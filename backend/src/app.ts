@@ -1,5 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
 import cors from '@fastify/cors';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import { AppError } from './lib/errors.js';
 
 export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
@@ -7,6 +9,22 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
   // CORS
   app.register(cors, { origin: true });
+
+  // Swagger
+  app.register(swagger, {
+    openapi: {
+      info: {
+        title: 'EsExpress v2 API',
+        description: 'Oilfield dispatch platform API',
+        version: '1.0.0',
+      },
+      servers: [{ url: '/api/v1' }],
+    },
+  });
+
+  app.register(swaggerUi, {
+    routePrefix: '/api/v1/docs',
+  });
 
   // Health check
   app.get(
