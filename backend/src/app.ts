@@ -6,6 +6,7 @@ import { AppError } from './lib/errors.js';
 import jwtPlugin from './plugins/auth/jwt.js';
 import guardsPlugin from './plugins/auth/guards.js';
 import authRoutes from './plugins/auth/routes.js';
+import dispatchPlugin from './plugins/dispatch/index.js';
 
 export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   const app = Fastify(opts);
@@ -37,6 +38,9 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
   // Auth routes
   app.register(authRoutes, { prefix: '/api/v1/auth' });
+
+  // Dispatch plugin (P1)
+  app.register(dispatchPlugin, { prefix: '/api/v1/dispatch' });
 
   // Health check
   app.get(
