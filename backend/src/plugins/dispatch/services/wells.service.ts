@@ -1,5 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { wells } from '../../../db/schema.js';
+import { eq, sql, getTableColumns } from 'drizzle-orm';
+import { wells, assignments } from '../../../db/schema.js';
 import type { Database } from '../../../db/client.js';
 
 export interface CreateWellInput {
@@ -27,10 +27,21 @@ export interface UpdateWellInput {
 }
 
 export async function listWells(db: Database, filters?: { status?: string }) {
+  const wellColumns = getTableColumns(wells);
+  const baseQuery = db
+    .select({
+      ...wellColumns,
+      assignmentCount: sql<number>`cast(count(${assignments.id}) as int)`.as('assignment_count'),
+    })
+    .from(wells)
+    .leftJoin(assignments, eq(wells.id, assignments.wellId))
+    .groupBy(wells.id)
+    .orderBy(wells.name);
+
   if (filters?.status) {
-    return db.select().from(wells).where(eq(wells.status, filters.status)).orderBy(wells.name);
+    return baseQuery.where(eq(wells.status, filters.status));
   }
-  return db.select().from(wells).orderBy(wells.name);
+  return baseQuery;
 }
 
 export async function getWellById(db: Database, id: number) {

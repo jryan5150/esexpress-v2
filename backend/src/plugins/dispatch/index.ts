@@ -83,7 +83,11 @@ const dispatchPlugin: FastifyPluginAsync = async (fastify) => {
         propxJobId: w.propxJobId,
       }));
 
-      const suggestions = scoreSuggestions(load.destinationName ?? '', null, candidates);
+      const propxJobId =
+        (load.rawData as Record<string, unknown> | null)?.['propx_job_id'] as string | null ??
+        (load.rawData as Record<string, unknown> | null)?.['job_id'] as string | null ??
+        null;
+      const suggestions = scoreSuggestions(load.destinationName ?? '', propxJobId, candidates);
       return { success: true, data: suggestions };
     },
   );
