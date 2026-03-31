@@ -3,12 +3,34 @@ import { wellRoutes } from './routes/wells.js';
 import { loadRoutes } from './routes/loads.js';
 import { assignmentRoutes } from './routes/assignments.js';
 import { validationRoutes } from './routes/validation.js';
+import { dispatchDeskRoutes } from './routes/dispatch-desk.js';
 
 const dispatchPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(wellRoutes, { prefix: '/wells' });
   fastify.register(loadRoutes, { prefix: '/loads' });
   fastify.register(assignmentRoutes, { prefix: '/assignments' });
   fastify.register(validationRoutes, { prefix: '/validation' });
+  fastify.register(dispatchDeskRoutes, { prefix: '/dispatch-desk' });
+
+  // GET /dispatch-readiness — field completeness and readiness metrics
+  fastify.get(
+    '/dispatch-readiness',
+    {
+      preHandler: [fastify.authenticate],
+    },
+    async (_request, reply) => {
+      const db = (fastify as any).db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: { code: 'SERVICE_UNAVAILABLE', message: 'Database not connected' },
+        });
+      }
+      const { getDispatchReadiness } = await import('./services/dispatch-desk.service.js');
+      const data = await getDispatchReadiness(db);
+      return { success: true, data };
+    },
+  );
 
   // GET /suggest/:loadId — suggest wells for a load
   fastify.get(

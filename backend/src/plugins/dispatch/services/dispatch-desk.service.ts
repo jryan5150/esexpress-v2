@@ -1,0 +1,322 @@
+import { eq, and, inArray, sql } from 'drizzle-orm';
+import { assignments, loads, wells, photos } from '../../../db/schema.js';
+import { ValidationError, NotFoundError, ForbiddenError } from '../../../lib/errors.js';
+import { createStatusHistoryEntry } from '../lib/state-machine.js';
+import type { Database } from '../../../db/client.js';
+import type { PhotoStatus, AssignmentStatus } from '../../../db/schema.js';
+
+// ─── PURE FUNCTIONS ───────────────────────────────────────────────
+
+/**
+ * Compute photo status from photo counts.
+ * - 0 total photos → 'missing'
+ * - all matched → 'attached'
+ * - some matched → 'pending'
+ */
+export function computePhotoStatus(matched: number, total: number): PhotoStatus {
+  if (total === 0) return 'missing';
+  if (matched >= total) return 'attached';
+  return 'pending';
+}
+
+/**
+ * Gate: can this assignment be marked as entered in PCS?
+ * - 'missing' → blocked (red gate)
+ * - 'pending' → allowed with amber warning
+ * - 'attached' → allowed (green)
+ */
+export function canMarkEntered(photoStatus: PhotoStatus): boolean {
+  return photoStatus !== 'missing';
+}
+
+// ─── QUERY TYPES ──────────────────────────────────────────────────
+
+export interface DispatchDeskFilters {
+  wellId?: number;
+  photoStatus?: PhotoStatus;
+  date?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface DispatchDeskRow {
+  assignmentId: number;
+  assignmentStatus: string;
+  photoStatus: string | null;
+  pcsSequence: number | null;
+  autoMapTier: number | null;
+  autoMapScore: string | null;
+  loadId: number;
+  loadNo: string;
+  driverName: string | null;
+  truckNo: string | null;
+  carrierName: string | null;
+  productDescription: string | null;
+  weightTons: string | null;
+  bolNo: string | null;
+  ticketNo: string | null;
+  deliveredOn: Date | null;
+  wellId: number;
+  wellName: string;
+  canEnter: boolean;
+}
+
+export interface DispatchReadiness {
+  total: number;
+  dispatchReady: number;
+  photosAttached: number;
+  photosPending: number;
+  photosMissing: number;
+  readinessRate: number;
+  photoAttachmentRate: number;
+  fieldCompleteness: {
+    driverName: number;
+    loadNo: number;
+    bolNo: number;
+    ticketNo: number;
+    weightTons: number;
+  };
+}
+
+// ─── QUERY FUNCTIONS ─────────────────────────────────────────────
+
+/**
+ * Fetch dispatch desk loads with joined well + load data.
+ * Applies filters for wellId, photoStatus, and date.
+ * Returns paginated results sorted by pcsSequence asc, createdAt desc.
+ */
+export async function getDispatchDeskLoads(
+  db: Database,
+  filters: DispatchDeskFilters = {},
+): Promise<{ data: DispatchDeskRow[]; meta: { page: number; limit: number; count: number } }> {
+  const { wellId, photoStatus, date, page = 1, limit = 100 } = filters;
+  const offset = (page - 1) * limit;
+
+  // Build where conditions
+  const conditions = [];
+
+  if (wellId != null) {
+    conditions.push(eq(assignments.wellId, wellId));
+  }
+
+  if (photoStatus != null) {
+    conditions.push(eq(assignments.photoStatus, photoStatus));
+  }
+
+  if (date) {
+    const startOfDay = new Date(`${date}T00:00:00.000Z`);
+    const endOfDay = new Date(`${date}T23:59:59.999Z`);
+    conditions.push(sql`${assignments.createdAt} >= ${startOfDay}`);
+    conditions.push(sql`${assignments.createdAt} <= ${endOfDay}`);
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const rows = await db
+    .select({
+      assignmentId: assignments.id,
+      assignmentStatus: assignments.status,
+      photoStatus: assignments.photoStatus,
+      pcsSequence: assignments.pcsSequence,
+      autoMapTier: assignments.autoMapTier,
+      autoMapScore: assignments.autoMapScore,
+      loadId: loads.id,
+      loadNo: loads.loadNo,
+      driverName: loads.driverName,
+      truckNo: loads.truckNo,
+      carrierName: loads.carrierName,
+      productDescription: loads.productDescription,
+      weightTons: loads.weightTons,
+      bolNo: loads.bolNo,
+      ticketNo: loads.ticketNo,
+      deliveredOn: loads.deliveredOn,
+      wellId: wells.id,
+      wellName: wells.name,
+    })
+    .from(assignments)
+    .innerJoin(loads, eq(assignments.loadId, loads.id))
+    .innerJoin(wells, eq(assignments.wellId, wells.id))
+    .where(whereClause)
+    .orderBy(
+      sql`${assignments.pcsSequence} asc nulls last`,
+      sql`${assignments.createdAt} desc`,
+    )
+    .limit(limit)
+    .offset(offset);
+
+  const data: DispatchDeskRow[] = rows.map((row) => ({
+    ...row,
+    canEnter: canMarkEntered((row.photoStatus ?? 'missing') as PhotoStatus),
+  }));
+
+  return { data, meta: { page, limit, count: data.length } };
+}
+
+// ─── MUTATION FUNCTIONS ───────────────────────────────────────────
+
+export interface MarkEnteredInput {
+  assignmentIds: number[];
+  pcsStartingNumber: number;
+  userId: number;
+  userName: string;
+}
+
+export interface MarkEnteredResult {
+  assignmentId: number;
+  success: boolean;
+  pcsSequence?: number;
+  blocked?: boolean;
+  reason?: string;
+  error?: string;
+}
+
+/**
+ * Mark assignments as entered in PCS.
+ * - Enforces photo gate: 'missing' photo status blocks entry.
+ * - Assigns sequential PCS numbers starting from pcsStartingNumber.
+ * - Transitions status to 'dispatch_ready'.
+ * - Returns per-assignment results with blocked flag for 'missing' photos.
+ */
+export async function markEntered(
+  db: Database,
+  input: MarkEnteredInput,
+): Promise<MarkEnteredResult[]> {
+  const { assignmentIds, pcsStartingNumber, userId, userName } = input;
+
+  // Fetch all assignments in one query
+  const existing = await db
+    .select()
+    .from(assignments)
+    .where(inArray(assignments.id, assignmentIds));
+
+  const existingById = new Map(existing.map((a) => [a.id, a]));
+
+  const results: MarkEnteredResult[] = [];
+  let sequenceOffset = 0;
+
+  for (const assignmentId of assignmentIds) {
+    const assignment = existingById.get(assignmentId);
+
+    if (!assignment) {
+      results.push({ assignmentId, success: false, error: `Assignment ${assignmentId} not found` });
+      continue;
+    }
+
+    const photoStatus = (assignment.photoStatus ?? 'missing') as PhotoStatus;
+
+    // Photo gate: block if missing
+    if (!canMarkEntered(photoStatus)) {
+      results.push({
+        assignmentId,
+        success: false,
+        blocked: true,
+        reason: 'Photo status is missing — attach a photo before entering in PCS',
+      });
+      continue;
+    }
+
+    const pcsSequence = pcsStartingNumber + sequenceOffset;
+    sequenceOffset += 1;
+
+    try {
+      // Determine valid next status: only transition if currently in an appropriate state
+      // dispatch_ready is the target; if already dispatch_ready or beyond, just update pcsSequence
+      const currentStatus = assignment.status as AssignmentStatus;
+      const canTransition = ['pending', 'assigned', 'dispatch_ready'].includes(currentStatus);
+
+      const entry = createStatusHistoryEntry('dispatch_ready', userId, userName, 'Marked entered via dispatch desk');
+      const history = [...(assignment.statusHistory as any[]), entry];
+
+      const updatePayload: Record<string, unknown> = {
+        pcsSequence,
+        updatedAt: new Date(),
+      };
+
+      if (canTransition && currentStatus !== 'dispatch_ready') {
+        updatePayload.status = 'dispatch_ready';
+        updatePayload.statusHistory = history;
+      }
+
+      await db
+        .update(assignments)
+        .set(updatePayload)
+        .where(eq(assignments.id, assignmentId));
+
+      results.push({ assignmentId, success: true, pcsSequence });
+    } catch (err: any) {
+      results.push({ assignmentId, success: false, error: err.message });
+    }
+  }
+
+  return results;
+}
+
+// ─── READINESS ANALYSIS ───────────────────────────────────────────
+
+/**
+ * Compute field completeness and dispatch readiness metrics.
+ * Used by the dispatch-readiness endpoint.
+ */
+export async function getDispatchReadiness(db: Database): Promise<DispatchReadiness> {
+  // Get total active assignments and their photo status breakdown
+  const statusCounts = await db
+    .select({
+      photoStatus: assignments.photoStatus,
+      count: sql<number>`count(*)`,
+    })
+    .from(assignments)
+    .groupBy(assignments.photoStatus);
+
+  const dispatchReadyCount = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(assignments)
+    .where(eq(assignments.status, 'dispatch_ready'));
+
+  // Field completeness: count assignments where joined load field is non-null
+  const fieldStats = await db
+    .select({
+      total: sql<number>`count(*)`,
+      hasDriverName: sql<number>`count(${loads.driverName})`,
+      hasLoadNo: sql<number>`count(${loads.loadNo})`,
+      hasBolNo: sql<number>`count(${loads.bolNo})`,
+      hasTicketNo: sql<number>`count(${loads.ticketNo})`,
+      hasWeightTons: sql<number>`count(${loads.weightTons})`,
+    })
+    .from(assignments)
+    .innerJoin(loads, eq(assignments.loadId, loads.id));
+
+  const photoMap = new Map(statusCounts.map((r) => [r.photoStatus, Number(r.count)]));
+  const attached = photoMap.get('attached') ?? 0;
+  const pending = photoMap.get('pending') ?? 0;
+  const missing = photoMap.get('missing') ?? 0;
+  const total = attached + pending + missing;
+
+  const drCount = Number(dispatchReadyCount[0]?.count ?? 0);
+  const fs = fieldStats[0] ?? {
+    total: 0,
+    hasDriverName: 0,
+    hasLoadNo: 0,
+    hasBolNo: 0,
+    hasTicketNo: 0,
+    hasWeightTons: 0,
+  };
+
+  const fsTotal = Number(fs.total) || 1; // avoid division by zero
+
+  return {
+    total,
+    dispatchReady: drCount,
+    photosAttached: attached,
+    photosPending: pending,
+    photosMissing: missing,
+    readinessRate: total > 0 ? Math.round((drCount / total) * 100) / 100 : 0,
+    photoAttachmentRate: total > 0 ? Math.round((attached / total) * 100) / 100 : 0,
+    fieldCompleteness: {
+      driverName: Math.round((Number(fs.hasDriverName) / fsTotal) * 100) / 100,
+      loadNo: Math.round((Number(fs.hasLoadNo) / fsTotal) * 100) / 100,
+      bolNo: Math.round((Number(fs.hasBolNo) / fsTotal) * 100) / 100,
+      ticketNo: Math.round((Number(fs.hasTicketNo) / fsTotal) * 100) / 100,
+      weightTons: Math.round((Number(fs.hasWeightTons) / fsTotal) * 100) / 100,
+    },
+  };
+}
