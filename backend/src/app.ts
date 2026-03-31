@@ -5,6 +5,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import { AppError } from './lib/errors.js';
 import jwtPlugin from './plugins/auth/jwt.js';
 import guardsPlugin from './plugins/auth/guards.js';
+import authRoutes from './plugins/auth/routes.js';
 
 export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   const app = Fastify(opts);
@@ -33,6 +34,9 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
   // Auth guards
   app.register(guardsPlugin);
+
+  // Auth routes
+  app.register(authRoutes, { prefix: '/api/v1/auth' });
 
   // Health check
   app.get(
