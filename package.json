@@ -1,0 +1,14 @@
+{
+  "name": "esexpress-v2",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter backend dev",
+    "build": "pnpm --filter backend build && pnpm --filter frontend build",
+    "test": "pnpm --filter backend test",
+    "test:frontend": "pnpm --filter frontend test",
+    "lint": "pnpm -r lint"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
