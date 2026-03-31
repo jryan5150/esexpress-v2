@@ -1,9 +1,9 @@
 import { eq, and, inArray, sql } from 'drizzle-orm';
 import { assignments, loads, wells, photos } from '../../../db/schema.js';
 import { ValidationError, NotFoundError, ForbiddenError } from '../../../lib/errors.js';
-import { createStatusHistoryEntry } from '../lib/state-machine.js';
+import { transitionStatus } from './assignments.service.js';
 import type { Database } from '../../../db/client.js';
-import type { PhotoStatus, AssignmentStatus } from '../../../db/schema.js';
+import type { PhotoStatus } from '../../../db/schema.js';
 
 // ─── PURE FUNCTIONS ───────────────────────────────────────────────
 
@@ -93,7 +93,7 @@ export async function getDispatchDeskLoads(
   const offset = (page - 1) * limit;
 
   // Build where conditions
-  const conditions = [];
+  const conditions = [eq(assignments.status, 'dispatch_ready')];
 
   if (wellId != null) {
     conditions.push(eq(assignments.wellId, wellId));
@@ -215,31 +215,28 @@ export async function markEntered(
       continue;
     }
 
+    // Status gate: must be dispatch_ready to enter in PCS
+    if (assignment.status !== 'dispatch_ready') {
+      results.push({
+        assignmentId,
+        success: false,
+        blocked: true,
+        reason: `Assignment must be in dispatch_ready status to enter in PCS (current: ${assignment.status})`,
+      });
+      continue;
+    }
+
     const pcsSequence = pcsStartingNumber + sequenceOffset;
     sequenceOffset += 1;
 
     try {
-      // Determine valid next status: only transition if currently in an appropriate state
-      // dispatch_ready is the target; if already dispatch_ready or beyond, just update pcsSequence
-      const currentStatus = assignment.status as AssignmentStatus;
-      const canTransition = ['pending', 'assigned', 'dispatch_ready'].includes(currentStatus);
+      // Use transitionStatus to enforce state machine validation (dispatch_ready -> dispatching)
+      await transitionStatus(db, assignmentId, 'dispatching', userId, userName, 'Marked entered via dispatch desk');
 
-      const entry = createStatusHistoryEntry('dispatch_ready', userId, userName, 'Marked entered via dispatch desk');
-      const history = [...(assignment.statusHistory as any[]), entry];
-
-      const updatePayload: Record<string, unknown> = {
-        pcsSequence,
-        updatedAt: new Date(),
-      };
-
-      if (canTransition && currentStatus !== 'dispatch_ready') {
-        updatePayload.status = 'dispatch_ready';
-        updatePayload.statusHistory = history;
-      }
-
+      // Separately update pcsSequence — not part of the state machine, just a PCS tracking field
       await db
         .update(assignments)
-        .set(updatePayload)
+        .set({ pcsSequence, updatedAt: new Date() })
         .where(eq(assignments.id, assignmentId));
 
       results.push({ assignmentId, success: true, pcsSequence });
@@ -273,6 +270,7 @@ export async function getDispatchReadiness(db: Database): Promise<DispatchReadin
     .where(eq(assignments.status, 'dispatch_ready'));
 
   // Field completeness: count assignments where joined load field is non-null
+  // Scoped to dispatch_ready only — readiness metrics are only meaningful for that status
   const fieldStats = await db
     .select({
       total: sql<number>`count(*)`,
@@ -283,7 +281,8 @@ export async function getDispatchReadiness(db: Database): Promise<DispatchReadin
       hasWeightTons: sql<number>`count(${loads.weightTons})`,
     })
     .from(assignments)
-    .innerJoin(loads, eq(assignments.loadId, loads.id));
+    .innerJoin(loads, eq(assignments.loadId, loads.id))
+    .where(eq(assignments.status, 'dispatch_ready'));
 
   const photoMap = new Map(statusCounts.map((r) => [r.photoStatus, Number(r.count)]));
   const attached = photoMap.get('attached') ?? 0;

@@ -168,11 +168,11 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
-  // POST /trust-sheets — bulk approve assignments from Sheets import
+  // POST /trust-sheets — bulk approve assignments from Sheets import (admin only)
   fastify.post(
     '/trust-sheets',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [fastify.authenticate, fastify.requireRole(['admin'])],
       schema: {
         body: {
           type: 'object',

@@ -88,4 +88,14 @@ describe('POST /api/v1/dispatch/validation/trust-sheets', () => {
     });
     expect(response.statusCode).toBe(400);
   });
+  it('rejects non-admin from trust-sheets', async () => {
+    const dispatcherToken = app.jwt.sign({ id: 3, email: 'dispatcher@test.com', name: 'Dispatcher', role: 'dispatcher' });
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/dispatch/validation/trust-sheets',
+      headers: { authorization: `Bearer ${dispatcherToken}` },
+      payload: { assignmentIds: [1] },
+    });
+    expect(response.statusCode).toBe(403);
+  });
 });
