@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { AppError } from './lib/errors.js';
+import jwtPlugin from './plugins/auth/jwt.js';
 
 export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   const app = Fastify(opts);
@@ -25,6 +26,9 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   app.register(swaggerUi, {
     routePrefix: '/api/v1/docs',
   });
+
+  // JWT
+  app.register(jwtPlugin);
 
   // Health check
   app.get(
