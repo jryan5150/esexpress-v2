@@ -12,6 +12,7 @@ import dbPlugin from "./plugins/db.js";
 import authRoutes from "./plugins/auth/routes.js";
 import dispatchPlugin from "./plugins/dispatch/index.js";
 import ingestionPlugin from "./plugins/ingestion/index.js";
+import pcsPlugin from "./plugins/pcs/index.js";
 
 export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   const app = Fastify(opts);
@@ -52,6 +53,9 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
   // Ingestion plugin (PropX, Logistiq)
   app.register(ingestionPlugin, { prefix: "/api/v1/ingestion" });
+
+  // PCS plugin (dispatch to PCS Express)
+  app.register(pcsPlugin, { prefix: "/api/v1/pcs" });
 
   // Health check
   app.get(
