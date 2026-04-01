@@ -30,7 +30,7 @@ describe('Database Plugin', () => {
     await app.close();
   });
 
-  it('db decorator is typed (not any)', async () => {
+  it('db decorator exposes drizzle query interface', async () => {
     savedUrl = process.env.DATABASE_URL;
     process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/esexpress_test';
     const app = buildApp({ logger: false });
