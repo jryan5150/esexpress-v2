@@ -15,6 +15,7 @@ import ingestionPlugin from "./plugins/ingestion/index.js";
 import pcsPlugin from "./plugins/pcs/index.js";
 import sheetsPlugin from "./plugins/sheets/index.js";
 import verificationPlugin from "./plugins/verification/index.js";
+import financePlugin from "./plugins/finance/index.js";
 
 export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   const app = Fastify(opts);
@@ -64,6 +65,9 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
   // Verification plugin (photos, JotForm, BOL)
   app.register(verificationPlugin, { prefix: "/api/v1/verification" });
+
+  // Finance plugin (payment batches, driver payments)
+  app.register(financePlugin, { prefix: "/api/v1/finance" });
 
   // Health check
   app.get(
