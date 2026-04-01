@@ -196,7 +196,7 @@ export async function proxyPhoto(
       headers: {
         "User-Agent": "EsExpress/2.0 PhotoProxy",
       },
-      redirect: "follow",
+      redirect: "error", // Security: never follow redirects — prevents SSRF bypass via open redirects on allowlisted hosts
     });
 
     if (!response.ok) {
