@@ -1,9 +1,10 @@
 import { type FastifyPluginAsync } from "fastify";
 import propxRoutes from "./routes/propx.js";
+import logistiqRoutes from "./routes/logistiq.js";
 
 const ingestionPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(propxRoutes);
-  // Logistiq routes will be added in Tasks 1.4-1.6
+  fastify.register(logistiqRoutes);
 };
 
 export default ingestionPlugin;
