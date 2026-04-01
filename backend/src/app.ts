@@ -13,6 +13,7 @@ import authRoutes from "./plugins/auth/routes.js";
 import dispatchPlugin from "./plugins/dispatch/index.js";
 import ingestionPlugin from "./plugins/ingestion/index.js";
 import pcsPlugin from "./plugins/pcs/index.js";
+import verificationPlugin from "./plugins/verification/index.js";
 
 export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   const app = Fastify(opts);
@@ -56,6 +57,9 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
   // PCS plugin (dispatch to PCS Express)
   app.register(pcsPlugin, { prefix: "/api/v1/pcs" });
+
+  // Verification plugin (photos, JotForm, BOL)
+  app.register(verificationPlugin, { prefix: "/api/v1/verification" });
 
   // Health check
   app.get(
