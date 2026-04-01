@@ -28,6 +28,7 @@
     "fastify": "^5.2.0",
     "fastify-plugin": "5.1.0",
     "fflate": "0.8.2",
+    "googleapis": "171.4.0",
     "p-queue": "9.1.0",
     "postgres": "^3.4.0",
     "zod": "^3.24.0"
