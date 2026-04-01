@@ -510,13 +510,13 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
           type: "object",
           properties: {
             status: { type: "string" },
+            page: { type: "integer", minimum: 1, default: 1 },
             limit: {
               type: "integer",
               minimum: 1,
               maximum: 500,
               default: 100,
             },
-            offset: { type: "integer", minimum: 0, default: 0 },
           },
         },
       },
@@ -533,11 +533,15 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const { status, limit, offset } = request.query as {
+      const { status, page, limit } = request.query as {
         status?: string;
+        page?: number;
         limit?: number;
-        offset?: number;
       };
+
+      const pageNum = page ?? 1;
+      const pageSize = limit ?? 100;
+      const offset = (pageNum - 1) * pageSize;
 
       const queue = await getReconciliationQueue(db, {
         status: status as Parameters<typeof getReconciliationQueue>[1] extends
@@ -545,14 +549,14 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
           | undefined
           ? S
           : never,
-        limit,
+        limit: pageSize,
         offset,
       });
 
       return {
         success: true,
         data: queue,
-        meta: { total: queue.length, limit: limit ?? 100, offset: offset ?? 0 },
+        meta: { total: queue.length, page: pageNum, limit: pageSize },
       };
     },
   );
@@ -638,13 +642,13 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
         querystring: {
           type: "object",
           properties: {
+            page: { type: "integer", minimum: 1, default: 1 },
             limit: {
               type: "integer",
               minimum: 1,
               maximum: 500,
               default: 100,
             },
-            offset: { type: "integer", minimum: 0, default: 0 },
           },
         },
       },
@@ -661,26 +665,27 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const { limit, offset } = request.query as {
+      const { page, limit } = request.query as {
+        page?: number;
         limit?: number;
-        offset?: number;
       };
 
+      const pageNum = page ?? 1;
       const pageSize = limit ?? 100;
-      const pageOffset = offset ?? 0;
+      const offset = (pageNum - 1) * pageSize;
 
       const rows = await db
         .select()
         .from(bolSubmissions)
         .where(eq(bolSubmissions.status, "discrepancy"))
         .limit(pageSize)
-        .offset(pageOffset)
+        .offset(offset)
         .orderBy(bolSubmissions.createdAt);
 
       return {
         success: true,
         data: rows,
-        meta: { total: rows.length, limit: pageSize, offset: pageOffset },
+        meta: { total: rows.length, page: pageNum, limit: pageSize },
       };
     },
   );

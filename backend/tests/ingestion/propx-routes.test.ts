@@ -31,7 +31,8 @@ describe("Ingestion Plugin — route registration", () => {
   const routes = [
     {
       method: "POST" as const,
-      url: "/api/v1/ingestion/sync/propx?from=2026-01-01&to=2026-01-31",
+      url: "/api/v1/ingestion/sync/propx",
+      body: { from: "2026-01-01", to: "2026-01-31" },
     },
     { method: "GET" as const, url: "/api/v1/ingestion/propx/carriers" },
     { method: "GET" as const, url: "/api/v1/ingestion/propx/drivers" },
@@ -43,10 +44,11 @@ describe("Ingestion Plugin — route registration", () => {
   ];
 
   for (const route of routes) {
-    it(`${route.method} ${route.url.split("?")[0]} is registered (not 404)`, async () => {
+    it(`${route.method} ${route.url} is registered (not 404)`, async () => {
       const response = await app.inject({
         method: route.method,
         url: route.url,
+        payload: (route as { body?: unknown }).body,
       });
       // Should not be 404 (route exists), but will be 401 (no auth token)
       expect(response.statusCode).not.toBe(404);
@@ -58,7 +60,8 @@ describe("Ingestion Plugin — auth enforcement", () => {
   it("rejects unauthenticated requests to sync endpoint", async () => {
     const response = await app.inject({
       method: "POST",
-      url: "/api/v1/ingestion/sync/propx?from=2026-01-01&to=2026-01-31",
+      url: "/api/v1/ingestion/sync/propx",
+      payload: { from: "2026-01-01", to: "2026-01-31" },
     });
     expect(response.statusCode).toBe(401);
     const body = response.json();
@@ -77,7 +80,8 @@ describe("Ingestion Plugin — auth enforcement", () => {
   it("rejects viewer role from sync endpoint (requires admin/dispatcher)", async () => {
     const response = await app.inject({
       method: "POST",
-      url: "/api/v1/ingestion/sync/propx?from=2026-01-01&to=2026-01-31",
+      url: "/api/v1/ingestion/sync/propx",
+      payload: { from: "2026-01-01", to: "2026-01-31" },
       headers: { authorization: `Bearer ${viewerToken}` },
     });
     expect(response.statusCode).toBe(403);
@@ -87,7 +91,7 @@ describe("Ingestion Plugin — auth enforcement", () => {
 });
 
 describe("Ingestion Plugin — sync validation", () => {
-  it("requires from and to query params", async () => {
+  it("requires from and to in request body", async () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/ingestion/sync/propx",
@@ -102,7 +106,8 @@ describe("Ingestion Plugin — sync validation", () => {
   it("requires both from and to (missing to)", async () => {
     const response = await app.inject({
       method: "POST",
-      url: "/api/v1/ingestion/sync/propx?from=2026-01-01",
+      url: "/api/v1/ingestion/sync/propx",
+      payload: { from: "2026-01-01" },
       headers: { authorization: `Bearer ${adminToken}` },
     });
     expect(response.statusCode).toBe(400);
@@ -111,7 +116,8 @@ describe("Ingestion Plugin — sync validation", () => {
   it("requires both from and to (missing from)", async () => {
     const response = await app.inject({
       method: "POST",
-      url: "/api/v1/ingestion/sync/propx?to=2026-01-31",
+      url: "/api/v1/ingestion/sync/propx",
+      payload: { to: "2026-01-31" },
       headers: { authorization: `Bearer ${adminToken}` },
     });
     expect(response.statusCode).toBe(400);
@@ -136,6 +142,7 @@ describe("Ingestion Plugin — response envelope", () => {
     const response = await app.inject({
       method: "POST",
       url: "/api/v1/ingestion/sync/propx",
+      payload: {},
       headers: { authorization: `Bearer ${adminToken}` },
     });
     const body = response.json();

@@ -66,7 +66,7 @@ describe("Finance Plugin — route registration", () => {
     {
       method: "PUT" as const,
       url: "/api/v1/finance/batches/1",
-      body: { ratePerTon: "5.50" },
+      body: { ratePerTon: 5.5 },
     },
     {
       method: "POST" as const,
@@ -108,7 +108,7 @@ describe("Finance Plugin — route registration", () => {
     },
     {
       method: "GET" as const,
-      url: "/api/v1/finance/driver/D-001/history",
+      url: "/api/v1/finance/drivers/D-001/history",
     },
     {
       method: "GET" as const,
@@ -188,7 +188,7 @@ describe("Finance Plugin — auth enforcement", () => {
     const response = await app.inject({
       method: "PUT",
       url: "/api/v1/finance/batches/1",
-      payload: { ratePerTon: "5.50" },
+      payload: { ratePerTon: 5.5 },
     });
     expect(response.statusCode).toBe(401);
   });
@@ -270,7 +270,7 @@ describe("Finance Plugin — auth enforcement", () => {
   it("rejects unauthenticated requests to GET /driver/:id/history", async () => {
     const response = await app.inject({
       method: "GET",
-      url: "/api/v1/finance/driver/D-001/history",
+      url: "/api/v1/finance/drivers/D-001/history",
     });
     expect(response.statusCode).toBe(401);
   });
@@ -380,7 +380,7 @@ describe("Finance Plugin — viewer restrictions on write endpoints", () => {
     const response = await app.inject({
       method: "PUT",
       url: "/api/v1/finance/batches/1",
-      payload: { ratePerTon: "5.50" },
+      payload: { ratePerTon: 5.5 },
       headers: { authorization: `Bearer ${viewerToken}` },
     });
     expect(response.statusCode).toBe(403);

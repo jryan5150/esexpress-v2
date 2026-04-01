@@ -31,22 +31,26 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
             driverId: { type: "string" },
             from: { type: "string", format: "date" },
             to: { type: "string", format: "date" },
+            page: { type: "integer", minimum: 1, default: 1 },
             limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
-            offset: { type: "integer", minimum: 0, default: 0 },
           },
         },
       },
     },
     async (request, _reply) => {
       const db = fastify.db;
-      const { status, driverId, from, to, limit, offset } = request.query as {
+      const { status, driverId, from, to, page, limit } = request.query as {
         status?: string;
         driverId?: string;
         from?: string;
         to?: string;
-        limit: number;
-        offset: number;
+        page?: number;
+        limit?: number;
       };
+
+      const pageNum = page ?? 1;
+      const pageSize = limit ?? 50;
+      const offset = (pageNum - 1) * pageSize;
 
       const conditions = [];
       if (status) conditions.push(eq(paymentBatches.status, status));
@@ -64,7 +68,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         .from(paymentBatches)
         .where(where)
         .orderBy(desc(paymentBatches.createdAt))
-        .limit(limit)
+        .limit(pageSize)
         .offset(offset);
 
       const [countRow] = await db
@@ -76,9 +80,11 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         success: true,
         data: {
           batches: rows,
+        },
+        meta: {
+          page: pageNum,
+          limit: pageSize,
           total: countRow?.count ?? 0,
-          limit,
-          offset,
         },
       };
     },
@@ -216,8 +222,8 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         body: {
           type: "object",
           properties: {
-            ratePerTon: { type: "string" },
-            ratePerMile: { type: "string" },
+            ratePerTon: { type: "number", minimum: 0 },
+            ratePerMile: { type: "number", minimum: 0 },
             rateType: { type: "string", enum: ["per_ton", "per_mile"] },
             carrierName: { type: "string" },
           },
@@ -228,8 +234,8 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
       const db = fastify.db;
       const { id } = request.params as { id: number };
       const body = request.body as Partial<{
-        ratePerTon: string;
-        ratePerMile: string;
+        ratePerTon: number;
+        ratePerMile: number;
         rateType: string;
         carrierName: string;
       }>;
@@ -586,9 +592,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
-  // ─── GET /driver/:id/history — driver payment history ────────────
+  // ─── GET /drivers/:id/history — driver payment history ───────────
   fastify.get(
-    "/driver/:id/history",
+    "/drivers/:id/history",
     {
       preHandler: [fastify.authenticate],
       schema: {
@@ -627,21 +633,50 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     "/pending-review",
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+          },
+        },
+      },
     },
-    async (_request, _reply) => {
+    async (request, _reply) => {
       const db = fastify.db;
+      const { page, limit } = request.query as {
+        page?: number;
+        limit?: number;
+      };
+      const pageNum = page ?? 1;
+      const pageSize = limit ?? 50;
+      const offset = (pageNum - 1) * pageSize;
+
+      const where = eq(paymentBatches.status, "pending_review");
 
       const batches = await db
         .select()
         .from(paymentBatches)
-        .where(eq(paymentBatches.status, "pending_review"))
-        .orderBy(desc(paymentBatches.createdAt));
+        .where(where)
+        .orderBy(desc(paymentBatches.createdAt))
+        .limit(pageSize)
+        .offset(offset);
+
+      const [countRow] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(paymentBatches)
+        .where(where);
 
       return {
         success: true,
         data: {
           batches,
-          total: batches.length,
+        },
+        meta: {
+          page: pageNum,
+          limit: pageSize,
+          total: countRow?.count ?? 0,
         },
       };
     },
@@ -681,9 +716,25 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     "/drivers",
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+          },
+        },
+      },
     },
-    async (_request, _reply) => {
+    async (request, _reply) => {
       const db = fastify.db;
+      const { page, limit } = request.query as {
+        page?: number;
+        limit?: number;
+      };
+      const pageNum = page ?? 1;
+      const pageSize = limit ?? 50;
+      const offset = (pageNum - 1) * pageSize;
 
       const drivers = await db
         .select({
@@ -700,13 +751,31 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
           paymentBatches.driverId,
           paymentBatches.driverName,
           paymentBatches.carrierName,
+        )
+        .limit(pageSize)
+        .offset(offset);
+
+      const [countRow] = await db
+        .select({
+          count: sql<number>`count(*)::int`,
+        })
+        .from(
+          db
+            .select({ driverId: paymentBatches.driverId })
+            .from(paymentBatches)
+            .groupBy(paymentBatches.driverId)
+            .as("distinct_drivers"),
         );
 
       return {
         success: true,
         data: {
           drivers,
-          total: drivers.length,
+        },
+        meta: {
+          page: pageNum,
+          limit: pageSize,
+          total: countRow?.count ?? 0,
         },
       };
     },

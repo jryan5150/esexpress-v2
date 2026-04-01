@@ -30,7 +30,7 @@ const propxRoutes: FastifyPluginAsync = async (fastify) => {
         fastify.requireRole(["admin", "dispatcher"]),
       ],
       schema: {
-        querystring: {
+        body: {
           type: "object",
           required: ["from", "to"],
           properties: {
@@ -52,7 +52,7 @@ const propxRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const { from, to } = request.query as { from: string; to: string };
+      const { from, to } = request.body as { from: string; to: string };
       const fromDate = new Date(from);
       const toDate = new Date(to);
 
