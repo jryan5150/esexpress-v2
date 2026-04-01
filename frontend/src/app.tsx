@@ -9,6 +9,12 @@ import { WellWorkspace } from "@/pages/WellWorkspace";
 import { DispatchConfirmation } from "@/pages/DispatchConfirmation";
 import { BolQueue } from "@/pages/BolQueue";
 import { Login } from "@/pages/Login";
+import { WellsAdmin } from "@/pages/admin/WellsAdmin";
+import { CompaniesAdmin } from "@/pages/admin/CompaniesAdmin";
+import { UsersAdmin } from "@/pages/admin/UsersAdmin";
+import { Validation } from "@/pages/admin/Validation";
+import { FinanceBatches } from "@/pages/FinanceBatches";
+import { Settings } from "@/pages/Settings";
 
 export function App() {
   useEffect(() => {
@@ -29,6 +35,12 @@ export function App() {
               element={<DispatchConfirmation />}
             />
             <Route path="bol" element={<BolQueue />} />
+            <Route path="admin/wells" element={<WellsAdmin />} />
+            <Route path="admin/companies" element={<CompaniesAdmin />} />
+            <Route path="admin/users" element={<UsersAdmin />} />
+            <Route path="admin/validation" element={<Validation />} />
+            <Route path="finance" element={<FinanceBatches />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </BrowserRouter>

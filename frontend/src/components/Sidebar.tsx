@@ -79,6 +79,21 @@ export function Sidebar() {
             </NavLink>
           </div>
         )}
+
+        {/* Operations Section */}
+        {!collapsed && (
+          <div className="pt-4">
+            <p className="px-3 pb-2 text-[var(--text-xs)] uppercase tracking-wider text-[var(--text-tertiary)]">
+              Operations
+            </p>
+            <NavLink to="/finance" className={navLinkClass}>
+              Finance
+            </NavLink>
+            <NavLink to="/settings" className={navLinkClass}>
+              Settings
+            </NavLink>
+          </div>
+        )}
       </nav>
 
       {/* Footer */}

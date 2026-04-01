@@ -1,11 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useFeed } from "@/hooks/use-feed";
-import { Button } from "@/components/Button";
 import type { FeedData, WellSummary } from "@/types/feed";
-
-/* -------------------------------------------------------------------------- */
-/*  ExceptionFeed — landing page showing system-handled summary + well list   */
-/* -------------------------------------------------------------------------- */
 
 export function ExceptionFeed() {
   const navigate = useNavigate();
@@ -15,40 +10,59 @@ export function ExceptionFeed() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-[var(--text-secondary)]">Loading feed...</p>
+        <p style={{ color: "var(--text-secondary)" }}>Loading feed...</p>
       </div>
     );
   }
 
+  const totalExceptions = feed.wellSummaries.reduce(
+    (s, w) => s + w.reviewCount + w.missingCount,
+    0,
+  );
   const automationRate =
     feed.systemHandled.loadsMatched > 0
       ? (
           (feed.systemHandled.loadsMatched /
-            (feed.systemHandled.loadsMatched +
-              feed.wellSummaries.reduce(
-                (s, w) => s + w.reviewCount + w.missingCount,
-                0,
-              ))) *
+            (feed.systemHandled.loadsMatched + totalExceptions)) *
           100
         ).toFixed(1)
       : "0.0";
 
   return (
-    <div className="p-6 pb-12 max-w-7xl mx-auto space-y-10">
+    <div className="p-8 pb-16 max-w-7xl mx-auto space-y-8">
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-[var(--text-2xl)] font-bold tracking-tight text-[var(--text-primary)]">
+          <h1
+            className="text-2xl font-bold tracking-tight"
+            style={{ fontFamily: "var(--font-ui)" }}
+          >
             EXCEPTION FEED
           </h1>
-          <span className="text-[var(--text-xs)] uppercase tracking-widest text-[var(--text-tertiary)] bg-[var(--bg-elevated)] px-2 py-0.5 rounded-[var(--radius-sm)] hidden lg:inline-block">
+          <span
+            className="text-xs uppercase tracking-widest px-2.5 py-1 rounded hidden lg:inline-block"
+            style={{
+              color: "var(--text-tertiary)",
+              background: "var(--bg-elevated)",
+            }}
+          >
             Operational Status: High Alert
           </span>
         </div>
-        <div className="flex items-center gap-2 bg-[var(--bg-surface)] px-3 py-1.5 rounded-[var(--radius-sm)] focus-within:ring-1 ring-[var(--accent)]">
-          <span className="text-[var(--text-tertiary)] text-sm">&#x1F50D;</span>
+        <div
+          className="flex items-center gap-2 px-3 py-2 rounded"
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-default)",
+          }}
+        >
+          <span style={{ color: "var(--text-tertiary)" }}>&#128269;</span>
           <input
-            className="bg-transparent border-none focus:ring-0 focus:outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] w-48"
+            className="bg-transparent border-none focus:ring-0 focus:outline-none text-sm w-48"
+            style={{
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-ui)",
+            }}
             placeholder="Search BOL or Well..."
             type="text"
           />
@@ -57,16 +71,31 @@ export function ExceptionFeed() {
 
       {/* Section 1: System Handled Summary */}
       <section className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 bg-gradient-to-br from-[var(--status-ready-dim)] to-[var(--bg-surface)] p-6 rounded-[var(--radius-lg)] border-l-4 border-[var(--status-ready)] relative overflow-hidden">
+        {/* Main summary card */}
+        <div
+          className="lg:col-span-3 p-6 rounded-xl relative overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--status-ready-dim) 0%, var(--bg-surface) 100%)",
+            borderLeft: "4px solid var(--status-ready)",
+          }}
+        >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="flex items-center gap-2">
-                <span className="text-[var(--status-ready)]">&#x2713;</span>
-                <h2 className="text-[var(--status-ready)] uppercase tracking-widest text-sm font-semibold">
+                <span
+                  style={{ color: "var(--status-ready)", fontSize: "1.25rem" }}
+                >
+                  &#10003;
+                </span>
+                <h2
+                  className="uppercase tracking-widest text-sm font-semibold"
+                  style={{ color: "var(--status-ready)" }}
+                >
                   System Handled Summary
                 </h2>
               </div>
-              <div className="flex flex-wrap gap-8">
+              <div className="flex flex-wrap gap-10">
                 <StatBlock
                   label="Loads Auto-Matched"
                   value={feed.systemHandled.loadsMatched}
@@ -81,51 +110,87 @@ export function ExceptionFeed() {
                 />
               </div>
             </div>
-            <Button
-              variant="primary"
-              className="px-6 py-3 font-bold"
+            <button
+              className="px-6 py-3 rounded font-bold flex items-center gap-2 transition-transform hover:scale-[1.02] cursor-pointer"
+              style={{
+                background: "var(--accent)",
+                color: "var(--text-inverse)",
+                boxShadow: "0 4px 12px rgba(240, 105, 44, 0.3)",
+              }}
               onClick={() =>
                 navigate(`/wells/${feed.wellSummaries[0]?.wellId ?? ""}`)
               }
             >
-              Review &amp; Approve &#x2192;
-            </Button>
+              Review &amp; Approve →
+            </button>
           </div>
         </div>
 
-        {/* Automation Rate gauge */}
-        <div className="bg-[var(--bg-surface)] p-6 rounded-[var(--radius-lg)] flex flex-col justify-between">
+        {/* Automation Rate card */}
+        <div
+          className="p-6 rounded-xl flex flex-col justify-between"
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
           <div className="space-y-1">
-            <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] uppercase">
+            <span
+              className="text-xs uppercase tracking-wider"
+              style={{ color: "var(--text-tertiary)" }}
+            >
               Automation Rate
             </span>
-            <h3 className="text-[var(--text-2xl)] font-bold text-[var(--status-ready)]">
+            <h3
+              className="text-3xl font-bold"
+              style={{
+                color: "var(--status-ready)",
+                fontFamily: "var(--font-mono)",
+              }}
+            >
               {automationRate}%
             </h3>
           </div>
-          <div className="w-full bg-[var(--bg-elevated)] h-1.5 rounded-full mt-4">
+          <div
+            className="w-full h-1.5 rounded-full mt-4"
+            style={{ background: "var(--bg-elevated)" }}
+          >
             <div
-              className="bg-[var(--status-ready)] h-full rounded-full transition-all duration-500"
-              style={{ width: `${automationRate}%` }}
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${automationRate}%`,
+                background: "var(--status-ready)",
+              }}
             />
           </div>
-          <p className="text-[var(--text-xs)] text-[var(--text-tertiary)] mt-2">
+          <p className="text-xs mt-2" style={{ color: "var(--text-tertiary)" }}>
             +4.2% from last shift
           </p>
         </div>
       </section>
 
-      {/* Section 2: Needs You — well rows */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-4">
+      {/* Section 2: Needs You */}
+      <section className="space-y-5">
+        <div
+          className="flex items-center justify-between pb-4"
+          style={{ borderBottom: "1px solid var(--border-subtle)" }}
+        >
           <div className="flex items-center gap-3">
-            <span className="text-[var(--accent)]">&#x25B2;</span>
-            <h2 className="text-[var(--text-secondary)] uppercase tracking-widest text-sm font-semibold">
+            <span style={{ color: "var(--accent)", fontSize: "1.1rem" }}>
+              &#9650;
+            </span>
+            <h2
+              className="uppercase tracking-widest text-sm font-semibold"
+              style={{ color: "var(--text-secondary)" }}
+            >
               Needs You: Priority Exceptions
             </h2>
           </div>
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] uppercase">
-            Sorted by: Exception Count &#x25BE;
+          <span
+            className="text-xs uppercase"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            Sorted by: Exception Count ▾
           </span>
         </div>
 
@@ -140,28 +205,52 @@ export function ExceptionFeed() {
         </div>
       </section>
 
-      {/* Section 3: Activity Log + Dispatcher Stats */}
+      {/* Section 3: Activity Log + Stats */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 bg-[var(--bg-base)] p-6 rounded-[var(--radius-lg)] space-y-4">
+        {/* Activity Log */}
+        <div
+          className="md:col-span-2 p-6 rounded-xl space-y-4"
+          style={{ background: "var(--bg-inset)" }}
+        >
           <div className="flex items-center justify-between">
-            <h4 className="text-[var(--text-xs)] text-[var(--text-tertiary)] uppercase tracking-widest">
+            <h4
+              className="text-xs uppercase tracking-widest"
+              style={{ color: "var(--text-tertiary)" }}
+            >
               Recent Activity Log
             </h4>
-            <span className="text-[var(--text-xs)] text-[var(--accent)] font-bold cursor-pointer">
+            <span
+              className="text-xs font-bold cursor-pointer"
+              style={{ color: "var(--accent)" }}
+            >
               View All Logs
             </span>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {MOCK_ACTIVITY.map((entry, i) => (
               <div
                 key={i}
-                className="flex items-start gap-4 p-2 hover:bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] transition-colors"
+                className="flex items-start gap-4 p-2.5 rounded transition-colors"
+                style={{ cursor: "pointer" }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "var(--bg-elevated)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
               >
-                <span className="text-[var(--text-xs)] font-[var(--font-mono)] text-[var(--text-tertiary)] pt-0.5">
+                <span
+                  className="text-xs pt-0.5 shrink-0"
+                  style={{
+                    color: "var(--text-tertiary)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
                   {entry.time}
                 </span>
                 <p
-                  className="text-sm text-[var(--text-secondary)]"
+                  className="text-sm"
+                  style={{ color: "var(--text-secondary)" }}
                   dangerouslySetInnerHTML={{ __html: entry.html }}
                 />
               </div>
@@ -169,38 +258,69 @@ export function ExceptionFeed() {
           </div>
         </div>
 
-        <div className="bg-[var(--bg-elevated)] p-6 rounded-[var(--radius-lg)] flex flex-col justify-between border border-[var(--border-subtle)]">
-          <div className="space-y-4">
-            <h4 className="text-[var(--text-xs)] text-[var(--text-tertiary)] uppercase tracking-widest">
+        {/* Dispatcher Stats */}
+        <div
+          className="p-6 rounded-xl flex flex-col justify-between"
+          style={{
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
+          <div className="space-y-5">
+            <h4
+              className="text-xs uppercase tracking-widest"
+              style={{ color: "var(--text-tertiary)" }}
+            >
               Dispatcher Stats
             </h4>
             <div className="space-y-4">
               <div className="flex justify-between items-end">
-                <span className="text-[var(--text-xs)] text-[var(--text-secondary)]">
+                <span
+                  className="text-xs"
+                  style={{ color: "var(--text-secondary)" }}
+                >
                   Total Exceptions Found
                 </span>
-                <span className="font-[var(--font-mono)] text-xl text-[var(--text-primary)]">
+                <span
+                  className="text-xl"
+                  style={{
+                    color: "var(--text-primary)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
                   12
                 </span>
               </div>
               <div className="flex justify-between items-end">
-                <span className="text-[var(--text-xs)] text-[var(--text-secondary)]">
+                <span
+                  className="text-xs"
+                  style={{ color: "var(--text-secondary)" }}
+                >
                   Average Resolve Time
                 </span>
-                <span className="font-[var(--font-mono)] text-xl text-[var(--text-primary)]">
+                <span
+                  className="text-xl"
+                  style={{
+                    color: "var(--text-primary)",
+                    fontFamily: "var(--font-mono)",
+                  }}
+                >
                   4m 12s
                 </span>
               </div>
             </div>
           </div>
-          {/* Mini bar chart */}
           <div className="mt-8">
             <div className="h-16 w-full flex items-end gap-1">
               {[50, 75, 66, 100, 80].map((h, i) => (
                 <div
                   key={i}
-                  className="flex-1 bg-[var(--accent)] rounded-t-[var(--radius-sm)]"
-                  style={{ height: `${h}%`, opacity: 0.2 + i * 0.2 }}
+                  className="flex-1 rounded-t"
+                  style={{
+                    height: `${h}%`,
+                    background: "var(--accent)",
+                    opacity: 0.2 + i * 0.2,
+                  }}
                 />
               ))}
             </div>
@@ -208,13 +328,25 @@ export function ExceptionFeed() {
         </div>
       </section>
 
-      {/* FAB: New Load */}
+      {/* FAB */}
       <button
-        className="fixed bottom-8 right-8 w-14 h-14 bg-[var(--accent)] text-[var(--text-inverse)] rounded-[var(--radius-sm)] shadow-[var(--shadow-lg)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group"
+        className="fixed bottom-8 right-8 w-14 h-14 rounded-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group cursor-pointer"
+        style={{
+          background: "var(--accent)",
+          color: "var(--text-inverse)",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+        }}
         aria-label="New Load"
       >
-        <span className="text-2xl">+</span>
-        <span className="absolute right-16 bg-[var(--bg-surface)] text-[var(--text-primary)] px-3 py-1 rounded-[var(--radius-sm)] text-[var(--text-xs)] font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity border border-[var(--border-subtle)]">
+        <span className="text-2xl font-light">+</span>
+        <span
+          className="absolute right-16 px-3 py-1.5 rounded text-xs font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
+          style={{
+            background: "var(--bg-overlay)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
           New Load
         </span>
       </button>
@@ -222,17 +354,21 @@ export function ExceptionFeed() {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Inline sub-components                                                     */
-/* -------------------------------------------------------------------------- */
+/* ---------- Sub-components ---------- */
 
 function StatBlock({ label, value }: { label: string; value: number }) {
   return (
     <div className="space-y-1">
-      <p className="text-[var(--text-xs)] text-[var(--text-tertiary)] uppercase tracking-wider">
+      <p
+        className="text-xs uppercase tracking-wider"
+        style={{ color: "var(--text-tertiary)" }}
+      >
         {label}
       </p>
-      <p className="text-4xl font-bold text-[var(--text-primary)] font-[var(--font-mono)]">
+      <p
+        className="text-4xl font-bold"
+        style={{ color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}
+      >
         {value}
       </p>
     </div>
@@ -246,79 +382,148 @@ function WellRow({
   well: WellSummary;
   onClick: () => void;
 }) {
-  const hasErrors = well.missingCount > 0;
-  const borderColor = hasErrors
-    ? "border-[var(--status-error)]"
-    : "border-[var(--status-ready)]";
+  const hasExceptions = well.reviewCount > 0 || well.missingCount > 0;
+  const borderColor = hasExceptions
+    ? "var(--status-error)"
+    : "var(--status-ready)";
 
   return (
     <div
-      className={`group bg-[var(--bg-surface)] hover:bg-[var(--bg-elevated)] transition-all border-l-[3px] ${borderColor} flex flex-col lg:flex-row lg:items-center justify-between p-4 gap-4 cursor-pointer`}
+      className="flex flex-col lg:flex-row lg:items-center justify-between p-5 gap-4 rounded-lg cursor-pointer transition-all duration-150"
+      style={{
+        background: "var(--bg-surface)",
+        borderLeft: `3px solid ${borderColor}`,
+      }}
       onClick={onClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && onClick()}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.background = "var(--bg-elevated)")
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.background = "var(--bg-surface)")
+      }
     >
       {/* Well info */}
-      <div className="flex items-center gap-6 min-w-[240px]">
-        <div className="space-y-1">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+      <div className="flex items-center gap-5 min-w-[220px]">
+        <div>
+          <h3
+            className="text-lg font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
             {well.wellName}
           </h3>
-          <div className="flex items-center gap-2 text-[var(--text-tertiary)] text-[var(--text-xs)] font-[var(--font-mono)]">
-            &#x1F4CD; Basin
-          </div>
+          <span
+            className="text-xs"
+            style={{
+              color: "var(--text-tertiary)",
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            📍 Basin
+          </span>
         </div>
-        <div className="bg-[var(--bg-elevated)] px-3 py-1 rounded-[var(--radius-sm)]">
-          <span className="font-[var(--font-mono)] text-xl font-semibold text-[var(--text-primary)]">
+        <div
+          className="px-3 py-1.5 rounded"
+          style={{ background: "var(--bg-elevated)" }}
+        >
+          <span
+            className="text-xl font-semibold"
+            style={{
+              color: "var(--text-primary)",
+              fontFamily: "var(--font-mono)",
+            }}
+          >
             {well.totalLoads}
           </span>
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] ml-1 uppercase">
+          <span
+            className="text-xs ml-1.5 uppercase"
+            style={{ color: "var(--text-tertiary)" }}
+          >
             Loads
           </span>
         </div>
       </div>
 
-      {/* Status chips */}
+      {/* Status pills */}
       <div className="flex flex-wrap gap-2 flex-1 justify-center px-4">
-        <StatusPill count={well.readyCount} label="Ready" status="ready" />
-        <StatusPill count={well.reviewCount} label="Review" status="warning" />
-        <StatusPill count={well.missingCount} label="Missing" status="error" />
+        <StatusPill
+          count={well.readyCount}
+          label="Ready"
+          color="var(--status-ready)"
+          dimBg="var(--status-ready-dim)"
+        />
+        <StatusPill
+          count={well.reviewCount}
+          label="Review"
+          color="var(--status-warning)"
+          dimBg="var(--status-warning-dim)"
+        />
+        <StatusPill
+          count={well.missingCount}
+          label="Missing"
+          color="var(--status-error)"
+          dimBg="var(--status-error-dim)"
+        />
       </div>
 
-      {/* Operators + open button */}
-      <div className="flex items-center gap-6">
+      {/* Operator + open */}
+      <div className="flex items-center gap-5">
         {well.operators.length > 0 ? (
           <div className="flex items-center gap-2">
             <span
-              className="w-2 h-2 rounded-full"
+              className="w-2.5 h-2.5 rounded-full shrink-0"
               style={{ background: well.operators[0].color }}
             />
             <div className="flex flex-col">
-              <span className="text-[var(--text-xs)] text-[var(--text-secondary)] uppercase font-bold">
+              <span
+                className="text-xs font-bold uppercase"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 {well.operators[0].name}
               </span>
-              <span className="text-[9px] text-[var(--text-tertiary)] font-[var(--font-mono)]">
+              <span
+                className="text-xs"
+                style={{
+                  color: "var(--text-tertiary)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.625rem",
+                }}
+              >
                 Active {well.operators[0].lastActive}
               </span>
             </div>
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-[var(--bg-elevated)] border border-dashed border-[var(--border-default)] flex items-center justify-center text-[var(--text-xs)] text-[var(--text-tertiary)]">
+            <span
+              className="w-6 h-6 rounded-full flex items-center justify-center text-xs"
+              style={{
+                background: "var(--bg-elevated)",
+                border: "1px dashed var(--border-default)",
+                color: "var(--text-tertiary)",
+              }}
+            >
               +
             </span>
-            <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] uppercase font-bold">
+            <span
+              className="text-xs font-bold uppercase"
+              style={{ color: "var(--text-tertiary)" }}
+            >
               Unassigned
             </span>
           </div>
         )}
-        <button
-          className="bg-[var(--bg-overlay)] p-2 rounded-[var(--radius-sm)] text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors"
-          aria-label={`Open ${well.wellName}`}
+        <span
+          className="p-2 rounded transition-colors text-sm"
+          style={{
+            background: "var(--bg-overlay)",
+            color: "var(--text-secondary)",
+          }}
         >
-          &#x2197;
-        </button>
+          ↗
+        </span>
       </div>
     </div>
   );
@@ -327,45 +532,29 @@ function WellRow({
 function StatusPill({
   count,
   label,
-  status,
+  color,
+  dimBg,
 }: {
   count: number;
   label: string;
-  status: "ready" | "warning" | "error";
+  color: string;
+  dimBg: string;
 }) {
-  const colorMap = {
-    ready: {
-      bg: "bg-[var(--status-ready-dim)]",
-      border: "border-[var(--status-ready-dim)]",
-      text: "text-[var(--status-ready)]",
-      labelOpacity: "opacity-60",
-    },
-    warning: {
-      bg: "bg-[var(--status-warning-dim)]",
-      border: "border-[var(--status-warning-dim)]",
-      text: "text-[var(--status-warning)]",
-      labelOpacity: "opacity-60",
-    },
-    error: {
-      bg: "bg-[var(--status-error-dim)]",
-      border: "border-[var(--status-error-dim)]",
-      text: "text-[var(--status-error)]",
-      labelOpacity: "opacity-60",
-    },
-  };
-
-  const c = colorMap[status];
   const dimmed = count === 0;
-
   return (
     <div
-      className={`${c.bg} px-3 py-1 rounded-full border ${c.border} flex items-center gap-2 ${dimmed ? "opacity-30" : ""}`}
+      className={`px-3 py-1 rounded-full flex items-center gap-2 ${dimmed ? "opacity-25" : ""}`}
+      style={{ background: dimBg, border: `1px solid ${dimBg}` }}
     >
-      <span className={`${c.text} font-[var(--font-mono)] font-bold text-sm`}>
+      <span
+        className="font-bold text-sm"
+        style={{ color, fontFamily: "var(--font-mono)" }}
+      >
         {count}
       </span>
       <span
-        className={`text-[var(--text-xs)] ${c.text} ${c.labelOpacity} uppercase font-semibold`}
+        className="text-xs uppercase font-semibold"
+        style={{ color, opacity: 0.7, fontSize: "0.625rem" }}
       >
         {label}
       </span>
@@ -373,28 +562,22 @@ function StatusPill({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Mock data                                                                 */
-/* -------------------------------------------------------------------------- */
+/* ---------- Mock data ---------- */
 
 const MOCK_ACTIVITY = [
   {
     time: "14:22",
-    html: '<span class="font-bold" style="color: var(--accent)">Stephanie</span> auto-approved <span class="font-[var(--font-mono)]">#BOL-8821</span> for Pendleton 1H.',
+    html: `<span style="color: var(--accent); font-weight: 700">Stephanie</span> auto-approved <span style="font-family: var(--font-mono)">#BOL-8821</span> for Pendleton 1H.`,
   },
   {
     time: "14:18",
-    html: 'System flagged exception: <span class="font-bold" style="color: var(--status-error)">MISSING_TICKET</span> on Browning SilverHill.',
+    html: `System flagged exception: <span style="color: var(--status-error); font-weight: 700">MISSING_TICKET</span> on Browning SilverHill.`,
   },
 ];
 
 const MOCK_FEED: FeedData = {
   date: new Date().toISOString().split("T")[0],
-  systemHandled: {
-    loadsMatched: 47,
-    bolsAttached: 38,
-    photosLinked: 23,
-  },
+  systemHandled: { loadsMatched: 47, bolsAttached: 38, photosLinked: 23 },
   wellSummaries: [
     {
       wellId: "pendleton-1h",

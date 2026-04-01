@@ -1,3 +1,44 @@
 @import "tailwindcss";
 @import "./src/tokens.css";
 @import "./src/global.css";
+
+/* Map CSS custom property tokens to Tailwind v4 theme utilities */
+@theme {
+  /* Backgrounds — use as: bg-base, bg-surface, bg-elevated, bg-overlay, bg-inset */
+  --color-base: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-overlay: var(--bg-overlay);
+  --color-inset: var(--bg-inset);
+
+  /* Text — use as: text-primary, text-secondary, text-tertiary, text-inverse */
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-tertiary: var(--text-tertiary);
+  --color-inverse: var(--text-inverse);
+
+  /* Accent — use as: bg-accent, text-accent, border-accent */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-dim: var(--accent-dim);
+
+  /* Status — use as: bg-ready, text-ready, bg-ready-dim, etc. */
+  --color-ready: var(--status-ready);
+  --color-ready-dim: var(--status-ready-dim);
+  --color-warning: var(--status-warning);
+  --color-warning-dim: var(--status-warning-dim);
+  --color-error: var(--status-error);
+  --color-error-dim: var(--status-error-dim);
+  --color-info: var(--status-info);
+  --color-info-dim: var(--status-info-dim);
+  --color-neutral: var(--status-neutral);
+
+  /* Borders — use as: border-subtle, border-default, border-bright */
+  --color-subtle: var(--border-subtle);
+  --color-default: var(--border-default);
+  --color-bright: var(--border-bright);
+
+  /* Fonts — use as: font-ui, font-mono */
+  --font-ui: var(--font-ui);
+  --font-mono: var(--font-mono);
+}
