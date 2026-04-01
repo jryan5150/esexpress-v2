@@ -19,7 +19,7 @@ const loadRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const db = (fastify as any).db;
+      const db = fastify.db;
       if (!db) {
         return reply.status(503).send({
           success: false,
@@ -45,7 +45,7 @@ const loadRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const db = (fastify as any).db;
+      const db = fastify.db;
       if (!db) {
         return reply.status(503).send({
           success: false,

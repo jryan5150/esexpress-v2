@@ -42,7 +42,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     const { verifyPassword } = await import('./service.js');
 
     // Database lookup — requires db decorated on app
-    const db = (fastify as any).db;
+    const db = fastify.db;
     if (!db) {
       return reply.status(503).send({
         success: false,

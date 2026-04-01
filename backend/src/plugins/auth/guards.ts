@@ -1,3 +1,4 @@
+import fp from 'fastify-plugin';
 import { type FastifyPluginAsync, type FastifyRequest, type FastifyReply } from 'fastify';
 import { UnauthorizedError, ForbiddenError } from '../../lib/errors.js';
 import type { JwtPayload } from '../../types/auth.js';
@@ -34,7 +35,4 @@ const guardsPlugin: FastifyPluginAsync = async (fastify) => {
   });
 };
 
-// Break Fastify encapsulation so decorators are available on root instance
-(guardsPlugin as { [key: symbol]: unknown })[Symbol.for('skip-override')] = true;
-
-export default guardsPlugin;
+export default fp(guardsPlugin, { name: 'guards', dependencies: ['jwt'] });

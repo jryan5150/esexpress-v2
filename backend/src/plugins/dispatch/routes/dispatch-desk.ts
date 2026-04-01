@@ -27,7 +27,7 @@ const dispatchDeskRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const db = (fastify as any).db;
+      const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
       const { getDispatchDeskLoads } = await import('../services/dispatch-desk.service.js');
@@ -72,7 +72,7 @@ const dispatchDeskRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const db = (fastify as any).db;
+      const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
       const { markEntered } = await import('../services/dispatch-desk.service.js');

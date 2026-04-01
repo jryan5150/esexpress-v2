@@ -14,6 +14,7 @@ export function createDbClient(connectionString: string): DbClient {
     max: 10,
     idle_timeout: 20,
     connect_timeout: 10,
+    prepare: false, // Required for PgBouncer (Railway)
   });
 
   const db = drizzle(pool, { schema });

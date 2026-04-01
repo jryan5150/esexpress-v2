@@ -5,6 +5,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import { AppError } from './lib/errors.js';
 import jwtPlugin from './plugins/auth/jwt.js';
 import guardsPlugin from './plugins/auth/guards.js';
+import dbPlugin from './plugins/db.js';
 import authRoutes from './plugins/auth/routes.js';
 import dispatchPlugin from './plugins/dispatch/index.js';
 
@@ -35,6 +36,9 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
   // Auth guards
   app.register(guardsPlugin);
+
+  // Database
+  app.register(dbPlugin);
 
   // Auth routes
   app.register(authRoutes, { prefix: '/api/v1/auth' });
