@@ -33,8 +33,8 @@ export function Sidebar() {
 
   return (
     <aside
-      className="flex flex-col h-screen bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] transition-all duration-[var(--transition-base)]"
-      style={{ width: collapsed ? 64 : 240 }}
+      className="es-sidebar flex flex-col h-screen shrink-0 overflow-hidden transition-all"
+      style={{ width: collapsed ? 64 : 240, minWidth: collapsed ? 64 : 240 }}
     >
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 py-4 border-b border-[var(--border-subtle)]">

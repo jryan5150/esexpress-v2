@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@700;800&amp;family=Space+Grotesk:wght@500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .data-mono { font-family: 'IBM Plex Mono', monospace; }
+        .ui-outfit { font-family: 'Outfit', sans-serif; }
+        .label-grotesk { font-family: 'Space Grotesk', sans-serif; }
+        .headline-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom scrollbar for industrial feel */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #090e1a; }
+        ::-webkit-scrollbar-thumb { background: #f0692c; border-radius: 2px; }
+        
+        .glass-panel {
+            background: rgba(52, 57, 71, 0.8);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-surface-variant": "#e0c0b4",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-low": "#161b28",
+                        "on-primary-fixed": "#370e00",
+                        "inverse-surface": "#dee2f4",
+                        "on-tertiary": "#00344a",
+                        "primary": "#ffb599",
+                        "outline-variant": "#594239",
+                        "on-error": "#690005",
+                        "surface-bright": "#343947",
+                        "surface-variant": "#303443",
+                        "tertiary-fixed-dim": "#7cd0ff",
+                        "surface": "#0e1320",
+                        "on-secondary-fixed": "#151b2e",
+                        "surface-container": "#1a1f2d",
+                        "on-primary": "#5a1c00",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#009dd4",
+                        "outline": "#a88a80",
+                        "on-secondary-container": "#afb4cd",
+                        "inverse-primary": "#a63b00",
+                        "surface-container-high": "#252a37",
+                        "secondary-container": "#40465b",
+                        "background": "#0e1320",
+                        "on-secondary": "#2a3043",
+                        "inverse-on-surface": "#2b303e",
+                        "secondary": "#c0c5df",
+                        "on-secondary-fixed-variant": "#40465b",
+                        "tertiary": "#7cd0ff",
+                        "primary-container": "#f0692c",
+                        "secondary-fixed-dim": "#c0c5df",
+                        "on-primary-container": "#511900",
+                        "tertiary-fixed": "#c4e7ff",
+                        "on-tertiary-fixed-variant": "#004c69",
+                        "surface-dim": "#0e1320",
+                        "on-tertiary-container": "#002f43",
+                        "on-background": "#dee2f4",
+                        "surface-tint": "#ffb599",
+                        "surface-container-lowest": "#090e1a",
+                        "on-surface": "#dee2f4",
+                        "surface-container-highest": "#303443",
+                        "primary-fixed-dim": "#ffb599",
+                        "primary-fixed": "#ffdbce",
+                        "on-tertiary-fixed": "#001e2c",
+                        "secondary-fixed": "#dce1fc",
+                        "on-primary-fixed-variant": "#7f2b00",
+                        "error": "#ffb4ab"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Space Grotesk"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface ui-outfit min-h-screen overflow-x-hidden">
+<!-- SIDE NAVBAR (Collapsed by default per user request, but structured via JSON) -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-slate-900 flex flex-col p-4 z-50 transition-all duration-300 -translate-x-48 hover:translate-x-0 group">
+<div class="flex items-center gap-3 mb-8 px-2 overflow-hidden">
+<span class="text-xl font-bold tracking-tight text-[#f0692c] headline-jakarta whitespace-nowrap">EsExpress</span>
+<span class="text-[10px] uppercase tracking-widest text-slate-500 label-grotesk opacity-0 group-hover:opacity-100 transition-opacity">Dispatch Console</span>
+</div>
+<nav class="flex-1 space-y-2">
+<!-- Exception Feed (ACTIVE) -->
+<a class="flex items-center gap-4 px-3 py-2 bg-slate-800 text-[#f0692c] font-semibold rounded-sm border-l-4 border-[#f0692c] scale-[0.99] transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+<span class="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">Exception Feed</span>
+</a>
+<!-- BOL Queue -->
+<a class="flex items-center gap-4 px-3 py-2 text-slate-400 hover:text-slate-100 hover:bg-slate-800/30 transition-colors rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="queue_play_next">queue_play_next</span>
+<span class="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">BOL Queue</span>
+</a>
+</nav>
+<div class="mt-auto space-y-4 bg-slate-800/50 p-2 rounded-sm">
+<!-- Operator Dots -->
+<div class="flex flex-col gap-2 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="text-xs text-slate-300">Stephanie</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="text-xs text-slate-300">Scout</span>
+</div>
+</div>
+<!-- Footer Links -->
+<div class="grid grid-cols-1 gap-1">
+<button class="flex items-center gap-4 px-2 py-1.5 text-slate-400 hover:text-slate-100 transition-colors text-sm">
+<span class="material-symbols-outlined text-xs" data-icon="sync">sync</span>
+<span class="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Sync: 2m ago</span>
+</button>
+<button class="flex items-center gap-4 px-2 py-1.5 text-slate-400 hover:text-slate-100 transition-colors text-sm">
+<span class="material-symbols-outlined text-xs" data-icon="dark_mode">dark_mode</span>
+<span class="opacity-0 group-hover:opacity-100 transition-opacity">Theme Toggle</span>
+</button>
+</div>
+<div class="flex items-center gap-3 p-2 pt-4 border-t border-slate-700/50">
+<div class="w-8 h-8 rounded-full bg-slate-700 overflow-hidden shrink-0">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="close-up portrait of a professional dispatcher in a dark office setting with soft ambient blue light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcNsvb9yYAGGY5X10efHzKXcj2VGqwZq3SanOuXXPwYcCd6qPE8PqjPLJOzew5TFGjIIFZ5K0nhvkjHn3AiIFVroeCeuMcr_eYS9zjhEq4VouTD7rmW8JIe5l5-IWz095BGY7aoFZh2doHDIrF5cOFpkPo6aJFC9a3C856zAXg6FPfiGj530_rfplY9LEz4hZYSpT5hQJJQzhR6jfUwSZrb4fw8_42lPqRu52b_Im0226E95Q44B_vRWzyKr9j1gO5vrstHJT7xEob"/>
+</div>
+<div class="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity overflow-hidden">
+<span class="text-xs font-bold text-slate-200">Admin Dispatch</span>
+<span class="text-[10px] text-slate-500 uppercase">Operator #402</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- TOP NAVBAR (JSON Based) -->
+<header class="fixed top-0 left-0 w-full h-14 pl-20 md:pl-24 pr-6 flex justify-between items-center bg-slate-950/80 backdrop-blur-md z-40 transition-all duration-200 ease-in-out">
+<div class="flex items-center gap-8">
+<h1 class="headline-jakarta font-extrabold text-2xl tracking-tighter text-on-surface">EXCEPTION FEED</h1>
+<div class="hidden lg:flex items-center gap-4">
+<span class="text-[10px] label-grotesk text-slate-500 uppercase tracking-widest bg-surface-container-high px-2 py-0.5 rounded-sm">Operational Status: High Alert</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-sm group focus-within:ring-1 ring-[#f0692c]">
+<span class="material-symbols-outlined text-slate-500 text-sm" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm text-slate-200 placeholder:text-slate-600 w-48 transition-all" placeholder="Search BOL or Well..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-400 hover:text-[#f0692c] cursor-pointer" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-slate-400 hover:text-[#f0692c] cursor-pointer" data-icon="settings">settings</span>
+</div>
+</div>
+</header>
+<!-- MAIN CONTENT CANVAS -->
+<main class="pt-24 pl-20 md:pl-24 pr-6 pb-12 max-w-7xl mx-auto space-y-10">
+<!-- SECTION 1: SYSTEM HANDLED SUMMARY -->
+<section class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+<div class="lg:col-span-3 bg-gradient-to-br from-emerald-950/30 to-slate-900 p-6 rounded-lg border-l-4 border-emerald-500 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-8 opacity-5">
+<span class="material-symbols-outlined text-9xl" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+<div class="space-y-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-400" data-icon="verified">verified</span>
+<h2 class="label-grotesk text-emerald-400 uppercase tracking-widest text-sm">System Handled Summary</h2>
+</div>
+<div class="flex flex-wrap gap-8">
+<div class="space-y-1">
+<p class="text-[10px] label-grotesk text-slate-500 uppercase tracking-wider">Loads Auto-Matched</p>
+<p class="headline-jakarta text-4xl text-on-surface data-mono">47</p>
+</div>
+<div class="space-y-1">
+<p class="text-[10px] label-grotesk text-slate-500 uppercase tracking-wider">BOLs Attached</p>
+<p class="headline-jakarta text-4xl text-on-surface data-mono">38</p>
+</div>
+<div class="space-y-1">
+<p class="text-[10px] label-grotesk text-slate-500 uppercase tracking-wider">Photos Linked</p>
+<p class="headline-jakarta text-4xl text-on-surface data-mono">23</p>
+</div>
+</div>
+</div>
+<div class="flex items-center">
+<button class="bg-primary-container text-on-primary-container px-6 py-3 rounded-sm font-bold label-grotesk flex items-center gap-2 hover:scale-[1.02] transition-transform shadow-lg shadow-orange-950/20">
+<span>Review &amp; Approve</span>
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Contextual Metric Card -->
+<div class="bg-surface-container p-6 rounded-lg flex flex-col justify-between">
+<div class="space-y-1">
+<span class="text-[10px] label-grotesk text-slate-500 uppercase">Automation Rate</span>
+<h3 class="headline-jakarta text-3xl text-emerald-400">88.4%</h3>
+</div>
+<div class="w-full bg-slate-800 h-1.5 rounded-full mt-4">
+<div class="bg-emerald-500 h-full rounded-full" style="width: 88.4%"></div>
+</div>
+<p class="text-xs text-slate-500 mt-2 ui-outfit">+4.2% from last shift</p>
+</div>
+</section>
+<!-- SECTION 2: NEEDS YOU LIST -->
+<section class="space-y-6">
+<div class="flex items-center justify-between border-b border-outline-variant/15 pb-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[#f0692c]" data-icon="sort">sort</span>
+<h2 class="label-grotesk text-slate-300 uppercase tracking-widest text-sm">Needs You: Priority Exceptions</h2>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500 label-grotesk uppercase">Sorted by: Exception Count</span>
+<span class="material-symbols-outlined text-slate-500 text-sm" data-icon="arrow_drop_down">arrow_drop_down</span>
+</div>
+</div>
+<div class="space-y-3">
+<!-- ROW: Pendleton 1H -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all border-l-[3px] border-error flex flex-col lg:flex-row lg:items-center justify-between p-4 gap-4">
+<div class="flex items-center gap-6 min-w-[240px]">
+<div class="space-y-1">
+<h3 class="headline-jakarta text-lg text-on-surface">Pendleton 1H</h3>
+<div class="flex items-center gap-2 text-slate-500 text-xs data-mono">
+<span class="material-symbols-outlined text-[10px]" data-icon="location_on">location_on</span>
+                                Basin 04-A
+                            </div>
+</div>
+<div class="bg-slate-800/50 px-3 py-1 rounded-sm">
+<span class="data-mono text-xl font-semibold text-slate-200">51</span>
+<span class="text-[10px] text-slate-500 ml-1 uppercase">Loads</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2 flex-1 justify-center px-4">
+<div class="bg-emerald-950/20 px-3 py-1 rounded-full border border-emerald-900/30 flex items-center gap-2">
+<span class="text-emerald-400 data-mono font-bold text-sm">47</span>
+<span class="text-[10px] text-emerald-300/60 uppercase font-semibold label-grotesk">Ready</span>
+</div>
+<div class="bg-amber-950/20 px-3 py-1 rounded-full border border-amber-900/30 flex items-center gap-2">
+<span class="text-amber-400 data-mono font-bold text-sm">3</span>
+<span class="text-[10px] text-amber-300/60 uppercase font-semibold label-grotesk">Review</span>
+</div>
+<div class="bg-rose-950/30 px-3 py-1 rounded-full border border-rose-900/50 flex items-center gap-2">
+<span class="text-rose-400 data-mono font-bold text-sm">1</span>
+<span class="text-[10px] text-rose-300/60 uppercase font-semibold label-grotesk">Missing</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-slate-700 overflow-hidden border border-emerald-500/50">
+<img alt="Stephanie" class="w-full h-full object-cover" data-alt="professional woman in corporate attire with warm studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBC4vFGF7EVrxKS9lDgTEsKpQNPfhOJYfj11-msVX-1qns_h9DfkLrutdh-v-aK72s6vxLN0KbtypAUXVLDZZeBaXJG-ihjIwIH-ZU6vybzek6ge2YBp4YqvPe4RTYq4mVZiP2TpHJq2npZd8NlTGL1CgRJJz_Ja662Ar0tLRf_Qh3tQW7eCg8MBBJZV_-EMN1DkkI5nXtd1KsA_s7lX3qsLeUwkF73oPTmQrcA9YFq4-okCdWV3hePPutz_Oh4QG-lYoEhN38AB8sU"/>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] text-slate-400 uppercase font-bold label-grotesk">Stephanie</span>
+<span class="text-[9px] text-slate-500 data-mono">Active 12m</span>
+</div>
+</div>
+<button class="bg-surface-container-highest p-2 rounded-sm text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- ROW: Browning SilverHill -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all border-l-[3px] border-error flex flex-col lg:flex-row lg:items-center justify-between p-4 gap-4">
+<div class="flex items-center gap-6 min-w-[240px]">
+<div class="space-y-1">
+<h3 class="headline-jakarta text-lg text-on-surface">Browning SilverHill</h3>
+<div class="flex items-center gap-2 text-slate-500 text-xs data-mono">
+<span class="material-symbols-outlined text-[10px]" data-icon="location_on">location_on</span>
+                                Permian 12-X
+                            </div>
+</div>
+<div class="bg-slate-800/50 px-3 py-1 rounded-sm">
+<span class="data-mono text-xl font-semibold text-slate-200">28</span>
+<span class="text-[10px] text-slate-500 ml-1 uppercase">Loads</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2 flex-1 justify-center px-4">
+<div class="bg-emerald-950/20 px-3 py-1 rounded-full border border-emerald-900/30 flex items-center gap-2">
+<span class="text-emerald-400 data-mono font-bold text-sm">22</span>
+<span class="text-[10px] text-emerald-300/60 uppercase font-semibold label-grotesk">Ready</span>
+</div>
+<div class="bg-amber-950/20 px-3 py-1 rounded-full border border-amber-900/30 flex items-center gap-2">
+<span class="text-amber-400 data-mono font-bold text-sm">4</span>
+<span class="text-[10px] text-amber-300/60 uppercase font-semibold label-grotesk">Review</span>
+</div>
+<div class="bg-rose-950/30 px-3 py-1 rounded-full border border-rose-900/50 flex items-center gap-2">
+<span class="text-rose-400 data-mono font-bold text-sm">2</span>
+<span class="text-[10px] text-rose-300/60 uppercase font-semibold label-grotesk">Missing</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-slate-700 overflow-hidden border border-amber-500/50">
+<img alt="Scout" class="w-full h-full object-cover" data-alt="professional man in tech environment with cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKbynsn_adKmr5q8WmEudYehHbla8NBkn6zjgGAb9h-AdCO-obKgaBgrH58SMxz_k-0RrJCwTaXl47DJb21vxqbAjkY6SDH5DBs83rhmnaaBdWHmAQk1JDVtcTSS19D4lQAXR0nLZ0YPf7QXkP-AzKvdCLHnIrtpSewKMga5zyvNeMiK955DcuY5CcdV6YHZAEQqT3mrNVdc8HsAksI1NBr4s1tWhBIM5C1koBMiYOCQhielFrOMbCrYlU0Dp0lJ-a2nWaiDdWXyP6"/>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] text-slate-400 uppercase font-bold label-grotesk">Scout</span>
+<span class="text-[9px] text-slate-500 data-mono">Active 3m</span>
+</div>
+</div>
+<button class="bg-surface-container-highest p-2 rounded-sm text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- ROW: Apache Warwick (OPTIMIZED) -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all border-l-[3px] border-emerald-500 flex flex-col lg:flex-row lg:items-center justify-between p-4 gap-4">
+<div class="flex items-center gap-6 min-w-[240px]">
+<div class="space-y-1">
+<h3 class="headline-jakarta text-lg text-on-surface">Apache Warwick</h3>
+<div class="flex items-center gap-2 text-slate-500 text-xs data-mono">
+<span class="material-symbols-outlined text-[10px]" data-icon="location_on">location_on</span>
+                                Delaware NW
+                            </div>
+</div>
+<div class="bg-slate-800/50 px-3 py-1 rounded-sm">
+<span class="data-mono text-xl font-semibold text-slate-200">12</span>
+<span class="text-[10px] text-slate-500 ml-1 uppercase">Loads</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2 flex-1 justify-center px-4">
+<div class="bg-emerald-950/20 px-3 py-1 rounded-full border border-emerald-900/30 flex items-center gap-2">
+<span class="text-emerald-400 data-mono font-bold text-sm">12</span>
+<span class="text-[10px] text-emerald-300/60 uppercase font-semibold label-grotesk">Ready</span>
+</div>
+<div class="bg-slate-800/30 px-3 py-1 rounded-full border border-slate-700/30 flex items-center gap-2 opacity-30">
+<span class="text-slate-400 data-mono font-bold text-sm">0</span>
+<span class="text-[10px] text-slate-500 uppercase font-semibold label-grotesk">Review</span>
+</div>
+<div class="bg-slate-800/30 px-3 py-1 rounded-full border border-slate-700/30 flex items-center gap-2 opacity-30">
+<span class="text-slate-400 data-mono font-bold text-sm">0</span>
+<span class="text-[10px] text-slate-500 uppercase font-semibold label-grotesk">Missing</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-slate-800 border border-dashed border-slate-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-[10px] text-slate-600" data-icon="person_add">person_add</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] text-slate-600 uppercase font-bold label-grotesk">Unassigned</span>
+<span class="text-[9px] text-slate-700 data-mono">--</span>
+</div>
+</div>
+<button class="bg-surface-container-highest p-2 rounded-sm text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- ASYMMETRIC LOG SECTION -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="md:col-span-2 bg-surface-container-lowest p-6 rounded-lg space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="label-grotesk text-slate-500 uppercase tracking-widest text-xs">Recent Activity Log</h4>
+<span class="text-[10px] text-[#f0692c] font-bold label-grotesk cursor-pointer">View All Logs</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-start gap-4 p-2 hover:bg-slate-800/30 rounded-sm transition-colors">
+<span class="text-[10px] data-mono text-slate-600 pt-0.5">14:22</span>
+<p class="text-sm text-slate-300 ui-outfit">
+<span class="font-bold text-[#f0692c]">Stephanie</span> auto-approved <span class="text-on-surface data-mono">#BOL-8821</span> for Pendleton 1H.
+                        </p>
+</div>
+<div class="flex items-start gap-4 p-2 hover:bg-slate-800/30 rounded-sm transition-colors">
+<span class="text-[10px] data-mono text-slate-600 pt-0.5">14:18</span>
+<p class="text-sm text-slate-300 ui-outfit">
+                            System flagged exception: <span class="text-rose-400 font-bold">MISSING_TICKET</span> on Browning SilverHill.
+                        </p>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-high p-6 rounded-lg flex flex-col justify-between border border-outline-variant/10">
+<div class="space-y-4">
+<h4 class="label-grotesk text-slate-500 uppercase tracking-widest text-xs">Dispatcher Stats</h4>
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<span class="text-xs text-slate-400">Total Exceptions Found</span>
+<span class="data-mono text-xl text-on-surface">12</span>
+</div>
+<div class="flex justify-between items-end">
+<span class="text-xs text-slate-400">Average Resolve Time</span>
+<span class="data-mono text-xl text-on-surface">4m 12s</span>
+</div>
+</div>
+</div>
+<div class="mt-8">
+<div class="h-16 w-full flex items-end gap-1">
+<div class="flex-1 bg-primary-container/20 h-1/2 rounded-t-sm"></div>
+<div class="flex-1 bg-primary-container/40 h-3/4 rounded-t-sm"></div>
+<div class="flex-1 bg-primary-container/60 h-2/3 rounded-t-sm"></div>
+<div class="flex-1 bg-primary-container h-full rounded-t-sm"></div>
+<div class="flex-1 bg-primary-container/80 h-4/5 rounded-t-sm"></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- FAB (Suppressed on this screen per rules if detail focused, but added for "New Load" context from JSON) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary-container text-on-primary-container rounded-sm shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group">
+<span class="material-symbols-outlined text-3xl" data-icon="add">add</span>
+<span class="absolute right-16 bg-slate-900 text-on-surface px-3 py-1 rounded-sm text-xs font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity border border-outline-variant/20">New Load</span>
+</button>
+</body></html>
