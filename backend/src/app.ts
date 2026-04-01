@@ -3,6 +3,7 @@ import Fastify, {
   type FastifyServerOptions,
 } from "fastify";
 import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
@@ -22,7 +23,18 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   const app = Fastify(opts);
 
   // CORS
-  app.register(cors, { origin: true });
+  app.register(cors, {
+    origin: process.env.CORS_ORIGINS
+      ? process.env.CORS_ORIGINS.split(",").map((s) => s.trim())
+      : ["http://localhost:5173"],
+    credentials: true,
+  });
+
+  // Security headers
+  app.register(helmet, {
+    contentSecurityPolicy: false, // API-only, no HTML rendering
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // allow photo proxy responses
+  });
 
   // Rate limiting (global: 100 req/min, tighter on auth)
   app.register(rateLimit, { max: 100, timeWindow: "1 minute" });

@@ -24,6 +24,15 @@ import type { Database } from "../../../db/client.js";
 import type { ExtractedBolData } from "./bol-extraction.service.js";
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Escape LIKE wildcards to prevent injection via user-supplied strings. */
+function escapeLikePattern(value: string): string {
+  return value.replace(/[%_\\]/g, "\\$&");
+}
+
+// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
@@ -348,7 +357,7 @@ export async function autoMatch(
       .from(loads)
       .where(
         and(
-          ilike(loads.driverName, `%${driverName}%`),
+          ilike(loads.driverName, `%${escapeLikePattern(driverName)}%`),
           between(loads.deliveredOn, dayBefore, dayAfter),
         ),
       );

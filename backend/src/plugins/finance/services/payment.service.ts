@@ -19,6 +19,7 @@ import {
   ValidationError,
   NotFoundError,
   ConflictError,
+  ForbiddenError,
 } from "../../../lib/errors.js";
 import type { Database } from "../../../db/client.js";
 
@@ -519,12 +520,17 @@ export async function transitionStatus(
     .select({
       status: paymentBatches.status,
       statusHistory: paymentBatches.statusHistory,
+      createdBy: paymentBatches.createdBy,
     })
     .from(paymentBatches)
     .where(eq(paymentBatches.id, batchId))
     .limit(1);
 
   if (!batch) throw new NotFoundError("PaymentBatch", batchId);
+
+  if (newStatus === "approved" && batch.createdBy === userId) {
+    throw new ForbiddenError("Cannot approve a batch you created");
+  }
 
   const currentStatus = batch.status ?? "draft";
   if (!isValidTransition(currentStatus, newStatus)) {
