@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/Button";
 
 /* -------------------------------------------------------------------------- */
 /*  CompaniesAdmin — carrier/operator registry CRUD                           */
@@ -40,111 +39,112 @@ export function CompaniesAdmin() {
   );
 
   return (
-    <div className="p-6 pb-12 max-w-7xl mx-auto space-y-6 relative">
+    <div className="p-8 pb-12 max-w-7xl mx-auto relative">
       {/* Header */}
-      <div className="flex justify-between items-end">
+      <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-[var(--text-2xl)] font-bold tracking-tight text-[var(--text-primary)]">
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--es-text-primary)]">
             Companies Management
           </h1>
-          <p className="text-[var(--text-secondary)] mt-1">
+          <p className="text-[var(--es-text-secondary)] mt-1">
             Manage carrier partnerships and operator registry
           </p>
         </div>
-        <Button variant="primary" className="px-6 py-2.5 font-bold">
-          + Add Company
-        </Button>
+        <button className="bg-[var(--es-accent)] text-white px-6 py-2.5 rounded-sm font-bold text-sm flex items-center gap-2 shadow-lg shadow-[var(--es-accent)]/20 hover:scale-[1.02] active:scale-95 transition-all">
+          <span className="material-symbols-outlined text-lg">domain_add</span>
+          Add Company
+        </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-[var(--bg-surface)] p-4 flex gap-4 items-center rounded-t-[var(--radius-md)]">
+      <div className="bg-[#161b28] p-4 mb-px flex gap-4 items-center rounded-t-[var(--es-radius-md)]">
         <div className="flex-1 relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] text-sm">
-            &#x1F50D;
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--es-text-primary)]/30 text-lg">
+            search
           </span>
           <input
-            className="w-full bg-[var(--bg-overlay)] border-none rounded-[var(--radius-sm)] pl-10 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:ring-1 focus:ring-[var(--accent)]"
+            className="w-full bg-[var(--es-bg-overlay)]/50 border-none rounded-sm pl-10 text-sm text-[var(--es-text-primary)] placeholder:text-[var(--es-text-primary)]/20 focus:ring-1 focus:ring-[var(--es-accent)]/50"
             placeholder="Search by name, contact, or location..."
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Button
-          variant="ghost"
-          className="text-[var(--text-xs)] uppercase tracking-widest font-bold"
-        >
-          Filter
-        </Button>
-        <Button
-          variant="ghost"
-          className="text-[var(--text-xs)] uppercase tracking-widest font-bold"
-        >
-          Export
-        </Button>
+        <div className="flex gap-2">
+          <button className="bg-[var(--es-bg-elevated)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--es-text-secondary)] hover:text-[var(--es-text-primary)] flex items-center gap-2 transition-colors">
+            <span className="material-symbols-outlined text-sm">
+              filter_alt
+            </span>
+            Filter
+          </button>
+          <button className="bg-[var(--es-bg-elevated)] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[var(--es-text-secondary)] hover:text-[var(--es-text-primary)] flex items-center gap-2 transition-colors">
+            <span className="material-symbols-outlined text-sm">download</span>
+            Export
+          </button>
+        </div>
       </div>
 
       {/* Table */}
-      <div className="bg-[var(--bg-surface)] overflow-hidden rounded-b-[var(--radius-md)]">
+      <div className="bg-[#161b28] overflow-hidden rounded-b-[var(--es-radius-md)]">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[var(--bg-elevated)] text-[var(--text-tertiary)] text-[10px] uppercase tracking-[0.2em] font-bold">
-              <th className="px-6 py-4 border-b border-[var(--border-subtle)]">
+            <tr className="bg-[var(--es-bg-elevated)]/50 text-[var(--es-text-tertiary)] text-[10px] uppercase tracking-[0.2em] font-bold">
+              <th className="px-6 py-4 border-b border-[var(--es-bg-base)]/50">
                 Company Name
               </th>
-              <th className="px-6 py-4 border-b border-[var(--border-subtle)]">
+              <th className="px-6 py-4 border-b border-[var(--es-bg-base)]/50">
                 Type
               </th>
-              <th className="px-6 py-4 border-b border-[var(--border-subtle)]">
+              <th className="px-6 py-4 border-b border-[var(--es-bg-base)]/50">
                 Primary Contact
               </th>
-              <th className="px-6 py-4 border-b border-[var(--border-subtle)]">
+              <th className="px-6 py-4 border-b border-[var(--es-bg-base)]/50">
                 Phone
               </th>
-              <th className="px-6 py-4 border-b border-[var(--border-subtle)]">
+              <th className="px-6 py-4 border-b border-[var(--es-bg-base)]/50">
                 Status
               </th>
-              <th className="px-6 py-4 border-b border-[var(--border-subtle)] text-right">
+              <th className="px-6 py-4 border-b border-[var(--es-bg-base)]/50 text-right">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--border-subtle)]">
+          <tbody className="divide-y divide-[var(--es-bg-base)]/30">
             {filtered.map((company) => {
               const isFocused = selectedId === company.id;
               const typeColor =
                 company.type === "operator"
-                  ? "text-[var(--accent)]"
-                  : "text-[var(--status-info)]";
+                  ? "text-[#ffb599]"
+                  : "text-[#bfc5e3]";
               const typeDot =
-                company.type === "operator"
-                  ? "bg-[var(--accent)]"
-                  : "bg-[var(--status-info)]";
+                company.type === "operator" ? "bg-[#ffb599]" : "bg-[#bfc5e3]";
 
               return (
                 <tr
                   key={company.id}
                   className={`group transition-colors cursor-pointer ${
                     isFocused
-                      ? "border-l-4 border-[var(--accent)] bg-[var(--bg-elevated)]"
-                      : "border-l-4 border-transparent hover:bg-[var(--bg-elevated)]"
+                      ? "border-l-4 border-[var(--es-accent)] bg-[var(--es-bg-elevated)]/40"
+                      : "border-l-4 border-transparent hover:bg-[var(--es-bg-elevated)]/40"
                   }`}
                   onClick={() => setSelectedId(company.id)}
                 >
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-[var(--radius-sm)] bg-[var(--bg-overlay)] flex items-center justify-center text-sm font-bold text-[var(--text-secondary)]">
-                        {company.name
-                          .split(" ")
-                          .map((w) => w[0])
-                          .slice(0, 2)
-                          .join("")}
+                      <div className="w-10 h-10 rounded-[var(--es-radius-sm)] bg-[var(--es-bg-overlay)] flex items-center justify-center">
+                        <span
+                          className={`material-symbols-outlined ${isFocused ? "text-[var(--es-accent)]" : "text-[var(--es-text-tertiary)]"}`}
+                        >
+                          {company.type === "operator"
+                            ? "factory"
+                            : "local_shipping"}
+                        </span>
                       </div>
                       <div>
-                        <p className="font-bold text-[var(--text-primary)]">
+                        <p className="font-bold text-[var(--es-text-primary)]">
                           {company.name}
                         </p>
-                        <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider font-[var(--font-mono)]">
+                        <p className="text-[10px] text-[var(--es-text-tertiary)] uppercase tracking-wider font-[var(--es-font-mono)]">
                           ID: {company.id.toUpperCase()}
                         </p>
                       </div>
@@ -152,16 +152,16 @@ export function CompaniesAdmin() {
                   </td>
                   <td className="px-6 py-5">
                     <span
-                      className={`bg-[var(--bg-overlay)] px-3 py-1 rounded-full text-[10px] font-bold tracking-tight flex items-center w-fit gap-1.5 ${typeColor}`}
+                      className={`bg-[var(--es-bg-overlay)] px-3 py-1 rounded-full text-[10px] font-bold tracking-tighter flex items-center w-fit gap-1.5 ${typeColor}`}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full ${typeDot}`} />
                       {company.type.toUpperCase()}
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-sm text-[var(--text-primary)] font-medium">
+                  <td className="px-6 py-5 text-sm text-[var(--es-text-primary)] font-medium">
                     {company.contact}
                   </td>
-                  <td className="px-6 py-5 text-sm font-[var(--font-mono)] text-[var(--text-secondary)]">
+                  <td className="px-6 py-5 text-sm font-[var(--es-font-mono)] text-[var(--es-text-secondary)]">
                     {company.phone}
                   </td>
                   <td className="px-6 py-5">
@@ -169,23 +169,23 @@ export function CompaniesAdmin() {
                       <div
                         className={`w-8 h-4 rounded-full relative ${
                           company.active
-                            ? "bg-[var(--status-ready-dim)]"
-                            : "bg-[var(--bg-overlay)]"
+                            ? "bg-[var(--es-ready-dim)]"
+                            : "bg-[var(--es-bg-overlay)]"
                         }`}
                       >
                         <div
                           className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${
                             company.active
-                              ? "right-0.5 bg-[var(--status-ready)]"
-                              : "left-0.5 bg-[var(--text-tertiary)]"
+                              ? "right-0.5 bg-[var(--es-ready)]"
+                              : "left-0.5 bg-[var(--es-text-tertiary)]"
                           }`}
                         />
                       </div>
                       <span
                         className={`text-[10px] font-bold uppercase ${
                           company.active
-                            ? "text-[var(--status-ready)]"
-                            : "text-[var(--text-tertiary)]"
+                            ? "text-[var(--es-ready)]"
+                            : "text-[var(--es-text-tertiary)]"
                         }`}
                       >
                         {company.active ? "ACTIVE" : "INACTIVE"}
@@ -193,8 +193,10 @@ export function CompaniesAdmin() {
                     </div>
                   </td>
                   <td className="px-6 py-5 text-right">
-                    <button className="text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors">
-                      &#x22EE;
+                    <button className="text-[var(--es-text-tertiary)] hover:text-[var(--es-accent)] transition-colors">
+                      <span className="material-symbols-outlined">
+                        more_vert
+                      </span>
                     </button>
                   </td>
                 </tr>
@@ -205,18 +207,22 @@ export function CompaniesAdmin() {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-[var(--text-tertiary)] px-2">
-        <p>
-          Showing 1-{filtered.length} of {MOCK_COMPANIES.length} Companies
-        </p>
+      <div className="flex justify-between items-center text-[10px] font-[var(--es-font-mono)] uppercase tracking-widest text-[var(--es-text-tertiary)] px-2 mt-4">
+        <p>Showing 1-10 of 42 Companies</p>
         <div className="flex gap-2">
-          <button className="bg-[var(--bg-surface)] px-3 py-1 hover:text-[var(--accent)] transition-colors border border-[var(--border-subtle)]">
+          <button className="bg-[var(--es-bg-surface)] px-3 py-1 hover:text-[var(--es-accent)] transition-colors border border-[var(--es-bg-elevated)]">
             Prev
           </button>
-          <button className="bg-[var(--bg-elevated)] text-[var(--accent)] px-3 py-1 border border-[var(--accent-dim)]">
+          <button className="bg-[var(--es-bg-elevated)] text-[var(--es-accent)] px-3 py-1 border border-[var(--es-accent)]/20">
             1
           </button>
-          <button className="bg-[var(--bg-surface)] px-3 py-1 hover:text-[var(--accent)] transition-colors border border-[var(--border-subtle)]">
+          <button className="bg-[var(--es-bg-surface)] px-3 py-1 hover:text-[var(--es-accent)] transition-colors border border-[var(--es-bg-elevated)]">
+            2
+          </button>
+          <button className="bg-[var(--es-bg-surface)] px-3 py-1 hover:text-[var(--es-accent)] transition-colors border border-[var(--es-bg-elevated)]">
+            3
+          </button>
+          <button className="bg-[var(--es-bg-surface)] px-3 py-1 hover:text-[var(--es-accent)] transition-colors border border-[var(--es-bg-elevated)]">
             Next
           </button>
         </div>
@@ -224,33 +230,31 @@ export function CompaniesAdmin() {
 
       {/* Detail Drawer */}
       {selected && (
-        <aside className="fixed inset-y-0 right-0 w-[420px] bg-[var(--bg-surface)] shadow-2xl border-l border-[var(--border-subtle)] z-50 flex flex-col">
+        <aside className="fixed inset-y-0 right-0 w-[450px] bg-[var(--es-bg-surface)] shadow-2xl border-l border-[var(--es-bg-overlay)] z-50 flex flex-col">
           {/* Drawer Header */}
-          <div className="p-8 border-b border-[var(--border-subtle)]">
+          <div className="p-8 border-b border-[var(--es-bg-overlay)]">
             <div className="flex justify-between items-start mb-6">
-              <div className="w-16 h-16 rounded-[var(--radius-sm)] bg-[var(--bg-overlay)] flex items-center justify-center text-2xl font-bold text-[var(--accent)]">
-                {selected.name
-                  .split(" ")
-                  .map((w) => w[0])
-                  .slice(0, 2)
-                  .join("")}
+              <div className="w-16 h-16 rounded-sm bg-[var(--es-bg-overlay)] flex items-center justify-center">
+                <span className="material-symbols-outlined text-4xl text-[var(--es-accent)]">
+                  {selected.type === "operator" ? "factory" : "local_shipping"}
+                </span>
               </div>
               <button
-                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                className="text-[var(--es-text-tertiary)] hover:text-[var(--es-text-primary)] transition-colors"
                 onClick={() => setSelectedId(null)}
               >
-                &times;
+                <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            <h3 className="text-2xl font-bold text-[var(--text-primary)]">
+            <h3 className="text-2xl font-bold text-[var(--es-text-primary)]">
               {selected.name}
             </h3>
             <div className="flex gap-2 mt-2">
-              <span className="bg-[var(--accent-dim)] text-[var(--accent)] text-[10px] font-bold px-2 py-0.5 rounded-[var(--radius-sm)]">
+              <span className="bg-[#ffb599]/10 text-[#ffb599] text-[10px] font-bold px-2 py-0.5 rounded-sm">
                 {selected.type.toUpperCase()}
               </span>
               {selected.active && (
-                <span className="bg-[var(--status-ready-dim)] text-[var(--status-ready)] text-[10px] font-bold px-2 py-0.5 rounded-[var(--radius-sm)]">
+                <span className="bg-[var(--es-ready)]/10 text-[var(--es-ready)] text-[10px] font-bold px-2 py-0.5 rounded-sm">
                   VERIFIED
                 </span>
               )}
@@ -261,23 +265,23 @@ export function CompaniesAdmin() {
           <div className="flex-1 overflow-auto p-8 space-y-10">
             {/* Addresses */}
             <section>
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-4">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--es-text-primary)]/30 mb-4">
                 Location &amp; Address
               </h4>
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-[10px] font-bold text-[var(--text-tertiary)] uppercase mb-1">
+                  <label className="block text-[10px] font-bold text-[var(--es-text-primary)]/40 uppercase mb-1">
                     HQ Address
                   </label>
-                  <p className="text-sm leading-relaxed text-[var(--text-primary)]">
+                  <p className="text-sm leading-relaxed text-[var(--es-text-primary)]">
                     {selected.hqAddress}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-[var(--text-tertiary)] uppercase mb-1">
+                  <label className="block text-[10px] font-bold text-[var(--es-text-primary)]/40 uppercase mb-1">
                     Billing Address
                   </label>
-                  <p className="text-sm leading-relaxed text-[var(--text-primary)]">
+                  <p className="text-sm leading-relaxed text-[var(--es-text-primary)]">
                     {selected.billingAddress}
                   </p>
                 </div>
@@ -286,27 +290,39 @@ export function CompaniesAdmin() {
 
             {/* Secondary Contacts */}
             <section>
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-4">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--es-text-primary)]/30 mb-4">
                 Secondary Contacts
               </h4>
               <div className="space-y-3">
                 {selected.secondaryContacts.map((c) => (
                   <div
                     key={c.initials}
-                    className="bg-[var(--bg-base)] p-4 rounded-[var(--radius-sm)] flex items-center justify-between group hover:bg-[var(--bg-elevated)] transition-colors"
+                    className="bg-[#161b28] p-4 rounded-sm flex items-center justify-between group hover:bg-[var(--es-bg-elevated)] transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[var(--bg-overlay)] flex items-center justify-center text-xs font-bold text-[var(--text-primary)]">
+                      <div className="w-8 h-8 rounded-full bg-[var(--es-bg-overlay)] flex items-center justify-center text-xs font-bold text-[var(--es-text-primary)]">
                         {c.initials}
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-[var(--text-primary)]">
+                        <p className="text-sm font-bold text-[var(--es-text-primary)]">
                           {c.name}
                         </p>
-                        <p className="text-xs text-[var(--text-tertiary)]">
+                        <p className="text-xs text-[var(--es-text-tertiary)]">
                           {c.title}
                         </p>
                       </div>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button className="p-2 bg-[var(--es-bg-overlay)] hover:text-[var(--es-accent)] transition-colors rounded-sm">
+                        <span className="material-symbols-outlined text-sm">
+                          mail
+                        </span>
+                      </button>
+                      <button className="p-2 bg-[var(--es-bg-overlay)] hover:text-[var(--es-accent)] transition-colors rounded-sm">
+                        <span className="material-symbols-outlined text-sm">
+                          call
+                        </span>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -315,24 +331,24 @@ export function CompaniesAdmin() {
 
             {/* Recent Activity */}
             <section>
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-tertiary)] mb-4">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--es-text-primary)]/30 mb-4">
                 Recent Network Activity
               </h4>
-              <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-[var(--border-subtle)]">
+              <div className="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-[var(--es-bg-overlay)]">
                 {selected.recentActivity.map((a, i) => (
                   <div key={i} className="relative">
                     <div
-                      className={`absolute -left-[1.65rem] top-1 w-2.5 h-2.5 rounded-full border-4 border-[var(--bg-surface)] ${
+                      className={`absolute -left-[1.65rem] top-1 w-2.5 h-2.5 rounded-full border-4 border-[var(--es-bg-surface)] ${
                         i === 0
-                          ? "bg-[var(--accent)]"
-                          : "bg-[var(--text-tertiary)]"
+                          ? "bg-[#ffb599]"
+                          : "bg-[var(--es-text-primary)]/20"
                       }`}
                     />
-                    <p className="text-xs font-bold text-[var(--text-primary)]">
+                    <p className="text-xs font-bold text-[var(--es-text-primary)]">
                       {a.text}
                     </p>
-                    <p className="text-[10px] font-[var(--font-mono)] text-[var(--text-tertiary)]">
-                      {a.date}
+                    <p className="text-[10px] font-[var(--es-font-mono)] text-[var(--es-text-primary)]/30">
+                      {a.date.replace(" - ", " \u00B7 ")}
                     </p>
                   </div>
                 ))}
@@ -341,19 +357,13 @@ export function CompaniesAdmin() {
           </div>
 
           {/* Drawer Footer */}
-          <div className="p-6 bg-[var(--bg-base)] flex gap-3 border-t border-[var(--border-subtle)]">
-            <Button
-              variant="secondary"
-              className="flex-1 py-3 font-bold text-sm uppercase tracking-widest"
-            >
+          <div className="p-6 bg-[#161b28] flex gap-3">
+            <button className="flex-1 bg-[var(--es-bg-overlay)] text-[var(--es-text-primary)] py-3 rounded-sm font-bold text-sm uppercase tracking-widest hover:brightness-125 transition-all">
               Edit Details
-            </Button>
-            <Button
-              variant="primary"
-              className="flex-1 py-3 font-bold text-sm uppercase tracking-widest"
-            >
+            </button>
+            <button className="flex-1 bg-[var(--es-accent)] text-white py-3 rounded-sm font-bold text-sm uppercase tracking-widest hover:brightness-110 shadow-lg shadow-[var(--es-accent)]/20 transition-all">
               Assign Load
-            </Button>
+            </button>
           </div>
         </aside>
       )}

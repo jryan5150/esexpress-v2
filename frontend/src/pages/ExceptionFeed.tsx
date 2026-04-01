@@ -32,7 +32,7 @@ export function ExceptionFeed() {
       : "0.0";
 
   return (
-    <div className="p-8 pb-16 max-w-7xl mx-auto space-y-8">
+    <div className="p-8 pb-16 max-w-7xl mx-auto space-y-10">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -65,7 +65,18 @@ export function ExceptionFeed() {
 
       {/* System Handled */}
       <section className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-3 es-card-ready p-6 relative overflow-hidden">
+        <div
+          className="lg:col-span-3 p-6 relative overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(6, 78, 59, 0.30) 0%, #0f172a 100%)",
+            borderLeft: "4px solid var(--es-ready)",
+            border: "1px solid rgba(52, 211, 153, 0.15)",
+            borderLeftWidth: "4px",
+            borderLeftColor: "var(--es-ready)",
+            borderRadius: "var(--es-radius-lg)",
+          }}
+        >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-5">
               <div className="flex items-center gap-2">
@@ -79,7 +90,7 @@ export function ExceptionFeed() {
                   System Handled Summary
                 </h2>
               </div>
-              <div className="flex flex-wrap gap-10">
+              <div className="flex flex-wrap gap-8">
                 <Stat
                   label="Loads Auto-Matched"
                   value={feed.systemHandled.loadsMatched}
@@ -96,6 +107,7 @@ export function ExceptionFeed() {
             </div>
             <button
               className="es-btn-accent flex items-center gap-2"
+              style={{ borderRadius: "2px" }}
               onClick={() =>
                 navigate(`/wells/${feed.wellSummaries[0]?.wellId ?? ""}`)
               }
@@ -114,7 +126,7 @@ export function ExceptionFeed() {
               Automation Rate
             </span>
             <h3
-              className="text-3xl font-bold es-mono"
+              className="text-3xl font-bold"
               style={{ color: "var(--es-ready)" }}
             >
               {rate}%
@@ -143,16 +155,16 @@ export function ExceptionFeed() {
       </section>
 
       {/* Needs You */}
-      <section className="space-y-5">
+      <section className="space-y-6">
         <div
           className="flex items-center justify-between pb-4"
-          style={{ borderBottom: "1px solid var(--es-border-subtle)" }}
+          style={{ borderBottom: "1px solid rgba(89, 66, 57, 0.15)" }}
         >
           <div className="flex items-center gap-3">
             <span style={{ color: "var(--es-accent)" }}>▲</span>
             <h2
               className="uppercase tracking-widest text-sm font-semibold"
-              style={{ color: "var(--es-text-secondary)" }}
+              style={{ color: "#cbd5e1" }}
             >
               Needs You: Priority Exceptions
             </h2>
@@ -186,16 +198,19 @@ export function ExceptionFeed() {
               Recent Activity Log
             </h4>
             <span
-              className="text-xs font-bold cursor-pointer"
+              className="text-[10px] font-bold cursor-pointer"
               style={{ color: "var(--es-accent)" }}
             >
               View All Logs
             </span>
           </div>
           {MOCK_ACTIVITY.map((e, i) => (
-            <div key={i} className="flex items-start gap-4 p-2.5 rounded">
+            <div
+              key={i}
+              className="flex items-start gap-4 p-2 hover:bg-[rgba(30,41,59,0.3)] rounded-sm transition-colors"
+            >
               <span
-                className="text-xs pt-0.5 shrink-0 es-mono"
+                className="text-[10px] pt-0.5 shrink-0 es-mono"
                 style={{ color: "var(--es-text-tertiary)" }}
               >
                 {e.time}
@@ -208,7 +223,14 @@ export function ExceptionFeed() {
             </div>
           ))}
         </div>
-        <div className="es-surface-elevated p-6 flex flex-col justify-between">
+        <div
+          className="p-6 flex flex-col justify-between"
+          style={{
+            background: "var(--es-bg-elevated)",
+            border: "1px solid rgba(89, 66, 57, 0.1)",
+            borderRadius: "var(--es-radius-lg)",
+          }}
+        >
           <div className="space-y-5">
             <h4
               className="text-xs uppercase tracking-widest"
@@ -249,7 +271,7 @@ export function ExceptionFeed() {
             {[50, 75, 66, 100, 80].map((h, i) => (
               <div
                 key={i}
-                className="flex-1 rounded-t"
+                className="flex-1 rounded-t-sm"
                 style={{
                   height: `${h}%`,
                   background: "var(--es-accent)",
@@ -263,7 +285,7 @@ export function ExceptionFeed() {
 
       {/* FAB */}
       <button
-        className="fixed bottom-8 right-8 w-14 h-14 rounded-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 cursor-pointer"
+        className="fixed bottom-8 right-8 w-14 h-14 rounded-sm flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 cursor-pointer"
         style={{
           background: "var(--es-accent)",
           color: "var(--es-text-inverse)",
@@ -279,9 +301,9 @@ export function ExceptionFeed() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div>
+    <div className="space-y-1">
       <p
-        className="text-xs uppercase tracking-wider"
+        className="text-[10px] uppercase tracking-wider"
         style={{ color: "var(--es-text-tertiary)" }}
       >
         {label}
@@ -303,33 +325,34 @@ function WellRow({
   well: WellSummary;
   onClick: () => void;
 }) {
-  const cls = `es-well-row ${well.reviewCount + well.missingCount > 0 ? "es-well-row-error" : "es-well-row-ready"} flex flex-col lg:flex-row lg:items-center justify-between p-5 gap-4`;
+  const hasExceptions = well.reviewCount + well.missingCount > 0;
   return (
     <div
-      className={cls}
+      className={`bg-[var(--es-bg-surface)] hover:bg-[var(--es-bg-elevated)] transition-all border-l-[3px] ${hasExceptions ? "border-[var(--es-error)]" : "border-[var(--es-ready)]"} flex flex-col lg:flex-row lg:items-center justify-between p-4 gap-4 cursor-pointer group`}
       onClick={onClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && onClick()}
     >
-      <div className="flex items-center gap-5 min-w-[220px]">
-        <div>
+      <div className="flex items-center gap-6 min-w-[240px]">
+        <div className="space-y-1">
           <h3
-            className="text-lg font-semibold"
+            className="text-lg font-bold"
             style={{ color: "var(--es-text-primary)" }}
           >
             {well.wellName}
           </h3>
-          <span
-            className="text-xs es-mono"
+          <div
+            className="flex items-center gap-2 text-xs es-mono"
             style={{ color: "var(--es-text-tertiary)" }}
           >
-            📍 Basin
-          </span>
+            <span style={{ fontSize: "10px" }}>&#x1F4CD;</span>
+            Basin
+          </div>
         </div>
         <div
-          className="px-3 py-1.5 rounded"
-          style={{ background: "var(--es-bg-elevated)" }}
+          className="px-3 py-1 rounded-sm"
+          style={{ background: "rgba(30, 41, 59, 0.5)" }}
         >
           <span
             className="text-xl font-semibold es-mono"
@@ -338,7 +361,7 @@ function WellRow({
             {well.totalLoads}
           </span>
           <span
-            className="text-xs ml-1.5 uppercase"
+            className="text-[10px] ml-1 uppercase"
             style={{ color: "var(--es-text-tertiary)" }}
           >
             Loads
@@ -346,74 +369,133 @@ function WellRow({
         </div>
       </div>
       <div className="flex flex-wrap gap-2 flex-1 justify-center px-4">
-        <span
-          className={`es-pill es-pill-ready ${well.readyCount === 0 ? "es-pill-dimmed" : ""}`}
-        >
-          {well.readyCount} <span className="text-xs opacity-70">READY</span>
-        </span>
-        <span
-          className={`es-pill es-pill-warning ${well.reviewCount === 0 ? "es-pill-dimmed" : ""}`}
-        >
-          {well.reviewCount} <span className="text-xs opacity-70">REVIEW</span>
-        </span>
-        <span
-          className={`es-pill es-pill-error ${well.missingCount === 0 ? "es-pill-dimmed" : ""}`}
-        >
-          {well.missingCount}{" "}
-          <span className="text-xs opacity-70">MISSING</span>
-        </span>
+        <StatusPill count={well.readyCount} label="Ready" color="ready" />
+        <StatusPill count={well.reviewCount} label="Review" color="warning" />
+        <StatusPill count={well.missingCount} label="Missing" color="error" />
       </div>
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-6">
         {well.operators.length > 0 ? (
           <div className="flex items-center gap-2">
-            <span
-              className="w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ background: well.operators[0].color }}
+            <div
+              className="w-6 h-6 rounded-full overflow-hidden border shrink-0"
+              style={{
+                background: "var(--es-bg-overlay)",
+                borderColor: `${well.operators[0].color}80`,
+              }}
             />
-            <div>
-              <div
-                className="text-xs font-bold uppercase"
+            <div className="flex flex-col">
+              <span
+                className="text-[10px] font-bold uppercase"
                 style={{ color: "var(--es-text-secondary)" }}
               >
                 {well.operators[0].name}
-              </div>
-              <div
+              </span>
+              <span
                 className="es-mono"
-                style={{ color: "var(--es-text-tertiary)", fontSize: "0.6rem" }}
+                style={{ color: "var(--es-text-tertiary)", fontSize: "9px" }}
               >
                 Active {well.operators[0].lastActive}
-              </div>
+              </span>
             </div>
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <span
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs"
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center"
               style={{
+                background: "var(--es-bg-elevated)",
                 border: "1px dashed var(--es-border-default)",
-                color: "var(--es-text-tertiary)",
               }}
             >
-              +
-            </span>
-            <span
-              className="text-xs font-bold uppercase"
-              style={{ color: "var(--es-text-tertiary)" }}
-            >
-              Unassigned
-            </span>
+              <span
+                style={{ color: "var(--es-text-tertiary)", fontSize: "10px" }}
+              >
+                +
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span
+                className="text-[10px] font-bold uppercase"
+                style={{ color: "var(--es-text-tertiary)" }}
+              >
+                Unassigned
+              </span>
+              <span
+                className="es-mono"
+                style={{ color: "var(--es-text-tertiary)", fontSize: "9px" }}
+              >
+                --
+              </span>
+            </div>
           </div>
         )}
-        <span
-          className="p-2 rounded text-sm"
+        <button
+          className="p-2 rounded-sm transition-colors"
           style={{
             background: "var(--es-bg-overlay)",
             color: "var(--es-text-secondary)",
           }}
         >
-          ↗
-        </span>
+          &#x2197;
+        </button>
       </div>
+    </div>
+  );
+}
+
+const STATUS_COLORS = {
+  ready: {
+    bg: "rgba(52, 211, 153, 0.08)",
+    text: "var(--es-ready)",
+    border: "rgba(52, 211, 153, 0.15)",
+    dimText: "var(--es-text-tertiary)",
+  },
+  warning: {
+    bg: "rgba(251, 191, 36, 0.08)",
+    text: "var(--es-warning)",
+    border: "rgba(251, 191, 36, 0.15)",
+    dimText: "var(--es-text-tertiary)",
+  },
+  error: {
+    bg: "rgba(248, 113, 113, 0.1)",
+    text: "var(--es-error)",
+    border: "rgba(248, 113, 113, 0.2)",
+    dimText: "var(--es-text-tertiary)",
+  },
+} as const;
+
+function StatusPill({
+  count,
+  label,
+  color,
+}: {
+  count: number;
+  label: string;
+  color: keyof typeof STATUS_COLORS;
+}) {
+  const c = STATUS_COLORS[color];
+  const isDimmed = count === 0;
+  return (
+    <div
+      className="px-3 py-1 rounded-full flex items-center gap-2"
+      style={{
+        background: isDimmed ? "rgba(30, 41, 59, 0.3)" : c.bg,
+        border: `1px solid ${isDimmed ? "rgba(71, 85, 105, 0.3)" : c.border}`,
+        opacity: isDimmed ? 0.3 : 1,
+      }}
+    >
+      <span
+        className="es-mono font-bold text-sm"
+        style={{ color: isDimmed ? c.dimText : c.text }}
+      >
+        {count}
+      </span>
+      <span
+        className="text-[10px] uppercase font-semibold"
+        style={{ color: isDimmed ? c.dimText : `${c.text}99` }}
+      >
+        {label}
+      </span>
     </div>
   );
 }

@@ -27,7 +27,7 @@ export function WellWorkspace() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-[var(--text-secondary)]">Loading workspace...</p>
+        <p className="text-[var(--es-text-secondary)]">Loading workspace...</p>
       </div>
     );
   }
@@ -43,33 +43,39 @@ export function WellWorkspace() {
   return (
     <div className="flex flex-col h-full relative">
       {/* Top bar: back + well name */}
-      <header className="h-14 flex items-center justify-between px-6 bg-[var(--bg-surface)] border-b border-[var(--border-subtle)] sticky top-0 z-30">
+      <header
+        className="h-14 flex items-center justify-between px-6 sticky top-0 z-30"
+        style={{
+          background: "rgba(8, 11, 20, 0.8)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/")}
-            className="p-2 hover:bg-[var(--bg-elevated)] rounded-[var(--radius-sm)] transition-all text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="p-2 hover:bg-[var(--es-bg-elevated)] rounded-[var(--es-radius-sm)] transition-all text-[var(--es-text-secondary)] hover:text-[var(--es-text-primary)]"
             aria-label="Back to feed"
           >
             &#x2190;
           </button>
           <div className="flex flex-col">
-            <h2 className="text-lg font-bold text-[var(--text-primary)] leading-tight">
+            <h2 className="text-lg font-bold text-[var(--es-text-primary)] leading-tight">
               {workspace.wellName}
             </h2>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[var(--status-ready)] animate-pulse" />
-              <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] uppercase tracking-widest">
+              <span className="w-2 h-2 rounded-full bg-[var(--es-ready)] animate-pulse" />
+              <span className="text-[10px] text-[var(--es-text-tertiary)] uppercase tracking-widest">
                 Operator Dot (Stephanie)
               </span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-[var(--bg-surface)] px-3 py-1.5 rounded-[var(--radius-sm)]">
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)]">
+        <div className="flex items-center gap-2 bg-[var(--es-bg-surface)] px-3 py-1.5 rounded-[var(--es-radius-sm)]">
+          <span className="text-xs text-[var(--es-text-tertiary)]">
             &#x1F50D;
           </span>
           <input
-            className="bg-transparent border-none focus:ring-0 focus:outline-none text-sm p-0 w-32 text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
+            className="bg-transparent border-none focus:ring-0 focus:outline-none text-sm p-0 w-32 text-[var(--es-text-primary)] placeholder:text-[var(--es-text-tertiary)]"
             placeholder="Search load ID..."
             type="text"
           />
@@ -79,26 +85,29 @@ export function WellWorkspace() {
       {/* Scrollable content */}
       <section className="flex-1 overflow-y-auto p-6 pb-28 space-y-6">
         {/* Target Progress Bar */}
-        <div className="bg-[var(--bg-surface)] rounded-[var(--radius-sm)] p-4 relative overflow-hidden">
+        <div className="bg-[var(--es-bg-surface)] rounded-[var(--es-radius-sm)] p-4 relative overflow-hidden">
           <div className="flex justify-between items-end mb-2">
             <div className="space-y-0.5">
-              <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] uppercase tracking-widest">
+              <span className="text-[10px] text-[var(--es-text-tertiary)] uppercase tracking-widest">
                 Well Fulfillment
               </span>
-              <p className="text-sm font-[var(--font-mono)] font-medium text-[var(--text-primary)]">
+              <p className="text-sm font-[var(--es-font-mono)] font-medium text-[var(--es-text-primary)]">
                 Target: {workspace.targetLoads} loads
-                <span className="text-[var(--text-tertiary)] mx-2">|</span>
+                <span className="text-[var(--es-text-tertiary)] mx-2">|</span>
                 Progress: {workspace.currentLoads}/{workspace.targetLoads}
               </p>
             </div>
-            <span className="text-2xl font-bold text-[var(--accent)]">
+            <span className="text-2xl font-extrabold text-[var(--es-accent)]">
               {progressPct}%
             </span>
           </div>
-          <div className="h-2 w-full bg-[var(--bg-overlay)] rounded-full overflow-hidden">
+          <div className="h-2 w-full bg-[var(--es-bg-overlay)] rounded-full overflow-hidden">
             <div
-              className="h-full bg-[var(--accent)] rounded-full transition-all duration-500"
-              style={{ width: `${progressPct}%` }}
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${progressPct}%`,
+                background: "linear-gradient(135deg, #f0692c 0%, #a63b00 100%)",
+              }}
             />
           </div>
         </div>
@@ -106,7 +115,8 @@ export function WellWorkspace() {
         {/* Ready group (collapsed by default) */}
         <div className="group">
           <div
-            className="flex items-center justify-between p-3 bg-[var(--bg-base)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer border-l-4 border-[var(--status-ready)]"
+            className="flex items-center justify-between p-3 bg-[#161b28] hover:bg-[var(--es-bg-surface)] transition-colors cursor-pointer border-l-4"
+            style={{ borderColor: "rgba(52, 211, 153, 0.4)" }}
             onClick={() => setReadyExpanded((prev) => !prev)}
             role="button"
             tabIndex={0}
@@ -115,15 +125,14 @@ export function WellWorkspace() {
             }
           >
             <div className="flex items-center gap-3">
-              <span className="text-[var(--status-ready)]">&#x2713;</span>
-              <span className="font-[var(--font-mono)] text-sm font-medium text-[var(--text-primary)]">
-                &#x2713; {readyLoads.length} ready — all verified
+              <span className="text-[var(--es-ready)] text-lg">{"\u2714"}</span>
+              <span className="font-[var(--es-font-mono)] text-sm font-medium text-[var(--es-text-primary)]">
+                {"\u2713"} {readyLoads.length} ready {"\u2014"} all verified
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <Button
-                variant="secondary"
-                className="px-3 py-1 text-[var(--text-xs)] font-bold uppercase tracking-wider text-[var(--status-ready)] border-[var(--status-ready)]"
+              <button
+                className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--es-ready)] border border-[rgba(52,211,153,0.3)] rounded-[var(--es-radius-sm)] hover:bg-[rgba(52,211,153,0.1)] transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   bulkApprove.mutate({
@@ -133,9 +142,9 @@ export function WellWorkspace() {
                 }}
               >
                 Bulk Approve
-              </Button>
-              <span className="text-[var(--text-tertiary)] transition-transform">
-                {readyExpanded ? "&#x25B2;" : "&#x25BC;"}
+              </button>
+              <span className="text-[var(--es-text-tertiary)] text-sm transition-transform">
+                {readyExpanded ? "\u25B2" : "\u25BC"}
               </span>
             </div>
           </div>
@@ -150,7 +159,7 @@ export function WellWorkspace() {
 
         {/* Need Review group */}
         <div className="space-y-2">
-          <h3 className="text-[var(--text-xs)] font-bold text-[var(--status-warning)] uppercase tracking-widest flex items-center gap-2 px-1">
+          <h3 className="text-xs font-bold text-[var(--es-warning)] uppercase tracking-widest flex items-center gap-2 px-1">
             &#x26A0; Need Review ({reviewLoads.length} Items)
           </h3>
           {reviewLoads.map((load) => (
@@ -166,7 +175,7 @@ export function WellWorkspace() {
 
         {/* Missing Data group */}
         <div className="space-y-2">
-          <h3 className="text-[var(--text-xs)] font-bold text-[var(--accent)] uppercase tracking-widest flex items-center gap-2 px-1">
+          <h3 className="text-xs font-bold text-[var(--es-accent)] uppercase tracking-widest flex items-center gap-2 px-1">
             &#x2716; Missing Data ({missingLoads.length} Item)
           </h3>
           {missingLoads.map((load) => (
@@ -176,29 +185,38 @@ export function WellWorkspace() {
       </section>
 
       {/* Sticky Action Bar */}
-      <footer className="absolute bottom-0 left-0 w-full h-20 bg-[var(--bg-surface)] backdrop-blur-xl border-t border-[var(--border-subtle)] px-8 flex items-center justify-between z-20">
+      <footer
+        className="absolute bottom-0 left-0 w-full h-20 border-t px-8 flex items-center justify-between z-20"
+        style={{
+          background: "rgba(52, 57, 71, 0.8)",
+          backdropFilter: "blur(20px)",
+          borderColor: "rgba(30, 41, 59, 0.5)",
+        }}
+      >
         <div className="flex items-center gap-6">
           <div className="flex flex-col">
-            <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] uppercase tracking-widest">
+            <span className="text-[10px] text-[var(--es-text-tertiary)] uppercase tracking-widest">
               Selected loads
             </span>
-            <span className="text-sm font-[var(--font-mono)] font-bold text-[var(--text-primary)]">
+            <span className="text-sm font-[var(--es-font-mono)] font-bold text-[var(--es-text-primary)]">
               {readyLoads.length} ready for dispatch
             </span>
           </div>
-          <div className="h-8 w-px bg-[var(--border-subtle)]" />
-          <p className="text-[var(--text-xs)] text-[var(--text-secondary)] max-w-xs leading-tight">
+          <div className="h-8 w-px bg-[var(--es-border-default)]" />
+          <p className="text-[11px] text-[var(--es-text-secondary)] max-w-xs leading-tight">
             Proceeding will finalize all verified BOLs and sync data to the
             central ledger.
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="secondary" className="px-6 py-2.5">
+          <button className="px-6 py-2.5 bg-[var(--es-bg-overlay)] text-[var(--es-text-primary)] font-bold rounded-[var(--es-radius-sm)] border border-[rgba(168,138,128,0.3)] hover:bg-[#454a5e] transition-colors">
             Export
-          </Button>
-          <Button
-            variant="primary"
-            className="px-8 py-2.5 font-bold shadow-lg"
+          </button>
+          <button
+            className="px-8 py-2.5 text-white font-bold rounded-[var(--es-radius-sm)] shadow-xl hover:scale-[1.02] active:scale-95 transition-all text-sm"
+            style={{
+              background: "linear-gradient(135deg, #f0692c 0%, #a63b00 100%)",
+            }}
             onClick={() =>
               dispatchToPcs.mutate({
                 wellId: wellId ?? "",
@@ -207,7 +225,7 @@ export function WellWorkspace() {
             }
           >
             Dispatch All Ready ({readyLoads.length})
-          </Button>
+          </button>
         </div>
       </footer>
     </div>
@@ -220,27 +238,27 @@ export function WellWorkspace() {
 
 function ReadyLoadRow({ load }: { load: Load }) {
   return (
-    <div className="bg-[var(--bg-surface)] border-l-4 border-[var(--status-ready)] p-4 flex items-center justify-between gap-6 hover:bg-[var(--bg-elevated)] transition-all">
+    <div className="bg-[var(--es-bg-surface)] border-l-4 border-[var(--es-ready)] p-4 flex items-center justify-between gap-6 hover:bg-[var(--es-bg-elevated)] transition-all">
       <div className="flex items-center gap-6 flex-1">
         <div className="w-16">
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] block">
+          <span className="text-[10px] text-[var(--es-text-tertiary)] block uppercase tracking-wider">
             LOAD ID
           </span>
-          <span className="text-sm font-[var(--font-mono)] font-bold">
+          <span className="text-sm font-[var(--es-font-mono)] font-bold">
             {load.loadNumber}
           </span>
         </div>
         <div className="w-32">
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] block">
+          <span className="text-[10px] text-[var(--es-text-tertiary)] block uppercase tracking-wider">
             DRIVER
           </span>
           <span className="text-sm font-medium">{load.driverName ?? "—"}</span>
         </div>
         <div className="flex-1">
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] block">
+          <span className="text-[10px] text-[var(--es-text-tertiary)] block uppercase tracking-wider">
             STATUS
           </span>
-          <span className="text-sm text-[var(--status-ready)]">Verified</span>
+          <span className="text-sm text-[var(--es-ready)]">Verified</span>
         </div>
       </div>
     </div>
@@ -255,73 +273,75 @@ function ReviewLoadRow({
   onResolve: (resolution: string, value?: string) => void;
 }) {
   return (
-    <div className="bg-[var(--bg-surface)] border-l-4 border-[var(--status-warning)] p-4 flex items-center justify-between gap-6 hover:bg-[var(--bg-elevated)] transition-all">
+    <div className="bg-[var(--es-bg-surface)] border-l-4 border-[var(--es-warning)] p-4 flex items-center justify-between gap-6 hover:bg-[var(--es-bg-elevated)] transition-all">
       <div className="flex items-center gap-6 flex-1">
         <div className="w-16">
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] block">
+          <span className="text-[10px] text-[var(--es-text-tertiary)] block uppercase tracking-wider">
             LOAD ID
           </span>
-          <span className="text-sm font-[var(--font-mono)] font-bold">
+          <span className="text-sm font-[var(--es-font-mono)] font-bold">
             {load.loadNumber}
           </span>
         </div>
         <div className="w-32">
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] block">
+          <span className="text-[10px] text-[var(--es-text-tertiary)] block uppercase tracking-wider">
             DRIVER
           </span>
           <span className="text-sm font-medium">
             {load.driverName ?? (
-              <span className="italic text-[var(--text-tertiary)]">
+              <span className="italic text-[var(--es-text-tertiary)]">
                 No driver data
               </span>
             )}
           </span>
         </div>
         <div className="flex-1">
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] block">
+          <span className="text-[10px] text-[var(--es-text-tertiary)] block uppercase tracking-wider">
             EXCEPTION DETAILS
           </span>
-          <p className="text-sm text-[var(--text-secondary)]">
-            {load.exceptionDetail}
+          <p className="text-sm text-[#e0c0b4]">
+            <ExceptionDetail text={load.exceptionDetail} />
           </p>
         </div>
       </div>
       <div className="flex items-center gap-2">
         {load.verification.weight === "mismatch" ? (
           <>
-            <Button
-              variant="secondary"
-              className="text-[var(--text-xs)]"
+            <button
+              className="px-3 py-2 bg-[var(--es-bg-overlay)] hover:bg-[#454a5e] text-[11px] font-bold rounded-[var(--es-radius-sm)] transition-colors"
               onClick={() => onResolve("accept_propx")}
             >
               Accept PropX
-            </Button>
-            <Button
-              variant="secondary"
-              className="text-[var(--text-xs)]"
+            </button>
+            <button
+              className="px-3 py-2 bg-[var(--es-bg-overlay)] hover:bg-[#454a5e] text-[11px] font-bold rounded-[var(--es-radius-sm)] transition-colors"
               onClick={() => onResolve("use_ticket")}
             >
               Use Ticket
-            </Button>
+            </button>
           </>
         ) : (
           <>
-            <Button
-              variant="secondary"
-              className="text-[var(--text-xs)]"
+            <button
+              className="px-3 py-2 bg-[var(--es-bg-overlay)] hover:bg-[#454a5e] text-[11px] font-bold rounded-[var(--es-radius-sm)] transition-colors"
               onClick={() => onResolve("search_jotform")}
             >
               Search JotForm
-            </Button>
-            <Button
-              variant="secondary"
-              className="text-[var(--text-xs)]"
+            </button>
+            <button
+              className="px-3 py-2 bg-[var(--es-bg-overlay)] hover:bg-[#454a5e] text-[11px] font-bold rounded-[var(--es-radius-sm)] transition-colors"
               onClick={() => onResolve("enter_manually")}
             >
               Enter Manually
-            </Button>
+            </button>
           </>
         )}
+        <button
+          className="p-2 hover:bg-[var(--es-bg-overlay)] rounded-[var(--es-radius-sm)] text-[var(--es-text-tertiary)] transition-colors"
+          aria-label="Edit load"
+        >
+          {"\u270E"}
+        </button>
       </div>
     </div>
   );
@@ -329,41 +349,69 @@ function ReviewLoadRow({
 
 function MissingLoadRow({ load }: { load: Load }) {
   return (
-    <div className="bg-[var(--bg-surface)] border-l-4 border-[var(--accent)] p-4 flex items-center justify-between gap-6 hover:bg-[var(--bg-elevated)] transition-all">
+    <div className="bg-[var(--es-bg-surface)] border-l-4 border-[var(--es-accent)] p-4 flex items-center justify-between gap-6 hover:bg-[var(--es-bg-elevated)] transition-all">
       <div className="flex items-center gap-6 flex-1">
         <div className="w-16">
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] block">
+          <span className="text-[10px] text-[var(--es-text-tertiary)] block uppercase tracking-wider">
             LOAD ID
           </span>
-          <span className="text-sm font-[var(--font-mono)] font-bold">
+          <span className="text-sm font-[var(--es-font-mono)] font-bold">
             {load.loadNumber}
           </span>
         </div>
         <div className="w-32">
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] block">
+          <span className="text-[10px] text-[var(--es-text-tertiary)] block uppercase tracking-wider">
             DRIVER
           </span>
-          <span className="text-sm italic text-[var(--text-tertiary)]">
+          <span className="text-sm italic text-[var(--es-text-tertiary)]">
             Unassigned
           </span>
         </div>
         <div className="flex-1">
-          <span className="text-[var(--text-xs)] text-[var(--text-tertiary)] block">
+          <span className="text-[10px] text-[var(--es-text-tertiary)] block uppercase tracking-wider">
             EXCEPTION DETAILS
           </span>
-          <p className="text-sm text-[var(--status-error)]">
+          <p className="text-sm text-[var(--es-error)]">
             No driver, BOL, or photo uploaded
           </p>
         </div>
       </div>
-      <Button
-        variant="secondary"
-        className="text-[var(--text-xs)] text-[var(--status-error)] border-[var(--status-error)]"
-      >
-        Assign Manually
-      </Button>
+      <div className="flex items-center gap-2">
+        <button className="px-4 py-2 bg-[var(--es-error-dim)] hover:bg-[rgba(248,113,113,0.25)] text-[var(--es-error)] text-[11px] font-bold rounded-[var(--es-radius-sm)] border border-[rgba(248,113,113,0.2)] transition-all">
+          Assign Manually
+        </button>
+      </div>
     </div>
   );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Inline helpers                                                            */
+/* -------------------------------------------------------------------------- */
+
+/** Renders exception detail with color-coded weight values */
+function ExceptionDetail({ text }: { text: string }) {
+  // Match patterns like "PropX 38,100 vs ticket 38,400"
+  const weightMatch = text.match(
+    /^(.*?)(PropX\s[\d,]+)(.*?)(ticket\s[\d,]+)(.*)$/i,
+  );
+  if (weightMatch) {
+    const [, prefix, propxVal, mid, ticketVal, suffix] = weightMatch;
+    return (
+      <>
+        {prefix}
+        <span className="font-[var(--es-font-mono)] text-[var(--es-text-primary)] font-medium">
+          {propxVal}
+        </span>
+        {mid}
+        <span className="font-[var(--es-font-mono)] text-[var(--es-warning)] font-medium">
+          {ticketVal}
+        </span>
+        {suffix}
+      </>
+    );
+  }
+  return <>{text}</>;
 }
 
 /* -------------------------------------------------------------------------- */

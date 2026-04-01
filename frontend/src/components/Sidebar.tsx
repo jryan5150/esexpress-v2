@@ -12,14 +12,14 @@ const themeEmoji: Record<Theme, string> = {
 function navLinkClass({ isActive }: { isActive: boolean }): string {
   const base = [
     "flex items-center gap-2 px-3 py-2",
-    "rounded-[var(--radius-md)] text-sm",
-    "transition-all duration-[var(--transition-fast)]",
+    "rounded-[var(--es-radius-md)] text-sm",
+    "transition-all duration-[150ms]",
   ].join(" ");
 
   if (isActive) {
-    return `${base} bg-[var(--accent-dim)] text-[var(--accent)]`;
+    return `${base} bg-[var(--es-accent-dim)] text-[var(--es-accent)]`;
   }
-  return `${base} text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]`;
+  return `${base} text-[var(--es-text-secondary)] hover:text-[var(--es-text-primary)] hover:bg-[var(--es-bg-elevated)]`;
 }
 
 export function Sidebar() {
@@ -37,12 +37,12 @@ export function Sidebar() {
       style={{ width: collapsed ? 64 : 240, minWidth: collapsed ? 64 : 240 }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center justify-center w-8 h-8 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--text-inverse)] text-sm font-bold shrink-0">
+      <div className="flex items-center gap-2 px-4 py-4 border-b border-[var(--es-border-subtle)]">
+        <div className="flex items-center justify-center w-8 h-8 rounded-[var(--es-radius-md)] bg-[var(--es-accent)] text-[var(--es-text-inverse)] text-sm font-bold shrink-0">
           ES
         </div>
         {!collapsed && (
-          <span className="text-sm font-semibold text-[var(--text-primary)]">
+          <span className="text-sm font-semibold text-[var(--es-text-primary)]">
             ES Express
           </span>
         )}
@@ -51,18 +51,18 @@ export function Sidebar() {
       {/* Primary Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         <NavLink to="/" end className={navLinkClass}>
-          <span className="text-[var(--accent)]">{"\u25CF"}</span>
+          <span className="text-[var(--es-accent)]">{"\u25CF"}</span>
           {!collapsed && <span>Exception Feed</span>}
         </NavLink>
         <NavLink to="/bol" className={navLinkClass}>
-          <span className="text-[var(--accent)]">{"\u25CF"}</span>
+          <span className="text-[var(--es-accent)]">{"\u25CF"}</span>
           {!collapsed && <span>BOL Queue</span>}
         </NavLink>
 
         {/* Admin Section */}
         {!collapsed && (
           <div className="pt-4">
-            <p className="px-3 pb-2 text-[var(--text-xs)] uppercase tracking-wider text-[var(--text-tertiary)]">
+            <p className="px-3 pb-2 text-xs uppercase tracking-wider text-[var(--es-text-tertiary)]">
               Admin
             </p>
             <NavLink to="/admin/wells" className={navLinkClass}>
@@ -83,7 +83,7 @@ export function Sidebar() {
         {/* Operations Section */}
         {!collapsed && (
           <div className="pt-4">
-            <p className="px-3 pb-2 text-[var(--text-xs)] uppercase tracking-wider text-[var(--text-tertiary)]">
+            <p className="px-3 pb-2 text-xs uppercase tracking-wider text-[var(--es-text-tertiary)]">
               Operations
             </p>
             <NavLink to="/finance" className={navLinkClass}>
@@ -97,18 +97,18 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-[var(--border-subtle)] p-3 space-y-2">
+      <div className="border-t border-[var(--es-border-subtle)] p-3 space-y-2">
         <button
           type="button"
           onClick={handleCycleTheme}
-          className="flex items-center gap-2 w-full px-2 py-1.5 rounded-[var(--radius-md)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all duration-[var(--transition-fast)]"
+          className="flex items-center gap-2 w-full px-2 py-1.5 rounded-[var(--es-radius-md)] text-sm text-[var(--es-text-secondary)] hover:text-[var(--es-text-primary)] hover:bg-[var(--es-bg-elevated)] transition-all duration-[150ms]"
         >
           <span>{themeEmoji[theme]}</span>
           {!collapsed && <span className="capitalize">{theme}</span>}
         </button>
 
         {!collapsed && (
-          <p className="px-2 text-[var(--text-xs)] text-[var(--text-tertiary)]">
+          <p className="px-2 text-xs text-[var(--es-text-tertiary)]">
             Synced 2m ago
           </p>
         )}
@@ -116,7 +116,7 @@ export function Sidebar() {
         <button
           type="button"
           onClick={() => setCollapsed((prev) => !prev)}
-          className="flex items-center justify-center w-full px-2 py-1.5 rounded-[var(--radius-md)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-all duration-[var(--transition-fast)]"
+          className="flex items-center justify-center w-full px-2 py-1.5 rounded-[var(--es-radius-md)] text-sm text-[var(--es-text-secondary)] hover:text-[var(--es-text-primary)] hover:bg-[var(--es-bg-elevated)] transition-all duration-[150ms]"
         >
           {collapsed ? "\u2192" : "\u2190"}
         </button>

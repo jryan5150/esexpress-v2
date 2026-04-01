@@ -2,43 +2,43 @@
 @import "./src/tokens.css";
 @import "./src/global.css";
 
-/* Map CSS custom property tokens to Tailwind v4 theme utilities */
+/* Map es-* tokens to Tailwind v4 theme utilities */
 @theme {
   /* Backgrounds — use as: bg-base, bg-surface, bg-elevated, bg-overlay, bg-inset */
-  --color-base: var(--bg-base);
-  --color-surface: var(--bg-surface);
-  --color-elevated: var(--bg-elevated);
-  --color-overlay: var(--bg-overlay);
-  --color-inset: var(--bg-inset);
+  --color-base: var(--es-bg-base);
+  --color-surface: var(--es-bg-surface);
+  --color-elevated: var(--es-bg-elevated);
+  --color-overlay: var(--es-bg-overlay);
+  --color-inset: var(--es-bg-inset);
 
   /* Text — use as: text-primary, text-secondary, text-tertiary, text-inverse */
-  --color-primary: var(--text-primary);
-  --color-secondary: var(--text-secondary);
-  --color-tertiary: var(--text-tertiary);
-  --color-inverse: var(--text-inverse);
+  --color-primary: var(--es-text-primary);
+  --color-secondary: var(--es-text-secondary);
+  --color-tertiary: var(--es-text-tertiary);
+  --color-inverse: var(--es-text-inverse);
 
   /* Accent — use as: bg-accent, text-accent, border-accent */
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-dim: var(--accent-dim);
+  --color-accent: var(--es-accent);
+  --color-accent-hover: var(--es-accent-hover);
+  --color-accent-dim: var(--es-accent-dim);
 
   /* Status — use as: bg-ready, text-ready, bg-ready-dim, etc. */
-  --color-ready: var(--status-ready);
-  --color-ready-dim: var(--status-ready-dim);
-  --color-warning: var(--status-warning);
-  --color-warning-dim: var(--status-warning-dim);
-  --color-error: var(--status-error);
-  --color-error-dim: var(--status-error-dim);
-  --color-info: var(--status-info);
-  --color-info-dim: var(--status-info-dim);
-  --color-neutral: var(--status-neutral);
+  --color-ready: var(--es-ready);
+  --color-ready-dim: var(--es-ready-dim);
+  --color-warning: var(--es-warning);
+  --color-warning-dim: var(--es-warning-dim);
+  --color-error: var(--es-error);
+  --color-error-dim: var(--es-error-dim);
+  --color-info: var(--es-info);
+  --color-info-dim: var(--es-info-dim);
+  --color-neutral: var(--es-neutral);
 
   /* Borders — use as: border-subtle, border-default, border-bright */
-  --color-subtle: var(--border-subtle);
-  --color-default: var(--border-default);
-  --color-bright: var(--border-bright);
+  --color-subtle: var(--es-border-subtle);
+  --color-default: var(--es-border-default);
+  --color-bright: var(--es-border-bright);
 
-  /* Fonts — use as: font-ui, font-mono */
-  --font-ui: var(--font-ui);
-  --font-mono: var(--font-mono);
+  /* Fonts */
+  --font-ui: var(--es-font-ui);
+  --font-mono: var(--es-font-mono);
 }

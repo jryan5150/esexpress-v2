@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -12,19 +12,25 @@
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
 
     <!-- Theme init: runs before React to prevent FOUC -->
     <script>
       (function () {
-        const saved = localStorage.getItem('esexpress-theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const saved = localStorage.getItem("esexpress-theme");
+        const prefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
         let theme;
-        if (saved === 'system' || !saved) {
-          theme = prefersDark ? 'dark' : 'light';
+        if (saved === "system" || !saved) {
+          theme = prefersDark ? "dark" : "light";
         } else {
           theme = saved;
         }
-        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.setAttribute("data-theme", theme);
       })();
     </script>
   </head>
