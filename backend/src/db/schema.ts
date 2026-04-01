@@ -9,6 +9,7 @@ import {
   jsonb,
   uniqueIndex,
   index,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
 
 // ─── AUTH ─────────────────────────────────────────────────────────
@@ -254,3 +255,141 @@ export const pcsSessions = pgTable('pcs_sessions', {
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 });
+
+// ─── PROPX REFERENCE DATA ────────────────────────────────────────
+// NOTE: propxJobs and jobSyncMetadata COLLAPSED into one table
+export const propxJobs = pgTable('propx_jobs', {
+  id: serial('id').primaryKey(),
+  propxJobId: text('propx_job_id').notNull().unique(),
+  jobName: text('job_name'),
+  customerId: text('customer_id'),
+  customerName: text('customer_name'),
+  status: text('status'),
+  workingStatus: text('working_status'),
+  hasPendingLoads: boolean('has_pending_loads').default(true),
+  loadCount: integer('load_count').default(0),
+  rawData: jsonb('raw_data'),
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+export const propxDrivers = pgTable('propx_drivers', {
+  id: serial('id').primaryKey(),
+  propxDriverId: text('propx_driver_id').notNull().unique(),
+  driverName: text('driver_name'),
+  carrierId: text('carrier_id'),
+  carrierName: text('carrier_name'),
+  truckNo: text('truck_no'),
+  trailerNo: text('trailer_no'),
+  status: text('status'),
+  rawData: jsonb('raw_data'),
+  lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+// ─── JOTFORM ──────────────────────────────────────────────────────
+export const jotformImports = pgTable('jotform_imports', {
+  id: serial('id').primaryKey(),
+  jotformSubmissionId: text('jotform_submission_id').notNull().unique(),
+  driverName: text('driver_name'),
+  truckNo: text('truck_no'),
+  bolNo: text('bol_no'),
+  weight: numeric('weight', { precision: 12, scale: 2 }),
+  photoUrl: text('photo_url'),
+  imageUrls: jsonb('image_urls').$type<string[]>().default([]),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }),
+  matchedLoadId: integer('matched_load_id').references(() => loads.id, { onDelete: 'set null' }),
+  matchMethod: text('match_method'),
+  matchedAt: timestamp('matched_at', { withTimezone: true }),
+  status: text('status', { enum: ['pending', 'matched', 'unmatched', 'discrepancy', 'archived'] }).default('pending'),
+  discrepancies: jsonb('discrepancies').$type<Array<{ field: string; expected: unknown; actual: unknown; severity: string }>>().default([]),
+  importBatchId: text('import_batch_id'),
+  manuallyMatched: boolean('manually_matched').default(false),
+  manuallyMatchedBy: integer('manually_matched_by').references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index('idx_jotform_status').on(table.status),
+  index('idx_jotform_matched_load').on(table.matchedLoadId),
+  index('idx_jotform_bol').on(table.bolNo),
+]);
+
+// ─── BOL SUBMISSIONS ──────────────────────────────────────────────
+export const bolSubmissions = pgTable('bol_submissions', {
+  id: serial('id').primaryKey(),
+  driverId: text('driver_id'),
+  driverName: text('driver_name'),
+  loadNumber: text('load_number'),
+  photos: jsonb('photos').$type<Array<{ url: string; cloudinaryId: string; filename: string }>>().default([]),
+  aiExtractedData: jsonb('ai_extracted_data'),
+  aiConfidence: integer('ai_confidence'),
+  aiMetadata: jsonb('ai_metadata'),
+  driverConfirmedAt: timestamp('driver_confirmed_at', { withTimezone: true }),
+  driverCorrections: jsonb('driver_corrections'),
+  matchedLoadId: integer('matched_load_id').references(() => loads.id, { onDelete: 'set null' }),
+  matchMethod: text('match_method'),
+  matchScore: integer('match_score'),
+  discrepancies: jsonb('discrepancies').$type<Array<{ field: string; expected: unknown; actual: unknown; severity: string }>>().default([]),
+  status: text('status', { enum: ['pending', 'extracting', 'extracted', 'confirmed', 'matched', 'discrepancy', 'failed'] }).default('pending'),
+  retryCount: integer('retry_count').default(0),
+  lastError: text('last_error'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index('idx_bol_status').on(table.status),
+  index('idx_bol_matched_load').on(table.matchedLoadId),
+  index('idx_bol_driver').on(table.driverId),
+]);
+
+// ─── INGESTION CONFLICTS ─────────────────────────────────────────
+export const ingestionConflicts = pgTable('ingestion_conflicts', {
+  id: serial('id').primaryKey(),
+  propxLoadId: integer('propx_load_id').references(() => loads.id),
+  logistiqLoadId: integer('logistiq_load_id').references(() => loads.id),
+  matchKey: text('match_key'),
+  importBatchId: text('import_batch_id'),
+  importFilename: text('import_filename'),
+  discrepancies: jsonb('discrepancies'),
+  maxSeverity: text('max_severity', { enum: ['critical', 'warning', 'info'] }),
+  status: text('status', { enum: ['pending', 'resolved_propx', 'resolved_logistiq', 'resolved_manual'] }).default('pending'),
+  resolvedBy: integer('resolved_by').references(() => users.id),
+  resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});
+
+// ─── PAYMENT BATCHES ─────────────────────────────────────────────
+export const paymentBatches = pgTable('payment_batches', {
+  id: serial('id').primaryKey(),
+  batchNumber: text('batch_number').notNull().unique(),
+  driverId: text('driver_id').notNull(),
+  driverName: text('driver_name').notNull(),
+  carrierName: text('carrier_name'),
+  weekStart: timestamp('week_start', { withTimezone: true }).notNull(),
+  weekEnd: timestamp('week_end', { withTimezone: true }).notNull(),
+  loadCount: integer('load_count').default(0),
+  totalWeightTons: numeric('total_weight_tons', { precision: 12, scale: 4 }),
+  totalMileage: numeric('total_mileage', { precision: 12, scale: 2 }),
+  ratePerTon: numeric('rate_per_ton', { precision: 10, scale: 2 }),
+  ratePerMile: numeric('rate_per_mile', { precision: 10, scale: 2 }),
+  rateType: text('rate_type', { enum: ['per_ton', 'per_mile'] }).default('per_ton'),
+  grossPay: numeric('gross_pay', { precision: 12, scale: 2 }),
+  totalDeductions: numeric('total_deductions', { precision: 12, scale: 2 }).default('0'),
+  netPay: numeric('net_pay', { precision: 12, scale: 2 }),
+  deductions: jsonb('deductions').$type<Array<{ type: string; amount: number; description: string; reference?: string; date?: string }>>().default([]),
+  status: text('status', { enum: ['draft', 'pending_review', 'under_review', 'approved', 'rejected', 'paid', 'cancelled'] }).default('draft'),
+  statusHistory: jsonb('status_history').default([]),
+  sheetsExportUrl: text('sheets_export_url'),
+  sheetsExportedAt: timestamp('sheets_exported_at', { withTimezone: true }),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index('idx_payment_status').on(table.status),
+  index('idx_payment_driver').on(table.driverId),
+]);
+
+// ─── PAYMENT BATCH ↔ LOADS JOIN TABLE ────────────────────────────
+export const paymentBatchLoads = pgTable('payment_batch_loads', {
+  batchId: integer('batch_id').notNull().references(() => paymentBatches.id, { onDelete: 'cascade' }),
+  loadId: integer('load_id').notNull().references(() => loads.id),
+}, (table) => [
+  primaryKey({ columns: [table.batchId, table.loadId] }),
+]);
