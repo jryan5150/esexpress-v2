@@ -1,3 +1,4 @@
+import fp from 'fastify-plugin';
 import { type FastifyPluginAsync } from 'fastify';
 import fjwt from '@fastify/jwt';
 import { loadConfig } from '../../lib/config.js';
@@ -10,7 +11,4 @@ const jwtPlugin: FastifyPluginAsync = async (fastify) => {
   });
 };
 
-// Break Fastify encapsulation so app.jwt is available on the root instance
-(jwtPlugin as { [key: symbol]: unknown })[Symbol.for('skip-override')] = true;
-
-export default jwtPlugin;
+export default fp(jwtPlugin, { name: 'jwt' });

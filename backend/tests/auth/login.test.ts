@@ -4,7 +4,10 @@ import type { FastifyInstance } from 'fastify';
 
 // Mock the db module for unit tests (no real database)
 vi.mock('../../src/db/client.js', () => ({
-  createDbClient: vi.fn(),
+  createDbClient: vi.fn().mockReturnValue({
+    db: {},
+    pool: { end: vi.fn() },
+  }),
 }));
 
 let app: FastifyInstance;

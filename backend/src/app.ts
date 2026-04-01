@@ -1,12 +1,21 @@
-import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
-import cors from '@fastify/cors';
-import swagger from '@fastify/swagger';
-import swaggerUi from '@fastify/swagger-ui';
-import { AppError } from './lib/errors.js';
-import jwtPlugin from './plugins/auth/jwt.js';
-import guardsPlugin from './plugins/auth/guards.js';
-import authRoutes from './plugins/auth/routes.js';
-import dispatchPlugin from './plugins/dispatch/index.js';
+import Fastify, {
+  type FastifyInstance,
+  type FastifyServerOptions,
+} from "fastify";
+import cors from "@fastify/cors";
+import swagger from "@fastify/swagger";
+import swaggerUi from "@fastify/swagger-ui";
+import { AppError } from "./lib/errors.js";
+import jwtPlugin from "./plugins/auth/jwt.js";
+import guardsPlugin from "./plugins/auth/guards.js";
+import dbPlugin from "./plugins/db.js";
+import authRoutes from "./plugins/auth/routes.js";
+import dispatchPlugin from "./plugins/dispatch/index.js";
+import ingestionPlugin from "./plugins/ingestion/index.js";
+import pcsPlugin from "./plugins/pcs/index.js";
+import sheetsPlugin from "./plugins/sheets/index.js";
+import verificationPlugin from "./plugins/verification/index.js";
+import financePlugin from "./plugins/finance/index.js";
 
 export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   const app = Fastify(opts);
@@ -18,16 +27,16 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   app.register(swagger, {
     openapi: {
       info: {
-        title: 'EsExpress v2 API',
-        description: 'Oilfield dispatch platform API',
-        version: '1.0.0',
+        title: "EsExpress v2 API",
+        description: "Oilfield dispatch platform API",
+        version: "1.0.0",
       },
-      servers: [{ url: '/api/v1' }],
+      servers: [{ url: "/api/v1" }],
     },
   });
 
   app.register(swaggerUi, {
-    routePrefix: '/api/v1/docs',
+    routePrefix: "/api/v1/docs",
   });
 
   // JWT
@@ -36,28 +45,46 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   // Auth guards
   app.register(guardsPlugin);
 
+  // Database
+  app.register(dbPlugin);
+
   // Auth routes
-  app.register(authRoutes, { prefix: '/api/v1/auth' });
+  app.register(authRoutes, { prefix: "/api/v1/auth" });
 
   // Dispatch plugin (P1)
-  app.register(dispatchPlugin, { prefix: '/api/v1/dispatch' });
+  app.register(dispatchPlugin, { prefix: "/api/v1/dispatch" });
+
+  // Ingestion plugin (PropX, Logistiq)
+  app.register(ingestionPlugin, { prefix: "/api/v1/ingestion" });
+
+  // PCS plugin (dispatch to PCS Express)
+  app.register(pcsPlugin, { prefix: "/api/v1/pcs" });
+
+  // Sheets plugin (Google Sheets import/export)
+  app.register(sheetsPlugin, { prefix: "/api/v1/sheets" });
+
+  // Verification plugin (photos, JotForm, BOL)
+  app.register(verificationPlugin, { prefix: "/api/v1/verification" });
+
+  // Finance plugin (payment batches, driver payments)
+  app.register(financePlugin, { prefix: "/api/v1/finance" });
 
   // Health check
   app.get(
-    '/api/v1/health',
+    "/api/v1/health",
     {
       schema: {
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
-              success: { type: 'boolean' },
+              success: { type: "boolean" },
               data: {
-                type: 'object',
+                type: "object",
                 properties: {
-                  status: { type: 'string' },
-                  timestamp: { type: 'string' },
-                  uptime: { type: 'number' },
+                  status: { type: "string" },
+                  timestamp: { type: "string" },
+                  uptime: { type: "number" },
                 },
               },
             },
@@ -69,7 +96,7 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
       return {
         success: true,
         data: {
-          status: 'ok',
+          status: "ok",
           timestamp: new Date().toISOString(),
           uptime: process.uptime(),
         },
@@ -90,7 +117,7 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     if (error.validation) {
       return reply.status(400).send({
         success: false,
-        error: { code: 'VALIDATION_ERROR', message: error.message },
+        error: { code: "VALIDATION_ERROR", message: error.message },
       });
     }
 
@@ -99,8 +126,8 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     return reply.status(statusCode).send({
       success: false,
       error: {
-        code: 'INTERNAL_ERROR',
-        message: statusCode === 500 ? 'Internal server error' : error.message,
+        code: "INTERNAL_ERROR",
+        message: statusCode === 500 ? "Internal server error" : error.message,
       },
     });
   });
@@ -109,7 +136,7 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   app.setNotFoundHandler((_request, reply) => {
     return reply.status(404).send({
       success: false,
-      error: { code: 'NOT_FOUND', message: 'Route not found' },
+      error: { code: "NOT_FOUND", message: "Route not found" },
     });
   });
 

@@ -22,7 +22,7 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       preHandler: [fastify.authenticate],
     },
     async (_request, reply) => {
-      const db = (fastify as any).db;
+      const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
       const data = await getValidationSummary(db);
@@ -46,7 +46,7 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const db = (fastify as any).db;
+      const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
       const { n } = request.params as { n: number };
@@ -71,7 +71,7 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const db = (fastify as any).db;
+      const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
       const { assignmentId } = request.body as { assignmentId: number };
@@ -109,7 +109,7 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const db = (fastify as any).db;
+      const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
       const { assignmentId, reason } = request.body as { assignmentId: number; reason?: string };
@@ -147,7 +147,7 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const db = (fastify as any).db;
+      const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
       const { loadId, wellId } = request.body as { loadId: number; wellId: number };
@@ -188,7 +188,7 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const db = (fastify as any).db;
+      const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
       const { assignmentIds } = request.body as { assignmentIds: number[] };
