@@ -20,6 +20,12 @@ interface DispatchCardProps {
   loadId: number;
   deliveredOn?: string | null;
   photoUrls?: string[];
+  pickupTime?: string | null;
+  arrivalTime?: string | null;
+  grossWeightLbs?: number | null;
+  netWeightLbs?: number | null;
+  terminalName?: string | null;
+  netWeightTons?: string | null;
 }
 
 function formatDeliveryTime(d: string | null | undefined): string {
@@ -94,8 +100,13 @@ export function DispatchCard({
   loadId,
   deliveredOn,
   photoUrls,
+  pickupTime,
+  arrivalTime,
+  grossWeightLbs,
+  netWeightLbs,
+  terminalName,
+  netWeightTons,
 }: DispatchCardProps) {
-  const [photoModal, setPhotoModal] = useState<string | null>(null);
   const hasPhotos = photoUrls && photoUrls.length > 0;
 
   const photoIcon =
@@ -112,46 +123,77 @@ export function DispatchCard({
       <div
         className={`bg-surface-container-lowest rounded-xl overflow-hidden border border-on-surface/5 transition-all ${entered ? "opacity-40" : ""}`}
       >
-        {/* Header with delivery time */}
-        <div className="flex items-center justify-between px-5 py-3 bg-surface-container-high/30 border-b border-on-surface/5">
-          <div className="flex items-center gap-4">
-            <span className="font-label text-lg font-bold text-primary-container">
-              {loadNo}
-            </span>
-            {pcsNumber && (
-              <>
-                <span className="text-on-surface/15">|</span>
-                <span className="font-label text-sm text-on-surface/50">
-                  PCS #{pcsNumber}
+        {/* Header — load ID + timeline + photo status */}
+        <div className="px-5 py-3 bg-surface-container-high/30 border-b border-on-surface/5 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="font-label text-lg font-bold text-primary-container">
+                {loadNo}
+              </span>
+              {pcsNumber && (
+                <>
+                  <span className="text-on-surface/15">|</span>
+                  <span className="font-label text-sm text-on-surface/50">
+                    PCS #{pcsNumber}
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`material-symbols-outlined text-base ${photoColor}`}
+                >
+                  {photoIcon}
                 </span>
-              </>
-            )}
+                <span className="font-label text-[10px] text-on-surface/40 uppercase">
+                  {photoStatus || "missing"}
+                </span>
+              </div>
+              {entered && (
+                <span className="font-label text-[10px] bg-tertiary/10 text-tertiary px-2 py-0.5 rounded-full font-bold uppercase">
+                  Entered
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            {/* Delivery time — prominent */}
-            <div className="text-right">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface/30 block">
+          {/* Timeline row */}
+          <div className="flex items-center gap-6 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm text-on-surface/30">
+                local_shipping
+              </span>
+              <span className="text-[9px] font-bold uppercase text-on-surface/30">
+                Pickup
+              </span>
+              <span className="font-label text-on-surface">
+                {formatDeliveryTime(pickupTime)}
+              </span>
+            </div>
+            <span className="text-on-surface/15">→</span>
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm text-on-surface/30">
+                pin_drop
+              </span>
+              <span className="text-[9px] font-bold uppercase text-on-surface/30">
+                Arrived
+              </span>
+              <span className="font-label text-on-surface">
+                {formatDeliveryTime(arrivalTime)}
+              </span>
+            </div>
+            <span className="text-on-surface/15">→</span>
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm text-tertiary">
+                check_circle
+              </span>
+              <span className="text-[9px] font-bold uppercase text-on-surface/30">
                 Delivered
               </span>
-              <span className="font-label text-sm font-medium text-on-surface">
+              <span className="font-label font-bold text-on-surface">
                 {formatDeliveryTime(deliveredOn)}
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`material-symbols-outlined text-base ${photoColor}`}
-              >
-                {photoIcon}
-              </span>
-              <span className="font-label text-[10px] text-on-surface/40 uppercase">
-                {photoStatus || "missing"}
-              </span>
-            </div>
-            {entered && (
-              <span className="font-label text-[10px] bg-tertiary/10 text-tertiary px-2 py-0.5 rounded-full font-bold uppercase">
-                Entered
-              </span>
-            )}
           </div>
         </div>
 
@@ -169,40 +211,67 @@ export function DispatchCard({
             <Field label="Ticket #" value={ticketNo} />
           </div>
 
-          {/* Right: photos / attachments */}
-          <div className="w-48 border-l border-on-surface/5 p-3 flex flex-col gap-2">
-            {hasPhotos ? (
-              <>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface/30 px-1">
-                  Weight Tickets ({photoUrls.length})
+          {/* Right: ticket info / weight / attachments */}
+          <div className="w-52 border-l border-on-surface/5 p-3 flex flex-col gap-3">
+            {/* Weight summary */}
+            <div className="bg-surface-container-high/50 rounded-lg p-3 space-y-2">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface/30">
+                Weight
+              </span>
+              <div className="font-label text-lg font-bold text-on-surface">
+                {weightTons
+                  ? `${parseFloat(weightTons).toFixed(2)} tons`
+                  : "--"}
+              </div>
+              {(grossWeightLbs || netWeightLbs) && (
+                <div className="text-[10px] text-on-surface/40 space-y-0.5">
+                  {grossWeightLbs && (
+                    <div>
+                      Gross: {Number(grossWeightLbs).toLocaleString()} lbs
+                    </div>
+                  )}
+                  {netWeightLbs && (
+                    <div>Net: {Number(netWeightLbs).toLocaleString()} lbs</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Terminal / Origin */}
+            {terminalName && (
+              <div className="px-1">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface/30 block">
+                  Origin
                 </span>
-                {photoUrls.map((url, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setPhotoModal(url)}
-                    className="w-full aspect-[3/4] rounded-lg overflow-hidden bg-surface-container-high border border-on-surface/10 hover:ring-2 hover:ring-primary-container transition-all cursor-pointer"
-                  >
-                    <img
-                      src={url}
-                      alt={`Ticket ${i + 1}`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const el = e.target as HTMLImageElement;
-                        el.style.display = "none";
-                        el.parentElement!.innerHTML =
-                          '<div class="w-full h-full flex items-center justify-center text-on-surface/20"><span class="material-symbols-outlined">broken_image</span></div>';
-                      }}
-                    />
-                  </button>
-                ))}
-              </>
+                <span className="text-xs text-on-surface/70 font-label">
+                  {terminalName}
+                </span>
+              </div>
+            )}
+
+            {/* Photo / ticket status */}
+            {hasPhotos ? (
+              <div className="bg-tertiary/5 border border-tertiary/20 rounded-lg p-3 space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-tertiary">
+                    photo_camera
+                  </span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-tertiary">
+                    Ticket on file
+                  </span>
+                </div>
+                <p className="text-[10px] text-on-surface/40">
+                  {photoUrls.length} weight ticket
+                  {photoUrls.length > 1 ? "s" : ""} matched via JotForm
+                </p>
+              </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center gap-2">
+              <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-4">
                 <span className="material-symbols-outlined text-2xl text-on-surface/10">
                   no_photography
                 </span>
                 <span className="text-[10px] text-on-surface/20 font-label uppercase">
-                  No photos
+                  No ticket
                 </span>
               </div>
             )}
@@ -221,28 +290,6 @@ export function DispatchCard({
           </Button>
         </div>
       </div>
-
-      {/* Photo Modal */}
-      {photoModal && (
-        <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8"
-          onClick={() => setPhotoModal(null)}
-        >
-          <div className="relative max-w-4xl max-h-[90vh]">
-            <button
-              onClick={() => setPhotoModal(null)}
-              className="absolute -top-10 right-0 text-white/60 hover:text-white cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-2xl">close</span>
-            </button>
-            <img
-              src={photoModal}
-              alt="Weight ticket"
-              className="max-w-full max-h-[85vh] object-contain rounded-lg"
-            />
-          </div>
-        </div>
-      )}
     </>
   );
 }

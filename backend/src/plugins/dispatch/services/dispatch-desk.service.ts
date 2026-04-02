@@ -149,9 +149,11 @@ export async function getDispatchDeskLoads(
       carrierName: loads.carrierName,
       productDescription: loads.productDescription,
       weightTons: loads.weightTons,
+      netWeightTons: loads.netWeightTons,
       bolNo: loads.bolNo,
       ticketNo: loads.ticketNo,
       deliveredOn: loads.deliveredOn,
+      rawData: loads.rawData,
       wellId: wells.id,
       wellName: wells.name,
       // JotForm photo data (left join — may be null)
@@ -172,31 +174,41 @@ export async function getDispatchDeskLoads(
     .limit(limit)
     .offset(offset);
 
-  const data = rows.map((row) => ({
-    assignmentId: row.assignmentId,
-    assignmentStatus: row.assignmentStatus,
-    photoStatus: row.photoStatus,
-    pcsSequence: row.pcsSequence,
-    autoMapTier: row.autoMapTier,
-    autoMapScore: row.autoMapScore,
-    loadId: row.loadId,
-    loadNo: row.loadNo,
-    driverName: row.driverName,
-    truckNo: row.truckNo,
-    carrierName: row.carrierName,
-    productDescription: row.productDescription,
-    weightTons: row.weightTons,
-    bolNo: row.bolNo,
-    ticketNo: row.ticketNo,
-    deliveredOn: row.deliveredOn,
-    wellId: row.wellId,
-    wellName: row.wellName,
-    canEnter: canMarkEntered((row.photoStatus ?? "missing") as PhotoStatus),
-    // Photo attachments from JotForm
-    photoUrls:
-      row.jotformImageUrls ??
-      (row.jotformPhotoUrl ? [row.jotformPhotoUrl] : []),
-  }));
+  const data = rows.map((row) => {
+    const raw = (row.rawData ?? {}) as Record<string, unknown>;
+    return {
+      assignmentId: row.assignmentId,
+      assignmentStatus: row.assignmentStatus,
+      photoStatus: row.photoStatus,
+      pcsSequence: row.pcsSequence,
+      autoMapTier: row.autoMapTier,
+      autoMapScore: row.autoMapScore,
+      loadId: row.loadId,
+      loadNo: row.loadNo,
+      driverName: row.driverName,
+      truckNo: row.truckNo,
+      carrierName: row.carrierName,
+      productDescription: row.productDescription,
+      weightTons: row.weightTons,
+      netWeightTons: row.netWeightTons,
+      bolNo: row.bolNo,
+      ticketNo: row.ticketNo,
+      deliveredOn: row.deliveredOn,
+      wellId: row.wellId,
+      wellName: row.wellName,
+      canEnter: canMarkEntered((row.photoStatus ?? "missing") as PhotoStatus),
+      // Times extracted from PropX rawData
+      pickupTime: raw.terminal_on ?? null,
+      arrivalTime: raw.destination_on ?? null,
+      grossWeightLbs: raw.gross_weight ?? null,
+      netWeightLbs: raw.weight ?? null,
+      terminalName: raw.terminal_name ?? null,
+      // Photo attachments from JotForm
+      photoUrls:
+        row.jotformImageUrls ??
+        (row.jotformPhotoUrl ? [row.jotformPhotoUrl] : []),
+    };
+  });
 
   return { data, meta: { page, limit, count: data.length } };
 }

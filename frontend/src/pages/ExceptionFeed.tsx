@@ -100,7 +100,7 @@ export function ExceptionFeed() {
                     pending_actions
                   </span>
                   <span className="text-[10px] uppercase tracking-[0.2em] font-black text-primary-container">
-                    Needs Your Review
+                    Needs Attention
                   </span>
                 </div>
                 <div className="font-label text-5xl font-bold text-on-surface">
