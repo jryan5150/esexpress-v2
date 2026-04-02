@@ -261,7 +261,9 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
           driverName: r.driverName,
           truckNo: r.truckNo,
           weight: r.weight,
-          photoUrls: r.imageUrls ?? (r.photoUrl ? [r.photoUrl] : []),
+          photoUrls: r.jotformSubmissionId
+            ? [`/api/v1/verification/photos/gcs/${r.jotformSubmissionId}`]
+            : [],
           status: r.status,
           submittedAt: r.submittedAt,
           createdAt: r.createdAt,
