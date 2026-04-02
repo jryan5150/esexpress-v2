@@ -6,6 +6,7 @@ import {
   useBulkApprove,
 } from "../hooks/use-wells";
 import { useMarkEntered, useAdvanceToReady } from "../hooks/use-dispatch-desk";
+import { usePresence, useHeartbeat } from "../hooks/use-presence";
 import { DispatchCard } from "../components/DispatchCard";
 import { Button } from "../components/Button";
 import { useToast } from "../components/Toast";
@@ -26,6 +27,22 @@ export function DispatchDesk() {
   const markEntered = useMarkEntered();
   const advanceToReady = useAdvanceToReady();
   const bulkApprove = useBulkApprove();
+
+  const selectedWell = (wellsQuery.data as any[])?.find(
+    (w: any) => String(w.id) === selectedWellId,
+  );
+  useHeartbeat({
+    currentPage: "dispatch",
+    wellId: selectedWellId ? Number(selectedWellId) : null,
+    wellName: selectedWell?.name ?? null,
+  });
+  const presenceQuery = usePresence();
+  const onlineUsers = Array.isArray(presenceQuery.data)
+    ? presenceQuery.data
+    : [];
+  const usersOnThisWell = selectedWellId
+    ? onlineUsers.filter((u: any) => u.wellId === Number(selectedWellId))
+    : [];
 
   const wells: Well[] = Array.isArray(wellsQuery.data) ? wellsQuery.data : [];
   const allLoads =
@@ -133,7 +150,6 @@ export function DispatchDesk() {
     }
   };
 
-  const selectedWell = wells.find((w) => String(w.id) === selectedWellId);
   const wellName = selectedWell?.name ?? "";
 
   return (
@@ -206,6 +222,19 @@ export function DispatchDesk() {
                 assigned &middot; {readyLoads.length} ready &middot;{" "}
                 {enteredIds.size} entered
               </span>
+              {/* Live presence — who's on this well */}
+              {usersOnThisWell.length > 0 && (
+                <div className="flex items-center gap-2 bg-surface-container-high/50 px-3 py-1 rounded-full">
+                  {usersOnThisWell.map((u: any) => (
+                    <div key={u.userId} className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(69,223,164,0.5)]" />
+                      <span className="text-xs text-on-surface/70 font-label">
+                        {u.userName?.split(" ")[0] || "User"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="flex gap-3">
               {assignedLoads.length > 0 && (

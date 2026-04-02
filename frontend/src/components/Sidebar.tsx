@@ -1,10 +1,15 @@
 import { Link, useLocation } from "react-router-dom";
 import { useCurrentUser, useLogoutFn } from "../hooks/use-auth";
+import { usePresence } from "../hooks/use-presence";
 
 export function Sidebar() {
   const location = useLocation();
   const userQuery = useCurrentUser();
   const logout = useLogoutFn();
+  const presenceQuery = usePresence();
+  const onlineUsers = Array.isArray(presenceQuery.data)
+    ? presenceQuery.data
+    : [];
   const isActive = (path: string) => location.pathname === path;
 
   const navClass = (path: string) =>
@@ -66,21 +71,34 @@ export function Sidebar() {
           <span className="text-sm font-medium">Finance</span>
         </Link>
       </nav>
-      {/* Current User */}
-      <div className="px-6 py-6 border-t border-surface-container space-y-4">
+      {/* Live Presence */}
+      <div className="px-6 py-6 border-t border-surface-container space-y-3">
         <h4 className="text-[10px] uppercase tracking-widest text-on-surface/40 font-bold">
-          Online
+          Online ({onlineUsers.length})
         </h4>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          {onlineUsers.length === 0 ? (
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(69,223,164,0.5)]" />
               <span className="text-xs text-on-surface/80">
                 {(userQuery.data as Record<string, unknown>)?.name || "You"}
               </span>
             </div>
-            <span className="font-label text-[10px] text-tertiary">now</span>
-          </div>
+          ) : (
+            onlineUsers.map((u: any) => (
+              <div key={u.userId} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(69,223,164,0.5)]" />
+                  <span className="text-xs text-on-surface/80">
+                    {u.userName?.split(" ")[0] || "User"}
+                  </span>
+                </div>
+                <span className="font-label text-[10px] text-on-surface/30 truncate max-w-[80px]">
+                  {u.wellName ? u.wellName.slice(0, 15) : u.currentPage}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </div>
       {/* Footer */}

@@ -4,6 +4,7 @@ import {
   useDispatchReadiness,
   useValidationSummary,
 } from "../hooks/use-wells";
+import { useHeartbeat } from "../hooks/use-presence";
 
 function getBorderColor(ready: number, total: number): string {
   if (total === 0) return "border-on-surface/20";
@@ -19,6 +20,7 @@ function pct(value: number, total: number): string {
 }
 
 export function ExceptionFeed() {
+  useHeartbeat({ currentPage: "feed" });
   const navigate = useNavigate();
   const wellsQuery = useWells();
   const readinessQuery = useDispatchReadiness();
