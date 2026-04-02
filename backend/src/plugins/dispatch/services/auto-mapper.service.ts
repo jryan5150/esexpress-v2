@@ -42,7 +42,7 @@ export async function processLoadBatch(
   loadIds: number[],
   systemUserId: number,
 ): Promise<AutoMapResult[]> {
-  // Fetch all active wells once — no N+1
+  // Fetch ALL wells (active + standby) — match against everything
   const allWells = await db
     .select({
       id: wells.id,
@@ -50,8 +50,7 @@ export async function processLoadBatch(
       aliases: wells.aliases,
       propxJobId: wells.propxJobId,
     })
-    .from(wells)
-    .where(eq(wells.status, "active"));
+    .from(wells);
 
   const candidates = allWells.map((w) => ({
     ...w,
