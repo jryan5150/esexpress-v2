@@ -80,6 +80,7 @@ export function Validation() {
   );
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   const summaryQuery = useValidationSummary();
   const confirmMutation = useValidationConfirm();
@@ -360,102 +361,163 @@ export function Validation() {
                 </div>
 
                 {assignments.map((a) => (
-                  <div
-                    key={a.id}
-                    className="bg-surface-container-low hover:bg-surface-container-high transition-all px-6 py-4 flex items-center gap-6"
-                  >
-                    {/* Load Number */}
-                    <div className="w-28">
-                      <span className="font-label text-sm font-bold text-on-surface">
-                        {a.loadNo || `#${a.loadId}`}
+                  <div key={a.id}>
+                    {/* Summary Row — click to expand */}
+                    <div
+                      onClick={() =>
+                        setExpandedId(expandedId === a.id ? null : a.id)
+                      }
+                      className="bg-surface-container-low hover:bg-surface-container-high transition-all px-6 py-4 flex items-center gap-6 cursor-pointer"
+                    >
+                      {/* Expand indicator */}
+                      <span
+                        className={`material-symbols-outlined text-sm text-on-surface/30 transition-transform ${expandedId === a.id ? "rotate-90" : ""}`}
+                      >
+                        chevron_right
                       </span>
-                    </div>
 
-                    {/* Driver */}
-                    <div className="w-36">
-                      <span className="text-sm text-on-surface/80 truncate block">
-                        {a.driverName ?? "--"}
-                      </span>
-                    </div>
+                      {/* Load Number */}
+                      <div className="w-24">
+                        <span className="font-label text-sm font-bold text-on-surface">
+                          {a.loadNo || `#${a.loadId}`}
+                        </span>
+                      </div>
 
-                    {/* Destination -> Well */}
-                    <div className="flex-1 flex items-center gap-2 min-w-0">
-                      <span className="font-label text-xs text-on-surface/50 truncate max-w-[140px]">
-                        {a.destinationName ?? "Unknown"}
-                      </span>
-                      <span className="material-symbols-outlined text-xs text-on-surface/20">
-                        arrow_forward
-                      </span>
-                      <span className="text-sm font-bold text-on-surface truncate max-w-[140px]">
-                        {a.wellName ?? `Well ${a.wellId}`}
-                      </span>
-                    </div>
+                      {/* Driver */}
+                      <div className="w-36">
+                        <span className="text-sm text-on-surface/80 truncate block">
+                          {a.driverName ?? "--"}
+                        </span>
+                      </div>
 
-                    {/* Confidence Score */}
-                    <div className="w-20 text-center">
-                      <ConfidenceBadge score={a.autoMapScore} />
-                    </div>
+                      {/* Destination -> Well */}
+                      <div className="flex-1 flex items-center gap-2 min-w-0">
+                        <span className="font-label text-xs text-on-surface/50 truncate max-w-[140px]">
+                          {a.destinationName ?? "Unknown"}
+                        </span>
+                        <span className="material-symbols-outlined text-xs text-on-surface/20">
+                          arrow_forward
+                        </span>
+                        <span className="text-sm font-bold text-on-surface truncate max-w-[140px]">
+                          {a.wellName ?? `Well ${a.wellId}`}
+                        </span>
+                      </div>
 
-                    {/* Actions */}
-                    <div className="w-44 flex items-center justify-end gap-2">
-                      {rejectingId === a.id ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Reason (optional)"
-                            className="w-28 bg-surface-container-high border border-on-surface/10 rounded px-2 py-1.5 text-xs text-on-surface font-label focus:outline-none focus:border-error/50"
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleReject(a.id);
-                              if (e.key === "Escape") {
+                      {/* Confidence Score */}
+                      <div className="w-20 text-center">
+                        <ConfidenceBadge score={a.autoMapScore} />
+                      </div>
+
+                      {/* Actions — stop propagation so clicks don't toggle expand */}
+                      <div
+                        className="w-44 flex items-center justify-end gap-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {rejectingId === a.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={rejectReason}
+                              onChange={(e) => setRejectReason(e.target.value)}
+                              placeholder="Reason (optional)"
+                              className="w-28 bg-surface-container-high border border-on-surface/10 rounded px-2 py-1.5 text-xs text-on-surface font-label focus:outline-none focus:border-error/50"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleReject(a.id);
+                                if (e.key === "Escape") {
+                                  setRejectingId(null);
+                                  setRejectReason("");
+                                }
+                              }}
+                            />
+                            <button
+                              onClick={() => handleReject(a.id)}
+                              disabled={rejectMutation.isPending}
+                              className="text-error text-xs font-bold cursor-pointer hover:underline"
+                            >
+                              Send
+                            </button>
+                            <button
+                              onClick={() => {
                                 setRejectingId(null);
                                 setRejectReason("");
-                              }
-                            }}
-                          />
-                          <button
-                            onClick={() => handleReject(a.id)}
-                            disabled={rejectMutation.isPending}
-                            className="text-error text-xs font-bold cursor-pointer hover:underline"
-                          >
-                            Send
-                          </button>
-                          <button
-                            onClick={() => {
-                              setRejectingId(null);
-                              setRejectReason("");
-                            }}
-                            className="text-on-surface/30 text-xs cursor-pointer hover:text-on-surface/60"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => handleConfirm(a.id)}
-                            disabled={confirmMutation.isPending}
-                            className="bg-tertiary/10 text-tertiary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-tertiary/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                          >
-                            <span className="material-symbols-outlined text-sm">
-                              check
-                            </span>
-                            Confirm
-                          </button>
-                          <button
-                            onClick={() => setRejectingId(a.id)}
-                            disabled={rejectMutation.isPending}
-                            className="bg-error/10 text-error px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-error/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                          >
-                            <span className="material-symbols-outlined text-sm">
-                              close
-                            </span>
-                            Reject
-                          </button>
-                        </>
-                      )}
+                              }}
+                              className="text-on-surface/30 text-xs cursor-pointer hover:text-on-surface/60"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleConfirm(a.id)}
+                              disabled={confirmMutation.isPending}
+                              className="bg-tertiary/10 text-tertiary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-tertiary/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-sm">
+                                check
+                              </span>
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setRejectingId(a.id)}
+                              disabled={rejectMutation.isPending}
+                              className="bg-error/10 text-error px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-error/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-sm">
+                                close
+                              </span>
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Expanded Detail Panel */}
+                    {expandedId === a.id && (
+                      <div className="bg-surface-container-lowest px-6 py-5 border-t border-on-surface/5">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {[
+                            { label: "Load #", value: a.loadNo },
+                            { label: "Driver", value: a.driverName },
+                            { label: "Carrier", value: a.carrierName },
+                            { label: "Destination", value: a.destinationName },
+                            { label: "Well", value: a.wellName },
+                            { label: "Weight (tons)", value: a.weightTons },
+                            { label: "Ticket #", value: a.ticketNo },
+                            { label: "BOL #", value: a.bolNo },
+                            {
+                              label: "Tier",
+                              value: a.autoMapTier
+                                ? `Tier ${a.autoMapTier}`
+                                : "--",
+                            },
+                            {
+                              label: "Score",
+                              value: a.autoMapScore
+                                ? `${Math.round(Number(a.autoMapScore) * 100)}%`
+                                : "--",
+                            },
+                            {
+                              label: "Photo Status",
+                              value: a.photoStatus ?? "missing",
+                            },
+                            { label: "Assignment ID", value: `#${a.id}` },
+                          ].map((field) => (
+                            <div key={field.label} className="space-y-1">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                                {field.label}
+                              </span>
+                              <p className="text-sm text-on-surface font-label">
+                                {field.value || (
+                                  <span className="text-on-surface/20">--</span>
+                                )}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
