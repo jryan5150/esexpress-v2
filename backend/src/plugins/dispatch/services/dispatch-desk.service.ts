@@ -157,6 +157,7 @@ export async function getDispatchDeskLoads(
       wellId: wells.id,
       wellName: wells.name,
       // JotForm photo data (left join — may be null)
+      jotformSubmissionId: jotformImports.jotformSubmissionId,
       jotformPhotoUrl: jotformImports.photoUrl,
       jotformImageUrls: jotformImports.imageUrls,
       jotformDriverName: jotformImports.driverName,
@@ -203,10 +204,11 @@ export async function getDispatchDeskLoads(
       grossWeightLbs: raw.gross_weight ?? null,
       netWeightLbs: raw.weight ?? null,
       terminalName: raw.terminal_name ?? null,
-      // Photo attachments from JotForm
-      photoUrls:
-        row.jotformImageUrls ??
-        (row.jotformPhotoUrl ? [row.jotformPhotoUrl] : []),
+      // Photo: use GCS proxy URL if submission ID available, else raw JotForm URL
+      jotformSubmissionId: row.jotformSubmissionId ?? null,
+      photoUrls: row.jotformSubmissionId
+        ? [`/api/v1/verification/photos/gcs/${row.jotformSubmissionId}`]
+        : [],
     };
   });
 

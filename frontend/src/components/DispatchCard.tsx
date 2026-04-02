@@ -249,21 +249,40 @@ export function DispatchCard({
               </div>
             )}
 
-            {/* Photo / ticket status */}
+            {/* Photo / ticket */}
             {hasPhotos ? (
-              <div className="bg-tertiary/5 border border-tertiary/20 rounded-lg p-3 space-y-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-sm text-tertiary">
-                    photo_camera
-                  </span>
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-tertiary">
-                    Ticket on file
-                  </span>
-                </div>
-                <p className="text-[10px] text-on-surface/40">
-                  {photoUrls.length} weight ticket
-                  {photoUrls.length > 1 ? "s" : ""} matched via JotForm
-                </p>
+              <div className="space-y-2">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface/30 px-1">
+                  Weight Ticket
+                </span>
+                {photoUrls.map((url, i) => {
+                  const fullUrl = url.startsWith("/")
+                    ? `${import.meta.env.VITE_API_URL || ""}${url}`
+                    : url;
+                  return (
+                    <a
+                      key={i}
+                      href={fullUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full aspect-[3/4] rounded-lg overflow-hidden bg-surface-container-high border border-on-surface/10 hover:ring-2 hover:ring-tertiary transition-all"
+                    >
+                      <img
+                        src={fullUrl}
+                        alt={`Ticket ${i + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const el = e.target as HTMLImageElement;
+                          el.style.display = "none";
+                          if (el.parentElement) {
+                            el.parentElement.innerHTML =
+                              '<div class="w-full h-full flex flex-col items-center justify-center text-on-surface/20 gap-1 p-2"><span class="material-symbols-outlined">photo_camera</span><span style="font-size:9px">View Ticket</span></div>';
+                          }
+                        }}
+                      />
+                    </a>
+                  );
+                })}
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-4">

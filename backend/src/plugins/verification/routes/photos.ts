@@ -29,6 +29,104 @@ import {
 let jotformSyncInProgress = false;
 
 const photosRoutes: FastifyPluginAsync = async (fastify) => {
+  // ─── GET /photos/gcs/:submissionId -- proxy photo from GCS via OAuth2 ──
+  fastify.get(
+    "/photos/gcs/:submissionId",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: "object",
+          required: ["submissionId"],
+          properties: { submissionId: { type: "string" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { submissionId } = request.params as { submissionId: string };
+      const bucket = process.env.GCS_PHOTO_BUCKET;
+      const keyJson = process.env.GCS_SERVICE_ACCOUNT_KEY;
+
+      if (!bucket || !keyJson) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "CONFIG_ERROR",
+            message: "GCS photo storage not configured",
+          },
+        });
+      }
+
+      // Get OAuth2 access token from service account key
+      const { createSign } = await import("node:crypto");
+      const sa = JSON.parse(keyJson);
+
+      const now = Math.floor(Date.now() / 1000);
+      const header = Buffer.from(
+        JSON.stringify({ alg: "RS256", typ: "JWT" }),
+      ).toString("base64url");
+      const payload = Buffer.from(
+        JSON.stringify({
+          iss: sa.client_email,
+          scope: "https://www.googleapis.com/auth/devstorage.read_only",
+          aud: "https://oauth2.googleapis.com/token",
+          iat: now,
+          exp: now + 3600,
+        }),
+      ).toString("base64url");
+
+      const signer = createSign("RSA-SHA256");
+      signer.update(`${header}.${payload}`);
+      const signature = signer.sign(sa.private_key, "base64url");
+      const jwt = `${header}.${payload}.${signature}`;
+
+      // Exchange JWT for access token
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+      });
+      const tokenData = (await tokenRes.json()) as { access_token?: string };
+      if (!tokenData.access_token) {
+        return reply.status(500).send({
+          success: false,
+          error: {
+            code: "AUTH_ERROR",
+            message: "Failed to get GCS access token",
+          },
+        });
+      }
+
+      // Try fetching the photo with common extensions
+      const extensions = ["jpg", "jpeg", "png", "pdf"];
+      for (const ext of extensions) {
+        const objectPath = encodeURIComponent(`photos/${submissionId}.${ext}`);
+        const gcsUrl = `https://storage.googleapis.com/storage/v1/b/${bucket}/o/${objectPath}?alt=media`;
+
+        const photoRes = await fetch(gcsUrl, {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+
+        if (photoRes.ok) {
+          const contentType =
+            photoRes.headers.get("content-type") || "image/jpeg";
+          reply.header("Content-Type", contentType);
+          reply.header("Cache-Control", "public, max-age=86400");
+          const buffer = Buffer.from(await photoRes.arrayBuffer());
+          return reply.send(buffer);
+        }
+      }
+
+      return reply.status(404).send({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: `No photo found for submission ${submissionId}`,
+        },
+      });
+    },
+  );
+
   // ─── GET /photos/load/:loadId -- all photos for a load ────────────
   fastify.get(
     "/photos/load/:loadId",
