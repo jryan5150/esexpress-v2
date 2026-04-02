@@ -589,7 +589,7 @@ const logistiqRoutes: FastifyPluginAsync = async (fastify) => {
           .limit(limit)
           .offset(offset),
         db
-          .select({ count: sql<number>`count(*)::int` })
+          .select({ count: sql<number>`cast(count(*) as int)` })
           .from(ingestionConflicts)
           .where(eq(ingestionConflicts.status, "pending")),
       ]);
@@ -726,26 +726,23 @@ const logistiqRoutes: FastifyPluginAsync = async (fastify) => {
       const [totalResult, todayResult, conflictsResult, lastSyncResult] =
         await Promise.all([
           db
-            .select({ count: sql<number>`count(*)::int` })
+            .select({ count: sql<number>`cast(count(*) as int)` })
             .from(loads)
-            .where(eq(loads.source, "logistiq")),
+            .where(sql`${loads.source} = 'logistiq'`),
           db
-            .select({ count: sql<number>`count(*)::int` })
+            .select({ count: sql<number>`cast(count(*) as int)` })
             .from(loads)
             .where(
-              and(
-                eq(loads.source, "logistiq"),
-                sql`${loads.createdAt} >= ${todayStart}`,
-              ),
+              sql`${loads.source} = 'logistiq' AND ${loads.createdAt} >= ${todayStart}`,
             ),
           db
-            .select({ count: sql<number>`count(*)::int` })
+            .select({ count: sql<number>`cast(count(*) as int)` })
             .from(ingestionConflicts)
-            .where(eq(ingestionConflicts.status, "pending")),
+            .where(sql`${ingestionConflicts.status} = 'pending'`),
           db
             .select({ lastUpdated: sql<string>`max(${loads.updatedAt})` })
             .from(loads)
-            .where(eq(loads.source, "logistiq")),
+            .where(sql`${loads.source} = 'logistiq'`),
         ]);
 
       return {
