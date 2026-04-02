@@ -1,5 +1,5 @@
 import { type FastifyPluginAsync } from "fastify";
-import { eq, sql, isNull } from "drizzle-orm";
+import { eq, sql, isNull, gte, and } from "drizzle-orm";
 import { loads, assignments } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 
@@ -44,6 +44,12 @@ const autoMapRoutes: FastifyPluginAsync = async (fastify) => {
               maximum: 2000,
               default: 500,
             },
+            fromDate: {
+              type: "string",
+              format: "date",
+              description:
+                "Only map loads delivered on or after this date (YYYY-MM-DD). Defaults to 30 days ago.",
+            },
           },
         },
       },
@@ -68,15 +74,25 @@ const autoMapRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const { limit = 20000, batchSize = 500 } = (request.body as any) ?? {};
+      const {
+        limit = 20000,
+        batchSize = 500,
+        fromDate: fromDateStr,
+      } = (request.body as any) ?? {};
       const user = request.user as { id: number; name: string };
 
-      // Count unmapped loads
+      // Default to 30 days ago if no fromDate provided
+      const fromDate = fromDateStr
+        ? new Date(fromDateStr)
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      // Count unmapped loads within date range (use deliveredOn, fall back to createdAt)
+      const dateFilter = sql`coalesce(${loads.deliveredOn}, ${loads.createdAt}) >= ${fromDate}`;
       const [{ count }] = await db
         .select({ count: sql<number>`cast(count(*) as int)` })
         .from(loads)
         .leftJoin(assignments, eq(loads.id, assignments.loadId))
-        .where(isNull(assignments.id));
+        .where(and(isNull(assignments.id), dateFilter));
 
       const totalToProcess = Math.min(count, limit);
 
@@ -103,22 +119,28 @@ const autoMapRoutes: FastifyPluginAsync = async (fastify) => {
       };
 
       // Fire-and-forget: start processing in background
-      runAutoMapJob(db, jobId, totalToProcess, batchSize, user.id).catch(
-        (err) => {
-          if (currentJob?.id === jobId) {
-            currentJob.status = "failed";
-            currentJob.error = err.message;
-            currentJob.completedAt = new Date().toISOString();
-          }
-        },
-      );
+      runAutoMapJob(
+        db,
+        jobId,
+        totalToProcess,
+        batchSize,
+        user.id,
+        fromDate,
+      ).catch((err) => {
+        if (currentJob?.id === jobId) {
+          currentJob.status = "failed";
+          currentJob.error = err.message;
+          currentJob.completedAt = new Date().toISOString();
+        }
+      });
 
       return {
         success: true,
         data: {
           jobId,
           totalLoads: totalToProcess,
-          message: `Auto-map started for ${totalToProcess} unmapped loads`,
+          fromDate: fromDate.toISOString().slice(0, 10),
+          message: `Auto-map started for ${totalToProcess} unmapped loads (from ${fromDate.toISOString().slice(0, 10)})`,
         },
       };
     },
@@ -150,6 +172,7 @@ async function runAutoMapJob(
   totalLimit: number,
   batchSize: number,
   systemUserId: number,
+  fromDate: Date,
 ) {
   const { processLoadBatch } =
     await import("../services/auto-mapper.service.js");
@@ -157,12 +180,17 @@ async function runAutoMapJob(
   let offset = 0;
 
   while (offset < totalLimit) {
-    // Fetch a batch of unmapped load IDs
+    // Fetch a batch of unmapped load IDs within date range
     const batch = await db
       .select({ id: loads.id })
       .from(loads)
       .leftJoin(assignments, eq(loads.id, assignments.loadId))
-      .where(isNull(assignments.id))
+      .where(
+        and(
+          isNull(assignments.id),
+          sql`coalesce(${loads.deliveredOn}, ${loads.createdAt}) >= ${fromDate}`,
+        ),
+      )
       .limit(batchSize)
       .offset(0); // Always offset 0 because processed loads now have assignments
 
