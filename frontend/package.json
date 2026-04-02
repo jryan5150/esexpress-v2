@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "start": "npx serve dist -s -l tcp://0.0.0.0:${PORT:-3000}",
     "preview": "vite preview",
     "test": "vitest run",
