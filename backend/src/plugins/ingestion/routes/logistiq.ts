@@ -720,38 +720,23 @@ const logistiqRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
+      const [statsRows] = await db.execute(sql`
+        SELECT
+          (SELECT count(*) FROM loads WHERE source = 'logistiq') AS total_loads,
+          (SELECT count(*) FROM loads WHERE source = 'logistiq' AND created_at >= current_date) AS synced_today,
+          (SELECT count(*) FROM ingestion_conflicts WHERE status = 'pending') AS unresolved_conflicts,
+          (SELECT max(updated_at) FROM loads WHERE source = 'logistiq') AS last_sync_at
+      `);
 
-      const [totalResult, todayResult, conflictsResult, lastSyncResult] =
-        await Promise.all([
-          db
-            .select({ count: sql<number>`cast(count(*) as int)` })
-            .from(loads)
-            .where(sql`${loads.source} = 'logistiq'`),
-          db
-            .select({ count: sql<number>`cast(count(*) as int)` })
-            .from(loads)
-            .where(
-              sql`${loads.source} = 'logistiq' AND ${loads.createdAt} >= ${todayStart}`,
-            ),
-          db
-            .select({ count: sql<number>`cast(count(*) as int)` })
-            .from(ingestionConflicts)
-            .where(sql`${ingestionConflicts.status} = 'pending'`),
-          db
-            .select({ lastUpdated: sql<string>`max(${loads.updatedAt})` })
-            .from(loads)
-            .where(sql`${loads.source} = 'logistiq'`),
-        ]);
+      const row = statsRows as Record<string, unknown>;
 
       return {
         success: true,
         data: {
-          totalLoads: totalResult[0]?.count ?? 0,
-          syncedToday: todayResult[0]?.count ?? 0,
-          unresolvedConflicts: conflictsResult[0]?.count ?? 0,
-          lastSyncAt: lastSyncResult[0]?.lastUpdated ?? null,
+          totalLoads: Number(row.total_loads ?? 0),
+          syncedToday: Number(row.synced_today ?? 0),
+          unresolvedConflicts: Number(row.unresolved_conflicts ?? 0),
+          lastSyncAt: row.last_sync_at ?? null,
         },
       };
     },
