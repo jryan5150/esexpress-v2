@@ -401,23 +401,24 @@ export class LogistiqClient {
     from: Date,
     to: Date,
   ): Promise<LogistiqOrder[]> {
-    const body = JSON.stringify({
-      carrierId: this.carrierId,
-      startDate: from.toISOString().slice(0, 10),
-      endDate: to.toISOString().slice(0, 10),
+    // API requires GET with query params, dates as "YYYY-MM-DD HH:MM:SS"
+    const startDt = `${from.toISOString().slice(0, 10)} 00:00:00`;
+    const endDt = `${to.toISOString().slice(0, 10)} 23:59:59`;
+    const params = new URLSearchParams({
+      start_datetime: startDt,
+      end_datetime: endDt,
+      CarrierID: String(this.carrierId),
     });
 
-    // Step 1: Request export — returns an S3 download URL
+    // Step 1: Request export — returns S3 download URL in export_info
     let res: Response;
     try {
-      res = await fetch(CARRIER_EXPORT_URL, {
-        method: "POST",
+      res = await fetch(`${CARRIER_EXPORT_URL}?${params}`, {
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
           "x-api-key": this.apiKey!,
         },
-        body,
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        signal: AbortSignal.timeout(60_000), // exports can take 30s for large sets
       });
       this.requestCount++;
     } catch (err: unknown) {
@@ -437,15 +438,23 @@ export class LogistiqClient {
       throw new HttpError(res.status, text);
     }
 
-    const exportData = (await res.json()) as CarrierExportResponse;
-    if (!exportData.downloadUrl) {
-      throw new Error("Logistiq carrier export: no downloadUrl in response");
+    const exportData = (await res.json()) as {
+      success: boolean;
+      export_info?: { download_url: string; record_count: number };
+      error?: string;
+    };
+
+    const downloadUrl = exportData.export_info?.download_url;
+    if (!downloadUrl) {
+      throw new Error(
+        `Logistiq carrier export: no download_url in response. ${exportData.error ?? ""}`,
+      );
     }
 
     // Step 2: Download the JSON file from S3
     let s3Res: Response;
     try {
-      s3Res = await fetch(exportData.downloadUrl, {
+      s3Res = await fetch(downloadUrl, {
         method: "GET",
         signal: AbortSignal.timeout(S3_DOWNLOAD_TIMEOUT_MS),
       });
@@ -467,7 +476,9 @@ export class LogistiqClient {
       throw new HttpError(s3Res.status, text);
     }
 
-    const orders = (await s3Res.json()) as LogistiqOrder[];
+    // S3 file has { export_metadata, records: [...] }
+    const fileData = (await s3Res.json()) as { records?: LogistiqOrder[] };
+    const orders = fileData.records ?? (fileData as unknown as LogistiqOrder[]);
     return Array.isArray(orders) ? orders : [];
   }
 
