@@ -8,6 +8,7 @@ import {
 import { useMarkEntered, useAdvanceToReady } from "../hooks/use-dispatch-desk";
 import { usePresence, useHeartbeat } from "../hooks/use-presence";
 import { DispatchCard } from "../components/DispatchCard";
+import { Pagination } from "../components/Pagination";
 import { Button } from "../components/Button";
 import { useToast } from "../components/Toast";
 import type { Well } from "../types/api";
@@ -19,10 +20,14 @@ export function DispatchDesk() {
   const selectedWellId = searchParams.get("wellId") || "";
   const [pcsStart, setPcsStart] = useState("");
   const [enteredIds, setEnteredIds] = useState<Set<number>>(new Set());
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   const wellsQuery = useWells();
   const deskQuery = useDispatchDeskLoads(
-    selectedWellId ? { wellId: Number(selectedWellId) } : undefined,
+    selectedWellId
+      ? { wellId: Number(selectedWellId), page, limit: pageSize }
+      : undefined,
   );
   const markEntered = useMarkEntered();
   const advanceToReady = useAdvanceToReady();
@@ -66,6 +71,7 @@ export function DispatchDesk() {
   const handleSelectWell = (wellId: string) => {
     setSearchParams(wellId ? { wellId } : {});
     setEnteredIds(new Set());
+    setPage(1);
   };
 
   const handleMarkSingle = (assignmentId: number) => {
@@ -529,6 +535,21 @@ export function DispatchDesk() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Pagination */}
+      {selectedWellId && allLoads.length > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={(deskQuery.data as any)?.total ?? allLoads.length}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => {
+            setPageSize(s);
+            setPage(1);
+          }}
+          loading={deskQuery.isLoading}
+        />
       )}
 
       {/* Completion Summary */}

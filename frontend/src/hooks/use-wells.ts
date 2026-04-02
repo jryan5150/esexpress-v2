@@ -73,11 +73,15 @@ export function useDispatchDeskLoads(filters?: {
   wellId?: number;
   photoStatus?: string;
   date?: string;
+  page?: number;
+  limit?: number;
 }) {
   const params = new URLSearchParams();
   if (filters?.wellId) params.set("wellId", String(filters.wellId));
   if (filters?.photoStatus) params.set("photoStatus", filters.photoStatus);
   if (filters?.date) params.set("date", filters.date);
+  if (filters?.page) params.set("page", String(filters.page));
+  if (filters?.limit) params.set("limit", String(filters.limit));
   const qs = params.toString() ? `?${params}` : "";
   return useQuery({
     queryKey: qk.dispatchDesk.loads(filters),
