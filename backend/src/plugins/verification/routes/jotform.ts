@@ -175,6 +175,112 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // NOTE: /jotform/sync and /jotform/stats are registered in photos.ts
+
+  // GET /jotform/queue — JotForm imports as BOL queue items with photo URLs
+  fastify.get(
+    "/jotform/queue",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            status: { type: "string" },
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+
+      const {
+        status,
+        page = 1,
+        limit = 50,
+      } = request.query as {
+        status?: string;
+        page?: number;
+        limit?: number;
+      };
+      const offset = (page - 1) * limit;
+
+      const { sql, desc } = await import("drizzle-orm");
+
+      let query = db
+        .select({
+          id: jotformImports.id,
+          jotformSubmissionId: jotformImports.jotformSubmissionId,
+          driverName: jotformImports.driverName,
+          truckNo: jotformImports.truckNo,
+          bolNo: jotformImports.bolNo,
+          weight: jotformImports.weight,
+          photoUrl: jotformImports.photoUrl,
+          imageUrls: jotformImports.imageUrls,
+          submittedAt: jotformImports.submittedAt,
+          status: jotformImports.status,
+          matchedLoadId: jotformImports.matchedLoadId,
+          matchMethod: jotformImports.matchMethod,
+          matchedAt: jotformImports.matchedAt,
+          createdAt: jotformImports.createdAt,
+          // Joined load fields when matched
+          loadNo: loads.loadNo,
+          loadDriverName: loads.driverName,
+          destinationName: loads.destinationName,
+          loadTicketNo: loads.ticketNo,
+        })
+        .from(jotformImports)
+        .leftJoin(loads, eq(jotformImports.matchedLoadId, loads.id))
+        .orderBy(desc(jotformImports.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      if (status) {
+        query = query.where(
+          sql`${jotformImports.status} = ${status}`,
+        ) as typeof query;
+      }
+
+      const rows = await query;
+
+      // Map to queue item format the frontend expects
+      const data = rows.map((r) => ({
+        submission: {
+          id: r.id,
+          bolNumber: r.bolNo,
+          driverName: r.driverName,
+          truckNo: r.truckNo,
+          weight: r.weight,
+          photoUrls: r.imageUrls ?? (r.photoUrl ? [r.photoUrl] : []),
+          status: r.status,
+          submittedAt: r.submittedAt,
+          createdAt: r.createdAt,
+        },
+        matchedLoad: r.matchedLoadId
+          ? {
+              id: r.matchedLoadId,
+              loadNo: r.loadNo,
+              driverName: r.loadDriverName,
+              destinationName: r.destinationName,
+              ticketNo: r.loadTicketNo,
+            }
+          : null,
+        discrepancies: [],
+      }));
+
+      return { success: true, data };
+    },
+  );
 };
 
 export default jotformRoutes;

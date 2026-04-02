@@ -11,8 +11,7 @@ import type {
 export function useBolQueue() {
   return useQuery({
     queryKey: qk.bol.queue(),
-    queryFn: () =>
-      api.get<BolQueueItem[]>("/verification/bol/operations/queue"),
+    queryFn: () => api.get<BolQueueItem[]>("/verification/jotform/queue"),
     refetchInterval: 30_000,
   });
 }
@@ -20,7 +19,7 @@ export function useBolQueue() {
 export function useBolStats() {
   return useQuery({
     queryKey: qk.bol.stats(),
-    queryFn: () => api.get<BolStats>("/verification/bol/operations/stats"),
+    queryFn: () => api.get<BolStats>("/verification/jotform/stats"),
     refetchInterval: 30_000,
   });
 }
