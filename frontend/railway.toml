@@ -1,3 +1,7 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "./Dockerfile"
+
+# Forward Railway env vars as Docker build args so Vite can inline them
+[build.args]
+VITE_API_URL = "${{VITE_API_URL}}"
