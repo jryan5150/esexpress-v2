@@ -1,5 +1,2 @@
 [build]
-buildCommand = "cd frontend && pnpm install && pnpm build"
-
-[deploy]
-staticFolder = "frontend/dist"
+dockerfilePath = "Dockerfile"
