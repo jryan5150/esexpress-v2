@@ -1,9 +1,9 @@
-import { eq, and, sql } from 'drizzle-orm';
-import { assignments, loads, wells } from '../../../db/schema.js';
-import { transitionStatus, createAssignment } from './assignments.service.js';
-import { createLocationMapping } from './mappings.service.js';
-import { NotFoundError } from '../../../lib/errors.js';
-import type { Database } from '../../../db/client.js';
+import { eq, and, sql, desc } from "drizzle-orm";
+import { assignments, loads, wells } from "../../../db/schema.js";
+import { transitionStatus, createAssignment } from "./assignments.service.js";
+import { createLocationMapping } from "./mappings.service.js";
+import { NotFoundError } from "../../../lib/errors.js";
+import type { Database } from "../../../db/client.js";
 
 // ─── Summary ─────────────────────────────────────────────────────────────────
 
@@ -14,14 +14,16 @@ export interface ValidationSummary {
   total: number;
 }
 
-export async function getValidationSummary(db: Database): Promise<ValidationSummary> {
+export async function getValidationSummary(
+  db: Database,
+): Promise<ValidationSummary> {
   const rows = await db
     .select({
       tier: assignments.autoMapTier,
       count: sql<number>`cast(count(*) as int)`,
     })
     .from(assignments)
-    .where(eq(assignments.status, 'pending'))
+    .where(eq(assignments.status, "pending"))
     .groupBy(assignments.autoMapTier);
 
   let tier1 = 0;
@@ -37,19 +39,40 @@ export async function getValidationSummary(db: Database): Promise<ValidationSumm
   return { tier1, tier2, tier3, total: tier1 + tier2 + tier3 };
 }
 
-// ─── By Tier ──────────────────────────────────────────────────────────────────
+// ─── By Tier (with joined load + well data) ──────────────────────────────────
 
 export async function getAssignmentsByTier(db: Database, tier: number) {
-  return db
-    .select()
+  const rows = await db
+    .select({
+      id: assignments.id,
+      wellId: assignments.wellId,
+      loadId: assignments.loadId,
+      status: assignments.status,
+      autoMapTier: assignments.autoMapTier,
+      autoMapScore: assignments.autoMapScore,
+      photoStatus: assignments.photoStatus,
+      createdAt: assignments.createdAt,
+      // Joined load fields
+      loadNo: loads.loadNo,
+      driverName: loads.driverName,
+      destinationName: loads.destinationName,
+      carrierName: loads.carrierName,
+      weightTons: loads.weightTons,
+      ticketNo: loads.ticketNo,
+      bolNo: loads.bolNo,
+      // Joined well fields
+      wellName: wells.name,
+    })
     .from(assignments)
+    .innerJoin(loads, eq(assignments.loadId, loads.id))
+    .innerJoin(wells, eq(assignments.wellId, wells.id))
     .where(
-      and(
-        eq(assignments.status, 'pending'),
-        eq(assignments.autoMapTier, tier),
-      ),
+      and(eq(assignments.status, "pending"), eq(assignments.autoMapTier, tier)),
     )
-    .orderBy(assignments.createdAt);
+    .orderBy(desc(assignments.createdAt))
+    .limit(200);
+
+  return rows;
 }
 
 // ─── Alias Learning Helpers ───────────────────────────────────────────────────
@@ -59,9 +82,13 @@ async function addWellAlias(
   wellId: number,
   sourceName: string,
   userId: number,
-  action: 'confirmed' | 'rejected' | 'manual_assign',
+  action: "confirmed" | "rejected" | "manual_assign",
 ): Promise<void> {
-  const [well] = await db.select().from(wells).where(eq(wells.id, wellId)).limit(1);
+  const [well] = await db
+    .select()
+    .from(wells)
+    .where(eq(wells.id, wellId))
+    .limit(1);
   if (!well) return;
 
   const normalized = sourceName.toLowerCase().trim();
@@ -76,7 +103,7 @@ async function addWellAlias(
   };
 
   // Only add alias for confirmed/manual_assign — rejected doesn't earn an alias
-  if (action !== 'rejected' && !existing.includes(normalized)) {
+  if (action !== "rejected" && !existing.includes(normalized)) {
     updates.aliases = [...existing, normalized];
   }
 
@@ -90,13 +117,15 @@ export async function confirmMatch(
   assignmentId: number,
   userId: number,
   userName: string,
-): Promise<ReturnType<typeof transitionStatus> extends Promise<infer T> ? T : never> {
+): Promise<
+  ReturnType<typeof transitionStatus> extends Promise<infer T> ? T : never
+> {
   const [assignment] = await db
     .select()
     .from(assignments)
     .where(eq(assignments.id, assignmentId))
     .limit(1);
-  if (!assignment) throw new NotFoundError('Assignment', assignmentId);
+  if (!assignment) throw new NotFoundError("Assignment", assignmentId);
 
   // Load destination_name for alias learning
   const [load] = await db
@@ -105,15 +134,28 @@ export async function confirmMatch(
     .where(eq(loads.id, assignment.loadId))
     .limit(1);
 
-  const updated = await transitionStatus(db, assignmentId, 'assigned', userId, userName, 'Confirmed via validation review');
+  const updated = await transitionStatus(
+    db,
+    assignmentId,
+    "assigned",
+    userId,
+    userName,
+    "Confirmed via validation review",
+  );
 
   // Alias learning loop
   if (load?.destinationName) {
-    await addWellAlias(db, assignment.wellId, load.destinationName, userId, 'confirmed');
+    await addWellAlias(
+      db,
+      assignment.wellId,
+      load.destinationName,
+      userId,
+      "confirmed",
+    );
     await createLocationMapping(db, {
       sourceName: load.destinationName,
       wellId: assignment.wellId,
-      confidence: '1.000',
+      confidence: "1.000",
       confirmed: true,
     });
   }
@@ -129,13 +171,15 @@ export async function rejectMatch(
   userId: number,
   userName: string,
   reason?: string,
-): Promise<ReturnType<typeof transitionStatus> extends Promise<infer T> ? T : never> {
+): Promise<
+  ReturnType<typeof transitionStatus> extends Promise<infer T> ? T : never
+> {
   const [assignment] = await db
     .select()
     .from(assignments)
     .where(eq(assignments.id, assignmentId))
     .limit(1);
-  if (!assignment) throw new NotFoundError('Assignment', assignmentId);
+  if (!assignment) throw new NotFoundError("Assignment", assignmentId);
 
   // Load destination_name for negative feedback recording
   const [load] = await db
@@ -147,15 +191,21 @@ export async function rejectMatch(
   const updated = await transitionStatus(
     db,
     assignmentId,
-    'cancelled',
+    "cancelled",
     userId,
     userName,
-    reason ? `Rejected: ${reason}` : 'Rejected via validation review',
+    reason ? `Rejected: ${reason}` : "Rejected via validation review",
   );
 
   // Record negative feedback — does NOT add alias
   if (load?.destinationName) {
-    await addWellAlias(db, assignment.wellId, load.destinationName, userId, 'rejected');
+    await addWellAlias(
+      db,
+      assignment.wellId,
+      load.destinationName,
+      userId,
+      "rejected",
+    );
   }
 
   return updated as any;
@@ -176,7 +226,7 @@ export async function manualResolve(
     .from(loads)
     .where(eq(loads.id, loadId))
     .limit(1);
-  if (!load) throw new NotFoundError('Load', loadId);
+  if (!load) throw new NotFoundError("Load", loadId);
 
   // Verify well exists
   const [well] = await db
@@ -184,7 +234,7 @@ export async function manualResolve(
     .from(wells)
     .where(eq(wells.id, wellId))
     .limit(1);
-  if (!well) throw new NotFoundError('Well', wellId);
+  if (!well) throw new NotFoundError("Well", wellId);
 
   // Create assignment
   const assignment = await createAssignment(db, {
@@ -199,19 +249,25 @@ export async function manualResolve(
   const updated = await transitionStatus(
     db,
     assignment.id,
-    'assigned',
+    "assigned",
     userId,
     userName,
-    'Manually resolved via validation review',
+    "Manually resolved via validation review",
   );
 
   // Alias learning loop — manual assign is the strongest training signal
   if (load.destinationName) {
-    await addWellAlias(db, wellId, load.destinationName, userId, 'manual_assign');
+    await addWellAlias(
+      db,
+      wellId,
+      load.destinationName,
+      userId,
+      "manual_assign",
+    );
     await createLocationMapping(db, {
       sourceName: load.destinationName,
       wellId,
-      confidence: '1.000',
+      confidence: "1.000",
       confirmed: true,
     });
   }
@@ -237,7 +293,14 @@ export async function trustSheets(
 
   for (const id of assignmentIds) {
     try {
-      await transitionStatus(db, id, 'assigned', userId, userName, 'Trusted via sheets bulk approval');
+      await transitionStatus(
+        db,
+        id,
+        "assigned",
+        userId,
+        userName,
+        "Trusted via sheets bulk approval",
+      );
       results.push({ assignmentId: id, success: true });
     } catch (err: any) {
       results.push({ assignmentId: id, success: false, error: err.message });

@@ -13,6 +13,11 @@ import {
   type Deduction,
 } from "../services/payment.service.js";
 
+const DB_UNAVAILABLE = {
+  success: false,
+  error: { code: "SERVICE_UNAVAILABLE", message: "Database not connected" },
+};
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
@@ -37,8 +42,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { status, driverId, from, to, page, limit } = request.query as {
         status?: string;
         driverId?: string;
@@ -78,9 +84,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
 
       return {
         success: true,
-        data: {
-          batches: rows,
-        },
+        data: rows,
         meta: {
           page: pageNum,
           limit: pageSize,
@@ -115,8 +119,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const body = request.body as {
         driverId: string;
         driverName: string;
@@ -163,8 +168,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { weekStart, weekEnd } = request.body as {
         weekStart: string;
         weekEnd: string;
@@ -195,8 +201,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { id } = request.params as { id: number };
       const batch = await getBatch(db, id);
       return { success: true, data: batch };
@@ -230,8 +237,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { id } = request.params as { id: number };
       const body = request.body as Partial<{
         ratePerTon: number;
@@ -278,8 +286,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { id } = request.params as { id: number };
       const deduction = request.body as Deduction;
 
@@ -311,8 +320,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { id, idx } = request.params as { id: number; idx: number };
 
       await removeDeduction(db, id, idx);
@@ -346,8 +356,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { id } = request.params as { id: number };
 
       await transitionStatus(db, id, "pending_review", request.user.id);
@@ -378,8 +389,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { id } = request.params as { id: number };
 
       await transitionStatus(db, id, "approved", request.user.id);
@@ -419,8 +431,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { id } = request.params as { id: number };
       const { notes } = (request.body as { notes?: string }) ?? {};
 
@@ -452,8 +465,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { id } = request.params as { id: number };
 
       await transitionStatus(db, id, "paid", request.user.id);
@@ -554,8 +568,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (request, _reply) => {
+    async (request, reply) => {
       const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
       const { from, to } = request.query as { from?: string; to?: string };
 
       const conditions = [];
@@ -619,9 +634,9 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
 
       return {
         success: true,
-        data: {
+        data: batches,
+        meta: {
           driverId,
-          batches,
           total: batches.length,
         },
       };
@@ -670,9 +685,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
 
       return {
         success: true,
-        data: {
-          batches,
-        },
+        data: batches,
         meta: {
           page: pageNum,
           limit: pageSize,
@@ -769,9 +782,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
 
       return {
         success: true,
-        data: {
-          drivers,
-        },
+        data: drivers,
         meta: {
           page: pageNum,
           limit: pageSize,

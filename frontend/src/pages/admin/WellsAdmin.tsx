@@ -1,469 +1,199 @@
 import { useState } from "react";
-import { Button } from "@/components/Button";
+import { useWells } from "../../hooks/use-wells";
+import type { Well } from "../../types/api";
 
-/* -------------------------------------------------------------------------- */
-/*  WellsAdmin — CRUD management for well assets                              */
-/* -------------------------------------------------------------------------- */
+type StatusFilter = "all" | "active" | "standby";
 
-type WellStatus = "active" | "drilling" | "maintenance" | "shut-in";
-
-interface AliasHistory {
-  original: string;
-  resolved: string;
-  confidence: number;
-  date: string;
-}
-
-interface MockWell {
-  id: string;
-  name: string;
-  api: string;
-  aliases: string[];
-  propxJobId: string;
-  status: WellStatus;
-  dailyTarget: number;
-  coordinates: string;
-  aliasHistory: AliasHistory[];
-}
-
-const STATUS_STYLE: Record<
-  WellStatus,
-  { dot: string; glow: string; label: string }
-> = {
-  active: {
-    dot: "bg-[var(--es-ready)]",
-    glow: "shadow-[0_0_8px_#34d399]",
-    label: "text-[var(--es-text-secondary)]",
-  },
-  drilling: {
-    dot: "bg-[var(--es-accent)]",
-    glow: "shadow-[0_0_8px_#f0692c]",
-    label: "text-[var(--es-text-secondary)]",
-  },
-  maintenance: {
-    dot: "bg-[var(--es-error)]",
-    glow: "shadow-[0_0_8px_#ffb4ab]",
-    label: "text-[var(--es-error)]/80",
-  },
-  "shut-in": {
-    dot: "bg-[var(--es-text-tertiary)]",
-    glow: "",
-    label: "text-[var(--es-text-tertiary)]",
-  },
+const STATUS_COLORS: Record<string, string> = {
+  active: "bg-tertiary/10 text-tertiary",
+  standby: "bg-primary-container/10 text-primary-container",
+  completed: "bg-on-surface/10 text-on-surface/60",
+  closed: "bg-error/10 text-error",
 };
 
 export function WellsAdmin() {
-  const [expandedId, setExpandedId] = useState<string | null>("pendleton-1h");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<StatusFilter>("all");
+  const wellsQuery = useWells();
 
-  const filtered = MOCK_WELLS.filter((w) => {
-    const matchesStatus = statusFilter === "all" || w.status === statusFilter;
-    const matchesSearch =
-      search === "" ||
-      w.name.toLowerCase().includes(search.toLowerCase()) ||
-      w.api.includes(search) ||
-      w.propxJobId.toLowerCase().includes(search.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  const wells: Well[] = Array.isArray(wellsQuery.data) ? wellsQuery.data : [];
+
+  const filtered =
+    filter === "all" ? wells : wells.filter((w) => w.status === filter);
+
+  const filterButtons: { value: StatusFilter; label: string }[] = [
+    { value: "all", label: "All" },
+    { value: "active", label: "Active" },
+    { value: "standby", label: "Standby" },
+  ];
 
   return (
-    <div className="px-8 pt-8 pb-10 max-w-7xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="p-8 max-w-7xl space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[var(--es-text-primary)]">
+          <h1 className="text-3xl font-black font-headline tracking-tight text-on-surface uppercase">
             Wells Management
           </h1>
-          <p className="text-[var(--es-text-secondary)] mt-1">
-            Configure and monitor assets across 12 active basins.
+          <p className="text-on-surface/40 font-label text-xs uppercase tracking-widest mt-1">
+            Administration // Well Registry
           </p>
         </div>
-        <Button
-          variant="primary"
-          className="px-6 py-2.5 font-bold shadow-lg shadow-[var(--es-accent)]/20"
-        >
-          <span
-            className="material-symbols-outlined"
-            style={{ fontSize: "20px" }}
-          >
-            add_location_alt
+        <div className="flex items-center gap-3">
+          <span className="font-label text-sm text-on-surface/50">
+            {wells.length} wells
           </span>
-          Add Well
-        </Button>
+          <div className="w-px h-5 bg-on-surface/10" />
+          <span className="font-label text-sm text-on-surface/50">
+            {wells.filter((w) => w.status === "active").length} active
+          </span>
+        </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-[#161b28] p-3 rounded-[var(--es-radius-lg)] flex flex-wrap items-center gap-4 border border-[var(--es-border-subtle)]">
-        <div className="flex-1 min-w-[300px] relative">
-          <input
-            className="w-full bg-[var(--es-bg-elevated)] border-none rounded-[var(--es-radius-md)] pl-10 py-2 text-sm text-[var(--es-text-primary)] placeholder:text-[var(--es-text-tertiary)] focus:ring-1 focus:ring-[var(--es-accent)]"
-            placeholder="Filter by Well Name, API, or Job ID..."
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <span
-            className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[var(--es-text-tertiary)]"
-            style={{ fontSize: "20px" }}
-          >
-            search
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs uppercase font-bold tracking-widest text-[var(--es-text-tertiary)]">
-            Status:
-          </label>
-          <select
-            className="bg-[var(--es-bg-elevated)] border-none rounded-[var(--es-radius-md)] text-sm py-2 px-4 text-[var(--es-text-primary)] focus:ring-1 focus:ring-[var(--es-accent)]"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="drilling">Drilling</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="shut-in">Shut-in</option>
-          </select>
-        </div>
-        <button className="p-2 bg-[var(--es-bg-elevated)] hover:bg-[var(--es-bg-overlay)] rounded-[var(--es-radius-md)] text-[var(--es-text-tertiary)] transition-colors">
-          <span className="material-symbols-outlined">filter_list</span>
-        </button>
-      </div>
-
-      {/* Data Table */}
-      <div className="bg-[var(--es-bg-inset)] rounded-[var(--es-radius-lg)] border border-[var(--es-border-subtle)] overflow-hidden">
-        <table className="min-w-full border-separate border-spacing-0">
-          <thead className="bg-[#161b28] sticky top-0 z-10">
-            <tr>
-              {[
-                "Well Name",
-                "Aliases",
-                "PropX Job ID",
-                "Status",
-                "Daily Target",
-                "Coordinates",
-                "",
-              ].map((h, i) => (
-                <th
-                  key={i}
-                  className={`px-6 py-4 text-xs font-bold uppercase tracking-widest text-[var(--es-text-tertiary)] border-b border-[var(--es-border-subtle)] ${
-                    h === "Daily Target" ? "text-right" : "text-left"
-                  }`}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--es-border-subtle)]/50">
-            {filtered.map((well) => {
-              const isExpanded = expandedId === well.id;
-              const style = STATUS_STYLE[well.status];
-
-              return (
-                <TableRows
-                  key={well.id}
-                  well={well}
-                  style={style}
-                  isExpanded={isExpanded}
-                  onToggle={() => setExpandedId(isExpanded ? null : well.id)}
-                />
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-between text-xs text-[var(--es-text-tertiary)]">
-        <span>
-          Showing 1-{filtered.length} of {MOCK_WELLS.length} wells
-        </span>
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2">
+        {filterButtons.map((btn) => (
           <button
-            className="p-1 rounded hover:bg-[var(--es-bg-elevated)] transition-colors disabled:opacity-20"
-            disabled
+            key={btn.value}
+            onClick={() => setFilter(btn.value)}
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              filter === btn.value
+                ? "bg-primary-container/15 text-primary-container"
+                : "text-on-surface/40 hover:bg-surface-container-high hover:text-on-surface/70"
+            }`}
           >
-            <span className="material-symbols-outlined">chevron_left</span>
+            {btn.label}
+            {btn.value !== "all" && (
+              <span className="ml-1.5 font-label">
+                {
+                  wells.filter((w) =>
+                    btn.value === "all" ? true : w.status === btn.value,
+                  ).length
+                }
+              </span>
+            )}
           </button>
-          <span className="font-bold text-[var(--es-accent)]">1</span>
-          <button className="px-2 py-1 rounded hover:bg-[var(--es-bg-elevated)] transition-colors">
-            2
-          </button>
-          <button className="px-2 py-1 rounded hover:bg-[var(--es-bg-elevated)] transition-colors">
-            3
-          </button>
-          <span>...</span>
-          <button className="px-2 py-1 rounded hover:bg-[var(--es-bg-elevated)] transition-colors">
-            9
-          </button>
-          <button className="p-1 rounded hover:bg-[var(--es-bg-elevated)] transition-colors">
-            <span className="material-symbols-outlined">chevron_right</span>
-          </button>
-        </div>
+        ))}
       </div>
+
+      {/* Loading */}
+      {wellsQuery.isLoading && (
+        <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="bg-surface-container-low p-5 animate-pulse flex items-center gap-6"
+            >
+              <div className="h-4 w-40 bg-on-surface/10 rounded" />
+              <div className="h-4 w-20 bg-on-surface/5 rounded" />
+              <div className="h-4 w-24 bg-on-surface/5 rounded" />
+              <div className="h-4 w-16 bg-on-surface/5 rounded" />
+              <div className="flex-1" />
+              <div className="h-4 w-8 bg-on-surface/5 rounded" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Error */}
+      {wellsQuery.isError && (
+        <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 flex items-center gap-3">
+          <span className="material-symbols-outlined text-error text-lg">
+            cloud_off
+          </span>
+          <p className="text-sm text-error font-medium">
+            Unable to load wells. Check your connection.
+          </p>
+        </div>
+      )}
+
+      {/* Empty */}
+      {!wellsQuery.isLoading &&
+        !wellsQuery.isError &&
+        filtered.length === 0 && (
+          <div className="bg-surface-container-low rounded-xl p-12 border border-on-surface/5 flex flex-col items-center justify-center text-center space-y-4">
+            <span className="material-symbols-outlined text-5xl text-on-surface/20">
+              oil_barrel
+            </span>
+            <h2 className="text-lg font-bold font-headline text-on-surface/60">
+              {filter === "all" ? "No Wells Found" : `No ${filter} wells`}
+            </h2>
+            <p className="text-sm text-on-surface/40 font-body max-w-md">
+              {filter === "all"
+                ? "Wells will appear here once synced from PropX."
+                : `No wells with "${filter}" status. Try a different filter.`}
+            </p>
+          </div>
+        )}
+
+      {/* Table */}
+      {!wellsQuery.isLoading && filtered.length > 0 && (
+        <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+          {/* Header Row */}
+          <div className="bg-surface-container-lowest/50 px-6 py-3 flex items-center gap-6 text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+            <div className="flex-1 min-w-[180px]">Name</div>
+            <div className="w-24 text-center">Status</div>
+            <div className="w-36">PropX Job ID</div>
+            <div className="w-28 text-center">Daily Target</div>
+            <div className="w-16 text-center">Actions</div>
+          </div>
+
+          {/* Data Rows */}
+          {filtered.map((well) => (
+            <div
+              key={well.id}
+              className="bg-surface-container-low hover:bg-surface-container-high transition-all px-6 py-4 flex items-center gap-6"
+            >
+              {/* Name */}
+              <div className="flex-1 min-w-[180px]">
+                <span className="font-bold text-sm text-on-surface">
+                  {well.name}
+                </span>
+                {well.aliases.length > 0 && (
+                  <span className="ml-2 font-label text-[10px] text-on-surface/30">
+                    +{well.aliases.length} alias
+                    {well.aliases.length > 1 ? "es" : ""}
+                  </span>
+                )}
+              </div>
+
+              {/* Status */}
+              <div className="w-24 text-center">
+                <span
+                  className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${STATUS_COLORS[well.status] ?? "bg-on-surface/10 text-on-surface/60"}`}
+                >
+                  {well.status}
+                </span>
+              </div>
+
+              {/* PropX Job ID */}
+              <div className="w-36">
+                <span className="font-label text-xs text-on-surface/50 truncate block max-w-[130px]">
+                  {well.propxJobId ?? "--"}
+                </span>
+              </div>
+
+              {/* Daily Target */}
+              <div className="w-28 text-center">
+                <span className="font-label text-sm font-bold text-on-surface">
+                  {well.dailyTargetLoads}
+                </span>
+                <span className="font-label text-xs text-on-surface/30 ml-1">
+                  loads
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="w-16 text-center">
+                <button className="p-2 hover:bg-surface-container-highest rounded-lg transition-colors cursor-pointer text-on-surface/30 hover:text-primary-container">
+                  <span className="material-symbols-outlined text-lg">
+                    edit
+                  </span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/*  Table row (+ expanded detail)                                             */
-/* -------------------------------------------------------------------------- */
-
-function TableRows({
-  well,
-  style,
-  isExpanded,
-  onToggle,
-}: {
-  well: MockWell;
-  style: { dot: string; glow: string; label: string };
-  isExpanded: boolean;
-  onToggle: () => void;
-}) {
-  const borderClass = isExpanded
-    ? "bg-[var(--es-bg-elevated)]/20 border-l-4 border-[var(--es-accent)]"
-    : "group hover:bg-[var(--es-bg-elevated)]/40 transition-colors";
-
-  return (
-    <>
-      <tr className={borderClass}>
-        <td className="px-6 py-4">
-          <div className="font-bold text-[var(--es-text-primary)]">
-            {well.name}
-          </div>
-          <div className="text-[10px] font-[var(--es-font-mono)] text-[var(--es-text-tertiary)]">
-            API: {well.api}
-          </div>
-        </td>
-        <td className="px-6 py-4">
-          <div className="flex flex-wrap gap-1.5 max-w-xs">
-            {well.aliases.map((alias) => (
-              <span
-                key={alias}
-                className="bg-[var(--es-bg-elevated)] text-[var(--es-text-secondary)] text-[10px] px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-[var(--es-error-dim)] hover:text-[var(--es-error)] transition-colors"
-              >
-                {alias}{" "}
-                <span
-                  className="material-symbols-outlined"
-                  style={{ fontSize: "12px" }}
-                >
-                  close
-                </span>
-              </span>
-            ))}
-            {isExpanded ? (
-              <input
-                className="bg-transparent border-none p-0 text-[10px] font-[var(--es-font-mono)] w-16 focus:ring-0 text-[var(--es-text-secondary)] placeholder:text-[var(--es-text-tertiary)]"
-                placeholder="Type name..."
-                type="text"
-              />
-            ) : (
-              <span className="border border-dashed border-[var(--es-border-default)] text-[var(--es-text-tertiary)] text-[10px] px-2 py-0.5 rounded cursor-pointer hover:border-[var(--es-accent)] transition-colors">
-                + Add
-              </span>
-            )}
-          </div>
-        </td>
-        <td className="px-6 py-4">
-          <span className="font-[var(--es-font-mono)] text-sm text-[var(--es-accent)]">
-            {well.propxJobId}
-          </span>
-        </td>
-        <td className="px-6 py-4">
-          <div className="inline-flex items-center gap-2 bg-[var(--es-bg-overlay)] px-3 py-1 rounded-full border border-[var(--es-border-default)]">
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${style.dot} ${style.glow}`}
-            />
-            <span
-              className={`font-[var(--es-font-mono)] text-[11px] font-bold uppercase ${style.label}`}
-            >
-              {well.status}
-            </span>
-          </div>
-        </td>
-        <td className="px-6 py-4 text-right">
-          <div className="font-[var(--es-font-mono)] text-sm font-medium text-[var(--es-text-primary)]">
-            {well.dailyTarget.toLocaleString()}{" "}
-            <span className="text-[10px] text-[var(--es-text-tertiary)]">
-              BBL
-            </span>
-          </div>
-        </td>
-        <td className="px-6 py-4">
-          <div className="font-[var(--es-font-mono)] text-xs text-[var(--es-text-tertiary)]">
-            {well.coordinates}
-          </div>
-        </td>
-        <td className="px-6 py-4 text-right">
-          <button
-            className={`${isExpanded ? "text-[var(--es-accent)]" : "text-[var(--es-text-tertiary)]"} hover:text-[var(--es-accent)] transition-colors`}
-            onClick={onToggle}
-            aria-label={isExpanded ? "Collapse" : "Expand"}
-          >
-            <span className="material-symbols-outlined">
-              {isExpanded ? "expand_less" : "more_vert"}
-            </span>
-          </button>
-        </td>
-      </tr>
-
-      {isExpanded && well.aliasHistory.length > 0 && (
-        <tr className="bg-[var(--es-bg-inset)]/50">
-          <td colSpan={7} className="px-6 py-6">
-            <div className="bg-[var(--es-bg-inset)] border border-[var(--es-border-subtle)] rounded-[var(--es-radius-md)] p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--es-accent)] flex items-center gap-2">
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ fontSize: "16px" }}
-                  >
-                    history
-                  </span>
-                  Alias Match History
-                </h4>
-                <span className="text-[10px] font-medium text-[var(--es-text-tertiary)]">
-                  Last {well.aliasHistory.length} automated resolutions
-                </span>
-              </div>
-              <div className="space-y-2">
-                {well.aliasHistory.map((h, idx) => {
-                  const highConf = h.confidence >= 85;
-                  const confColor = highConf
-                    ? "bg-[var(--es-ready-dim)] text-[var(--es-ready)]"
-                    : "bg-[var(--es-accent-dim)] text-[var(--es-accent)]";
-                  const borderColor = highConf
-                    ? "border-[var(--es-ready)]"
-                    : "border-[var(--es-accent)]";
-
-                  return (
-                    <div
-                      key={idx}
-                      className={`flex items-center justify-between py-2 px-3 bg-[var(--es-bg-surface)]/30 rounded border-l-2 ${borderColor}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="font-[var(--es-font-mono)] text-xs text-[var(--es-text-secondary)]">
-                          {h.original}
-                        </span>
-                        <span className="material-symbols-outlined text-sm text-[var(--es-text-tertiary)]">
-                          arrow_forward
-                        </span>
-                        <span className="font-[var(--es-font-mono)] text-xs font-bold text-[var(--es-text-primary)]">
-                          {h.resolved}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`text-[10px] ${confColor} px-2 py-0.5 rounded font-bold`}
-                        >
-                          {h.confidence}% CONFIDENCE
-                        </div>
-                        <div className="text-[10px] font-[var(--es-font-mono)] text-[var(--es-text-tertiary)]">
-                          {h.date}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Mock data                                                                 */
-/* -------------------------------------------------------------------------- */
-
-const MOCK_WELLS: MockWell[] = [
-  {
-    id: "blackwood-4h",
-    name: "Blackwood 4H",
-    api: "42-329-39401",
-    aliases: ["BW-4-Horiz", "B-Wood-4H"],
-    propxJobId: "PX-9928-102",
-    status: "active",
-    dailyTarget: 4250,
-    coordinates: "31.968, -102.103",
-    aliasHistory: [],
-  },
-  {
-    id: "pendleton-1h",
-    name: "Pendleton 1H",
-    api: "42-329-41120",
-    aliases: ["Pendlton 1-H"],
-    propxJobId: "PX-5501-A90",
-    status: "drilling",
-    dailyTarget: 0,
-    coordinates: "32.041, -101.988",
-    aliasHistory: [
-      {
-        original: "Pendlton 1-H",
-        resolved: "Pendleton 1H",
-        confidence: 98,
-        date: "2023-11-20 14:22",
-      },
-      {
-        original: "PENDLETON #1",
-        resolved: "Pendleton 1H",
-        confidence: 92,
-        date: "2023-11-18 09:10",
-      },
-      {
-        original: "Pndltn Unit 1",
-        resolved: "Pendleton 1H",
-        confidence: 74,
-        date: "2023-11-17 16:45",
-      },
-      {
-        original: "PEN-1H",
-        resolved: "Pendleton 1H",
-        confidence: 99,
-        date: "2023-11-15 11:12",
-      },
-      {
-        original: "Pendleton 1H Rig 4",
-        resolved: "Pendleton 1H",
-        confidence: 88,
-        date: "2023-11-14 18:30",
-      },
-    ],
-  },
-  {
-    id: "sawyer-12h",
-    name: "Sawyer 12H",
-    api: "42-123-55610",
-    aliases: ["SY-12H"],
-    propxJobId: "PX-1200-S12",
-    status: "maintenance",
-    dailyTarget: 1800,
-    coordinates: "32.112, -102.450",
-    aliasHistory: [],
-  },
-  {
-    id: "apache-ridge-7v",
-    name: "Apache Ridge 7V",
-    api: "42-461-22035",
-    aliases: ["AR-7V", "Apache-R-7"],
-    propxJobId: "PX-7744-AR7",
-    status: "active",
-    dailyTarget: 3100,
-    coordinates: "31.845, -103.221",
-    aliasHistory: [],
-  },
-  {
-    id: "howard-draw-2h",
-    name: "Howard Draw 2H",
-    api: "42-227-18892",
-    aliases: [],
-    propxJobId: "PX-3301-HD2",
-    status: "shut-in",
-    dailyTarget: 0,
-    coordinates: "32.305, -101.476",
-    aliasHistory: [],
-  },
-];

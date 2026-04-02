@@ -1,72 +1,55 @@
-export const API_BASE = import.meta.env.VITE_API_URL || "/api";
+const BASE = (import.meta.env.VITE_API_URL || "") + "/api/v1";
 
 export class ApiError extends Error {
   constructor(
+    public status: number,
+    public code: string,
     message: string,
-    public readonly status: number,
   ) {
     super(message);
     this.name = "ApiError";
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<T> {
   const token = localStorage.getItem("esexpress-token");
-
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      ...headers,
-      ...(init?.headers as Record<string, string> | undefined),
-    },
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
   });
 
-  if (!response.ok) {
-    let message = `HTTP ${response.status}: ${response.statusText}`;
-    try {
-      const body = await response.json();
-      if (typeof body?.error === "string") {
-        message = body.error;
-      } else if (typeof body?.message === "string") {
-        message = body.message;
-      }
-    } catch {
-      // Response body is not JSON — use default message
-    }
-    throw new ApiError(message, response.status);
+  if (res.status === 401) {
+    localStorage.removeItem("esexpress-token");
+    // Auth redirect handled by ProtectedRoute component
+    throw new ApiError(401, "UNAUTHORIZED", "Session expired");
   }
 
-  return response.json() as Promise<T>;
+  const json = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new ApiError(
+      res.status,
+      json.error?.code || "UNKNOWN",
+      json.error?.message || res.statusText,
+    );
+  }
+
+  return json.data !== undefined && json.data !== null ? json.data : json;
 }
 
 export const api = {
-  get<T>(path: string): Promise<T> {
-    return request<T>(path, { method: "GET" });
-  },
-
-  post<T>(path: string, body?: unknown): Promise<T> {
-    return request<T>(path, {
-      method: "POST",
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-  },
-
-  put<T>(path: string, body?: unknown): Promise<T> {
-    return request<T>(path, {
-      method: "PUT",
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-  },
-
-  delete<T>(path: string): Promise<T> {
-    return request<T>(path, { method: "DELETE" });
-  },
+  get: <T>(path: string) => request<T>("GET", path),
+  post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
+  put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body),
+  del: <T>(path: string) => request<T>("DELETE", path),
 };

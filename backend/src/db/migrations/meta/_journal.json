@@ -8,6 +8,13 @@
       "when": 1774982652444,
       "tag": "0000_common_maverick",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775084302267,
+      "tag": "0001_elite_black_knight",
+      "breakpoints": true
     }
   ]
 }

@@ -1,212 +1,180 @@
-import { Button } from "@/components/Button";
-
-/* -------------------------------------------------------------------------- */
-/*  Login — standalone auth page, no sidebar/layout wrapper                   */
-/* -------------------------------------------------------------------------- */
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useLogin } from "../hooks/use-auth";
 
 export function Login() {
+  const navigate = useNavigate();
+  const login = useLogin();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    login.mutate(
+      { email, password },
+      {
+        onSuccess: () => navigate("/"),
+      },
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--es-bg-base)] relative">
-      {/* Subtle radial gradient overlay */}
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            "radial-gradient(at 0% 0%, rgba(240,105,44,0.05) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(240,105,44,0.03) 0px, transparent 50%)",
-        }}
-      />
-
-      {/* Dot grid background */}
-      <div
-        className="fixed inset-0 pointer-events-none opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "radial-gradient(var(--es-text-primary) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
-
-      <main className="w-full max-w-[420px] px-6 py-12 relative z-10">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-8">
         {/* Branding */}
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-14 h-14 bg-[var(--es-bg-elevated)] flex items-center justify-center rounded-xl mb-6 shadow-xl relative group">
-            <div className="absolute inset-0 bg-[var(--es-accent)] opacity-10 blur-xl group-hover:opacity-20 transition-opacity" />
-            <span
-              className="material-symbols-outlined text-[var(--es-accent)] text-4xl relative z-10"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-surface-container-high rounded-2xl border border-on-surface/10 mx-auto">
+            <span className="material-symbols-outlined text-primary-container text-3xl">
               terminal
             </span>
           </div>
-          <h1 className="font-bold text-3xl tracking-tighter text-[var(--es-text-primary)] uppercase">
-            EsExpress <span className="text-[var(--es-accent)]">v2</span>
-          </h1>
-          <p className="text-xs uppercase tracking-[0.2em] text-[var(--es-text-secondary)] opacity-60 mt-2">
-            Logistics Command Center
-          </p>
+          <div>
+            <h1 className="text-3xl font-black font-headline tracking-tighter text-on-surface uppercase">
+              EsExpress
+            </h1>
+            <p className="text-sm font-label text-on-surface/40 tracking-widest uppercase mt-1">
+              v2 // Dispatch Command
+            </p>
+          </div>
         </div>
 
-        {/* Auth Card */}
-        <div className="bg-[#161b28] rounded-xl p-8 shadow-2xl relative overflow-hidden">
-          {/* Decorative accent line */}
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[var(--es-accent)] to-transparent opacity-50" />
+        {/* Login Card */}
+        <div className="bg-surface-container-low rounded-xl p-8 border border-on-surface/5 shadow-2xl shadow-black/30 space-y-6">
+          <div className="space-y-1">
+            <h2 className="text-lg font-bold font-headline text-on-surface">
+              Operator Access
+            </h2>
+            <p className="text-xs text-on-surface/40 font-label uppercase tracking-widest">
+              Authenticate to continue
+            </p>
+          </div>
 
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-            {/* Email */}
+          {login.isError && (
+            <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 flex items-center gap-3">
+              <span className="material-symbols-outlined text-error text-lg">
+                error
+              </span>
+              <p className="text-sm text-error font-medium">
+                {login.error?.message ||
+                  "Authentication failed. Check your credentials."}
+              </p>
+            </div>
+          )}
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <label
-                className="text-xs font-bold uppercase tracking-widest text-[#e0c0b4]"
                 htmlFor="email"
+                className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/50"
               >
                 Operator Email
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <span className="material-symbols-outlined text-[var(--es-text-secondary)] opacity-40 text-lg">
-                    alternate_email
-                  </span>
-                </div>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface/30 text-lg">
+                  mail
+                </span>
                 <input
-                  className="w-full bg-[var(--es-bg-inset)] border-none focus:ring-1 focus:ring-[var(--es-accent)] text-[var(--es-text-primary)] rounded-lg pl-11 py-3.5 font-[var(--es-font-mono)] text-sm placeholder:text-[var(--es-text-secondary)] placeholder:opacity-30 transition-all"
-                  style={{ boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1)" }}
                   id="email"
-                  name="email"
-                  placeholder="username@terminal.oil"
-                  required
                   type="email"
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label
-                  className="text-xs font-bold uppercase tracking-widest text-[#e0c0b4]"
-                  htmlFor="password"
-                >
-                  Access Key
-                </label>
-                <a
-                  className="text-[10px] uppercase tracking-wider text-[var(--es-accent)] hover:underline transition-all cursor-pointer"
-                  href="#"
-                >
-                  Forgot?
-                </a>
-              </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <span className="material-symbols-outlined text-[var(--es-text-secondary)] opacity-40 text-lg">
-                    lock
-                  </span>
-                </div>
-                <input
-                  className="w-full bg-[var(--es-bg-inset)] border-none focus:ring-1 focus:ring-[var(--es-accent)] text-[var(--es-text-primary)] rounded-lg pl-11 py-3.5 font-[var(--es-font-mono)] text-sm placeholder:text-[var(--es-text-secondary)] placeholder:opacity-30 transition-all"
-                  style={{ boxShadow: "inset 0 1px 0 0 rgba(255,255,255,0.1)" }}
-                  id="password"
-                  name="password"
-                  placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="operator@esexpress.com"
+                  className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all"
                   required
-                  type="password"
                 />
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="pt-4 space-y-4">
-              {/* Sign In */}
-              <Button
-                variant="primary"
-                className="w-full py-4 font-extrabold uppercase tracking-widest flex items-center justify-center gap-2 active:scale-[0.98]"
-                style={{
-                  boxShadow:
-                    "0 10px 15px -3px rgba(240,105,44,0.2), 0 4px 6px -4px rgba(240,105,44,0.2), inset 0 1px 0 0 rgba(255,255,255,0.1)",
-                }}
-                type="submit"
+            <div className="space-y-2">
+              <label
+                htmlFor="password"
+                className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/50"
               >
-                Sign In
-                <span className="material-symbols-outlined text-lg">
-                  arrow_forward
+                Access Key
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface/30 text-lg">
+                  lock
                 </span>
-              </Button>
-
-              {/* Divider */}
-              <div className="flex items-center py-2">
-                <div className="flex-grow h-px bg-[var(--es-text-secondary)] opacity-10" />
-                <span className="px-4 text-[10px] uppercase tracking-[0.3em] text-[var(--es-text-secondary)] opacity-30">
-                  External Auth
-                </span>
-                <div className="flex-grow h-px bg-[var(--es-text-secondary)] opacity-10" />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter access key"
+                  className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all"
+                  required
+                />
               </div>
-
-              {/* Google SSO */}
-              <button
-                className="w-full bg-[var(--es-bg-elevated)] hover:bg-[var(--es-bg-overlay)] active:scale-[0.98] text-[var(--es-text-primary)] font-bold text-sm py-4 rounded-lg transition-all flex items-center justify-center gap-3 border border-[var(--es-border-subtle)] border-opacity-10"
-                type="button"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 48 48"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fill="#EA4335"
-                    d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-                  />
-                </svg>
-                Continue with Google
-              </button>
             </div>
+
+            <button
+              type="submit"
+              disabled={login.isPending}
+              className="w-full bg-primary-container text-on-primary-container py-3.5 rounded-lg font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all active:scale-[0.98] shadow-lg shadow-primary-container/30 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {login.isPending ? (
+                <>
+                  <span className="material-symbols-outlined text-sm animate-spin">
+                    progress_activity
+                  </span>
+                  Authenticating...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-sm">
+                    login
+                  </span>
+                  Sign In
+                </>
+              )}
+            </button>
           </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-on-surface/10" />
+            </div>
+            <div className="relative flex justify-center text-[10px]">
+              <span className="bg-surface-container-low px-3 text-on-surface/30 font-label uppercase tracking-widest">
+                or
+              </span>
+            </div>
+          </div>
+
+          <button className="w-full bg-surface-container-high border border-on-surface/10 py-3.5 rounded-lg font-bold text-sm text-on-surface hover:bg-surface-container-highest transition-all flex items-center justify-center gap-3">
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              />
+            </svg>
+            Continue with Google
+          </button>
         </div>
 
         {/* Footer */}
-        <footer className="mt-8 text-center space-y-4">
-          <p className="text-[10px] uppercase tracking-widest text-[var(--es-text-secondary)] opacity-40">
-            Terminal Authorization Required &bull; System ID:{" "}
-            <span className="text-[#e0c0b4] font-medium">TX-492-B</span>
+        <div className="text-center space-y-2">
+          <p className="text-[10px] text-on-surface/20 font-mono tracking-wider">
+            SYS-ID: ESX-DISPATCH-V2.0.1 // TERMINAL: UNASSIGNED
           </p>
-          <div className="flex justify-center gap-6">
-            <a
-              className="text-[var(--es-text-secondary)] opacity-30 hover:text-[var(--es-accent)] hover:opacity-100 transition-colors cursor-pointer"
-              href="#"
-            >
-              <span className="material-symbols-outlined text-xl">
-                help_center
-              </span>
-            </a>
-            <a
-              className="text-[var(--es-text-secondary)] opacity-30 hover:text-[var(--es-accent)] hover:opacity-100 transition-colors cursor-pointer"
-              href="#"
-            >
-              <span className="material-symbols-outlined text-xl">
-                security
-              </span>
-            </a>
-            <a
-              className="text-[var(--es-text-secondary)] opacity-30 hover:text-[var(--es-accent)] hover:opacity-100 transition-colors cursor-pointer"
-              href="#"
-            >
-              <span className="material-symbols-outlined text-xl">
-                language
-              </span>
-            </a>
-          </div>
-        </footer>
-      </main>
+          <p className="text-[10px] text-on-surface/15 font-label">
+            ES Express LLC // Secure Access Portal
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

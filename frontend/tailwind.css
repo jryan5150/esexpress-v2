@@ -1,44 +1,79 @@
 @import "tailwindcss";
-@import "./src/tokens.css";
-@import "./src/global.css";
 
-/* Map es-* tokens to Tailwind v4 theme utilities */
 @theme {
-  /* Backgrounds — use as: bg-base, bg-surface, bg-elevated, bg-overlay, bg-inset */
-  --color-base: var(--es-bg-base);
-  --color-surface: var(--es-bg-surface);
-  --color-elevated: var(--es-bg-elevated);
-  --color-overlay: var(--es-bg-overlay);
-  --color-inset: var(--es-bg-inset);
+  --color-background: #0e1320;
+  --color-surface: #0e1320;
+  --color-surface-dim: #0e1320;
+  --color-surface-bright: #343947;
+  --color-surface-container: #1a1f2d;
+  --color-surface-container-low: #161b28;
+  --color-surface-container-high: #252a37;
+  --color-surface-container-highest: #303443;
+  --color-surface-container-lowest: #090e1a;
+  --color-surface-tint: #ffb599;
+  --color-surface-variant: #303443;
+  --color-primary: #ffb599;
+  --color-primary-container: #f0692c;
+  --color-primary-fixed: #ffdbce;
+  --color-primary-fixed-dim: #ffb599;
+  --color-on-primary: #5a1c00;
+  --color-on-primary-container: #511900;
+  --color-on-primary-fixed: #370e00;
+  --color-on-primary-fixed-variant: #7f2b00;
+  --color-secondary: #bfc5e3;
+  --color-secondary-container: #414861;
+  --color-secondary-fixed: #dbe1ff;
+  --color-secondary-fixed-dim: #bfc5e3;
+  --color-on-secondary: #293047;
+  --color-on-secondary-container: #b1b7d4;
+  --color-on-secondary-fixed: #131b31;
+  --color-on-secondary-fixed-variant: #3f465e;
+  --color-tertiary: #45dfa4;
+  --color-tertiary-container: #00a775;
+  --color-tertiary-fixed: #68fcbf;
+  --color-tertiary-fixed-dim: #45dfa4;
+  --color-on-tertiary: #003825;
+  --color-on-tertiary-container: #003321;
+  --color-on-tertiary-fixed: #002114;
+  --color-on-tertiary-fixed-variant: #005137;
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+  --color-on-surface: #dee2f4;
+  --color-on-surface-variant: #e0c0b4;
+  --color-on-background: #dee2f4;
+  --color-outline: #a88a80;
+  --color-outline-variant: #594239;
+  --color-inverse-primary: #a63b00;
+  --color-inverse-surface: #dee2f4;
+  --color-inverse-on-surface: #2b303e;
 
-  /* Text — use as: text-primary, text-secondary, text-tertiary, text-inverse */
-  --color-primary: var(--es-text-primary);
-  --color-secondary: var(--es-text-secondary);
-  --color-tertiary: var(--es-text-tertiary);
-  --color-inverse: var(--es-text-inverse);
+  --font-headline: "Plus Jakarta Sans", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "IBM Plex Mono", monospace;
+}
 
-  /* Accent — use as: bg-accent, text-accent, border-accent */
-  --color-accent: var(--es-accent);
-  --color-accent-hover: var(--es-accent-hover);
-  --color-accent-dim: var(--es-accent-dim);
+body {
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+  font-family: var(--font-headline);
+}
 
-  /* Status — use as: bg-ready, text-ready, bg-ready-dim, etc. */
-  --color-ready: var(--es-ready);
-  --color-ready-dim: var(--es-ready-dim);
-  --color-warning: var(--es-warning);
-  --color-warning-dim: var(--es-warning-dim);
-  --color-error: var(--es-error);
-  --color-error-dim: var(--es-error-dim);
-  --color-info: var(--es-info);
-  --color-info-dim: var(--es-info-dim);
-  --color-neutral: var(--es-neutral);
+.material-symbols-outlined {
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+  vertical-align: middle;
+}
 
-  /* Borders — use as: border-subtle, border-default, border-bright */
-  --color-subtle: var(--es-border-subtle);
-  --color-default: var(--es-border-default);
-  --color-bright: var(--es-border-bright);
-
-  /* Fonts */
-  --font-ui: var(--es-font-ui);
-  --font-mono: var(--es-font-mono);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

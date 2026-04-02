@@ -141,7 +141,9 @@ export class PropxClient {
     path: string,
     params?: Record<string, string>,
   ): Promise<T> {
-    const url = new URL(path, this.baseUrl);
+    const base = this.baseUrl.endsWith("/") ? this.baseUrl : this.baseUrl + "/";
+    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+    const url = new URL(cleanPath, base);
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         url.searchParams.set(key, value);
@@ -333,14 +335,50 @@ export class PropxClient {
 
   /**
    * Fetch all loads within a date range across all active jobs.
-   * This is the primary entry point for the PropX sync pipeline.
+   * PropX does not have a global /loads endpoint — loads are per-job.
+   * We fetch all jobs, then fetch loads for each job and filter by date range.
    */
   async getCompanyLoadsByDates(from: Date, to: Date): Promise<PropxLoad[]> {
-    const params: Record<string, string> = {
-      from_date: from.toISOString().slice(0, 10),
-      to_date: to.toISOString().slice(0, 10),
-    };
-    return this.requestAllPages<PropxLoad>("/loads", params);
+    const fromStr = from.toISOString().slice(0, 10);
+    const toStr = to.toISOString().slice(0, 10);
+
+    // Only fetch from active/recent jobs to avoid iterating hundreds of old jobs
+    const jobs = await this.getJobs();
+    const allLoads: PropxLoad[] = [];
+
+    const candidateJobs = jobs.filter((job) => {
+      const raw = job as unknown as Record<string, unknown>;
+      const ws = String(raw.working_status || "").toLowerCase();
+      if (ws === "active" || ws === "started") return true;
+      const endDate = raw.end_date ? String(raw.end_date).slice(0, 10) : null;
+      if (!endDate) return true;
+      return endDate >= fromStr;
+    });
+
+    console.log(
+      `[PropX] Fetching loads from ${candidateJobs.length} of ${jobs.length} jobs`,
+    );
+
+    for (const job of candidateJobs) {
+      try {
+        const raw = job as unknown as Record<string, unknown>;
+        const jobId = raw.id as string;
+        const jobName = raw.name as string;
+        const jobLoads = await this.getJobLoads(jobId);
+        if (jobLoads.length > 0) {
+          console.log(`[PropX] Job ${jobName}: ${jobLoads.length} loads`);
+        }
+        allLoads.push(...jobLoads);
+      } catch (err) {
+        const raw = job as unknown as Record<string, unknown>;
+        console.warn(
+          `[PropX] Failed job ${raw.name}: ${(err as Error).message}`,
+        );
+      }
+    }
+
+    console.log(`[PropX] Total loads fetched: ${allLoads.length}`);
+    return allLoads;
   }
 
   // -------------------------------------------------------------------------

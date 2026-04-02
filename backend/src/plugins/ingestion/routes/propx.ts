@@ -2,8 +2,20 @@ import { type FastifyPluginAsync } from "fastify";
 import { PropxClient } from "../services/propx.service.js";
 import { syncPropxLoads } from "../services/propx-sync.service.js";
 
-// Process-level concurrency guard for sync operations
-let syncInProgress = false;
+// Process-level job state for async sync operations
+interface SyncJob {
+  id: string;
+  status: "running" | "completed" | "failed";
+  startedAt: string;
+  completedAt?: string;
+  from: string;
+  to: string;
+  jobsProcessed: number;
+  loadsUpserted: number;
+  error?: string;
+}
+
+let currentSyncJob: SyncJob | null = null;
 
 /**
  * Build a PropxClient from environment variables.
@@ -76,36 +88,72 @@ const propxRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // In-memory guard to prevent concurrent syncs.
-      // pg_try_advisory_xact_lock would release immediately after the SELECT
-      // since Drizzle auto-commits. A process-level flag is sufficient for
-      // single-instance deployment; upgrade to Redis or session-level pg lock
-      // if horizontal scaling is needed.
-      if (syncInProgress) {
+      // Concurrency guard
+      if (currentSyncJob?.status === "running") {
         return reply.status(409).send({
           success: false,
           error: {
             code: "CONFLICT",
             message: "A PropX sync is already in progress",
           },
+          data: currentSyncJob,
         });
       }
 
-      syncInProgress = true;
-      try {
-        const client = createPropxClientFromEnv();
-        const result = await syncPropxLoads(db, client, {
-          from: fromDate,
-          to: toDate,
+      const jobId = `propx-sync-${Date.now()}`;
+      currentSyncJob = {
+        id: jobId,
+        status: "running",
+        startedAt: new Date().toISOString(),
+        from,
+        to,
+        jobsProcessed: 0,
+        loadsUpserted: 0,
+      };
+
+      // Fire-and-forget: start sync in background
+      const client = createPropxClientFromEnv();
+      syncPropxLoads(db, client, { from: fromDate, to: toDate })
+        .then((result) => {
+          if (currentSyncJob?.id === jobId) {
+            currentSyncJob.status = "completed";
+            currentSyncJob.completedAt = new Date().toISOString();
+            currentSyncJob.jobsProcessed = result.fetched;
+            currentSyncJob.loadsUpserted = result.inserted + result.updated;
+          }
+        })
+        .catch((err) => {
+          if (currentSyncJob?.id === jobId) {
+            currentSyncJob.status = "failed";
+            currentSyncJob.completedAt = new Date().toISOString();
+            currentSyncJob.error = err.message;
+          }
         });
 
+      return {
+        success: true,
+        data: {
+          jobId,
+          message: `PropX sync started for ${from} to ${to}. Poll /sync/propx/status for progress.`,
+        },
+      };
+    },
+  );
+
+  // ─── GET /sync/propx/status — poll sync job progress ────────────────
+  fastify.get(
+    "/sync/propx/status",
+    {
+      preHandler: [fastify.authenticate],
+    },
+    async () => {
+      if (!currentSyncJob) {
         return {
           success: true,
-          data: result,
+          data: { status: "idle", message: "No sync job has been run" },
         };
-      } finally {
-        syncInProgress = false;
       }
+      return { success: true, data: currentSyncJob };
     },
   );
 

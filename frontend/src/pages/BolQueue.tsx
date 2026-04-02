@@ -1,505 +1,410 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useBolQueue } from "@/hooks/use-bol-queue";
-import { Button } from "@/components/Button";
-import type { BolItem, BolQueueData } from "@/hooks/use-bol-queue";
+import { useBolQueue, useBolStats } from "../hooks/use-bol";
+import { useDispatchReadiness } from "../hooks/use-wells";
 
-/* -------------------------------------------------------------------------- */
-/*  BolQueue — BOL reconciliation: matched, unmatched, discrepancy, missing   */
-/* -------------------------------------------------------------------------- */
+interface QueueItem {
+  id: string;
+  carrier: string;
+  location: string;
+  time: string;
+  status: string;
+  loadId?: string;
+  type?: string;
+  label?: string;
+  dispatchValue?: string;
+  driverValue?: string;
+  difference?: string;
+}
 
 export function BolQueue() {
-  const navigate = useNavigate();
-  const { data, isLoading } = useBolQueue();
-  const queue = data ?? MOCK_BOL_QUEUE;
-  const [matchedExpanded, setMatchedExpanded] = useState(false);
+  const statsQuery = useBolStats();
+  const queueQuery = useBolQueue();
+  const readinessQuery = useDispatchReadiness();
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-[var(--es-text-secondary)]">Loading BOL queue...</p>
-      </div>
-    );
-  }
+  const isError = statsQuery.isError || queueQuery.isError;
+  const isLoading = statsQuery.isLoading || queueQuery.isLoading;
 
-  const matchedPct =
-    queue.matched.length > 0
-      ? Math.round(
-          (queue.matched.length /
-            (queue.matched.length +
-              queue.unmatched.length +
-              queue.discrepancies.length +
-              queue.missingTickets.length)) *
-            100,
-        )
-      : 0;
+  const stats = statsQuery.data
+    ? {
+        pending: Number(
+          (statsQuery.data as Record<string, unknown>).pending ?? 0,
+        ),
+        matched: Number(
+          (statsQuery.data as Record<string, unknown>).matched ?? 0,
+        ),
+      }
+    : { pending: 0, matched: 0 };
+
+  // Dispatch readiness data for photo status summary
+  const readiness = readinessQuery.data;
+  const totalAssignments = readiness?.totalAssignments ?? 0;
+  const readyCount = readiness?.readyCount ?? 0;
+  const missingFields = Array.isArray(readiness?.missingFields)
+    ? readiness.missingFields
+    : [];
+  const photoMissing =
+    missingFields.find((f) => f.field === "photo" || f.field === "photoStatus")
+      ?.count ?? 0;
+  const photosAttached =
+    totalAssignments > 0 ? totalAssignments - photoMissing : 0;
+
+  // Group queue items by status — no mock fallback
+  const rawItems: QueueItem[] = Array.isArray(queueQuery.data)
+    ? (queueQuery.data as Array<Record<string, unknown>>).map(
+        (item: Record<string, unknown>) => {
+          const sub = item.submission as Record<string, unknown> | undefined;
+          const load = item.matchedLoad as Record<string, unknown> | undefined;
+          return {
+            id: String(
+              sub?.id || sub?.bolNumber || item.id || item.ticketId || "",
+            ),
+            carrier: String(
+              load?.carrierName || item.carrier || item.carrierName || "",
+            ),
+            location: String(
+              load?.destinationName || item.location || item.wellName || "",
+            ),
+            time: String(
+              sub?.createdAt ||
+                item.timeSubmitted ||
+                item.createdAt ||
+                item.time ||
+                "",
+            ),
+            status: String(sub?.status || item.status || "unmatched"),
+            loadId: item.loadId ? String(item.loadId) : undefined,
+            type: item.type ? String(item.type) : undefined,
+            label: item.label ? String(item.label) : undefined,
+            dispatchValue: item.dispatchValue
+              ? String(item.dispatchValue)
+              : undefined,
+            driverValue: item.driverValue
+              ? String(item.driverValue)
+              : undefined,
+            difference: item.difference ? String(item.difference) : undefined,
+          };
+        },
+      )
+    : [];
+
+  const unmatched = rawItems.filter((i) => i.status === "unmatched");
+  const discrepancies = rawItems.filter((i) => i.status === "discrepancy");
 
   return (
-    <div className="min-h-full pb-28 space-y-6 p-6">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-lg font-bold text-[var(--es-text-primary)] tracking-wide uppercase">
-            BOL RECONCILIATION
-          </h1>
-          <div className="h-4 w-px bg-[var(--es-border-subtle)]" />
-          <span className="text-xs text-[var(--es-text-tertiary)] uppercase tracking-widest">
-            Active Shift: 08:00 - 20:00
+    <div className="p-8 space-y-6 max-w-7xl">
+      {/* API Error Banner */}
+      {isError && (
+        <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 flex items-center gap-3">
+          <span className="material-symbols-outlined text-error text-lg">
+            cloud_off
           </span>
+          <p className="text-sm text-error font-medium">
+            Unable to connect to the server. Showing cached data.
+          </p>
         </div>
-        <div className="flex items-center gap-2 bg-[var(--es-bg-surface)] px-3 py-1.5 rounded-[var(--es-radius-sm)] focus-within:ring-1 ring-[var(--es-accent)]">
-          <span className="text-[var(--es-text-tertiary)] text-sm">
-            &#x1F50D;
-          </span>
-          <input
-            className="bg-transparent border-none focus:ring-0 focus:outline-none text-xs w-48 text-[var(--es-text-primary)] placeholder:text-[var(--es-text-tertiary)]"
-            placeholder="Search BOL Queue..."
-            type="text"
-          />
-        </div>
-      </div>
-
-      {/* Section 1: Matched (collapsed) */}
-      <section
-        className="bg-[var(--es-bg-surface)] rounded-sm overflow-hidden border-l-[3px] transition-all"
-        style={{ borderColor: "rgba(52, 211, 153, 0.8)" }}
-      >
-        <div
-          className="p-4 flex items-center justify-between cursor-pointer hover:bg-[var(--es-bg-elevated)] transition-colors"
-          onClick={() => setMatchedExpanded((prev) => !prev)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) =>
-            e.key === "Enter" && setMatchedExpanded((prev) => !prev)
-          }
-        >
-          <div className="flex items-center gap-4 flex-1">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--es-ready)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9 12l2 2 4-4" />
-            </svg>
-            <div className="flex-1 max-w-xl">
-              <div className="flex justify-between mb-1.5">
-                <span className="text-xs font-bold text-[var(--es-text-secondary)] uppercase tracking-wider">
-                  Matched &mdash; {queue.matched.length} loads
-                </span>
-                <span className="font-[var(--es-font-mono)] text-[10px] text-[var(--es-ready)]">
-                  {matchedPct}% Complete
-                </span>
-              </div>
-              <div className="w-full bg-[var(--es-bg-elevated)] h-1.5 rounded-full overflow-hidden">
-                <div
-                  className="bg-[var(--es-ready)] h-full rounded-full transition-all"
-                  style={{ width: `${matchedPct}%` }}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              className="px-4 py-1.5 text-xs text-[var(--es-ready)] bg-[var(--es-bg-elevated)] hover:bg-[var(--es-bg-overlay)] rounded-sm transition-colors"
-              style={{ border: "1px solid rgba(52, 211, 153, 0.2)" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              Bulk Approve
-            </button>
-            <SectionChevron direction={matchedExpanded ? "up" : "down"} />
-          </div>
-        </div>
-      </section>
-
-      {/* Section 2: Unmatched */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-xs font-bold text-[var(--es-text-secondary)] uppercase tracking-widest flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[var(--es-warning)]" />
-            Unmatched
-            <span className="text-[var(--es-text-tertiary)] font-normal ml-2">
-              {queue.unmatched.length} loads
-            </span>
-          </h3>
-          <SectionChevron direction="up" />
-        </div>
-        <div className="space-y-0.5">
-          {queue.unmatched.map((item) => (
-            <UnmatchedRow key={item.bolNumber} item={item} />
-          ))}
-        </div>
-      </section>
-
-      {/* Section 3: Discrepancy */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-xs font-bold text-[var(--es-text-secondary)] uppercase tracking-widest flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[var(--es-warning)]" />
-            Discrepancy
-            <span className="text-[var(--es-text-tertiary)] font-normal ml-2">
-              {queue.discrepancies.length} loads
-            </span>
-          </h3>
-          <SectionChevron direction="up" />
-        </div>
-        <div className="space-y-0.5">
-          {queue.discrepancies.map((item) => (
-            <DiscrepancyRow key={item.bolNumber} item={item} />
-          ))}
-        </div>
-      </section>
-
-      {/* Section 4: Missing Ticket */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-xs font-bold text-[var(--es-text-secondary)] uppercase tracking-widest flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[var(--es-error)]" />
-            Missing Ticket
-            <span className="text-[var(--es-text-tertiary)] font-normal ml-2">
-              {queue.missingTickets.length} loads
-            </span>
-          </h3>
-          <SectionChevron direction="up" />
-        </div>
-        <div className="space-y-0.5">
-          {queue.missingTickets.map((item) => (
-            <MissingTicketRow
-              key={item.bolNumber ?? item.driverName}
-              item={item}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Sticky Action Bar */}
-      <footer className="fixed bottom-0 left-0 w-full bg-[var(--es-bg-base)] border-t border-[var(--es-border-subtle)] z-40">
-        <div
-          className="h-16 px-8 flex items-center justify-between"
-          style={{ marginLeft: "240px" }}
-        >
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[var(--es-text-tertiary)] uppercase tracking-widest">
-                Total Exceptions:
-              </span>
-              <span className="font-[var(--es-font-mono)] text-sm font-bold text-[var(--es-text-primary)]">
-                {queue.totalExceptions}
-              </span>
-            </div>
-            <div className="h-4 w-px bg-[var(--es-border-subtle)]" />
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-[var(--es-text-tertiary)] uppercase tracking-widest">
-                Ready for Export:
-              </span>
-              <span className="font-[var(--es-font-mono)] text-sm font-bold text-[var(--es-ready)]">
-                {queue.readyForExport}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              className="px-6 py-2.5 text-sm font-medium rounded-sm transition-all flex items-center gap-2 bg-[var(--es-bg-surface)] text-[var(--es-text-secondary)] hover:text-[var(--es-text-primary)]"
-              style={{ border: "1px solid var(--es-border-default)" }}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Export CSV
-            </button>
-            <button
-              className="px-8 py-2.5 text-sm font-bold rounded-sm shadow-lg transition-all flex items-center gap-2 text-white hover:opacity-90"
-              style={{
-                background: "var(--es-accent)",
-                boxShadow: "0 4px 12px rgba(240, 105, 44, 0.2)",
-              }}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9 12l2 2 4-4" />
-              </svg>
-              Approve All Matched
-            </button>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Inline sub-components                                                     */
-/* -------------------------------------------------------------------------- */
-
-function SectionChevron({ direction }: { direction: "up" | "down" }) {
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="var(--es-text-tertiary)"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="cursor-pointer"
-    >
-      {direction === "up" ? (
-        <polyline points="18 15 12 9 6 15" />
-      ) : (
-        <polyline points="6 9 12 15 18 9" />
       )}
-    </svg>
-  );
-}
 
-function UnmatchedRow({ item }: { item: BolItem }) {
-  return (
-    <div className="bg-[var(--es-bg-surface)] hover:bg-[var(--es-bg-elevated)] transition-colors p-4 flex items-center justify-between border-l-[3px] border-[var(--es-warning)]">
-      <div className="flex items-center gap-8">
-        <div className="w-32">
-          <p className="text-[10px] text-[var(--es-text-tertiary)] mb-0.5 uppercase tracking-wider">
-            BOL NUMBER
-          </p>
-          <p className="font-[var(--es-font-mono)] text-sm font-medium text-[var(--es-text-primary)]">
-            {item.bolNumber}
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <h1 className="text-3xl font-black font-headline tracking-tight text-on-surface">
+            BOL Queue
+          </h1>
+          <p className="text-on-surface-variant font-label text-sm mt-1">
+            RECONCILIATION WORKSPACE // OPERATOR: 882-J
           </p>
         </div>
-        <div
-          className="flex items-center gap-3 text-[var(--es-warning)]"
-          style={{ opacity: 0.9 }}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18.84 12.25l1.72-1.71a4.04 4.04 0 0 0-5.72-5.71l-1.71 1.71" />
-            <path d="M5.17 11.75l-1.71 1.71a4.04 4.04 0 0 0 5.71 5.71l1.71-1.71" />
-            <line x1="2" y1="2" x2="22" y2="22" />
-          </svg>
-          <p className="text-sm font-medium">No Matching Ticket</p>
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <button className="px-4 py-2 text-xs rounded-sm transition-colors bg-[var(--es-bg-overlay)] hover:bg-[var(--es-bg-elevated)] text-[var(--es-text-primary)]">
-          Search JotForm
-        </button>
-        <button className="px-4 py-2 text-xs font-bold rounded-sm transition-colors bg-[var(--es-accent)] hover:opacity-90 text-[var(--es-text-inverse)]">
-          Assign Manually
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function DiscrepancyRow({ item }: { item: BolItem }) {
-  return (
-    <div className="bg-[var(--es-bg-surface)] hover:bg-[var(--es-bg-elevated)] transition-colors p-4 flex items-center justify-between border-l-[3px] border-[var(--es-warning)]">
-      <div className="flex items-center gap-8">
-        <div className="w-32">
-          <p className="text-[10px] text-[var(--es-text-tertiary)] mb-0.5 uppercase tracking-wider">
-            BOL NUMBER
-          </p>
-          <p className="font-[var(--es-font-mono)] text-sm font-medium text-[var(--es-text-primary)]">
-            {item.bolNumber}
-          </p>
-        </div>
-        <div className="flex flex-col">
-          <p className="text-xs text-[var(--es-text-tertiary)] mb-0.5 uppercase tracking-tighter">
-            Variance Detected
-          </p>
-          <div className="flex items-center gap-2 text-[var(--es-text-primary)]">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--es-warning)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M16 3l-8 0" />
-              <path d="M12 3l0 18" />
-              <path d="M3 13l4-8 4 8" />
-              <path d="M5 17l4 0" />
-              <path d="M13 13l4-8 4 8" />
-              <path d="M15 17l4 0" />
-            </svg>
-            <p className="text-sm font-medium">
-              Weight mismatch:{" "}
-              <span className="font-[var(--es-font-mono)] text-[var(--es-warning)]">
-                {item.weightPropx?.toLocaleString()}
-              </span>{" "}
-              vs{" "}
-              <span className="font-[var(--es-font-mono)] text-[var(--es-text-secondary)]">
-                {item.weightTicket?.toLocaleString()}
+        <div className="flex gap-3">
+          <div className="bg-surface-container-highest px-4 py-2 rounded flex items-center gap-4">
+            <span className="font-label text-xs uppercase text-on-surface-variant">
+              Queue Status
+            </span>
+            <div className="flex gap-2">
+              <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 font-mono text-[10px] rounded">
+                {isLoading ? "..." : stats.pending} PENDING
               </span>
-            </p>
+              <span className="bg-tertiary/10 text-tertiary border border-tertiary/20 px-2 py-0.5 font-mono text-[10px] rounded">
+                {isLoading ? "..." : stats.matched} MATCHED
+              </span>
+            </div>
           </div>
         </div>
       </div>
-      <div className="flex gap-2">
-        <Button variant="secondary" className="text-xs">
-          Accept PropX
-        </Button>
-        <button
-          className="px-4 py-2 text-xs font-bold rounded-sm transition-colors text-[var(--es-accent)] border hover:bg-[var(--es-accent-dim)]"
-          style={{ borderColor: "rgba(240, 105, 44, 0.4)" }}
-        >
-          Use Ticket
-        </button>
-      </div>
+
+      {/* Photo Status Summary */}
+      <section className="bg-surface-container-lowest border-l-4 border-tertiary overflow-hidden rounded-sm shadow-lg">
+        <div className="flex items-center justify-between p-4 bg-surface-container-high/50">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-tertiary">
+              photo_library
+            </span>
+            <h2 className="font-headline font-bold text-on-surface">
+              Photo Status
+            </h2>
+          </div>
+          {readinessQuery.isLoading && (
+            <span className="font-mono text-xs text-on-surface/40">
+              Loading...
+            </span>
+          )}
+        </div>
+        <div className="p-6">
+          {readinessQuery.isLoading ? (
+            <div className="animate-pulse flex gap-6">
+              <div className="h-20 flex-1 bg-on-surface/5 rounded" />
+              <div className="h-20 flex-1 bg-on-surface/5 rounded" />
+              <div className="h-20 flex-1 bg-on-surface/5 rounded" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-6">
+              <div className="p-4 bg-surface-container rounded border-l-2 border-tertiary">
+                <span className="block text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-1">
+                  Photos Attached
+                </span>
+                <span className="font-mono text-2xl font-bold text-tertiary">
+                  {photosAttached}
+                </span>
+              </div>
+              <div className="p-4 bg-surface-container rounded border-l-2 border-error">
+                <span className="block text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-1">
+                  Photos Missing
+                </span>
+                <span className="font-mono text-2xl font-bold text-error">
+                  {photoMissing}
+                </span>
+              </div>
+              <div className="p-4 bg-surface-container rounded border-l-2 border-primary">
+                <span className="block text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-1">
+                  Dispatch Ready
+                </span>
+                <span className="font-mono text-2xl font-bold text-primary">
+                  {readyCount}
+                </span>
+                <span className="font-label text-xs text-on-surface/40 ml-1">
+                  / {totalAssignments}
+                </span>
+              </div>
+            </div>
+          )}
+          {!readinessQuery.isLoading && totalAssignments > 0 && (
+            <div className="mt-4 h-2 bg-surface-container-high rounded-full overflow-hidden">
+              <div
+                className="h-full bg-tertiary rounded-full transition-all"
+                style={{
+                  width: `${totalAssignments > 0 ? (photosAttached / totalAssignments) * 100 : 0}%`,
+                }}
+              />
+            </div>
+          )}
+          {!readinessQuery.isLoading && totalAssignments === 0 && (
+            <p className="text-on-surface/30 font-label text-sm text-center py-2">
+              No assignments found
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Unmatched Tickets */}
+      <section className="bg-surface-container-lowest border-l-4 border-error overflow-hidden rounded-sm shadow-lg">
+        <div className="flex items-center justify-between p-4 bg-surface-container-high/50 cursor-pointer">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-error">error</span>
+            <h2 className="font-headline font-bold text-on-surface">
+              Unmatched Tickets
+            </h2>
+            <span className="font-mono text-xs bg-error-container text-on-error-container px-2 py-0.5 rounded">
+              {isLoading ? "..." : `${unmatched.length} ITEMS`}
+            </span>
+          </div>
+          <span className="material-symbols-outlined">expand_more</span>
+        </div>
+        <div className="p-0">
+          <div className="grid grid-cols-12 gap-1 px-4 py-2 text-[10px] font-label uppercase tracking-widest text-on-surface-variant/60 border-b border-surface-variant/20">
+            <div className="col-span-2">Ticket ID</div>
+            <div className="col-span-2">Carrier</div>
+            <div className="col-span-2">Location</div>
+            <div className="col-span-2">Time Submitted</div>
+            <div className="col-span-4 text-right">Quick Actions</div>
+          </div>
+          <div className="divide-y divide-surface-container">
+            {isLoading ? (
+              <>
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-12 gap-1 items-center px-4 py-3 animate-pulse"
+                  >
+                    <div className="col-span-2">
+                      <div className="h-4 w-24 bg-on-surface/10 rounded" />
+                    </div>
+                    <div className="col-span-2">
+                      <div className="h-4 w-28 bg-on-surface/5 rounded" />
+                    </div>
+                    <div className="col-span-2">
+                      <div className="h-4 w-24 bg-on-surface/5 rounded" />
+                    </div>
+                    <div className="col-span-2">
+                      <div className="h-4 w-32 bg-on-surface/5 rounded" />
+                    </div>
+                    <div className="col-span-4 flex justify-end gap-2">
+                      <div className="h-7 w-24 bg-on-surface/5 rounded" />
+                      <div className="h-7 w-16 bg-on-surface/5 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : unmatched.length === 0 ? (
+              <div className="px-4 py-8 text-center space-y-2">
+                <span className="material-symbols-outlined text-3xl text-on-surface/10">
+                  inbox
+                </span>
+                <p className="text-on-surface/40 font-label text-sm">
+                  No unmatched tickets
+                </p>
+                <p className="text-on-surface/20 font-label text-xs">
+                  JotForm weight ticket sync not yet configured
+                </p>
+              </div>
+            ) : (
+              unmatched.map((row) => (
+                <div
+                  key={row.id}
+                  className="grid grid-cols-12 gap-1 items-center px-4 py-3 hover:bg-surface-container-high transition-all group"
+                >
+                  <div className="col-span-2 font-mono text-sm text-primary">
+                    {row.id}
+                  </div>
+                  <div className="col-span-2 font-headline text-sm">
+                    {row.carrier}
+                  </div>
+                  <div className="col-span-2 font-headline text-sm">
+                    {row.location}
+                  </div>
+                  <div className="col-span-2 font-mono text-xs">{row.time}</div>
+                  <div className="col-span-4 flex justify-end gap-2">
+                    <button className="bg-surface-container-high px-3 py-1.5 text-xs font-bold border border-outline-variant/30 hover:bg-surface-container-highest flex items-center gap-2">
+                      <span className="material-symbols-outlined text-sm">
+                        search
+                      </span>
+                      Manual Match
+                    </button>
+                    <button className="bg-surface-container-high px-3 py-1.5 text-xs font-bold border border-outline-variant/30 hover:bg-surface-container-highest flex items-center gap-2">
+                      <span className="material-symbols-outlined text-sm">
+                        delete
+                      </span>
+                      Void
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Data Discrepancies */}
+      <section className="bg-surface-container-lowest border-l-4 border-primary overflow-hidden rounded-sm shadow-lg">
+        <div className="flex items-center justify-between p-4 bg-surface-container-high/50">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-primary">
+              warning
+            </span>
+            <h2 className="font-headline font-bold text-on-surface">
+              Data Discrepancies
+            </h2>
+            <span className="font-mono text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+              {isLoading
+                ? "..."
+                : `${discrepancies.length} ITEM${discrepancies.length !== 1 ? "S" : ""}`}
+            </span>
+          </div>
+          <span className="material-symbols-outlined">expand_more</span>
+        </div>
+        <div className="p-6">
+          {isLoading ? (
+            <div className="animate-pulse space-y-4 bg-surface-container p-4 rounded-sm">
+              <div className="h-5 w-64 bg-on-surface/10 rounded" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="h-16 bg-on-surface/5 rounded" />
+                <div className="h-16 bg-on-surface/5 rounded" />
+              </div>
+            </div>
+          ) : discrepancies.length === 0 ? (
+            <div className="text-center py-8 space-y-2">
+              <span className="material-symbols-outlined text-3xl text-on-surface/10">
+                verified
+              </span>
+              <p className="text-on-surface/40 font-label text-sm">
+                No discrepancies found
+              </p>
+              <p className="text-on-surface/20 font-label text-xs">
+                Discrepancies will appear when JotForm submissions are matched
+                to loads
+              </p>
+            </div>
+          ) : (
+            discrepancies.map((disc) => (
+              <div
+                key={disc.id}
+                className="flex items-start gap-6 bg-surface-container p-4 rounded-sm mb-4 last:mb-0"
+              >
+                <div className="w-12 h-12 bg-primary/10 rounded flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-primary">
+                    balance
+                  </span>
+                </div>
+                <div className="flex-1 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-label text-xs uppercase tracking-widest text-on-surface-variant">
+                        {disc.label || "Data Mismatch detected"}
+                      </p>
+                      <p className="font-headline text-lg font-bold">
+                        Load #{disc.loadId || "N/A"} // Ticket {disc.id}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-label text-xs uppercase text-on-surface-variant">
+                        Difference
+                      </p>
+                      <p className="font-mono text-xl text-error font-bold">
+                        {disc.difference || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-surface-container-high rounded border-l-2 border-surface-variant">
+                      <span className="block text-[10px] font-label uppercase text-on-surface-variant mb-1">
+                        Dispatch Data
+                      </span>
+                      <span className="font-mono text-lg font-bold">
+                        {disc.dispatchValue || "N/A"}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-surface-container-high rounded border-l-2 border-primary">
+                      <span className="block text-[10px] font-label uppercase text-on-surface-variant mb-1">
+                        Driver Submission
+                      </span>
+                      <span className="font-mono text-lg font-bold text-primary">
+                        {disc.driverValue || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button className="px-4 py-2 text-xs font-bold border border-outline-variant/30 hover:bg-surface-container-highest transition-colors">
+                      Request Recalibration
+                    </button>
+                    <button className="px-4 py-2 text-xs font-bold border border-outline-variant/30 hover:bg-surface-container-highest transition-colors">
+                      Flag for Supervisor
+                    </button>
+                    <button className="px-6 py-2 text-xs font-bold bg-primary text-on-primary-container hover:brightness-110">
+                      Override &amp; Approve
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
     </div>
   );
 }
-
-function MissingTicketRow({ item }: { item: BolItem }) {
-  return (
-    <div className="bg-[var(--es-bg-surface)] hover:bg-[var(--es-bg-elevated)] transition-colors p-4 flex items-center justify-between border-l-[3px] border-[var(--es-error)]">
-      <div className="flex items-center gap-12">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-[var(--es-bg-overlay)] flex items-center justify-center border border-[var(--es-border-default)]">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="var(--es-text-secondary)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-[10px] text-[var(--es-text-tertiary)] mb-0.5 uppercase tracking-wider">
-              DRIVER
-            </p>
-            <p className="font-medium text-sm text-[var(--es-text-primary)]">
-              {item.driverName}
-            </p>
-          </div>
-        </div>
-        <div
-          className="flex items-center gap-3 text-[var(--es-error)]"
-          style={{ opacity: 0.9 }}
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect x="2" y="2" width="20" height="20" rx="2" />
-            <line x1="9" y1="9" x2="15" y2="15" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-          </svg>
-          <p className="text-sm font-medium">No submission found</p>
-        </div>
-      </div>
-      <button
-        className="px-4 py-2 text-xs font-bold rounded-sm transition-colors text-[var(--es-error)] flex items-center gap-2 opacity-60 hover:opacity-100"
-        style={{ border: "1px solid rgba(248, 113, 113, 0.3)" }}
-      >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-          <line x1="4" y1="22" x2="4" y2="15" />
-        </svg>
-        Flag Driver
-      </button>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Mock data                                                                 */
-/* -------------------------------------------------------------------------- */
-
-const MOCK_BOL_QUEUE: BolQueueData = {
-  matched: Array.from({ length: 84 }, (_, i) => ({
-    bolNumber: `TX-${10000 + i}`,
-    status: "matched" as const,
-  })),
-  unmatched: [
-    { bolNumber: "TX-49202-A", status: "unmatched" as const },
-    { bolNumber: "OK-91823-C", status: "unmatched" as const },
-    { bolNumber: "NM-22109-B", status: "unmatched" as const },
-  ],
-  discrepancies: [
-    {
-      bolNumber: "TX-33821-X",
-      status: "discrepancy" as const,
-      detail: "Weight mismatch",
-      weightPropx: 42000,
-      weightTicket: 41850,
-    },
-    {
-      bolNumber: "TX-33822-Y",
-      status: "discrepancy" as const,
-      detail: "Weight mismatch",
-      weightPropx: 45100,
-      weightTicket: 44900,
-    },
-  ],
-  missingTickets: [
-    {
-      bolNumber: "MT-001",
-      status: "missing_ticket" as const,
-      driverName: 'Marcus "Wheels" Rodriguez',
-    },
-    {
-      bolNumber: "MT-002",
-      status: "missing_ticket" as const,
-      driverName: "Sarah J. Miller",
-    },
-  ],
-  totalExceptions: 10,
-  readyForExport: 84,
-};

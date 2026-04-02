@@ -1,9 +1,13 @@
-import { eq } from 'drizzle-orm';
-import { loads, wells } from '../../../db/schema.js';
-import { scoreSuggestions, type SuggestionResult } from './suggestion.service.js';
-import { createAssignment } from './assignments.service.js';
-import { createLocationMapping } from './mappings.service.js';
-import type { Database } from '../../../db/client.js';
+import { eq, inArray } from "drizzle-orm";
+import { loads, wells } from "../../../db/schema.js";
+import {
+  scoreSuggestions,
+  type SuggestionResult,
+} from "./suggestion.service.js";
+import { createAssignment } from "./assignments.service.js";
+import { createLocationMapping } from "./mappings.service.js";
+import { getLocationMappingByName } from "./mappings.service.js";
+import type { Database } from "../../../db/client.js";
 
 export interface AutoMapResult {
   loadId: number;
@@ -15,12 +19,15 @@ export interface AutoMapResult {
   error?: string;
 }
 
-export function classifyTier(suggestion: { score: number; matchType: string }): 1 | 2 | 3 {
+export function classifyTier(suggestion: {
+  score: number;
+  matchType: string;
+}): 1 | 2 | 3 {
   if (
-    suggestion.matchType === 'propx_job_id' ||
-    suggestion.matchType === 'exact_name' ||
-    suggestion.matchType === 'exact_alias' ||
-    suggestion.matchType === 'confirmed_mapping'
+    suggestion.matchType === "propx_job_id" ||
+    suggestion.matchType === "exact_name" ||
+    suggestion.matchType === "exact_alias" ||
+    suggestion.matchType === "confirmed_mapping"
   ) {
     return 1;
   }
@@ -44,7 +51,7 @@ export async function processLoadBatch(
       propxJobId: wells.propxJobId,
     })
     .from(wells)
-    .where(eq(wells.status, 'active'));
+    .where(eq(wells.status, "active"));
 
   const candidates = allWells.map((w) => ({
     ...w,
@@ -52,25 +59,99 @@ export async function processLoadBatch(
     propxJobId: w.propxJobId,
   }));
 
+  // Batch-fetch all loads at once instead of one-by-one
+  const allLoads = await db
+    .select()
+    .from(loads)
+    .where(inArray(loads.id, loadIds));
+
+  const loadMap = new Map(allLoads.map((l) => [l.id, l]));
+
   const results: AutoMapResult[] = [];
 
   for (const loadId of loadIds) {
     try {
-      const [load] = await db.select().from(loads).where(eq(loads.id, loadId)).limit(1);
+      const load = loadMap.get(loadId);
       if (!load) {
         results.push({
           loadId,
-          loadNo: '',
+          loadNo: "",
           destinationName: null,
           tier: 3,
           suggestion: null,
           assignmentId: null,
-          error: 'Load not found',
+          error: "Load not found",
         });
         continue;
       }
 
-      const suggestions = scoreSuggestions(load.destinationName ?? '', null, candidates);
+      // Check confirmed mapping first (fast path)
+      if (load.destinationName) {
+        const existing = await getLocationMappingByName(
+          db,
+          load.destinationName,
+        );
+        if (existing?.confirmed && existing.wellId) {
+          const matchedWell = candidates.find((w) => w.id === existing.wellId);
+          if (matchedWell) {
+            try {
+              const assignment = await createAssignment(db, {
+                wellId: existing.wellId,
+                loadId,
+                assignedBy: systemUserId,
+                assignedByName: "Auto-Mapper",
+                autoMapTier: 1,
+                autoMapScore: "1.000",
+              });
+              results.push({
+                loadId,
+                loadNo: load.loadNo,
+                destinationName: load.destinationName,
+                tier: 1,
+                suggestion: {
+                  wellId: existing.wellId,
+                  wellName: matchedWell.name,
+                  score: 1.0,
+                  tier: 1,
+                  matchType: "confirmed_mapping",
+                },
+                assignmentId: assignment.id,
+              });
+              continue;
+            } catch (err: any) {
+              // Duplicate assignment — skip silently
+              if (err.message?.includes("duplicate") || err.code === "23505")
+                continue;
+              results.push({
+                loadId,
+                loadNo: load.loadNo,
+                destinationName: load.destinationName,
+                tier: 1,
+                suggestion: null,
+                assignmentId: null,
+                error: err.message,
+              });
+              continue;
+            }
+          }
+        }
+      }
+
+      // Extract propxJobId from rawData for job-based matching
+      const propxJobId =
+        ((load.rawData as Record<string, unknown> | null)?.["propx_job_id"] as
+          | string
+          | null) ??
+        ((load.rawData as Record<string, unknown> | null)?.["job_id"] as
+          | string
+          | null) ??
+        null;
+
+      const suggestions = scoreSuggestions(
+        load.destinationName ?? "",
+        propxJobId,
+        candidates,
+      );
 
       if (suggestions.length === 0) {
         results.push({
@@ -93,7 +174,7 @@ export async function processLoadBatch(
             wellId: topSuggestion.wellId,
             loadId,
             assignedBy: systemUserId,
-            assignedByName: 'Auto-Mapper',
+            assignedByName: "Auto-Mapper",
             autoMapTier: tier,
             autoMapScore: topSuggestion.score.toString(),
           });
@@ -116,6 +197,9 @@ export async function processLoadBatch(
             assignmentId: assignment.id,
           });
         } catch (err: any) {
+          // Duplicate assignment — skip silently
+          if (err.message?.includes("duplicate") || err.code === "23505")
+            continue;
           results.push({
             loadId,
             loadNo: load.loadNo,
@@ -139,7 +223,7 @@ export async function processLoadBatch(
     } catch (err: any) {
       results.push({
         loadId,
-        loadNo: '',
+        loadNo: "",
         destinationName: null,
         tier: 3,
         suggestion: null,

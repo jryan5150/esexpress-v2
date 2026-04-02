@@ -1,562 +1,356 @@
 import { useNavigate } from "react-router-dom";
-import { useFeed } from "@/hooks/use-feed";
-import type { FeedData, WellSummary } from "@/types/feed";
+import {
+  useWells,
+  useDispatchReadiness,
+  useValidationSummary,
+} from "../hooks/use-wells";
+
+function getBorderColor(ready: number, total: number): string {
+  if (total === 0) return "border-on-surface/20";
+  const pct = ready / total;
+  if (pct >= 0.9) return "border-tertiary";
+  if (pct >= 0.5) return "border-primary-container";
+  return "border-on-surface/20";
+}
+
+function pct(value: number, total: number): string {
+  if (total === 0) return "0%";
+  return `${Math.round((value / total) * 100)}%`;
+}
 
 export function ExceptionFeed() {
   const navigate = useNavigate();
-  const { data, isLoading } = useFeed();
-  const feed = data ?? MOCK_FEED;
+  const wellsQuery = useWells();
+  const readinessQuery = useDispatchReadiness();
+  const validationQuery = useValidationSummary();
 
-  if (isLoading) {
-    return (
-      <div
-        className="flex items-center justify-center h-full"
-        style={{ color: "var(--es-text-secondary)" }}
-      >
-        Loading feed...
-      </div>
-    );
-  }
+  const isError = wellsQuery.isError || readinessQuery.isError;
+  const isLoading = wellsQuery.isLoading || readinessQuery.isLoading;
 
-  const totalExceptions = feed.wellSummaries.reduce(
-    (s, w) => s + w.reviewCount + w.missingCount,
-    0,
+  // Wells now return per-well assignment stats from backend
+  const rawWells = Array.isArray(wellsQuery.data) ? wellsQuery.data : [];
+  const wells = (rawWells as Array<Record<string, unknown>>)
+    .map((w) => ({
+      id: String(w.id ?? ""),
+      name: String(w.name ?? ""),
+      totalLoads: Number(w.totalLoads ?? w.total_loads ?? 0),
+      ready: Number(w.ready ?? 0),
+      review: Number(w.review ?? 0),
+      assigned: Number(w.assigned ?? 0),
+      missing: Number(w.missing ?? 0),
+    }))
+    .filter((w) => w.totalLoads > 0)
+    .sort((a, b) => b.review - a.review || b.totalLoads - a.totalLoads);
+
+  const readiness = readinessQuery.data as Record<string, unknown> | undefined;
+  const readyCount = Number(
+    readiness?.dispatchReady ?? readiness?.readyCount ?? 0,
   );
-  const rate =
-    feed.systemHandled.loadsMatched > 0
-      ? (
-          (feed.systemHandled.loadsMatched /
-            (feed.systemHandled.loadsMatched + totalExceptions)) *
-          100
-        ).toFixed(1)
-      : "0.0";
+  const photosAttached = Number(readiness?.photosAttached ?? 0);
+  const totalAssignments = Number(readiness?.total ?? 0);
+
+  // Validation summary for the "pending review" count
+  const validation = validationQuery.data as
+    | Record<string, unknown>
+    | undefined;
+  const pendingReview = Number(validation?.total ?? 0);
 
   return (
-    <div className="p-8 pb-16 max-w-7xl mx-auto space-y-10">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: "var(--es-text-primary)" }}
-          >
-            EXCEPTION FEED
-          </h1>
-          <span
-            className="text-xs uppercase tracking-widest px-2.5 py-1 hidden lg:inline-block"
-            style={{
-              color: "var(--es-text-tertiary)",
-              background: "var(--es-bg-elevated)",
-              borderRadius: "var(--es-radius-sm)",
-            }}
-          >
-            Operational Status: High Alert
-          </span>
-        </div>
-        <div className="es-surface flex items-center gap-2 px-3 py-2">
-          <span style={{ color: "var(--es-text-tertiary)" }}>🔍</span>
-          <input
-            className="bg-transparent border-none focus:ring-0 focus:outline-none text-sm w-48"
-            style={{ color: "var(--es-text-primary)" }}
-            placeholder="Search BOL or Well..."
-          />
-        </div>
-      </div>
-
-      {/* System Handled */}
-      <section className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div
-          className="lg:col-span-3 p-6 relative overflow-hidden"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(6, 78, 59, 0.30) 0%, #0f172a 100%)",
-            borderLeft: "4px solid var(--es-ready)",
-            border: "1px solid rgba(52, 211, 153, 0.15)",
-            borderLeftWidth: "4px",
-            borderLeftColor: "var(--es-ready)",
-            borderRadius: "var(--es-radius-lg)",
-          }}
-        >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-5">
-              <div className="flex items-center gap-2">
-                <span style={{ color: "var(--es-ready)", fontSize: "1.25rem" }}>
-                  ✓
-                </span>
-                <h2
-                  className="uppercase tracking-widest text-sm font-semibold"
-                  style={{ color: "var(--es-ready)" }}
-                >
-                  System Handled Summary
-                </h2>
-              </div>
-              <div className="flex flex-wrap gap-8">
-                <Stat
-                  label="Loads Auto-Matched"
-                  value={feed.systemHandled.loadsMatched}
-                />
-                <Stat
-                  label="BOLs Attached"
-                  value={feed.systemHandled.bolsAttached}
-                />
-                <Stat
-                  label="Photos Linked"
-                  value={feed.systemHandled.photosLinked}
-                />
-              </div>
-            </div>
-            <button
-              className="es-btn-accent flex items-center gap-2"
-              style={{ borderRadius: "2px" }}
-              onClick={() =>
-                navigate(`/wells/${feed.wellSummaries[0]?.wellId ?? ""}`)
-              }
-            >
-              Review &amp; Approve →
-            </button>
-          </div>
-        </div>
-
-        <div className="es-surface p-6 flex flex-col justify-between">
-          <div>
-            <span
-              className="text-xs uppercase tracking-wider"
-              style={{ color: "var(--es-text-tertiary)" }}
-            >
-              Automation Rate
+    <>
+      <div className="p-8 space-y-8 max-w-7xl">
+        {/* API Error Banner */}
+        {isError && (
+          <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 flex items-center gap-3">
+            <span className="material-symbols-outlined text-error text-lg">
+              cloud_off
             </span>
-            <h3
-              className="text-3xl font-bold"
-              style={{ color: "var(--es-ready)" }}
-            >
-              {rate}%
-            </h3>
-          </div>
-          <div
-            className="w-full h-1.5 rounded-full mt-4"
-            style={{ background: "var(--es-bg-inset)" }}
-          >
-            <div
-              className="h-full rounded-full"
-              style={{
-                width: `${rate}%`,
-                background: "var(--es-ready)",
-                transition: "width 500ms ease",
-              }}
-            />
-          </div>
-          <p
-            className="text-xs mt-2"
-            style={{ color: "var(--es-text-tertiary)" }}
-          >
-            +4.2% from last shift
-          </p>
-        </div>
-      </section>
-
-      {/* Needs You */}
-      <section className="space-y-6">
-        <div
-          className="flex items-center justify-between pb-4"
-          style={{ borderBottom: "1px solid rgba(89, 66, 57, 0.15)" }}
-        >
-          <div className="flex items-center gap-3">
-            <span style={{ color: "var(--es-accent)" }}>▲</span>
-            <h2
-              className="uppercase tracking-widest text-sm font-semibold"
-              style={{ color: "#cbd5e1" }}
-            >
-              Needs You: Priority Exceptions
-            </h2>
-          </div>
-          <span
-            className="text-xs uppercase"
-            style={{ color: "var(--es-text-tertiary)" }}
-          >
-            Sorted by: Exception Count ▾
-          </span>
-        </div>
-        <div className="space-y-3">
-          {feed.wellSummaries.map((w) => (
-            <WellRow
-              key={w.wellId}
-              well={w}
-              onClick={() => navigate(`/wells/${w.wellId}`)}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Activity + Stats */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 es-surface-inset p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h4
-              className="text-xs uppercase tracking-widest"
-              style={{ color: "var(--es-text-tertiary)" }}
-            >
-              Recent Activity Log
-            </h4>
-            <span
-              className="text-[10px] font-bold cursor-pointer"
-              style={{ color: "var(--es-accent)" }}
-            >
-              View All Logs
-            </span>
-          </div>
-          {MOCK_ACTIVITY.map((e, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-4 p-2 hover:bg-[rgba(30,41,59,0.3)] rounded-sm transition-colors"
-            >
-              <span
-                className="text-[10px] pt-0.5 shrink-0 es-mono"
-                style={{ color: "var(--es-text-tertiary)" }}
-              >
-                {e.time}
-              </span>
-              <p
-                className="text-sm"
-                style={{ color: "var(--es-text-secondary)" }}
-                dangerouslySetInnerHTML={{ __html: e.html }}
-              />
-            </div>
-          ))}
-        </div>
-        <div
-          className="p-6 flex flex-col justify-between"
-          style={{
-            background: "var(--es-bg-elevated)",
-            border: "1px solid rgba(89, 66, 57, 0.1)",
-            borderRadius: "var(--es-radius-lg)",
-          }}
-        >
-          <div className="space-y-5">
-            <h4
-              className="text-xs uppercase tracking-widest"
-              style={{ color: "var(--es-text-tertiary)" }}
-            >
-              Dispatcher Stats
-            </h4>
-            <div className="flex justify-between items-end">
-              <span
-                className="text-xs"
-                style={{ color: "var(--es-text-secondary)" }}
-              >
-                Total Exceptions
-              </span>
-              <span
-                className="text-xl es-mono"
-                style={{ color: "var(--es-text-primary)" }}
-              >
-                12
-              </span>
-            </div>
-            <div className="flex justify-between items-end">
-              <span
-                className="text-xs"
-                style={{ color: "var(--es-text-secondary)" }}
-              >
-                Avg Resolve Time
-              </span>
-              <span
-                className="text-xl es-mono"
-                style={{ color: "var(--es-text-primary)" }}
-              >
-                4m 12s
-              </span>
-            </div>
-          </div>
-          <div className="mt-8 h-16 flex items-end gap-1">
-            {[50, 75, 66, 100, 80].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-t-sm"
-                style={{
-                  height: `${h}%`,
-                  background: "var(--es-accent)",
-                  opacity: 0.2 + i * 0.2,
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* FAB */}
-      <button
-        className="fixed bottom-8 right-8 w-14 h-14 rounded-sm flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 cursor-pointer"
-        style={{
-          background: "var(--es-accent)",
-          color: "var(--es-text-inverse)",
-          boxShadow: "var(--es-shadow-lg)",
-        }}
-        aria-label="New Load"
-      >
-        <span className="text-2xl font-light">+</span>
-      </button>
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="space-y-1">
-      <p
-        className="text-[10px] uppercase tracking-wider"
-        style={{ color: "var(--es-text-tertiary)" }}
-      >
-        {label}
-      </p>
-      <p
-        className="text-4xl font-bold es-mono"
-        style={{ color: "var(--es-text-primary)" }}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function WellRow({
-  well,
-  onClick,
-}: {
-  well: WellSummary;
-  onClick: () => void;
-}) {
-  const hasExceptions = well.reviewCount + well.missingCount > 0;
-  return (
-    <div
-      className={`bg-[var(--es-bg-surface)] hover:bg-[var(--es-bg-elevated)] transition-all border-l-[3px] ${hasExceptions ? "border-[var(--es-error)]" : "border-[var(--es-ready)]"} flex flex-col lg:flex-row lg:items-center justify-between p-4 gap-4 cursor-pointer group`}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === "Enter" && onClick()}
-    >
-      <div className="flex items-center gap-6 min-w-[240px]">
-        <div className="space-y-1">
-          <h3
-            className="text-lg font-bold"
-            style={{ color: "var(--es-text-primary)" }}
-          >
-            {well.wellName}
-          </h3>
-          <div
-            className="flex items-center gap-2 text-xs es-mono"
-            style={{ color: "var(--es-text-tertiary)" }}
-          >
-            <span style={{ fontSize: "10px" }}>&#x1F4CD;</span>
-            Basin
-          </div>
-        </div>
-        <div
-          className="px-3 py-1 rounded-sm"
-          style={{ background: "rgba(30, 41, 59, 0.5)" }}
-        >
-          <span
-            className="text-xl font-semibold es-mono"
-            style={{ color: "var(--es-text-primary)" }}
-          >
-            {well.totalLoads}
-          </span>
-          <span
-            className="text-[10px] ml-1 uppercase"
-            style={{ color: "var(--es-text-tertiary)" }}
-          >
-            Loads
-          </span>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-2 flex-1 justify-center px-4">
-        <StatusPill count={well.readyCount} label="Ready" color="ready" />
-        <StatusPill count={well.reviewCount} label="Review" color="warning" />
-        <StatusPill count={well.missingCount} label="Missing" color="error" />
-      </div>
-      <div className="flex items-center gap-6">
-        {well.operators.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded-full overflow-hidden border shrink-0"
-              style={{
-                background: "var(--es-bg-overlay)",
-                borderColor: `${well.operators[0].color}80`,
-              }}
-            />
-            <div className="flex flex-col">
-              <span
-                className="text-[10px] font-bold uppercase"
-                style={{ color: "var(--es-text-secondary)" }}
-              >
-                {well.operators[0].name}
-              </span>
-              <span
-                className="es-mono"
-                style={{ color: "var(--es-text-tertiary)", fontSize: "9px" }}
-              >
-                Active {well.operators[0].lastActive}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center"
-              style={{
-                background: "var(--es-bg-elevated)",
-                border: "1px dashed var(--es-border-default)",
-              }}
-            >
-              <span
-                style={{ color: "var(--es-text-tertiary)", fontSize: "10px" }}
-              >
-                +
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span
-                className="text-[10px] font-bold uppercase"
-                style={{ color: "var(--es-text-tertiary)" }}
-              >
-                Unassigned
-              </span>
-              <span
-                className="es-mono"
-                style={{ color: "var(--es-text-tertiary)", fontSize: "9px" }}
-              >
-                --
-              </span>
-            </div>
+            <p className="text-sm text-error font-medium">
+              Unable to connect to the server.
+            </p>
           </div>
         )}
-        <button
-          className="p-2 rounded-sm transition-colors"
-          style={{
-            background: "var(--es-bg-overlay)",
-            color: "var(--es-text-secondary)",
-          }}
-        >
-          &#x2197;
-        </button>
+
+        {/* Date */}
+        <div className="flex items-end gap-3">
+          <h2 className="text-3xl font-extrabold tracking-tighter text-on-surface">
+            TODAY
+          </h2>
+          <div className="h-6 w-px bg-on-surface/10 mx-1 mb-1" />
+          <p className="text-lg font-medium text-primary-container/80 font-label tracking-tight mb-0.5">
+            {new Date().toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </p>
+        </div>
+
+        {/* System Handled */}
+        <section>
+          <div className="bg-surface-container-low rounded-xl p-8 border-l-4 border-tertiary relative overflow-hidden group">
+            <div className="absolute -right-12 -top-12 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl group-hover:bg-tertiary/10 transition-all duration-700" />
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="space-y-4">
+                <h3 className="text-sm uppercase tracking-[0.2em] font-bold text-on-surface/40">
+                  System Handled
+                </h3>
+                <div className="flex flex-wrap gap-8">
+                  {[
+                    {
+                      icon: "check_circle",
+                      value: readinessQuery.isLoading
+                        ? "..."
+                        : String(totalAssignments),
+                      label: "Loads Mapped",
+                    },
+                    {
+                      icon: "task_alt",
+                      value: readinessQuery.isLoading
+                        ? "..."
+                        : String(readyCount),
+                      label: "Dispatch Ready",
+                    },
+                    {
+                      icon: "image",
+                      value: readinessQuery.isLoading
+                        ? "..."
+                        : String(photosAttached),
+                      label: "Photos Attached",
+                    },
+                    {
+                      icon: "pending_actions",
+                      value: validationQuery.isLoading
+                        ? "..."
+                        : String(pendingReview),
+                      label: "Pending Review",
+                    },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center gap-3">
+                      <div className="bg-tertiary/10 p-2 rounded-lg">
+                        <span className="material-symbols-outlined text-tertiary">
+                          {item.icon}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="font-label text-2xl font-bold text-on-surface">
+                          {item.value}
+                        </div>
+                        <div className="text-[10px] uppercase font-bold text-on-surface/40">
+                          {item.label}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/validation")}
+                className="bg-surface-container-high text-on-surface px-8 py-3.5 rounded-lg font-bold text-sm uppercase tracking-wider hover:bg-surface-container-highest hover:text-primary transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-black/20 cursor-pointer"
+              >
+                Review &amp; Approve
+                <span className="material-symbols-outlined text-sm">
+                  arrow_forward
+                </span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Well List */}
+        <section className="space-y-4">
+          <div className="flex justify-between items-center px-2">
+            <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
+              Wells{" "}
+              <span className="text-primary-container">
+                {wells.length} with loads
+              </span>
+            </h3>
+          </div>
+
+          <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+            {isLoading ? (
+              <>
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="bg-surface-container-low flex flex-col md:flex-row md:items-center p-6 gap-6 animate-pulse"
+                  >
+                    <div className="md:w-64 border-l-4 border-on-surface/10 pl-4">
+                      <div className="h-5 w-40 bg-on-surface/10 rounded mb-2" />
+                      <div className="h-4 w-24 bg-on-surface/5 rounded" />
+                    </div>
+                    <div className="flex-1 grid grid-cols-3 gap-8">
+                      {[1, 2, 3].map((j) => (
+                        <div key={j} className="space-y-2">
+                          <div className="h-3 w-12 bg-on-surface/5 rounded" />
+                          <div className="h-4 w-full bg-on-surface/5 rounded" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : wells.length === 0 ? (
+              <div className="bg-surface-container-low p-8 text-center">
+                <span className="material-symbols-outlined text-on-surface/20 text-4xl mb-2">
+                  inbox
+                </span>
+                <p className="text-on-surface/40 font-label text-sm">
+                  No wells with assignments yet. Run the auto-mapper to create
+                  assignments from synced loads.
+                </p>
+              </div>
+            ) : (
+              wells.map((well) => (
+                <div
+                  key={well.id}
+                  onClick={() => navigate(`/wells/${well.id}`)}
+                  className="bg-surface-container-low hover:bg-surface-container-high transition-all group cursor-pointer flex flex-col md:flex-row md:items-center p-6 gap-6"
+                >
+                  <div
+                    className={`md:w-64 border-l-4 pl-4 ${getBorderColor(well.ready, well.totalLoads)}`}
+                  >
+                    <h4 className="font-bold text-lg text-on-surface">
+                      {well.name}
+                    </h4>
+                    <span className="font-label text-sm text-on-surface/60">
+                      {well.totalLoads} Loads
+                    </span>
+                  </div>
+                  <div className="flex-1 grid grid-cols-3 gap-8">
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-on-surface/40 tracking-widest">
+                        Ready
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-tertiary"
+                            style={{
+                              width: pct(well.ready, well.totalLoads),
+                            }}
+                          />
+                        </div>
+                        <span className="font-label text-sm font-bold">
+                          {well.ready}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className={`space-y-1 ${well.review === 0 ? "opacity-20" : ""}`}
+                    >
+                      <span
+                        className={`text-[10px] uppercase font-bold tracking-widest ${well.review > 0 ? "text-on-surface/40" : ""}`}
+                      >
+                        Review
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary-container"
+                            style={{
+                              width: pct(well.review, well.totalLoads),
+                            }}
+                          />
+                        </div>
+                        <span
+                          className={`font-label text-sm font-bold ${well.review > 0 ? "text-primary-container" : ""}`}
+                        >
+                          {well.review}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className={`space-y-1 ${well.missing === 0 ? "opacity-20" : ""}`}
+                    >
+                      <span
+                        className={`text-[10px] uppercase font-bold tracking-widest ${well.missing > 0 ? "text-error" : ""}`}
+                      >
+                        Missing Photos
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-error"
+                            style={{
+                              width: pct(well.missing, well.totalLoads),
+                            }}
+                          />
+                        </div>
+                        <span
+                          className={`font-label text-sm font-bold ${well.missing > 0 ? "text-error" : ""}`}
+                        >
+                          {well.missing}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* Bottom Insights */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="col-span-1 md:col-span-2 bg-surface-container-low/40 p-6 rounded-xl border border-on-surface/5">
+            <div className="flex justify-between items-center mb-6">
+              <h4 className="text-xs uppercase font-black text-on-surface/40 tracking-widest">
+                Dispatch Pipeline
+              </h4>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                {
+                  label: "Pending Review",
+                  count: pendingReview,
+                  color: "bg-primary-container",
+                },
+                {
+                  label: "Assigned",
+                  count: wells.reduce((s, w) => s + w.assigned, 0),
+                  color: "bg-primary-container/60",
+                },
+                {
+                  label: "Dispatch Ready",
+                  count: readyCount,
+                  color: "bg-tertiary",
+                },
+                {
+                  label: "Photos Attached",
+                  count: photosAttached,
+                  color: "bg-tertiary/60",
+                },
+              ].map((item) => (
+                <div key={item.label} className="text-center space-y-2">
+                  <div className="font-label text-2xl font-bold text-on-surface">
+                    {isLoading ? "..." : item.count}
+                  </div>
+                  <div className={`h-2 rounded-full ${item.color}`} />
+                  <div className="text-[10px] uppercase font-bold text-on-surface/40 tracking-wider">
+                    {item.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-primary-container rounded-xl p-6 flex flex-col justify-between overflow-hidden relative group">
+            <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-8xl text-on-primary-container/10 group-hover:rotate-12 transition-transform duration-500">
+              rocket_launch
+            </span>
+            <div>
+              <h4 className="text-[10px] font-black text-on-primary-container uppercase tracking-[0.2em] mb-4">
+                Dispatcher Tip
+              </h4>
+              <p className="text-sm font-medium leading-relaxed text-on-primary-container">
+                Use <span className="font-label font-bold">[Shift + A]</span> to
+                quickly approve matched loads in the Validation page.
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </>
   );
 }
-
-const STATUS_COLORS = {
-  ready: {
-    bg: "rgba(52, 211, 153, 0.08)",
-    text: "var(--es-ready)",
-    border: "rgba(52, 211, 153, 0.15)",
-    dimText: "var(--es-text-tertiary)",
-  },
-  warning: {
-    bg: "rgba(251, 191, 36, 0.08)",
-    text: "var(--es-warning)",
-    border: "rgba(251, 191, 36, 0.15)",
-    dimText: "var(--es-text-tertiary)",
-  },
-  error: {
-    bg: "rgba(248, 113, 113, 0.1)",
-    text: "var(--es-error)",
-    border: "rgba(248, 113, 113, 0.2)",
-    dimText: "var(--es-text-tertiary)",
-  },
-} as const;
-
-function StatusPill({
-  count,
-  label,
-  color,
-}: {
-  count: number;
-  label: string;
-  color: keyof typeof STATUS_COLORS;
-}) {
-  const c = STATUS_COLORS[color];
-  const isDimmed = count === 0;
-  return (
-    <div
-      className="px-3 py-1 rounded-full flex items-center gap-2"
-      style={{
-        background: isDimmed ? "rgba(30, 41, 59, 0.3)" : c.bg,
-        border: `1px solid ${isDimmed ? "rgba(71, 85, 105, 0.3)" : c.border}`,
-        opacity: isDimmed ? 0.3 : 1,
-      }}
-    >
-      <span
-        className="es-mono font-bold text-sm"
-        style={{ color: isDimmed ? c.dimText : c.text }}
-      >
-        {count}
-      </span>
-      <span
-        className="text-[10px] uppercase font-semibold"
-        style={{ color: isDimmed ? c.dimText : `${c.text}99` }}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
-const MOCK_ACTIVITY = [
-  {
-    time: "14:22",
-    html: `<span style="color:var(--es-accent);font-weight:700">Stephanie</span> auto-approved <span class="es-mono">#BOL-8821</span> for Pendleton 1H.`,
-  },
-  {
-    time: "14:18",
-    html: `System flagged: <span style="color:var(--es-error);font-weight:700">MISSING_TICKET</span> on Browning SilverHill.`,
-  },
-];
-
-const MOCK_FEED: FeedData = {
-  date: new Date().toISOString().split("T")[0],
-  systemHandled: { loadsMatched: 47, bolsAttached: 38, photosLinked: 23 },
-  wellSummaries: [
-    {
-      wellId: "pendleton-1h",
-      wellName: "Pendleton 1H",
-      totalLoads: 51,
-      readyCount: 47,
-      reviewCount: 3,
-      missingCount: 1,
-      operators: [
-        {
-          userId: "s1",
-          name: "Stephanie",
-          color: "#34d399",
-          location: "Pendleton 1H",
-          lastActive: "12m",
-        },
-      ],
-    },
-    {
-      wellId: "browning-silverhill",
-      wellName: "Browning SilverHill",
-      totalLoads: 28,
-      readyCount: 22,
-      reviewCount: 4,
-      missingCount: 2,
-      operators: [
-        {
-          userId: "s2",
-          name: "Scout",
-          color: "#fbbf24",
-          location: "Browning SilverHill",
-          lastActive: "3m",
-        },
-      ],
-    },
-    {
-      wellId: "apache-warwick",
-      wellName: "Apache Warwick",
-      totalLoads: 12,
-      readyCount: 12,
-      reviewCount: 0,
-      missingCount: 0,
-      operators: [],
-    },
-  ],
-};

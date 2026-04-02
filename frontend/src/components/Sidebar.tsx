@@ -1,125 +1,103 @@
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { cycleTheme, getStoredTheme } from "@/lib/theme";
-import type { Theme } from "@/lib/theme";
-
-const themeEmoji: Record<Theme, string> = {
-  dark: "\u{1F319}",
-  light: "\u{2600}\u{FE0F}",
-  system: "\u{1F4BB}",
-};
-
-function navLinkClass({ isActive }: { isActive: boolean }): string {
-  const base = [
-    "flex items-center gap-2 px-3 py-2",
-    "rounded-[var(--es-radius-md)] text-sm",
-    "transition-all duration-[150ms]",
-  ].join(" ");
-
-  if (isActive) {
-    return `${base} bg-[var(--es-accent-dim)] text-[var(--es-accent)]`;
-  }
-  return `${base} text-[var(--es-text-secondary)] hover:text-[var(--es-text-primary)] hover:bg-[var(--es-bg-elevated)]`;
-}
+import { Link, useLocation } from "react-router-dom";
+import { useCurrentUser } from "../hooks/use-auth";
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
-  const [theme, setTheme] = useState<Theme>(getStoredTheme);
+  const location = useLocation();
+  const userQuery = useCurrentUser();
+  const isActive = (path: string) => location.pathname === path;
 
-  function handleCycleTheme() {
-    const next = cycleTheme();
-    setTheme(next);
-  }
+  const navClass = (path: string) =>
+    isActive(path)
+      ? "bg-surface-container-high text-primary-container border-l-4 border-primary-container flex items-center gap-3 px-4 py-3 transition-all duration-200"
+      : "text-on-surface/70 flex items-center gap-3 px-4 py-3 hover:bg-surface-container hover:text-on-surface transition-all duration-200";
 
   return (
-    <aside
-      className="es-sidebar flex flex-col h-screen shrink-0 overflow-hidden transition-all"
-      style={{ width: collapsed ? 64 : 240, minWidth: collapsed ? 64 : 240 }}
-    >
-      {/* Logo */}
-      <div className="flex items-center gap-2 px-4 py-4 border-b border-[var(--es-border-subtle)]">
-        <div className="flex items-center justify-center w-8 h-8 rounded-[var(--es-radius-md)] bg-[var(--es-accent)] text-[var(--es-text-inverse)] text-sm font-bold shrink-0">
-          ES
-        </div>
-        {!collapsed && (
-          <span className="text-sm font-semibold text-[var(--es-text-primary)]">
-            ES Express
-          </span>
-        )}
+    <aside className="hidden md:flex flex-col h-screen w-64 bg-surface-container-low border-r border-transparent z-50 shrink-0">
+      <div className="px-6 py-8 flex flex-col gap-1">
+        <h2 className="text-primary-container font-black text-xl tracking-tighter uppercase">
+          Dispatch Command
+        </h2>
+        <p className="text-xs text-on-surface/50 font-medium">
+          Terminal 04 - Active
+        </p>
       </div>
-
-      {/* Primary Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <NavLink to="/" end className={navLinkClass}>
-          <span className="text-[var(--es-accent)]">{"\u25CF"}</span>
-          {!collapsed && <span>Exception Feed</span>}
-        </NavLink>
-        <NavLink to="/bol" className={navLinkClass}>
-          <span className="text-[var(--es-accent)]">{"\u25CF"}</span>
-          {!collapsed && <span>BOL Queue</span>}
-        </NavLink>
-
-        {/* Admin Section */}
-        {!collapsed && (
-          <div className="pt-4">
-            <p className="px-3 pb-2 text-xs uppercase tracking-wider text-[var(--es-text-tertiary)]">
-              Admin
-            </p>
-            <NavLink to="/admin/wells" className={navLinkClass}>
-              Wells
-            </NavLink>
-            <NavLink to="/admin/companies" className={navLinkClass}>
-              Companies
-            </NavLink>
-            <NavLink to="/admin/validation" className={navLinkClass}>
-              Validation
-            </NavLink>
-            <NavLink to="/admin/users" className={navLinkClass}>
-              Users
-            </NavLink>
-          </div>
-        )}
-
-        {/* Operations Section */}
-        {!collapsed && (
-          <div className="pt-4">
-            <p className="px-3 pb-2 text-xs uppercase tracking-wider text-[var(--es-text-tertiary)]">
-              Operations
-            </p>
-            <NavLink to="/finance" className={navLinkClass}>
-              Finance
-            </NavLink>
-            <NavLink to="/settings" className={navLinkClass}>
-              Settings
-            </NavLink>
-          </div>
-        )}
+      <nav className="flex-1 px-3 space-y-1">
+        <Link to="/" className={navClass("/")}>
+          <span className="material-symbols-outlined">priority_high</span>
+          <span className="text-sm font-medium">Exception Feed</span>
+        </Link>
+        <Link to="/bol" className={navClass("/bol")}>
+          <span className="material-symbols-outlined">description</span>
+          <span className="text-sm font-medium">BOL Queue</span>
+        </Link>
+        <Link to="/dispatch-desk" className={navClass("/dispatch-desk")}>
+          <span className="material-symbols-outlined">local_shipping</span>
+          <span className="text-sm font-medium">Dispatch Desk</span>
+        </Link>
+        <Link to="/validation" className={navClass("/validation")}>
+          <span className="material-symbols-outlined">fact_check</span>
+          <span className="text-sm font-medium">Validation</span>
+        </Link>
+        <div className="pt-6 pb-2 px-4">
+          <span className="text-[10px] uppercase tracking-widest text-on-surface/40 font-bold">
+            Administration
+          </span>
+        </div>
+        <Link to="/admin/wells" className={navClass("/admin/wells")}>
+          <span className="material-symbols-outlined">oil_barrel</span>
+          <span className="text-sm font-medium">Wells</span>
+        </Link>
+        <Link to="/admin/companies" className={navClass("/admin/companies")}>
+          <span className="material-symbols-outlined">business</span>
+          <span className="text-sm font-medium">Companies</span>
+        </Link>
+        <Link to="/admin/users" className={navClass("/admin/users")}>
+          <span className="material-symbols-outlined">group</span>
+          <span className="text-sm font-medium">Users</span>
+        </Link>
+        <div className="pt-6 pb-2 px-4">
+          <span className="text-[10px] uppercase tracking-widest text-on-surface/40 font-bold">
+            Operations
+          </span>
+        </div>
+        <Link to="/finance" className={navClass("/finance")}>
+          <span className="material-symbols-outlined">payments</span>
+          <span className="text-sm font-medium">Finance</span>
+        </Link>
       </nav>
-
+      {/* Current User */}
+      <div className="px-6 py-6 border-t border-surface-container space-y-4">
+        <h4 className="text-[10px] uppercase tracking-widest text-on-surface/40 font-bold">
+          Online
+        </h4>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(69,223,164,0.5)]" />
+              <span className="text-xs text-on-surface/80">
+                {(userQuery.data as Record<string, unknown>)?.name || "You"}
+              </span>
+            </div>
+            <span className="font-label text-[10px] text-tertiary">now</span>
+          </div>
+        </div>
+      </div>
       {/* Footer */}
-      <div className="border-t border-[var(--es-border-subtle)] p-3 space-y-2">
-        <button
-          type="button"
-          onClick={handleCycleTheme}
-          className="flex items-center gap-2 w-full px-2 py-1.5 rounded-[var(--es-radius-md)] text-sm text-[var(--es-text-secondary)] hover:text-[var(--es-text-primary)] hover:bg-[var(--es-bg-elevated)] transition-all duration-[150ms]"
+      <div className="px-3 pb-6 flex flex-col gap-1">
+        <Link
+          to="/settings"
+          className="text-on-surface/50 flex items-center gap-3 px-4 py-2 hover:text-primary-container transition-colors"
         >
-          <span>{themeEmoji[theme]}</span>
-          {!collapsed && <span className="capitalize">{theme}</span>}
-        </button>
-
-        {!collapsed && (
-          <p className="px-2 text-xs text-[var(--es-text-tertiary)]">
-            Synced 2m ago
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setCollapsed((prev) => !prev)}
-          className="flex items-center justify-center w-full px-2 py-1.5 rounded-[var(--es-radius-md)] text-sm text-[var(--es-text-secondary)] hover:text-[var(--es-text-primary)] hover:bg-[var(--es-bg-elevated)] transition-all duration-[150ms]"
+          <span className="material-symbols-outlined text-lg">settings</span>
+          <span className="text-xs font-medium">Settings</span>
+        </Link>
+        <a
+          className="text-on-surface/50 flex items-center gap-3 px-4 py-2 hover:text-primary-container transition-colors"
+          href="#"
         >
-          {collapsed ? "\u2192" : "\u2190"}
-        </button>
+          <span className="material-symbols-outlined text-lg">help</span>
+          <span className="text-xs font-medium">Support</span>
+        </a>
       </div>
     </aside>
   );

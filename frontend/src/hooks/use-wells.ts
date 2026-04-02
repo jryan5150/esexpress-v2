@@ -1,0 +1,140 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "../lib/api";
+import { qk } from "../lib/query-client";
+import type {
+  Well,
+  Assignment,
+  DispatchDeskLoad,
+  ValidationSummary,
+  DispatchReadiness,
+  Paginated,
+} from "../types/api";
+
+export function useWells() {
+  return useQuery({
+    queryKey: qk.wells.list(),
+    queryFn: () => api.get<Well[]>("/dispatch/wells/"),
+  });
+}
+
+export function useWell(id: string) {
+  return useQuery({
+    queryKey: qk.wells.detail(id),
+    queryFn: () => api.get<Well>(`/dispatch/wells/${id}`),
+    enabled: !!id,
+  });
+}
+
+export function useAssignmentQueue(wellId?: number) {
+  const params = wellId ? `?wellId=${wellId}` : "";
+  return useQuery({
+    queryKey: qk.assignments.queue({ wellId }),
+    queryFn: () =>
+      api.get<Paginated<Assignment>>(`/dispatch/assignments/queue${params}`),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useAssignmentStats() {
+  return useQuery({
+    queryKey: qk.assignments.stats(),
+    queryFn: () =>
+      api.get<Record<string, number>>("/dispatch/assignments/stats"),
+    refetchInterval: 30_000,
+  });
+}
+
+export function usePendingReview() {
+  return useQuery({
+    queryKey: qk.assignments.pendingReview(),
+    queryFn: () =>
+      api.get<Assignment[]>("/dispatch/assignments/pending-review"),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useValidationSummary() {
+  return useQuery({
+    queryKey: qk.validation.summary(),
+    queryFn: () => api.get<ValidationSummary>("/dispatch/validation/"),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useDispatchReadiness() {
+  return useQuery({
+    queryKey: qk.readiness.all,
+    queryFn: () => api.get<DispatchReadiness>("/dispatch/dispatch-readiness"),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useDispatchDeskLoads(filters?: {
+  wellId?: number;
+  photoStatus?: string;
+  date?: string;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.wellId) params.set("wellId", String(filters.wellId));
+  if (filters?.photoStatus) params.set("photoStatus", filters.photoStatus);
+  if (filters?.date) params.set("date", filters.date);
+  const qs = params.toString() ? `?${params}` : "";
+  return useQuery({
+    queryKey: qk.dispatchDesk.loads(filters),
+    queryFn: () =>
+      api.get<Paginated<DispatchDeskLoad>>(`/dispatch/dispatch-desk/${qs}`),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useBulkApprove() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentIds: number[]) =>
+      api.post("/dispatch/assignments/bulk-approve", { assignmentIds }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+      queryClient.invalidateQueries({ queryKey: qk.validation.all });
+      queryClient.invalidateQueries({ queryKey: qk.readiness.all });
+    },
+  });
+}
+
+export function useTransitionStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { id: number; status: string; notes?: string }) =>
+      api.put(`/dispatch/assignments/${params.id}/status`, {
+        newStatus: params.status,
+        notes: params.notes,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+      queryClient.invalidateQueries({ queryKey: qk.validation.all });
+    },
+  });
+}
+
+export function useValidationConfirm() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { assignmentId: number }) =>
+      api.post("/dispatch/validation/confirm", params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.validation.all });
+      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+    },
+  });
+}
+
+export function useValidationReject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { assignmentId: number; reason?: string }) =>
+      api.post("/dispatch/validation/reject", params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.validation.all });
+      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+    },
+  });
+}

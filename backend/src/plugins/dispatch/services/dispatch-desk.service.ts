@@ -1,9 +1,13 @@
-import { eq, and, inArray, sql } from 'drizzle-orm';
-import { assignments, loads, wells, photos } from '../../../db/schema.js';
-import { ValidationError, NotFoundError, ForbiddenError } from '../../../lib/errors.js';
-import { transitionStatus } from './assignments.service.js';
-import type { Database } from '../../../db/client.js';
-import type { PhotoStatus } from '../../../db/schema.js';
+import { eq, and, inArray, sql, or } from "drizzle-orm";
+import { assignments, loads, wells, photos } from "../../../db/schema.js";
+import {
+  ValidationError,
+  NotFoundError,
+  ForbiddenError,
+} from "../../../lib/errors.js";
+import { transitionStatus } from "./assignments.service.js";
+import type { Database } from "../../../db/client.js";
+import type { PhotoStatus } from "../../../db/schema.js";
 
 // ─── PURE FUNCTIONS ───────────────────────────────────────────────
 
@@ -13,10 +17,13 @@ import type { PhotoStatus } from '../../../db/schema.js';
  * - all matched → 'attached'
  * - some matched → 'pending'
  */
-export function computePhotoStatus(matched: number, total: number): PhotoStatus {
-  if (total === 0) return 'missing';
-  if (matched >= total) return 'attached';
-  return 'pending';
+export function computePhotoStatus(
+  matched: number,
+  total: number,
+): PhotoStatus {
+  if (total === 0) return "missing";
+  if (matched >= total) return "attached";
+  return "pending";
 }
 
 /**
@@ -26,7 +33,7 @@ export function computePhotoStatus(matched: number, total: number): PhotoStatus 
  * - 'attached' → allowed (green)
  */
 export function canMarkEntered(photoStatus: PhotoStatus): boolean {
-  return photoStatus !== 'missing';
+  return photoStatus !== "missing";
 }
 
 // ─── QUERY TYPES ──────────────────────────────────────────────────
@@ -88,12 +95,20 @@ export interface DispatchReadiness {
 export async function getDispatchDeskLoads(
   db: Database,
   filters: DispatchDeskFilters = {},
-): Promise<{ data: DispatchDeskRow[]; meta: { page: number; limit: number; count: number } }> {
+): Promise<{
+  data: DispatchDeskRow[];
+  meta: { page: number; limit: number; count: number };
+}> {
   const { wellId, photoStatus, date, page = 1, limit = 100 } = filters;
   const offset = (page - 1) * limit;
 
-  // Build where conditions
-  const conditions = [eq(assignments.status, 'dispatch_ready')];
+  // Build where conditions — show assigned + dispatch_ready
+  const conditions = [
+    or(
+      eq(assignments.status, "assigned"),
+      eq(assignments.status, "dispatch_ready"),
+    )!,
+  ];
 
   if (wellId != null) {
     conditions.push(eq(assignments.wellId, wellId));
@@ -146,7 +161,7 @@ export async function getDispatchDeskLoads(
 
   const data: DispatchDeskRow[] = rows.map((row) => ({
     ...row,
-    canEnter: canMarkEntered((row.photoStatus ?? 'missing') as PhotoStatus),
+    canEnter: canMarkEntered((row.photoStatus ?? "missing") as PhotoStatus),
   }));
 
   return { data, meta: { page, limit, count: data.length } };
@@ -198,11 +213,15 @@ export async function markEntered(
     const assignment = existingById.get(assignmentId);
 
     if (!assignment) {
-      results.push({ assignmentId, success: false, error: `Assignment ${assignmentId} not found` });
+      results.push({
+        assignmentId,
+        success: false,
+        error: `Assignment ${assignmentId} not found`,
+      });
       continue;
     }
 
-    const photoStatus = (assignment.photoStatus ?? 'missing') as PhotoStatus;
+    const photoStatus = (assignment.photoStatus ?? "missing") as PhotoStatus;
 
     // Photo gate: block if missing
     if (!canMarkEntered(photoStatus)) {
@@ -210,13 +229,14 @@ export async function markEntered(
         assignmentId,
         success: false,
         blocked: true,
-        reason: 'Photo status is missing — attach a photo before entering in PCS',
+        reason:
+          "Photo status is missing — attach a photo before entering in PCS",
       });
       continue;
     }
 
     // Status gate: must be dispatch_ready to enter in PCS
-    if (assignment.status !== 'dispatch_ready') {
+    if (assignment.status !== "dispatch_ready") {
       results.push({
         assignmentId,
         success: false,
@@ -231,7 +251,14 @@ export async function markEntered(
 
     try {
       // Use transitionStatus to enforce state machine validation (dispatch_ready -> dispatching)
-      await transitionStatus(db, assignmentId, 'dispatching', userId, userName, 'Marked entered via dispatch desk');
+      await transitionStatus(
+        db,
+        assignmentId,
+        "dispatching",
+        userId,
+        userName,
+        "Marked entered via dispatch desk",
+      );
 
       // Separately update pcsSequence — not part of the state machine, just a PCS tracking field
       await db
@@ -254,7 +281,9 @@ export async function markEntered(
  * Compute field completeness and dispatch readiness metrics.
  * Used by the dispatch-readiness endpoint.
  */
-export async function getDispatchReadiness(db: Database): Promise<DispatchReadiness> {
+export async function getDispatchReadiness(
+  db: Database,
+): Promise<DispatchReadiness> {
   // Get total active assignments and their photo status breakdown
   const statusCounts = await db
     .select({
@@ -267,7 +296,7 @@ export async function getDispatchReadiness(db: Database): Promise<DispatchReadin
   const dispatchReadyCount = await db
     .select({ count: sql<number>`count(*)` })
     .from(assignments)
-    .where(eq(assignments.status, 'dispatch_ready'));
+    .where(eq(assignments.status, "dispatch_ready"));
 
   // Field completeness: count assignments where joined load field is non-null
   // Scoped to dispatch_ready only — readiness metrics are only meaningful for that status
@@ -282,12 +311,14 @@ export async function getDispatchReadiness(db: Database): Promise<DispatchReadin
     })
     .from(assignments)
     .innerJoin(loads, eq(assignments.loadId, loads.id))
-    .where(eq(assignments.status, 'dispatch_ready'));
+    .where(eq(assignments.status, "dispatch_ready"));
 
-  const photoMap = new Map(statusCounts.map((r) => [r.photoStatus, Number(r.count)]));
-  const attached = photoMap.get('attached') ?? 0;
-  const pending = photoMap.get('pending') ?? 0;
-  const missing = photoMap.get('missing') ?? 0;
+  const photoMap = new Map(
+    statusCounts.map((r) => [r.photoStatus, Number(r.count)]),
+  );
+  const attached = photoMap.get("attached") ?? 0;
+  const pending = photoMap.get("pending") ?? 0;
+  const missing = photoMap.get("missing") ?? 0;
   const total = attached + pending + missing;
 
   const drCount = Number(dispatchReadyCount[0]?.count ?? 0);
@@ -309,7 +340,8 @@ export async function getDispatchReadiness(db: Database): Promise<DispatchReadin
     photosPending: pending,
     photosMissing: missing,
     readinessRate: total > 0 ? Math.round((drCount / total) * 100) / 100 : 0,
-    photoAttachmentRate: total > 0 ? Math.round((attached / total) * 100) / 100 : 0,
+    photoAttachmentRate:
+      total > 0 ? Math.round((attached / total) * 100) / 100 : 0,
     fieldCompleteness: {
       driverName: Math.round((Number(fs.hasDriverName) / fsTotal) * 100) / 100,
       loadNo: Math.round((Number(fs.hasLoadNo) / fsTotal) * 100) / 100,

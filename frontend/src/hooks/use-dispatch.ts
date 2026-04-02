@@ -1,14 +1,31 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "../lib/api";
+import { qk } from "../lib/query-client";
+
+export interface DispatchResult {
+  dispatched: number;
+  failed: number;
+  errors: Array<{ assignmentId: number; error: string }>;
+}
+
+export function useDispatchPreview() {
+  return useMutation({
+    mutationFn: (assignmentIds: number[]) =>
+      api.post<{ preview: unknown }>("/pcs/dispatch-preview", {
+        assignmentIds,
+      }),
+  });
+}
 
 export function useDispatchToPcs() {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { wellId: string; loadIds: string[] }) =>
-      api.post(`/wells/${payload.wellId}/dispatch`, payload),
+    mutationFn: (assignmentIds: number[]) =>
+      api.post<DispatchResult>("/pcs/dispatch", { assignmentIds }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["well-workspace"] });
-      qc.invalidateQueries({ queryKey: ["feed"] });
+      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
+      queryClient.invalidateQueries({ queryKey: qk.readiness.all });
     },
   });
 }
