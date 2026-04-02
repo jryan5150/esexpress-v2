@@ -86,13 +86,12 @@ const autoMapRoutes: FastifyPluginAsync = async (fastify) => {
         ? new Date(fromDateStr)
         : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-      // Count unmapped loads within date range (use deliveredOn, fall back to createdAt)
-      const dateFilter = sql`coalesce(${loads.deliveredOn}, ${loads.createdAt}) >= ${fromDate}`;
+      // Count unmapped loads within date range
       const [{ count }] = await db
         .select({ count: sql<number>`cast(count(*) as int)` })
         .from(loads)
         .leftJoin(assignments, eq(loads.id, assignments.loadId))
-        .where(and(isNull(assignments.id), dateFilter));
+        .where(and(isNull(assignments.id), gte(loads.createdAt, fromDate)));
 
       const totalToProcess = Math.min(count, limit);
 
@@ -185,12 +184,7 @@ async function runAutoMapJob(
       .select({ id: loads.id })
       .from(loads)
       .leftJoin(assignments, eq(loads.id, assignments.loadId))
-      .where(
-        and(
-          isNull(assignments.id),
-          sql`coalesce(${loads.deliveredOn}, ${loads.createdAt}) >= ${fromDate}`,
-        ),
-      )
+      .where(and(isNull(assignments.id), gte(loads.createdAt, fromDate)))
       .limit(batchSize)
       .offset(0); // Always offset 0 because processed loads now have assignments
 
