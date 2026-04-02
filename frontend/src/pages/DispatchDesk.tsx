@@ -402,6 +402,8 @@ export function DispatchDesk() {
                 onMarkEntered={() => {}}
                 isPending={false}
                 loadId={load.loadId}
+                deliveredOn={load.deliveredOn}
+                photoUrls={(load as any).photoUrls}
               />
             ))}
             {pendingLoads.length > 50 && (
@@ -453,6 +455,8 @@ export function DispatchDesk() {
                 onMarkEntered={() => {}}
                 isPending={false}
                 loadId={load.loadId}
+                deliveredOn={load.deliveredOn}
+                photoUrls={(load as any).photoUrls}
               />
             ))}
           </div>
@@ -490,6 +494,8 @@ export function DispatchDesk() {
                 onMarkEntered={() => handleMarkSingle(load.assignmentId)}
                 isPending={markEntered.isPending}
                 loadId={load.loadId}
+                deliveredOn={load.deliveredOn}
+                photoUrls={(load as any).photoUrls}
               />
             ))}
           </div>

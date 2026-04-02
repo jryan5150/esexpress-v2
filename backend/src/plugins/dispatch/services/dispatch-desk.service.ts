@@ -1,5 +1,11 @@
 import { eq, and, inArray, sql, or } from "drizzle-orm";
-import { assignments, loads, wells, photos } from "../../../db/schema.js";
+import {
+  assignments,
+  loads,
+  wells,
+  photos,
+  jotformImports,
+} from "../../../db/schema.js";
 import {
   ValidationError,
   NotFoundError,
@@ -148,10 +154,16 @@ export async function getDispatchDeskLoads(
       deliveredOn: loads.deliveredOn,
       wellId: wells.id,
       wellName: wells.name,
+      // JotForm photo data (left join — may be null)
+      jotformPhotoUrl: jotformImports.photoUrl,
+      jotformImageUrls: jotformImports.imageUrls,
+      jotformDriverName: jotformImports.driverName,
+      jotformBolNo: jotformImports.bolNo,
     })
     .from(assignments)
     .innerJoin(loads, eq(assignments.loadId, loads.id))
     .innerJoin(wells, eq(assignments.wellId, wells.id))
+    .leftJoin(jotformImports, eq(jotformImports.matchedLoadId, loads.id))
     .where(whereClause)
     .orderBy(
       sql`${assignments.pcsSequence} asc nulls last`,
@@ -160,9 +172,30 @@ export async function getDispatchDeskLoads(
     .limit(limit)
     .offset(offset);
 
-  const data: DispatchDeskRow[] = rows.map((row) => ({
-    ...row,
+  const data = rows.map((row) => ({
+    assignmentId: row.assignmentId,
+    assignmentStatus: row.assignmentStatus,
+    photoStatus: row.photoStatus,
+    pcsSequence: row.pcsSequence,
+    autoMapTier: row.autoMapTier,
+    autoMapScore: row.autoMapScore,
+    loadId: row.loadId,
+    loadNo: row.loadNo,
+    driverName: row.driverName,
+    truckNo: row.truckNo,
+    carrierName: row.carrierName,
+    productDescription: row.productDescription,
+    weightTons: row.weightTons,
+    bolNo: row.bolNo,
+    ticketNo: row.ticketNo,
+    deliveredOn: row.deliveredOn,
+    wellId: row.wellId,
+    wellName: row.wellName,
     canEnter: canMarkEntered((row.photoStatus ?? "missing") as PhotoStatus),
+    // Photo attachments from JotForm
+    photoUrls:
+      row.jotformImageUrls ??
+      (row.jotformPhotoUrl ? [row.jotformPhotoUrl] : []),
   }));
 
   return { data, meta: { page, limit, count: data.length } };
