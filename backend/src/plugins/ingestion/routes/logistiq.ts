@@ -17,16 +17,11 @@ let syncInProgress = false;
 
 /**
  * Build a LogistiqClient from environment variables.
- * Throws if required credentials are missing.
+ * Email/password needed for order search; API key alone enables carrier export.
  */
 function createLogistiqClientFromEnv(): LogistiqClient {
-  const email = process.env.LOGISTIQ_EMAIL;
-  const password = process.env.LOGISTIQ_PASSWORD;
-  if (!email || !password) {
-    throw new Error(
-      "LOGISTIQ_EMAIL and LOGISTIQ_PASSWORD environment variables are required",
-    );
-  }
+  const email = process.env.LOGISTIQ_EMAIL ?? "placeholder@unused.com";
+  const password = process.env.LOGISTIQ_PASSWORD ?? "placeholder";
   return new LogistiqClient({
     email,
     password,
@@ -36,6 +31,11 @@ function createLogistiqClientFromEnv(): LogistiqClient {
       ? parseInt(process.env.LOGISTIQ_CARRIER_ID, 10)
       : undefined,
   });
+}
+
+/** Can we use the email/password order search path? */
+function hasLogistiqLoginCreds(): boolean {
+  return !!(process.env.LOGISTIQ_EMAIL && process.env.LOGISTIQ_PASSWORD);
 }
 
 // ---------------------------------------------------------------------------
@@ -184,10 +184,105 @@ const logistiqRoutes: FastifyPluginAsync = async (fastify) => {
       syncInProgress = true;
       try {
         const client = createLogistiqClientFromEnv();
-        const syncResult = await syncLogistiqLoads(db, client, {
-          from: fromDate,
-          to: toDate,
-        });
+
+        // Use carrier export (API key) if email/password not configured
+        let rawOrders;
+        if (hasLogistiqLoginCreds()) {
+          rawOrders = await client.searchOrders(fromDate, toDate);
+        } else if (process.env.LOGISTIQ_API_KEY) {
+          rawOrders = await client.getCarrierExport(fromDate, toDate);
+        } else {
+          return reply.status(400).send({
+            success: false,
+            error: {
+              code: "CONFIG_ERROR",
+              message:
+                "Neither LOGISTIQ_EMAIL/PASSWORD nor LOGISTIQ_API_KEY configured",
+            },
+          });
+        }
+
+        // Normalize and upsert
+        const { normalizeFromLogistiq } =
+          await import("../services/logistiq-sync.service.js");
+        let inserted = 0;
+        let updated = 0;
+        const errors: Array<{ sourceId: string; error: string }> = [];
+
+        for (const raw of rawOrders) {
+          const normalized = normalizeFromLogistiq(
+            raw as unknown as Record<string, unknown>,
+          );
+          try {
+            const [existing] = await db
+              .select({ id: loads.id })
+              .from(loads)
+              .where(
+                and(
+                  eq(loads.source, "logistiq"),
+                  eq(loads.sourceId, normalized.sourceId),
+                ),
+              )
+              .limit(1);
+
+            await db
+              .insert(loads)
+              .values({
+                loadNo: normalized.loadNo,
+                source: normalized.source,
+                sourceId: normalized.sourceId,
+                driverName: normalized.driverName,
+                driverId: normalized.driverId,
+                truckNo: normalized.truckNo,
+                trailerNo: normalized.trailerNo,
+                carrierName: normalized.carrierName,
+                customerName: normalized.customerName,
+                productDescription: normalized.productDescription,
+                originName: normalized.originName,
+                destinationName: normalized.destinationName,
+                weightTons: normalized.weightTons,
+                netWeightTons: normalized.netWeightTons,
+                rate: normalized.rate,
+                mileage: normalized.mileage,
+                bolNo: normalized.bolNo,
+                orderNo: normalized.orderNo,
+                referenceNo: normalized.referenceNo,
+                ticketNo: normalized.ticketNo,
+                status: normalized.status,
+                deliveredOn: normalized.deliveredOn,
+                rawData: normalized.rawData,
+                updatedAt: new Date(),
+              })
+              .onConflictDoUpdate({
+                target: [loads.source, loads.sourceId],
+                set: {
+                  driverName: normalized.driverName,
+                  truckNo: normalized.truckNo,
+                  carrierName: normalized.carrierName,
+                  destinationName: normalized.destinationName,
+                  weightTons: normalized.weightTons,
+                  ticketNo: normalized.ticketNo,
+                  status: normalized.status,
+                  deliveredOn: normalized.deliveredOn,
+                  rawData: normalized.rawData,
+                  updatedAt: new Date(),
+                },
+              });
+
+            if (existing) updated++;
+            else inserted++;
+          } catch (err: any) {
+            errors.push({ sourceId: normalized.sourceId, error: err.message });
+          }
+        }
+
+        const syncResult = {
+          fetched: rawOrders.length,
+          inserted,
+          updated,
+          skippedFinalized: 0,
+          errors,
+        };
 
         // Detect cross-source conflicts for newly inserted loads
         let conflictCount = 0;
