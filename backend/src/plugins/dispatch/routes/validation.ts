@@ -1,4 +1,4 @@
-import { type FastifyPluginAsync } from 'fastify';
+import { type FastifyPluginAsync } from "fastify";
 import {
   getValidationSummary,
   getAssignmentsByTier,
@@ -6,18 +6,18 @@ import {
   rejectMatch,
   manualResolve,
   trustSheets,
-} from '../services/validation.service.js';
-import { AppError } from '../../../lib/errors.js';
+} from "../services/validation.service.js";
+import { AppError } from "../../../lib/errors.js";
 
 const DB_UNAVAILABLE = {
   success: false,
-  error: { code: 'SERVICE_UNAVAILABLE', message: 'Database not connected' },
+  error: { code: "SERVICE_UNAVAILABLE", message: "Database not connected" },
 };
 
 const validationRoutes: FastifyPluginAsync = async (fastify) => {
   // GET / — tier summary stats
   fastify.get(
-    '/',
+    "/",
     {
       preHandler: [fastify.authenticate],
     },
@@ -32,15 +32,22 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
 
   // GET /tier/:n — pending assignments for a specific tier
   fastify.get(
-    '/tier/:n',
+    "/tier/:n",
     {
       preHandler: [fastify.authenticate],
       schema: {
         params: {
-          type: 'object',
-          required: ['n'],
+          type: "object",
+          required: ["n"],
           properties: {
-            n: { type: 'integer', minimum: 1, maximum: 3 },
+            n: { type: "integer", minimum: 1, maximum: 3 },
+          },
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
           },
         },
       },
@@ -50,22 +57,39 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
       const { n } = request.params as { n: number };
-      const data = await getAssignmentsByTier(db, n);
-      return { success: true, data, meta: { tier: n, count: data.length } };
+      const { page = 1, limit = 50 } = request.query as {
+        page?: number;
+        limit?: number;
+      };
+      const { data, total } = await getAssignmentsByTier(db, n, {
+        page,
+        limit,
+      });
+      return {
+        success: true,
+        data,
+        meta: {
+          tier: n,
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
     },
   );
 
   // POST /confirm — confirm an auto-mapped assignment
   fastify.post(
-    '/confirm',
+    "/confirm",
     {
       preHandler: [fastify.authenticate],
       schema: {
         body: {
-          type: 'object',
-          required: ['assignmentId'],
+          type: "object",
+          required: ["assignmentId"],
           properties: {
-            assignmentId: { type: 'integer' },
+            assignmentId: { type: "integer" },
           },
         },
       },
@@ -94,16 +118,16 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /reject — reject an auto-mapped assignment
   fastify.post(
-    '/reject',
+    "/reject",
     {
       preHandler: [fastify.authenticate],
       schema: {
         body: {
-          type: 'object',
-          required: ['assignmentId'],
+          type: "object",
+          required: ["assignmentId"],
           properties: {
-            assignmentId: { type: 'integer' },
-            reason: { type: 'string' },
+            assignmentId: { type: "integer" },
+            reason: { type: "string" },
           },
         },
       },
@@ -112,11 +136,20 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
-      const { assignmentId, reason } = request.body as { assignmentId: number; reason?: string };
+      const { assignmentId, reason } = request.body as {
+        assignmentId: number;
+        reason?: string;
+      };
       const user = (request as any).user as { id: number; name: string };
 
       try {
-        const data = await rejectMatch(db, assignmentId, user.id, user.name, reason);
+        const data = await rejectMatch(
+          db,
+          assignmentId,
+          user.id,
+          user.name,
+          reason,
+        );
         return { success: true, data };
       } catch (err: any) {
         if (err instanceof AppError) {
@@ -132,16 +165,16 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /resolve — manually resolve a Tier 3 unmatched load
   fastify.post(
-    '/resolve',
+    "/resolve",
     {
       preHandler: [fastify.authenticate],
       schema: {
         body: {
-          type: 'object',
-          required: ['loadId', 'wellId'],
+          type: "object",
+          required: ["loadId", "wellId"],
           properties: {
-            loadId: { type: 'integer' },
-            wellId: { type: 'integer' },
+            loadId: { type: "integer" },
+            wellId: { type: "integer" },
           },
         },
       },
@@ -150,11 +183,20 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
-      const { loadId, wellId } = request.body as { loadId: number; wellId: number };
+      const { loadId, wellId } = request.body as {
+        loadId: number;
+        wellId: number;
+      };
       const user = (request as any).user as { id: number; name: string };
 
       try {
-        const data = await manualResolve(db, loadId, wellId, user.id, user.name);
+        const data = await manualResolve(
+          db,
+          loadId,
+          wellId,
+          user.id,
+          user.name,
+        );
         return { success: true, data };
       } catch (err: any) {
         if (err instanceof AppError) {
@@ -170,17 +212,17 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /trust-sheets — bulk approve assignments from Sheets import (admin only)
   fastify.post(
-    '/trust-sheets',
+    "/trust-sheets",
     {
-      preHandler: [fastify.authenticate, fastify.requireRole(['admin'])],
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
       schema: {
         body: {
-          type: 'object',
-          required: ['assignmentIds'],
+          type: "object",
+          required: ["assignmentIds"],
           properties: {
             assignmentIds: {
-              type: 'array',
-              items: { type: 'integer' },
+              type: "array",
+              items: { type: "integer" },
               minItems: 1,
             },
           },
@@ -199,7 +241,11 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       return {
         success: true,
         data: results,
-        meta: { total: results.length, succeeded, failed: results.length - succeeded },
+        meta: {
+          total: results.length,
+          succeeded,
+          failed: results.length - succeeded,
+        },
       };
     },
   );

@@ -50,10 +50,26 @@ export async function getValidationSummary(
 
 // ─── By Tier (with joined load + well data) ──────────────────────────────────
 
-export async function getAssignmentsByTier(db: Database, tier: number) {
+export async function getAssignmentsByTier(
+  db: Database,
+  tier: number,
+  opts: { page?: number; limit?: number } = {},
+) {
+  const page = opts.page ?? 1;
+  const limit = opts.limit ?? 50;
+  const offset = (page - 1) * limit;
+
   // Tier 3: return unmapped loads (no assignment) for manual resolution
   if (tier === 3) {
-    const unmapped = await db
+    const [countResult] = await db
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(loads)
+      .leftJoin(assignments, eq(loads.id, assignments.loadId))
+      .where(isNull(assignments.id));
+
+    const total = countResult?.count ?? 0;
+
+    const data = await db
       .select({
         id: loads.id,
         wellId: sql<number>`0`.as("well_id"),
@@ -76,12 +92,26 @@ export async function getAssignmentsByTier(db: Database, tier: number) {
       .leftJoin(assignments, eq(loads.id, assignments.loadId))
       .where(isNull(assignments.id))
       .orderBy(desc(loads.createdAt))
-      .limit(200);
+      .limit(limit)
+      .offset(offset);
 
-    return unmapped;
+    return { data, total };
   }
 
-  const rows = await db
+  // Tier 1/2: pending assignments with matching tier
+  const whereClause = and(
+    eq(assignments.status, "pending"),
+    eq(assignments.autoMapTier, tier),
+  );
+
+  const [countResult] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(assignments)
+    .where(whereClause);
+
+  const total = countResult?.count ?? 0;
+
+  const data = await db
     .select({
       id: assignments.id,
       wellId: assignments.wellId,
@@ -103,13 +133,12 @@ export async function getAssignmentsByTier(db: Database, tier: number) {
     .from(assignments)
     .innerJoin(loads, eq(assignments.loadId, loads.id))
     .innerJoin(wells, eq(assignments.wellId, wells.id))
-    .where(
-      and(eq(assignments.status, "pending"), eq(assignments.autoMapTier, tier)),
-    )
+    .where(whereClause)
     .orderBy(desc(assignments.createdAt))
-    .limit(200);
+    .limit(limit)
+    .offset(offset);
 
-  return rows;
+  return { data, total };
 }
 
 // ─── Alias Learning Helpers ───────────────────────────────────────────────────
