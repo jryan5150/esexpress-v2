@@ -138,3 +138,46 @@ export function useValidationReject() {
     },
   });
 }
+
+export function useWellSuggestions(loadId: number | null) {
+  return useQuery({
+    queryKey: qk.suggestions.forLoad(loadId!),
+    queryFn: () =>
+      api.get<
+        Array<{
+          wellId: number;
+          wellName: string;
+          score: number;
+          tier: number;
+          matchType: string;
+        }>
+      >(`/dispatch/suggest/${loadId}`),
+    enabled: loadId !== null,
+    staleTime: 60_000,
+  });
+}
+
+export function useManualResolve() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { loadId: number; wellId: number }) =>
+      api.post("/dispatch/validation/resolve", params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.validation.all });
+      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+      queryClient.invalidateQueries({ queryKey: qk.wells.all });
+      queryClient.invalidateQueries({ queryKey: qk.readiness.all });
+    },
+  });
+}
+
+export function useCreateWell() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { name: string }) =>
+      api.post<Well>("/dispatch/wells/", params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.wells.all });
+    },
+  });
+}

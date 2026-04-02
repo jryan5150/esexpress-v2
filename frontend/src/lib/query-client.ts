@@ -38,6 +38,10 @@ export const qk = {
   readiness: {
     all: ["readiness"] as const,
   },
+  suggestions: {
+    all: ["suggestions"] as const,
+    forLoad: (loadId: number) => [...qk.suggestions.all, loadId] as const,
+  },
   bol: {
     all: ["bol"] as const,
     queue: () => [...qk.bol.all, "queue"] as const,

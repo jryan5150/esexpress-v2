@@ -8,10 +8,28 @@ import type {
   Paginated,
 } from "../types/api";
 
-export function useBolQueue() {
+export function useBolQueue(opts?: {
+  page?: number;
+  limit?: number;
+  status?: string;
+}) {
+  const params = new URLSearchParams();
+  if (opts?.page) params.set("page", String(opts.page));
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  if (opts?.status) params.set("status", opts.status);
+  const qs = params.toString() ? `?${params}` : "";
   return useQuery({
-    queryKey: qk.bol.queue(),
-    queryFn: () => api.get<BolQueueItem[]>("/verification/jotform/queue"),
+    queryKey: [...qk.bol.queue(), opts] as const,
+    queryFn: () =>
+      api.get<{
+        data: BolQueueItem[];
+        meta: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      }>(`/verification/jotform/queue${qs}`),
     refetchInterval: 30_000,
   });
 }
