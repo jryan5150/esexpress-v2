@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useBolQueue, useBolStats } from "../hooks/use-bol";
 
+const API_BASE = import.meta.env.VITE_API_URL || "";
+const resolveUrl = (url: string) =>
+  url.startsWith("/") ? `${API_BASE}${url}` : url;
+
 interface JotFormItem {
   submission: {
     id: number;
@@ -190,7 +194,7 @@ export function BolQueue() {
                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-container-high flex-shrink-0 border border-on-surface/10">
                     {hasPhoto ? (
                       <img
-                        src={sub.photoUrls[0]}
+                        src={resolveUrl(sub.photoUrls[0])}
                         alt="Weight ticket"
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -258,11 +262,11 @@ export function BolQueue() {
                         {sub.photoUrls.map((url, i) => (
                           <button
                             key={i}
-                            onClick={() => setPhotoModal(url)}
+                            onClick={() => setPhotoModal(resolveUrl(url))}
                             className="w-32 h-40 rounded-lg overflow-hidden bg-surface-container-high border border-on-surface/10 flex-shrink-0 hover:ring-2 hover:ring-primary-container transition-all cursor-pointer"
                           >
                             <img
-                              src={url}
+                              src={resolveUrl(url)}
                               alt={`Ticket photo ${i + 1}`}
                               className="w-full h-full object-cover"
                               onError={(e) => {
