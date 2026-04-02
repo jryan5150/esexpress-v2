@@ -8,7 +8,7 @@ export function WellWorkspace() {
   // Redirect to Dispatch Desk with this well pre-selected
   useEffect(() => {
     if (wellId) {
-      navigate(`/dispatch?wellId=${wellId}`, { replace: true });
+      navigate(`/dispatch-desk?wellId=${wellId}`, { replace: true });
     } else {
       navigate("/", { replace: true });
     }

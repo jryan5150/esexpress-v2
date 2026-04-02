@@ -36,7 +36,7 @@ export function Sidebar() {
           <span className="material-symbols-outlined">description</span>
           <span className="text-sm font-medium">BOL Queue</span>
         </Link>
-        <Link to="/dispatch" className={navClass("/dispatch")}>
+        <Link to="/dispatch-desk" className={navClass("/dispatch-desk")}>
           <span className="material-symbols-outlined">local_shipping</span>
           <span className="text-sm font-medium">Dispatch Desk</span>
         </Link>

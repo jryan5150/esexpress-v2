@@ -223,7 +223,7 @@ export function ExceptionFeed() {
               wells.map((well) => (
                 <div
                   key={well.id}
-                  onClick={() => navigate(`/dispatch?wellId=${well.id}`)}
+                  onClick={() => navigate(`/dispatch-desk?wellId=${well.id}`)}
                   className="bg-surface-container-low hover:bg-surface-container-high transition-all group cursor-pointer flex flex-col md:flex-row md:items-center p-6 gap-6"
                 >
                   <div
