@@ -217,6 +217,20 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
 
       const { sql, desc } = await import("drizzle-orm");
 
+      // Count total for pagination meta
+      let countQuery = db
+        .select({ total: sql<number>`cast(count(*) as int)` })
+        .from(jotformImports);
+
+      if (status) {
+        countQuery = countQuery.where(
+          sql`${jotformImports.status} = ${status}`,
+        ) as typeof countQuery;
+      }
+
+      const [countResult] = await countQuery;
+      const total = countResult?.total ?? 0;
+
       let query = db
         .select({
           id: jotformImports.id,
@@ -280,7 +294,11 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
         discrepancies: [],
       }));
 
-      return { success: true, data };
+      return {
+        success: true,
+        data,
+        meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
     },
   );
 };
