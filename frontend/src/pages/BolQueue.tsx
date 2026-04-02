@@ -1,410 +1,360 @@
+import { useState } from "react";
 import { useBolQueue, useBolStats } from "../hooks/use-bol";
-import { useDispatchReadiness } from "../hooks/use-wells";
 
-interface QueueItem {
-  id: string;
-  carrier: string;
-  location: string;
-  time: string;
-  status: string;
-  loadId?: string;
-  type?: string;
-  label?: string;
-  dispatchValue?: string;
-  driverValue?: string;
-  difference?: string;
+interface JotFormItem {
+  submission: {
+    id: number;
+    bolNumber: string | null;
+    driverName: string | null;
+    truckNo: string | null;
+    weight: string | null;
+    photoUrls: string[];
+    status: string;
+    submittedAt: string | null;
+    createdAt: string | null;
+  };
+  matchedLoad: {
+    id: number;
+    loadNo: string;
+    driverName: string | null;
+    destinationName: string | null;
+    ticketNo: string | null;
+  } | null;
+  discrepancies: unknown[];
+}
+
+function formatDate(d: string | null): string {
+  if (!d) return "--";
+  try {
+    return new Date(d).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return d;
+  }
 }
 
 export function BolQueue() {
   const statsQuery = useBolStats();
   const queueQuery = useBolQueue();
-  const readinessQuery = useDispatchReadiness();
+  const [filter, setFilter] = useState<"all" | "matched" | "pending">("all");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [photoModal, setPhotoModal] = useState<string | null>(null);
 
-  const isError = statsQuery.isError || queueQuery.isError;
-  const isLoading = statsQuery.isLoading || queueQuery.isLoading;
+  const stats = statsQuery.data as Record<string, unknown> | undefined;
+  const total = Number(stats?.total ?? 0);
+  const matchRate = String(stats?.matchRate ?? "0%");
+  const byStatus = (stats?.byStatus ?? {}) as Record<string, number>;
 
-  const stats = statsQuery.data
-    ? {
-        pending: Number(
-          (statsQuery.data as Record<string, unknown>).pending ?? 0,
-        ),
-        matched: Number(
-          (statsQuery.data as Record<string, unknown>).matched ?? 0,
-        ),
-      }
-    : { pending: 0, matched: 0 };
-
-  // Dispatch readiness data for photo status summary
-  const readiness = readinessQuery.data;
-  const totalAssignments = readiness?.totalAssignments ?? 0;
-  const readyCount = readiness?.readyCount ?? 0;
-  const missingFields = Array.isArray(readiness?.missingFields)
-    ? readiness.missingFields
-    : [];
-  const photoMissing =
-    missingFields.find((f) => f.field === "photo" || f.field === "photoStatus")
-      ?.count ?? 0;
-  const photosAttached =
-    totalAssignments > 0 ? totalAssignments - photoMissing : 0;
-
-  // Group queue items by status — no mock fallback
-  const rawItems: QueueItem[] = Array.isArray(queueQuery.data)
-    ? (queueQuery.data as Array<Record<string, unknown>>).map(
-        (item: Record<string, unknown>) => {
-          const sub = item.submission as Record<string, unknown> | undefined;
-          const load = item.matchedLoad as Record<string, unknown> | undefined;
-          return {
-            id: String(
-              sub?.id || sub?.bolNumber || item.id || item.ticketId || "",
-            ),
-            carrier: String(
-              load?.carrierName || item.carrier || item.carrierName || "",
-            ),
-            location: String(
-              load?.destinationName || item.location || item.wellName || "",
-            ),
-            time: String(
-              sub?.createdAt ||
-                item.timeSubmitted ||
-                item.createdAt ||
-                item.time ||
-                "",
-            ),
-            status: String(sub?.status || item.status || "unmatched"),
-            loadId: item.loadId ? String(item.loadId) : undefined,
-            type: item.type ? String(item.type) : undefined,
-            label: item.label ? String(item.label) : undefined,
-            dispatchValue: item.dispatchValue
-              ? String(item.dispatchValue)
-              : undefined,
-            driverValue: item.driverValue
-              ? String(item.driverValue)
-              : undefined,
-            difference: item.difference ? String(item.difference) : undefined,
-          };
-        },
-      )
+  const rawItems: JotFormItem[] = Array.isArray(queueQuery.data)
+    ? (queueQuery.data as JotFormItem[])
     : [];
 
-  const unmatched = rawItems.filter((i) => i.status === "unmatched");
-  const discrepancies = rawItems.filter((i) => i.status === "discrepancy");
+  const filtered =
+    filter === "all"
+      ? rawItems
+      : rawItems.filter((i) =>
+          filter === "matched"
+            ? i.submission.status === "matched"
+            : i.submission.status === "pending",
+        );
 
   return (
     <div className="p-8 space-y-6 max-w-7xl">
-      {/* API Error Banner */}
-      {isError && (
-        <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 flex items-center gap-3">
-          <span className="material-symbols-outlined text-error text-lg">
-            cloud_off
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-black font-headline tracking-tight text-on-surface uppercase">
+          BOL Queue
+        </h1>
+        <p className="text-on-surface/40 font-label text-xs uppercase tracking-widest mt-1">
+          Weight Ticket Reconciliation // JotForm Pipeline
+        </p>
+      </div>
+
+      {/* Stats Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          {
+            label: "Total Submissions",
+            value: total,
+            icon: "receipt_long",
+            color: "primary-container",
+          },
+          {
+            label: "Matched",
+            value: byStatus.matched ?? 0,
+            icon: "link",
+            color: "tertiary",
+          },
+          {
+            label: "Unmatched",
+            value: byStatus.pending ?? 0,
+            icon: "link_off",
+            color: "error",
+          },
+          {
+            label: "Match Rate",
+            value: matchRate,
+            icon: "percent",
+            color: "primary-container",
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className={`bg-surface-container-low rounded-xl p-5 border-l-4 border-${s.color}`}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <span
+                className={`material-symbols-outlined text-${s.color} text-lg`}
+              >
+                {s.icon}
+              </span>
+              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/40">
+                {s.label}
+              </span>
+            </div>
+            <div className={`font-label text-2xl font-bold text-${s.color}`}>
+              {statsQuery.isLoading ? "..." : s.value}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2">
+        {(["all", "matched", "pending"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+              filter === f
+                ? "bg-primary-container text-on-primary-container"
+                : "bg-surface-container-high text-on-surface/50 hover:text-on-surface"
+            }`}
+          >
+            {f === "all"
+              ? `All (${rawItems.length})`
+              : f === "matched"
+                ? `Matched (${rawItems.filter((i) => i.submission.status === "matched").length})`
+                : `Unmatched (${rawItems.filter((i) => i.submission.status === "pending").length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Queue List */}
+      {queueQuery.isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="bg-surface-container-low rounded-xl p-5 animate-pulse flex gap-6"
+            >
+              <div className="w-16 h-16 bg-on-surface/10 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-40 bg-on-surface/10 rounded" />
+                <div className="h-3 w-60 bg-on-surface/5 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="bg-surface-container-low rounded-xl p-12 text-center">
+          <span className="material-symbols-outlined text-4xl text-on-surface/15 mb-2">
+            inbox
           </span>
-          <p className="text-sm text-error font-medium">
-            Unable to connect to the server. Showing cached data.
+          <p className="text-on-surface/30 font-label text-sm">
+            {filter === "all"
+              ? "No JotForm submissions yet"
+              : `No ${filter} submissions`}
           </p>
+        </div>
+      ) : (
+        <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+          {filtered.map((item) => {
+            const sub = item.submission;
+            const load = item.matchedLoad;
+            const isExpanded = expandedId === sub.id;
+            const hasPhoto = sub.photoUrls && sub.photoUrls.length > 0;
+
+            return (
+              <div key={sub.id}>
+                {/* Row */}
+                <div
+                  onClick={() => setExpandedId(isExpanded ? null : sub.id)}
+                  className="bg-surface-container-low hover:bg-surface-container-high transition-all px-5 py-4 flex items-center gap-5 cursor-pointer"
+                >
+                  {/* Photo thumbnail */}
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-container-high flex-shrink-0 border border-on-surface/10">
+                    {hasPhoto ? (
+                      <img
+                        src={sub.photoUrls[0]}
+                        alt="Weight ticket"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="material-symbols-outlined text-on-surface/20 text-lg">
+                          no_photography
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3">
+                      <span className="font-label text-sm font-bold text-on-surface">
+                        BOL {sub.bolNumber || "--"}
+                      </span>
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                          sub.status === "matched"
+                            ? "bg-tertiary/10 text-tertiary"
+                            : "bg-error/10 text-error"
+                        }`}
+                      >
+                        {sub.status}
+                      </span>
+                    </div>
+                    <div className="text-xs text-on-surface/50 mt-0.5 flex gap-4">
+                      <span>{sub.driverName || "Unknown driver"}</span>
+                      <span>Truck {sub.truckNo || "--"}</span>
+                      <span>{formatDate(sub.submittedAt)}</span>
+                    </div>
+                  </div>
+
+                  {/* Matched load info */}
+                  {load && (
+                    <div className="text-right">
+                      <span className="font-label text-xs text-on-surface/40">
+                        Matched to
+                      </span>
+                      <p className="font-label text-sm font-bold text-on-surface">
+                        Load {load.loadNo || `#${load.id}`}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Expand indicator */}
+                  <span
+                    className={`material-symbols-outlined text-sm text-on-surface/30 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                  >
+                    chevron_right
+                  </span>
+                </div>
+
+                {/* Expanded Detail */}
+                {isExpanded && (
+                  <div className="bg-surface-container-lowest px-5 py-5 border-t border-on-surface/5 space-y-4">
+                    {/* Photo viewer */}
+                    {hasPhoto && (
+                      <div className="flex gap-3 overflow-x-auto pb-2">
+                        {sub.photoUrls.map((url, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setPhotoModal(url)}
+                            className="w-32 h-40 rounded-lg overflow-hidden bg-surface-container-high border border-on-surface/10 flex-shrink-0 hover:ring-2 hover:ring-primary-container transition-all cursor-pointer"
+                          >
+                            <img
+                              src={url}
+                              alt={`Ticket photo ${i + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "";
+                                (e.target as HTMLImageElement).alt =
+                                  "Failed to load";
+                              }}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Fields grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        { label: "BOL / Ticket #", value: sub.bolNumber },
+                        { label: "Driver", value: sub.driverName },
+                        { label: "Truck #", value: sub.truckNo },
+                        { label: "Weight", value: sub.weight },
+                        {
+                          label: "Submitted",
+                          value: formatDate(sub.submittedAt),
+                        },
+                        { label: "Status", value: sub.status },
+                        ...(load
+                          ? [
+                              {
+                                label: "Matched Load",
+                                value: load.loadNo || `#${load.id}`,
+                              },
+                              {
+                                label: "Load Driver",
+                                value: load.driverName,
+                              },
+                              {
+                                label: "Well / Destination",
+                                value: load.destinationName,
+                              },
+                              {
+                                label: "Load Ticket #",
+                                value: load.ticketNo,
+                              },
+                            ]
+                          : [
+                              {
+                                label: "Matched Load",
+                                value: "-- UNMATCHED --",
+                              },
+                            ]),
+                      ].map((f) => (
+                        <div key={f.label} className="space-y-1">
+                          <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                            {f.label}
+                          </span>
+                          <p className="text-sm text-on-surface font-label">
+                            {f.value || (
+                              <span className="text-on-surface/20">--</span>
+                            )}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <div className="flex justify-between items-end mb-8">
-        <div>
-          <h1 className="text-3xl font-black font-headline tracking-tight text-on-surface">
-            BOL Queue
-          </h1>
-          <p className="text-on-surface-variant font-label text-sm mt-1">
-            RECONCILIATION WORKSPACE // OPERATOR: 882-J
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <div className="bg-surface-container-highest px-4 py-2 rounded flex items-center gap-4">
-            <span className="font-label text-xs uppercase text-on-surface-variant">
-              Queue Status
-            </span>
-            <div className="flex gap-2">
-              <span className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 font-mono text-[10px] rounded">
-                {isLoading ? "..." : stats.pending} PENDING
-              </span>
-              <span className="bg-tertiary/10 text-tertiary border border-tertiary/20 px-2 py-0.5 font-mono text-[10px] rounded">
-                {isLoading ? "..." : stats.matched} MATCHED
-              </span>
-            </div>
+      {/* Photo Modal */}
+      {photoModal && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8"
+          onClick={() => setPhotoModal(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <button
+              onClick={() => setPhotoModal(null)}
+              className="absolute -top-10 right-0 text-white/60 hover:text-white cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-2xl">close</span>
+            </button>
+            <img
+              src={photoModal}
+              alt="Weight ticket"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            />
           </div>
         </div>
-      </div>
-
-      {/* Photo Status Summary */}
-      <section className="bg-surface-container-lowest border-l-4 border-tertiary overflow-hidden rounded-sm shadow-lg">
-        <div className="flex items-center justify-between p-4 bg-surface-container-high/50">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-tertiary">
-              photo_library
-            </span>
-            <h2 className="font-headline font-bold text-on-surface">
-              Photo Status
-            </h2>
-          </div>
-          {readinessQuery.isLoading && (
-            <span className="font-mono text-xs text-on-surface/40">
-              Loading...
-            </span>
-          )}
-        </div>
-        <div className="p-6">
-          {readinessQuery.isLoading ? (
-            <div className="animate-pulse flex gap-6">
-              <div className="h-20 flex-1 bg-on-surface/5 rounded" />
-              <div className="h-20 flex-1 bg-on-surface/5 rounded" />
-              <div className="h-20 flex-1 bg-on-surface/5 rounded" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-6">
-              <div className="p-4 bg-surface-container rounded border-l-2 border-tertiary">
-                <span className="block text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-1">
-                  Photos Attached
-                </span>
-                <span className="font-mono text-2xl font-bold text-tertiary">
-                  {photosAttached}
-                </span>
-              </div>
-              <div className="p-4 bg-surface-container rounded border-l-2 border-error">
-                <span className="block text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-1">
-                  Photos Missing
-                </span>
-                <span className="font-mono text-2xl font-bold text-error">
-                  {photoMissing}
-                </span>
-              </div>
-              <div className="p-4 bg-surface-container rounded border-l-2 border-primary">
-                <span className="block text-[10px] font-label uppercase tracking-widest text-on-surface-variant mb-1">
-                  Dispatch Ready
-                </span>
-                <span className="font-mono text-2xl font-bold text-primary">
-                  {readyCount}
-                </span>
-                <span className="font-label text-xs text-on-surface/40 ml-1">
-                  / {totalAssignments}
-                </span>
-              </div>
-            </div>
-          )}
-          {!readinessQuery.isLoading && totalAssignments > 0 && (
-            <div className="mt-4 h-2 bg-surface-container-high rounded-full overflow-hidden">
-              <div
-                className="h-full bg-tertiary rounded-full transition-all"
-                style={{
-                  width: `${totalAssignments > 0 ? (photosAttached / totalAssignments) * 100 : 0}%`,
-                }}
-              />
-            </div>
-          )}
-          {!readinessQuery.isLoading && totalAssignments === 0 && (
-            <p className="text-on-surface/30 font-label text-sm text-center py-2">
-              No assignments found
-            </p>
-          )}
-        </div>
-      </section>
-
-      {/* Unmatched Tickets */}
-      <section className="bg-surface-container-lowest border-l-4 border-error overflow-hidden rounded-sm shadow-lg">
-        <div className="flex items-center justify-between p-4 bg-surface-container-high/50 cursor-pointer">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-error">error</span>
-            <h2 className="font-headline font-bold text-on-surface">
-              Unmatched Tickets
-            </h2>
-            <span className="font-mono text-xs bg-error-container text-on-error-container px-2 py-0.5 rounded">
-              {isLoading ? "..." : `${unmatched.length} ITEMS`}
-            </span>
-          </div>
-          <span className="material-symbols-outlined">expand_more</span>
-        </div>
-        <div className="p-0">
-          <div className="grid grid-cols-12 gap-1 px-4 py-2 text-[10px] font-label uppercase tracking-widest text-on-surface-variant/60 border-b border-surface-variant/20">
-            <div className="col-span-2">Ticket ID</div>
-            <div className="col-span-2">Carrier</div>
-            <div className="col-span-2">Location</div>
-            <div className="col-span-2">Time Submitted</div>
-            <div className="col-span-4 text-right">Quick Actions</div>
-          </div>
-          <div className="divide-y divide-surface-container">
-            {isLoading ? (
-              <>
-                {[1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="grid grid-cols-12 gap-1 items-center px-4 py-3 animate-pulse"
-                  >
-                    <div className="col-span-2">
-                      <div className="h-4 w-24 bg-on-surface/10 rounded" />
-                    </div>
-                    <div className="col-span-2">
-                      <div className="h-4 w-28 bg-on-surface/5 rounded" />
-                    </div>
-                    <div className="col-span-2">
-                      <div className="h-4 w-24 bg-on-surface/5 rounded" />
-                    </div>
-                    <div className="col-span-2">
-                      <div className="h-4 w-32 bg-on-surface/5 rounded" />
-                    </div>
-                    <div className="col-span-4 flex justify-end gap-2">
-                      <div className="h-7 w-24 bg-on-surface/5 rounded" />
-                      <div className="h-7 w-16 bg-on-surface/5 rounded" />
-                    </div>
-                  </div>
-                ))}
-              </>
-            ) : unmatched.length === 0 ? (
-              <div className="px-4 py-8 text-center space-y-2">
-                <span className="material-symbols-outlined text-3xl text-on-surface/10">
-                  inbox
-                </span>
-                <p className="text-on-surface/40 font-label text-sm">
-                  No unmatched tickets
-                </p>
-                <p className="text-on-surface/20 font-label text-xs">
-                  JotForm weight ticket sync not yet configured
-                </p>
-              </div>
-            ) : (
-              unmatched.map((row) => (
-                <div
-                  key={row.id}
-                  className="grid grid-cols-12 gap-1 items-center px-4 py-3 hover:bg-surface-container-high transition-all group"
-                >
-                  <div className="col-span-2 font-mono text-sm text-primary">
-                    {row.id}
-                  </div>
-                  <div className="col-span-2 font-headline text-sm">
-                    {row.carrier}
-                  </div>
-                  <div className="col-span-2 font-headline text-sm">
-                    {row.location}
-                  </div>
-                  <div className="col-span-2 font-mono text-xs">{row.time}</div>
-                  <div className="col-span-4 flex justify-end gap-2">
-                    <button className="bg-surface-container-high px-3 py-1.5 text-xs font-bold border border-outline-variant/30 hover:bg-surface-container-highest flex items-center gap-2">
-                      <span className="material-symbols-outlined text-sm">
-                        search
-                      </span>
-                      Manual Match
-                    </button>
-                    <button className="bg-surface-container-high px-3 py-1.5 text-xs font-bold border border-outline-variant/30 hover:bg-surface-container-highest flex items-center gap-2">
-                      <span className="material-symbols-outlined text-sm">
-                        delete
-                      </span>
-                      Void
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Data Discrepancies */}
-      <section className="bg-surface-container-lowest border-l-4 border-primary overflow-hidden rounded-sm shadow-lg">
-        <div className="flex items-center justify-between p-4 bg-surface-container-high/50">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-primary">
-              warning
-            </span>
-            <h2 className="font-headline font-bold text-on-surface">
-              Data Discrepancies
-            </h2>
-            <span className="font-mono text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-              {isLoading
-                ? "..."
-                : `${discrepancies.length} ITEM${discrepancies.length !== 1 ? "S" : ""}`}
-            </span>
-          </div>
-          <span className="material-symbols-outlined">expand_more</span>
-        </div>
-        <div className="p-6">
-          {isLoading ? (
-            <div className="animate-pulse space-y-4 bg-surface-container p-4 rounded-sm">
-              <div className="h-5 w-64 bg-on-surface/10 rounded" />
-              <div className="grid grid-cols-2 gap-4">
-                <div className="h-16 bg-on-surface/5 rounded" />
-                <div className="h-16 bg-on-surface/5 rounded" />
-              </div>
-            </div>
-          ) : discrepancies.length === 0 ? (
-            <div className="text-center py-8 space-y-2">
-              <span className="material-symbols-outlined text-3xl text-on-surface/10">
-                verified
-              </span>
-              <p className="text-on-surface/40 font-label text-sm">
-                No discrepancies found
-              </p>
-              <p className="text-on-surface/20 font-label text-xs">
-                Discrepancies will appear when JotForm submissions are matched
-                to loads
-              </p>
-            </div>
-          ) : (
-            discrepancies.map((disc) => (
-              <div
-                key={disc.id}
-                className="flex items-start gap-6 bg-surface-container p-4 rounded-sm mb-4 last:mb-0"
-              >
-                <div className="w-12 h-12 bg-primary/10 rounded flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-primary">
-                    balance
-                  </span>
-                </div>
-                <div className="flex-1 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-label text-xs uppercase tracking-widest text-on-surface-variant">
-                        {disc.label || "Data Mismatch detected"}
-                      </p>
-                      <p className="font-headline text-lg font-bold">
-                        Load #{disc.loadId || "N/A"} // Ticket {disc.id}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-label text-xs uppercase text-on-surface-variant">
-                        Difference
-                      </p>
-                      <p className="font-mono text-xl text-error font-bold">
-                        {disc.difference || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-surface-container-high rounded border-l-2 border-surface-variant">
-                      <span className="block text-[10px] font-label uppercase text-on-surface-variant mb-1">
-                        Dispatch Data
-                      </span>
-                      <span className="font-mono text-lg font-bold">
-                        {disc.dispatchValue || "N/A"}
-                      </span>
-                    </div>
-                    <div className="p-3 bg-surface-container-high rounded border-l-2 border-primary">
-                      <span className="block text-[10px] font-label uppercase text-on-surface-variant mb-1">
-                        Driver Submission
-                      </span>
-                      <span className="font-mono text-lg font-bold text-primary">
-                        {disc.driverValue || "N/A"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button className="px-4 py-2 text-xs font-bold border border-outline-variant/30 hover:bg-surface-container-highest transition-colors">
-                      Request Recalibration
-                    </button>
-                    <button className="px-4 py-2 text-xs font-bold border border-outline-variant/30 hover:bg-surface-container-highest transition-colors">
-                      Flag for Supervisor
-                    </button>
-                    <button className="px-6 py-2 text-xs font-bold bg-primary text-on-primary-container hover:brightness-110">
-                      Override &amp; Approve
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
+      )}
     </div>
   );
 }
