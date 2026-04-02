@@ -123,15 +123,17 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
           if (matchResult.matched) {
             matched++;
 
-            // Update photo status on the assignment for this load
+            // Create photo record and update assignment photo status
             if (matchResult.loadId && sub.photoUrl) {
+              // Find active assignment (not cancelled) for this load
               const [assignment] = await db
-                .select({ id: assignments.id })
+                .select({ id: assignments.id, status: assignments.status })
                 .from(assignments)
                 .where(eq(assignments.loadId, matchResult.loadId))
+                .orderBy(assignments.createdAt)
                 .limit(1);
 
-              if (assignment) {
+              if (assignment && assignment.status !== "cancelled") {
                 // Create photo record
                 await db
                   .insert(photos)
@@ -146,10 +148,12 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
                   })
                   .onConflictDoNothing();
 
-                // Update assignment photo status
+                // Update photo status to pending (not attached — one photo doesn't
+                // mean all required photos are present). Use 'pending' to indicate
+                // at least one photo exists but completeness is not verified.
                 await db
                   .update(assignments)
-                  .set({ photoStatus: "attached", updatedAt: new Date() })
+                  .set({ photoStatus: "pending", updatedAt: new Date() })
                   .where(eq(assignments.id, assignment.id));
               }
             }

@@ -231,17 +231,98 @@ export function DispatchDesk() {
         </div>
       )}
 
-      {/* Empty State: No well selected */}
+      {/* Smart Well Picker: No well selected */}
       {!selectedWellId && (
-        <div className="bg-surface-container-lowest rounded-xl p-16 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <span className="material-symbols-outlined text-5xl text-on-surface/10">
-              oil_barrel
+        <div className="space-y-4">
+          <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40 px-2">
+            Pick a Well{" "}
+            <span className="text-on-surface/20">
+              -- showing wells with dispatch-ready or assigned loads
             </span>
-            <p className="text-sm text-on-surface/30 font-headline font-bold uppercase tracking-widest">
-              Select a well to load dispatch cards
-            </p>
-          </div>
+          </h3>
+          {wellsQuery.isLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-surface-container-lowest rounded-xl h-20 animate-pulse"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {(wellsQuery.data as Array<Record<string, unknown>> | undefined)
+                ?.map((w) => ({
+                  id: String(w.id ?? ""),
+                  name: String(w.name ?? ""),
+                  totalLoads: Number(w.totalLoads ?? w.total_loads ?? 0),
+                  ready: Number(w.ready ?? 0),
+                  assigned: Number(w.assigned ?? 0),
+                }))
+                .filter((w) => w.totalLoads > 0)
+                .sort(
+                  (a, b) =>
+                    b.ready + b.assigned - (a.ready + a.assigned) ||
+                    b.totalLoads - a.totalLoads,
+                )
+                .map((w) => (
+                  <button
+                    key={w.id}
+                    onClick={() => handleSelectWell(w.id)}
+                    className="w-full bg-surface-container-lowest hover:bg-surface-container-high rounded-xl p-5 flex items-center justify-between transition-all cursor-pointer group border border-on-surface/5 text-left"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`w-2 h-10 rounded-full ${w.ready > 0 ? "bg-tertiary" : w.assigned > 0 ? "bg-primary-container" : "bg-on-surface/10"}`}
+                      />
+                      <div>
+                        <h4 className="font-bold text-on-surface text-lg group-hover:text-primary-container transition-colors">
+                          {w.name}
+                        </h4>
+                        <span className="font-label text-xs text-on-surface/40">
+                          {w.totalLoads} total loads
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      {w.ready > 0 && (
+                        <div className="text-right">
+                          <span className="font-label text-lg font-bold text-tertiary">
+                            {w.ready}
+                          </span>
+                          <span className="text-[10px] uppercase font-bold text-on-surface/30 block tracking-wider">
+                            Ready
+                          </span>
+                        </div>
+                      )}
+                      {w.assigned > 0 && (
+                        <div className="text-right">
+                          <span className="font-label text-lg font-bold text-primary-container">
+                            {w.assigned}
+                          </span>
+                          <span className="text-[10px] uppercase font-bold text-on-surface/30 block tracking-wider">
+                            Assigned
+                          </span>
+                        </div>
+                      )}
+                      <span className="material-symbols-outlined text-on-surface/20 group-hover:text-primary-container group-hover:translate-x-1 transition-all">
+                        arrow_forward
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              {wells.length === 0 && (
+                <div className="bg-surface-container-lowest rounded-xl p-12 text-center">
+                  <span className="material-symbols-outlined text-4xl text-on-surface/10 mb-2">
+                    oil_barrel
+                  </span>
+                  <p className="text-on-surface/30 font-label text-sm">
+                    No wells with loads found
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

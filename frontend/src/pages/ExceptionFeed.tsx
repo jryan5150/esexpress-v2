@@ -85,73 +85,90 @@ export function ExceptionFeed() {
           </p>
         </div>
 
-        {/* System Handled */}
-        <section>
-          <div className="bg-surface-container-low rounded-xl p-8 border-l-4 border-tertiary relative overflow-hidden group">
-            <div className="absolute -right-12 -top-12 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl group-hover:bg-tertiary/10 transition-all duration-700" />
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-              <div className="space-y-4">
-                <h3 className="text-sm uppercase tracking-[0.2em] font-bold text-on-surface/40">
-                  System Handled
-                </h3>
-                <div className="flex flex-wrap gap-8">
-                  {[
-                    {
-                      icon: "check_circle",
-                      value: readinessQuery.isLoading
-                        ? "..."
-                        : String(totalAssignments),
-                      label: "Loads Mapped",
-                    },
-                    {
-                      icon: "task_alt",
-                      value: readinessQuery.isLoading
-                        ? "..."
-                        : String(readyCount),
-                      label: "Dispatch Ready",
-                    },
-                    {
-                      icon: "image",
-                      value: readinessQuery.isLoading
-                        ? "..."
-                        : String(photosAttached),
-                      label: "Photos Attached",
-                    },
-                    {
-                      icon: "pending_actions",
-                      value: validationQuery.isLoading
-                        ? "..."
-                        : String(pendingReview),
-                      label: "Pending Review",
-                    },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center gap-3">
-                      <div className="bg-tertiary/10 p-2 rounded-lg">
-                        <span className="material-symbols-outlined text-tertiary">
-                          {item.icon}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="font-label text-2xl font-bold text-on-surface">
-                          {item.value}
-                        </div>
-                        <div className="text-[10px] uppercase font-bold text-on-surface/40">
-                          {item.label}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+        {/* Action Required + System Handled */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Needs Your Attention — dominant */}
+          {pendingReview > 0 && (
+            <button
+              onClick={() => navigate("/validation")}
+              className="md:col-span-1 bg-surface-container-low rounded-xl p-8 border-l-4 border-primary-container relative overflow-hidden group text-left transition-all hover:bg-surface-container-high cursor-pointer"
+            >
+              <div className="absolute -right-8 -bottom-8 w-48 h-48 bg-primary-container/5 rounded-full blur-3xl group-hover:bg-primary-container/10 transition-all duration-700" />
+              <div className="relative z-10 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary-container text-lg">
+                    pending_actions
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] font-black text-primary-container">
+                    Needs Your Review
+                  </span>
+                </div>
+                <div className="font-label text-5xl font-bold text-on-surface">
+                  {validationQuery.isLoading ? "..." : pendingReview}
+                </div>
+                <p className="text-xs text-on-surface/40 font-medium">
+                  assignments awaiting confirmation
+                </p>
+                <div className="flex items-center gap-2 text-primary-container text-sm font-bold uppercase tracking-wider pt-2 group-hover:gap-3 transition-all">
+                  Review Now
+                  <span className="material-symbols-outlined text-sm">
+                    arrow_forward
+                  </span>
                 </div>
               </div>
-              <button
-                onClick={() => navigate("/validation")}
-                className="bg-surface-container-high text-on-surface px-8 py-3.5 rounded-lg font-bold text-sm uppercase tracking-wider hover:bg-surface-container-highest hover:text-primary transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-black/20 cursor-pointer"
-              >
-                Review &amp; Approve
-                <span className="material-symbols-outlined text-sm">
-                  arrow_forward
-                </span>
-              </button>
+            </button>
+          )}
+
+          {/* System Handled — secondary */}
+          <div
+            className={`${pendingReview > 0 ? "md:col-span-2" : "md:col-span-3"} bg-surface-container-low rounded-xl p-8 border-l-4 border-tertiary relative overflow-hidden group`}
+          >
+            <div className="absolute -right-12 -top-12 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl group-hover:bg-tertiary/10 transition-all duration-700" />
+            <div className="relative z-10 space-y-4">
+              <h3 className="text-[10px] uppercase tracking-[0.2em] font-black text-on-surface/40">
+                System Handled
+              </h3>
+              <div className="flex flex-wrap gap-8">
+                {[
+                  {
+                    icon: "check_circle",
+                    value: readinessQuery.isLoading
+                      ? "..."
+                      : String(totalAssignments),
+                    label: "Loads Mapped",
+                  },
+                  {
+                    icon: "task_alt",
+                    value: readinessQuery.isLoading
+                      ? "..."
+                      : String(readyCount),
+                    label: "Dispatch Ready",
+                  },
+                  {
+                    icon: "image",
+                    value: readinessQuery.isLoading
+                      ? "..."
+                      : String(photosAttached),
+                    label: "Photos Attached",
+                  },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-3">
+                    <div className="bg-tertiary/10 p-2 rounded-lg">
+                      <span className="material-symbols-outlined text-tertiary">
+                        {item.icon}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="font-label text-2xl font-bold text-on-surface">
+                        {item.value}
+                      </div>
+                      <div className="text-[10px] uppercase font-bold text-on-surface/40">
+                        {item.label}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>

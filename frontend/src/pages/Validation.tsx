@@ -197,6 +197,35 @@ export function Validation() {
         </p>
       </div>
 
+      {/* Quick Action: Bulk Approve Tier 1 */}
+      {tierCounts[1] > 0 && !summaryQuery.isLoading && (
+        <div className="bg-surface-container-low rounded-xl p-6 border border-tertiary/20 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="bg-tertiary/10 p-3 rounded-lg">
+              <span className="material-symbols-outlined text-tertiary text-2xl">
+                verified
+              </span>
+            </div>
+            <div>
+              <p className="text-on-surface font-bold text-lg">
+                {tierCounts[1]} high-confidence matches ready
+              </p>
+              <p className="text-on-surface/40 text-xs font-label">
+                Job ID matched -- bulk approve to move to dispatch
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleBulkApproveTier1}
+            disabled={confirmMutation.isPending}
+            className="bg-tertiary/15 text-tertiary px-6 py-3 rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-tertiary/25 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2 active:scale-95"
+          >
+            <span className="material-symbols-outlined text-lg">done_all</span>
+            Approve All Tier 1
+          </button>
+        </div>
+      )}
+
       {/* Tier Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[1, 2, 3].map((tier) => {

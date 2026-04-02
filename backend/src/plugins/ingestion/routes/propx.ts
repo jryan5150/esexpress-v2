@@ -112,7 +112,19 @@ const propxRoutes: FastifyPluginAsync = async (fastify) => {
       };
 
       // Fire-and-forget: start sync in background
-      const client = createPropxClientFromEnv();
+      let client;
+      try {
+        client = createPropxClientFromEnv();
+      } catch (err: any) {
+        currentSyncJob.status = "failed";
+        currentSyncJob.completedAt = new Date().toISOString();
+        currentSyncJob.error = err.message;
+        return reply.status(400).send({
+          success: false,
+          error: { code: "CONFIG_ERROR", message: err.message },
+        });
+      }
+
       syncPropxLoads(db, client, { from: fromDate, to: toDate })
         .then((result) => {
           if (currentSyncJob?.id === jobId) {

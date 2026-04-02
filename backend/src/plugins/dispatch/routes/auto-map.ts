@@ -176,24 +176,59 @@ async function runAutoMapJob(
   const { processLoadBatch } =
     await import("../services/auto-mapper.service.js");
 
-  let offset = 0;
+  let processed = 0;
+  let lastBatchFirstId = -1;
 
-  while (offset < totalLimit) {
-    // Fetch a batch of unmapped load IDs within date range
+  while (processed < totalLimit) {
+    // Fetch unmapped loads. offset(0) works when loads get assignments.
+    // Safety: if the first ID repeats (stuck on Tier 3 loads), use increasing offset.
     const batch = await db
       .select({ id: loads.id })
       .from(loads)
       .leftJoin(assignments, eq(loads.id, assignments.loadId))
       .where(and(isNull(assignments.id), gte(loads.createdAt, fromDate)))
-      .limit(batchSize)
-      .offset(0); // Always offset 0 because processed loads now have assignments
+      .orderBy(loads.id)
+      .limit(batchSize);
 
     if (batch.length === 0) break;
 
+    // Infinite loop guard: if we see the same first ID twice, these are all
+    // Tier 3 (no assignment created) — skip forward with real offset
+    if (batch[0].id === lastBatchFirstId) {
+      // Fetch with offset to skip past the stuck batch
+      const skipped = await db
+        .select({ id: loads.id })
+        .from(loads)
+        .leftJoin(assignments, eq(loads.id, assignments.loadId))
+        .where(and(isNull(assignments.id), gte(loads.createdAt, fromDate)))
+        .orderBy(loads.id)
+        .limit(batchSize)
+        .offset(batchSize);
+
+      if (skipped.length === 0) break; // No more loads after the stuck batch
+
+      const skipIds = skipped.map((r) => r.id);
+      const skipResults = await processLoadBatch(db, skipIds, systemUserId);
+
+      if (currentJob?.id === jobId) {
+        for (const r of skipResults) {
+          currentJob.processed++;
+          if (r.tier === 1) currentJob.tier1++;
+          else if (r.tier === 2) currentJob.tier2++;
+          else currentJob.tier3++;
+          if (r.assignmentId) currentJob.assignmentsCreated++;
+          if (r.error) currentJob.errors++;
+        }
+      }
+      processed += batchSize + skipped.length; // Count both stuck + skipped batches
+      lastBatchFirstId = -1; // Reset guard
+      continue;
+    }
+
+    lastBatchFirstId = batch[0].id;
     const loadIds = batch.map((r) => r.id);
     const results = await processLoadBatch(db, loadIds, systemUserId);
 
-    // Update job progress
     if (currentJob?.id === jobId) {
       for (const r of results) {
         currentJob.processed++;
@@ -205,7 +240,17 @@ async function runAutoMapJob(
       }
     }
 
-    offset += batch.length;
+    // If zero assignments were created from this batch, all were Tier 3 — advance
+    const assignmentsCreatedThisBatch = results.filter(
+      (r) => r.assignmentId,
+    ).length;
+    if (assignmentsCreatedThisBatch === 0) {
+      processed += batch.length;
+      // Reset guard since we're counting these as processed
+      lastBatchFirstId = -1;
+    }
+
+    processed += batch.length;
   }
 
   if (currentJob?.id === jobId) {

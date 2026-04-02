@@ -269,7 +269,10 @@ const assignmentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     "/bulk-assign",
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
       schema: {
         body: {
           type: "object",
@@ -315,7 +318,10 @@ const assignmentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post(
     "/bulk-approve",
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
       schema: {
         body: {
           type: "object",

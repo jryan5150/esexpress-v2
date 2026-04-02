@@ -1,0 +1,419 @@
+{
+  "timestamp": "2026-04-02T05:18:51.605923+00:00",
+  "note": "Well status snapshot BEFORE bulk activation. 42 wells changed standby->active for auto-mapper.",
+  "rollback": "PUT /api/v1/dispatch/wells/{id} with {status: original_status} for each well where original_status=standby",
+  "summary": {
+    "originally_active": 26,
+    "originally_standby": 42
+  },
+  "wells": [
+    {
+      "id": 1,
+      "name": "Alliance-Silver HIll-D Pad North",
+      "original_status": "active",
+      "propxJobId": "01706e6c-2d25-4dda-8c9c-c3c2550172f8"
+    },
+    {
+      "id": 2,
+      "name": "Alliance-Silver Hill-Lark Ranch",
+      "original_status": "active",
+      "propxJobId": "df625cfd-74d4-4124-9354-ce0c1efedf03"
+    },
+    {
+      "id": 3,
+      "name": "Apache-Baytex-Moulton",
+      "original_status": "standby",
+      "propxJobId": "3ca252b4-25ed-48cb-93e8-955314bdf00b"
+    },
+    {
+      "id": 4,
+      "name": "Apache-Baytex-Romulus",
+      "original_status": "standby",
+      "propxJobId": "7867fcac-6f34-4cd0-b937-522f850b6957"
+    },
+    {
+      "id": 5,
+      "name": "Apache-Murphy-Alice 1H",
+      "original_status": "active",
+      "propxJobId": "b857260a-99ad-4633-afcb-018f80fb1759"
+    },
+    {
+      "id": 6,
+      "name": "Apache-Murphy-Alice May Blitz",
+      "original_status": "active",
+      "propxJobId": "67f38dd8-e2c9-425e-9a44-925a3a5ad76b"
+    },
+    {
+      "id": 7,
+      "name": "Apache-Warwick-Hayes",
+      "original_status": "active",
+      "propxJobId": "bf4d7a60-869d-4320-bfa9-e55763485cf6"
+    },
+    {
+      "id": 8,
+      "name": "Apache-Warwick-Kopecki",
+      "original_status": "active",
+      "propxJobId": "fae885c6-ad2c-4408-86a0-c271d290f945"
+    },
+    {
+      "id": 9,
+      "name": "Apache-Warwick-Niedenberger",
+      "original_status": "active",
+      "propxJobId": "474ad222-15fc-4ba6-abfc-be30f5a55665"
+    },
+    {
+      "id": 10,
+      "name": "Apache-Warwick-Sky McCarn 4H",
+      "original_status": "standby",
+      "propxJobId": "4b297c0c-9a9c-44b6-9cc2-119cf1cd34fc"
+    },
+    {
+      "id": 11,
+      "name": "Bobby Yancey",
+      "original_status": "active",
+      "propxJobId": "010be796-c6fc-4ec2-ae4b-0f05c52258a3"
+    },
+    {
+      "id": 12,
+      "name": "CDM Unit 73 HSNV",
+      "original_status": "active",
+      "propxJobId": "44740301-bad5-4443-b7c0-1c7a8ec788f0"
+    },
+    {
+      "id": 13,
+      "name": "CHK LA MIN 25-13-12",
+      "original_status": "active",
+      "propxJobId": "d5f2cf00-8c8d-4e9f-87b6-4aaa6c076902"
+    },
+    {
+      "id": 14,
+      "name": "Camp 3HB",
+      "original_status": "standby",
+      "propxJobId": "2f34a9b3-0f53-41b5-a1aa-85aedf8c7ad8"
+    },
+    {
+      "id": 15,
+      "name": "Cothrom 3 & 4",
+      "original_status": "standby",
+      "propxJobId": "d05dff02-f833-4652-a769-3d84602ecbfd"
+    },
+    {
+      "id": 16,
+      "name": "Cudd-Eckard-Riva Ridge 1,2,4",
+      "original_status": "active",
+      "propxJobId": "0da93d1c-0d31-42fc-a04b-d48228a8d509"
+    },
+    {
+      "id": 17,
+      "name": "Cutthroat",
+      "original_status": "standby",
+      "propxJobId": "cc857e50-d3f2-416f-8f78-1a3aede273fb"
+    },
+    {
+      "id": 18,
+      "name": "Delaware Basin #3",
+      "original_status": "active",
+      "propxJobId": null
+    },
+    {
+      "id": 19,
+      "name": "Double Deep Gas Unit 1.2.3",
+      "original_status": "standby",
+      "propxJobId": "7d3b15c4-9e28-4dbc-abbe-651458ae4cc4"
+    },
+    {
+      "id": 20,
+      "name": "EF (APACHE) BAYTEX - Dogwood",
+      "original_status": "standby",
+      "propxJobId": "c8f7f400-b87a-47b5-93a7-f22692e753a2"
+    },
+    {
+      "id": 21,
+      "name": "EF (APACHE) BAYTEX - KRONOS",
+      "original_status": "standby",
+      "propxJobId": "db70ed52-a52f-447b-ae04-d15ac54d62fe"
+    },
+    {
+      "id": 22,
+      "name": "EF (APACHE) BAYTEX - NABOO",
+      "original_status": "standby",
+      "propxJobId": "4ebf79a8-3188-4b42-8dc7-18273f60ffc6"
+    },
+    {
+      "id": 23,
+      "name": "EF (APACHE) BAYTEX - ZIRICOTE",
+      "original_status": "standby",
+      "propxJobId": "32592b97-e5e3-400e-a699-0f64f03a4d45"
+    },
+    {
+      "id": 24,
+      "name": "EF (APACHE) BAYTEX-FEROS A1H/B2H",
+      "original_status": "standby",
+      "propxJobId": "c21e7bcf-2c15-46e3-937f-997b6f2c17e6"
+    },
+    {
+      "id": 25,
+      "name": "EF (APACHE) Baytex - Pika",
+      "original_status": "standby",
+      "propxJobId": "bf07c92f-17c9-420d-9768-89e17f414784"
+    },
+    {
+      "id": 26,
+      "name": "EF (APACHE) CYTEX-RICHMOND",
+      "original_status": "standby",
+      "propxJobId": "e6db98a4-e056-4b86-b571-c5c6df1a3111"
+    },
+    {
+      "id": 27,
+      "name": "EF (APACHE) Crescent - San Roman 208",
+      "original_status": "standby",
+      "propxJobId": "e61f9471-76f3-437a-a5cb-9d9182ba213d"
+    },
+    {
+      "id": 28,
+      "name": "EF (Apache) Strand Energy - Faith State",
+      "original_status": "standby",
+      "propxJobId": "534ee075-5739-46e9-a8a0-79a06983220c"
+    },
+    {
+      "id": 29,
+      "name": "EF (BROWNING) Baytex - Remus",
+      "original_status": "standby",
+      "propxJobId": "4c1e037a-e356-4601-94c7-aab65cf2d6b5"
+    },
+    {
+      "id": 30,
+      "name": "Eagle Ford #12",
+      "original_status": "active",
+      "propxJobId": null
+    },
+    {
+      "id": 31,
+      "name": "Eubanks Unit 5H",
+      "original_status": "active",
+      "propxJobId": "009237d6-b6f9-4270-8722-218eec0bcf1b"
+    },
+    {
+      "id": 32,
+      "name": "HV (REAPER) TG NR - McLOFFLIN",
+      "original_status": "standby",
+      "propxJobId": "47729a9d-4247-4a15-bb02-f63c17e87758"
+    },
+    {
+      "id": 33,
+      "name": "HV (SPITFIRE) Comstock - Blocker Gill",
+      "original_status": "standby",
+      "propxJobId": "89e91050-fa2f-4b7a-b0de-427f1aa53f97"
+    },
+    {
+      "id": 34,
+      "name": "HV (SPITFIRE) Comstock - Nation",
+      "original_status": "standby",
+      "propxJobId": "1d518c1e-d7e5-4f40-8940-59c698850f8a"
+    },
+    {
+      "id": 35,
+      "name": "Hauglum",
+      "original_status": "standby",
+      "propxJobId": "f4604bbe-f8cf-457f-bc5a-b463214876d7"
+    },
+    {
+      "id": 36,
+      "name": "Huddleston Trust 12,13,14",
+      "original_status": "standby",
+      "propxJobId": "0d8f8ede-b0c1-490f-bae6-e07c99efb0d6"
+    },
+    {
+      "id": 37,
+      "name": "Jarzombek",
+      "original_status": "standby",
+      "propxJobId": "9a9816ca-0750-45cb-8815-b1d6637e6f7b"
+    },
+    {
+      "id": 38,
+      "name": "Jeanine",
+      "original_status": "active",
+      "propxJobId": "0203a094-50e0-4899-b79b-17f18d172861"
+    },
+    {
+      "id": 39,
+      "name": "Justapor",
+      "original_status": "standby",
+      "propxJobId": "7c6b78de-1f7d-4149-93de-d96897bbf6fc"
+    },
+    {
+      "id": 40,
+      "name": "LOS- Shreveport",
+      "original_status": "standby",
+      "propxJobId": "0832861e-e5a7-4822-900b-8490edb80d76"
+    },
+    {
+      "id": 41,
+      "name": "Lindsay Ranch 2",
+      "original_status": "standby",
+      "propxJobId": "67aaf64b-dd04-49a8-90cd-4e8d97f26cda"
+    },
+    {
+      "id": 42,
+      "name": "Lipsey",
+      "original_status": "active",
+      "propxJobId": "2deda744-9be7-41f0-bf1e-7761904f349c"
+    },
+    {
+      "id": 43,
+      "name": "Midland Basin #15",
+      "original_status": "standby",
+      "propxJobId": null
+    },
+    {
+      "id": 44,
+      "name": "Moro Creek",
+      "original_status": "standby",
+      "propxJobId": "de095b05-915a-4cad-a34c-5a419f7df48c"
+    },
+    {
+      "id": 45,
+      "name": "Nabors 6&7-11-11 HC",
+      "original_status": "standby",
+      "propxJobId": "dafea5f8-64f8-4b67-a617-879b88fb3753"
+    },
+    {
+      "id": 46,
+      "name": "Napoo",
+      "original_status": "standby",
+      "propxJobId": "aac8b8b0-a732-4037-be97-769870e63acb"
+    },
+    {
+      "id": 47,
+      "name": "PGE Brown T",
+      "original_status": "standby",
+      "propxJobId": "0978bcf9-af30-402f-99e6-75699850fa0a"
+    },
+    {
+      "id": 48,
+      "name": "Permian Basin #7",
+      "original_status": "active",
+      "propxJobId": null
+    },
+    {
+      "id": 49,
+      "name": "Renee Refrac",
+      "original_status": "standby",
+      "propxJobId": "a0106998-b9d1-46f0-80aa-37d753cba8c3"
+    },
+    {
+      "id": 50,
+      "name": "Renegade-Formentera-Pendleton",
+      "original_status": "active",
+      "propxJobId": "726ff4ab-5267-4490-aa68-811bae7f0416"
+    },
+    {
+      "id": 51,
+      "name": "Roberts",
+      "original_status": "standby",
+      "propxJobId": "672fae2b-6eed-4614-a652-2d5006d0f929"
+    },
+    {
+      "id": 52,
+      "name": "San Roman 210H 211H 2112H",
+      "original_status": "standby",
+      "propxJobId": "f87b408c-9c49-41b3-9ebf-feabf5e22817"
+    },
+    {
+      "id": 53,
+      "name": "Silver/Westgate",
+      "original_status": "active",
+      "propxJobId": "8ae9bec1-8098-4636-96f7-71809f406a31"
+    },
+    {
+      "id": 54,
+      "name": "Spectre-Capital Star-Lanik",
+      "original_status": "standby",
+      "propxJobId": "16b010c9-8d21-4d87-a1be-347029d666f9"
+    },
+    {
+      "id": 55,
+      "name": "Spectre-Crescent-Brush Hook",
+      "original_status": "standby",
+      "propxJobId": "92d193eb-8a92-4bc3-ad29-56524784863d"
+    },
+    {
+      "id": 56,
+      "name": "Spectre-Crescent-Fasken State",
+      "original_status": "active",
+      "propxJobId": "846ce6ec-640e-4bea-bd6e-828aef7f2425"
+    },
+    {
+      "id": 57,
+      "name": "Spectre-Crescent-SIMUL Washburn",
+      "original_status": "active",
+      "propxJobId": "09967515-ec66-44ce-a79d-82989b4a37aa"
+    },
+    {
+      "id": 58,
+      "name": "Super Snake 10 & 13",
+      "original_status": "active",
+      "propxJobId": "27d689c7-ab83-45aa-9183-3101e9d49852"
+    },
+    {
+      "id": 59,
+      "name": "Thrash Unit 84",
+      "original_status": "active",
+      "propxJobId": "cb3f1d00-4fc4-4a70-b587-dba5f24bbe5c"
+    },
+    {
+      "id": 60,
+      "name": "Tortuga 101 HA/HD",
+      "original_status": "standby",
+      "propxJobId": "086a9fb6-7c50-4812-be10-a9b8db806cd9"
+    },
+    {
+      "id": 61,
+      "name": "WCCO 4 - Miller B 21H/22H",
+      "original_status": "standby",
+      "propxJobId": "5c843f4d-b058-4b26-876b-7f4a46e47eea"
+    },
+    {
+      "id": 62,
+      "name": "Worthey Ranch 102HW-HX-HY-HZ",
+      "original_status": "standby",
+      "propxJobId": "b4317727-b90b-424d-b66f-5b36924c2742"
+    },
+    {
+      "id": 63,
+      "name": "Zamora 201-204H",
+      "original_status": "standby",
+      "propxJobId": "7d00bbf8-19f4-4ee3-a120-449acdbf4bed"
+    },
+    {
+      "id": 64,
+      "name": "Zappenduster",
+      "original_status": "standby",
+      "propxJobId": "bcf043c6-06c4-47a9-ae27-9abda83935d8"
+    },
+    {
+      "id": 65,
+      "name": "Zimmerman 1H 2H",
+      "original_status": "standby",
+      "propxJobId": "af2705f5-2ffb-4300-9aae-ee1358412c13"
+    },
+    {
+      "id": 66,
+      "name": "Apache-Gulftex-Fred Gawlik",
+      "original_status": "active",
+      "propxJobId": null
+    },
+    {
+      "id": 67,
+      "name": "Greenlake Energy - Rick Ross",
+      "original_status": "active",
+      "propxJobId": null
+    },
+    {
+      "id": 68,
+      "name": "Spectre-Crescent-SIMUL Diamond H",
+      "original_status": "active",
+      "propxJobId": null
+    }
+  ]
+}
