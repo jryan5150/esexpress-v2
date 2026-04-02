@@ -117,6 +117,9 @@ const COLUMN_ALIASES: Record<string, string> = {
   destination_name: "destination_name",
   destinationname: "destination_name",
   dest: "destination_name",
+  well_site_name: "destination_name",
+  "well site name": "destination_name",
+  wellsitename: "destination_name",
   terminal: "origin_name",
   "terminal name": "origin_name",
   terminal_name: "origin_name",
@@ -125,6 +128,9 @@ const COLUMN_ALIASES: Record<string, string> = {
   "origin name": "origin_name",
   origin_name: "origin_name",
   originname: "origin_name",
+  loading_site_name: "origin_name",
+  "loading site name": "origin_name",
+  loadingsitename: "origin_name",
 
   // Carrier/Driver
   driver: "driver_name",
