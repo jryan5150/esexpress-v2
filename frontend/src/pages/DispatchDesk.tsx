@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { useWells, useDispatchDeskLoads } from "../hooks/use-wells";
+import {
+  useWells,
+  useDispatchDeskLoads,
+  useBulkApprove,
+} from "../hooks/use-wells";
 import { useMarkEntered, useAdvanceToReady } from "../hooks/use-dispatch-desk";
 import { DispatchCard } from "../components/DispatchCard";
 import { Button } from "../components/Button";
@@ -21,6 +25,7 @@ export function DispatchDesk() {
   );
   const markEntered = useMarkEntered();
   const advanceToReady = useAdvanceToReady();
+  const bulkApprove = useBulkApprove();
 
   const wells: Well[] = Array.isArray(wellsQuery.data) ? wellsQuery.data : [];
   const allLoads =
@@ -28,6 +33,9 @@ export function DispatchDesk() {
     (Array.isArray(deskQuery.data) ? deskQuery.data : []);
 
   // Split loads by status for display
+  const pendingLoads = allLoads.filter(
+    (l) => l.assignmentStatus === "pending" && !enteredIds.has(l.assignmentId),
+  );
   const assignedLoads = allLoads.filter(
     (l) => l.assignmentStatus === "assigned" && !enteredIds.has(l.assignmentId),
   );
@@ -36,7 +44,7 @@ export function DispatchDesk() {
       l.assignmentStatus === "dispatch_ready" &&
       !enteredIds.has(l.assignmentId),
   );
-  const activeLoads = [...readyLoads, ...assignedLoads];
+  const activeLoads = [...readyLoads, ...assignedLoads, ...pendingLoads];
 
   const handleSelectWell = (wellId: string) => {
     setSearchParams(wellId ? { wellId } : {});
@@ -72,6 +80,17 @@ export function DispatchDesk() {
           toast(`Bulk mark failed: ${(err as Error).message}`, "error"),
       },
     );
+  };
+
+  const handleApproveAll = () => {
+    const ids = pendingLoads.map((l) => l.assignmentId);
+    bulkApprove.mutate(ids, {
+      onSuccess: () => {
+        toast(`${ids.length} loads approved`, "success");
+      },
+      onError: (err) =>
+        toast(`Approve failed: ${(err as Error).message}`, "error"),
+    });
   };
 
   const handleAdvanceAll = () => {
@@ -183,8 +202,9 @@ export function DispatchDesk() {
                 {wellName}
               </span>
               <span className="font-label text-sm text-on-surface/50">
-                {readyLoads.length} ready &middot; {assignedLoads.length}{" "}
-                assigned &middot; {enteredIds.size} entered
+                {pendingLoads.length} pending &middot; {assignedLoads.length}{" "}
+                assigned &middot; {readyLoads.length} ready &middot;{" "}
+                {enteredIds.size} entered
               </span>
             </div>
             <div className="flex gap-3">
@@ -339,6 +359,57 @@ export function DispatchDesk() {
             <p className="text-xs text-on-surface/20 font-label">
               Loads need to be validated first. Check the Validation page.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Pending approval loads */}
+      {pendingLoads.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
+              Pending Approval{" "}
+              <span className="text-primary-container">
+                {pendingLoads.length} auto-mapped loads
+              </span>
+            </h3>
+            <Button
+              variant="primary"
+              icon="done_all"
+              onClick={handleApproveAll}
+              disabled={bulkApprove.isPending}
+            >
+              Approve All ({pendingLoads.length})
+            </Button>
+          </div>
+          <div className="space-y-4">
+            {pendingLoads.slice(0, 50).map((load) => (
+              <DispatchCard
+                key={load.assignmentId}
+                loadNo={load.loadNo}
+                pcsNumber={null}
+                driverName={load.driverName}
+                truckNo={load.truckNo}
+                carrierName={load.carrierName}
+                productDescription={load.productDescription}
+                weightTons={load.weightTons}
+                bolNo={load.bolNo}
+                ticketNo={load.ticketNo}
+                wellName={load.wellName}
+                photoStatus={load.photoStatus}
+                canEnter={false}
+                entered={false}
+                onMarkEntered={() => {}}
+                isPending={false}
+                loadId={load.loadId}
+              />
+            ))}
+            {pendingLoads.length > 50 && (
+              <div className="text-center py-4 text-on-surface/30 text-sm font-label">
+                Showing 50 of {pendingLoads.length} pending loads. Approve all
+                to continue.
+              </div>
+            )}
           </div>
         </div>
       )}

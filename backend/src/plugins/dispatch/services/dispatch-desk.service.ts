@@ -102,9 +102,10 @@ export async function getDispatchDeskLoads(
   const { wellId, photoStatus, date, page = 1, limit = 100 } = filters;
   const offset = (page - 1) * limit;
 
-  // Build where conditions — show assigned + dispatch_ready
+  // Build where conditions — show pending + assigned + dispatch_ready
   const conditions = [
     or(
+      eq(assignments.status, "pending"),
       eq(assignments.status, "assigned"),
       eq(assignments.status, "dispatch_ready"),
     )!,
