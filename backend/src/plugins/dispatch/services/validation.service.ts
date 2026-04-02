@@ -1,4 +1,4 @@
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, isNull } from "drizzle-orm";
 import { assignments, loads, wells } from "../../../db/schema.js";
 import { transitionStatus, createAssignment } from "./assignments.service.js";
 import { createLocationMapping } from "./mappings.service.js";
@@ -36,12 +36,51 @@ export async function getValidationSummary(
     else if (row.tier === 3) tier3 = row.count;
   }
 
+  // Count unresolved loads (no assignment at all) as Tier 3
+  const [unmapped] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(loads)
+    .leftJoin(assignments, eq(loads.id, assignments.loadId))
+    .where(isNull(assignments.id));
+
+  tier3 += unmapped?.count ?? 0;
+
   return { tier1, tier2, tier3, total: tier1 + tier2 + tier3 };
 }
 
 // ─── By Tier (with joined load + well data) ──────────────────────────────────
 
 export async function getAssignmentsByTier(db: Database, tier: number) {
+  // Tier 3: return unmapped loads (no assignment) for manual resolution
+  if (tier === 3) {
+    const unmapped = await db
+      .select({
+        id: loads.id,
+        wellId: sql<number>`0`.as("well_id"),
+        loadId: loads.id,
+        status: sql<string>`'unresolved'`.as("status"),
+        autoMapTier: sql<number>`3`.as("auto_map_tier"),
+        autoMapScore: sql<string | null>`null`.as("auto_map_score"),
+        photoStatus: sql<string>`'missing'`.as("photo_status"),
+        createdAt: loads.createdAt,
+        loadNo: loads.loadNo,
+        driverName: loads.driverName,
+        destinationName: loads.destinationName,
+        carrierName: loads.carrierName,
+        weightTons: loads.weightTons,
+        ticketNo: loads.ticketNo,
+        bolNo: loads.bolNo,
+        wellName: sql<string>`'-- Unresolved --'`.as("well_name"),
+      })
+      .from(loads)
+      .leftJoin(assignments, eq(loads.id, assignments.loadId))
+      .where(isNull(assignments.id))
+      .orderBy(desc(loads.createdAt))
+      .limit(200);
+
+    return unmapped;
+  }
+
   const rows = await db
     .select({
       id: assignments.id,
@@ -52,7 +91,6 @@ export async function getAssignmentsByTier(db: Database, tier: number) {
       autoMapScore: assignments.autoMapScore,
       photoStatus: assignments.photoStatus,
       createdAt: assignments.createdAt,
-      // Joined load fields
       loadNo: loads.loadNo,
       driverName: loads.driverName,
       destinationName: loads.destinationName,
@@ -60,7 +98,6 @@ export async function getAssignmentsByTier(db: Database, tier: number) {
       weightTons: loads.weightTons,
       ticketNo: loads.ticketNo,
       bolNo: loads.bolNo,
-      // Joined well fields
       wellName: wells.name,
     })
     .from(assignments)
