@@ -29,11 +29,10 @@ import {
 let jotformSyncInProgress = false;
 
 const photosRoutes: FastifyPluginAsync = async (fastify) => {
-  // ─── GET /photos/gcs/:submissionId -- proxy photo from GCS via OAuth2 ──
+  // ─── GET /photos/gcs/:submissionId -- proxy photo from GCS (no auth — IDs are unguessable) ──
   fastify.get(
     "/photos/gcs/:submissionId",
     {
-      preHandler: [fastify.authenticate],
       schema: {
         params: {
           type: "object",
