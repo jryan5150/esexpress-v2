@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useBolQueue, useBolStats } from "../hooks/use-bol";
+import { Pagination } from "../components/Pagination";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 const resolveUrl = (url: string) =>
@@ -43,19 +44,23 @@ function formatDate(d: string | null): string {
 
 export function BolQueue() {
   const statsQuery = useBolStats();
-  const queueQuery = useBolQueue();
   const [filter, setFilter] = useState<"all" | "matched" | "pending">("all");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [photoModal, setPhotoModal] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
+  const queueQuery = useBolQueue({ page, limit: pageSize });
 
   const stats = statsQuery.data as Record<string, unknown> | undefined;
   const total = Number(stats?.total ?? 0);
   const matchRate = String(stats?.matchRate ?? "0%");
   const byStatus = (stats?.byStatus ?? {}) as Record<string, number>;
 
-  const rawItems: JotFormItem[] = Array.isArray(queueQuery.data)
-    ? (queueQuery.data as JotFormItem[])
-    : [];
+  const response = queueQuery.data as any;
+  const rawItems: JotFormItem[] =
+    response?.data ?? (Array.isArray(response) ? response : []);
+  const queueTotal = response?.meta?.total ?? rawItems.length;
 
   const filtered =
     filter === "all"
@@ -336,6 +341,20 @@ export function BolQueue() {
             );
           })}
         </div>
+      )}
+
+      {queueTotal > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={queueTotal}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => {
+            setPageSize(s);
+            setPage(1);
+          }}
+          loading={queueQuery.isLoading}
+        />
       )}
 
       {/* Photo Modal */}
