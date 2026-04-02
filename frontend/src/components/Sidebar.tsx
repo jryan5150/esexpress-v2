@@ -1,9 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
-import { useCurrentUser } from "../hooks/use-auth";
+import { useCurrentUser, useLogoutFn } from "../hooks/use-auth";
 
 export function Sidebar() {
   const location = useLocation();
   const userQuery = useCurrentUser();
+  const logout = useLogoutFn();
   const isActive = (path: string) => location.pathname === path;
 
   const navClass = (path: string) =>
@@ -30,7 +31,7 @@ export function Sidebar() {
           <span className="material-symbols-outlined">description</span>
           <span className="text-sm font-medium">BOL Queue</span>
         </Link>
-        <Link to="/dispatch-desk" className={navClass("/dispatch-desk")}>
+        <Link to="/dispatch" className={navClass("/dispatch")}>
           <span className="material-symbols-outlined">local_shipping</span>
           <span className="text-sm font-medium">Dispatch Desk</span>
         </Link>
@@ -91,13 +92,13 @@ export function Sidebar() {
           <span className="material-symbols-outlined text-lg">settings</span>
           <span className="text-xs font-medium">Settings</span>
         </Link>
-        <a
-          className="text-on-surface/50 flex items-center gap-3 px-4 py-2 hover:text-primary-container transition-colors"
-          href="#"
+        <button
+          onClick={logout}
+          className="text-on-surface/50 flex items-center gap-3 px-4 py-2 hover:text-error transition-colors w-full cursor-pointer"
         >
-          <span className="material-symbols-outlined text-lg">help</span>
-          <span className="text-xs font-medium">Support</span>
-        </a>
+          <span className="material-symbols-outlined text-lg">logout</span>
+          <span className="text-xs font-medium">Log Out</span>
+        </button>
       </div>
     </aside>
   );
