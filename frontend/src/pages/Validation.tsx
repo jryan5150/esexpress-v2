@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useValidationSummary,
   useValidationConfirm,
   useValidationReject,
-  useBulkApprove,
 } from "../hooks/use-wells";
 import { api } from "../lib/api";
 import { qk } from "../lib/query-client";
 import { useToast } from "../components/Toast";
+import { WellPicker } from "../components/WellPicker";
+import { Pagination } from "../components/Pagination";
 
 interface TierAssignment {
   id: number;
@@ -82,21 +83,42 @@ export function Validation() {
   const [rejectReason, setRejectReason] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
+  // Pagination state per tier
+  const [tierPages, setTierPages] = useState<Record<number, number>>({
+    1: 1,
+    2: 1,
+    3: 1,
+  });
+  const [tierPageSizes, setTierPageSizes] = useState<Record<number, number>>({
+    1: 50,
+    2: 50,
+    3: 50,
+  });
+
   const summaryQuery = useValidationSummary();
   const confirmMutation = useValidationConfirm();
   const rejectMutation = useValidationReject();
 
   const tier1Query = useQuery({
-    queryKey: qk.validation.tier(1),
-    queryFn: () => api.get<TierAssignment[]>("/dispatch/validation/tier/1"),
+    queryKey: [...qk.validation.tier(1), tierPages[1], tierPageSizes[1]],
+    queryFn: () =>
+      api.get<any>(
+        `/dispatch/validation/tier/1?page=${tierPages[1]}&limit=${tierPageSizes[1]}`,
+      ),
   });
   const tier2Query = useQuery({
-    queryKey: qk.validation.tier(2),
-    queryFn: () => api.get<TierAssignment[]>("/dispatch/validation/tier/2"),
+    queryKey: [...qk.validation.tier(2), tierPages[2], tierPageSizes[2]],
+    queryFn: () =>
+      api.get<any>(
+        `/dispatch/validation/tier/2?page=${tierPages[2]}&limit=${tierPageSizes[2]}`,
+      ),
   });
   const tier3Query = useQuery({
-    queryKey: qk.validation.tier(3),
-    queryFn: () => api.get<TierAssignment[]>("/dispatch/validation/tier/3"),
+    queryKey: [...qk.validation.tier(3), tierPages[3], tierPageSizes[3]],
+    queryFn: () =>
+      api.get<any>(
+        `/dispatch/validation/tier/3?page=${tierPages[3]}&limit=${tierPageSizes[3]}`,
+      ),
   });
 
   const tierQueries: Record<number, typeof tier1Query> = {
@@ -121,12 +143,12 @@ export function Validation() {
     });
   };
 
-  const invalidateAll = () => {
+  const invalidateAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: qk.validation.all });
     queryClient.invalidateQueries({ queryKey: qk.assignments.all });
     queryClient.invalidateQueries({ queryKey: qk.wells.all });
     queryClient.invalidateQueries({ queryKey: qk.readiness.all });
-  };
+  }, [queryClient]);
 
   const handleConfirm = (assignmentId: number) => {
     confirmMutation.mutate(
@@ -159,8 +181,12 @@ export function Validation() {
   };
 
   const handleBulkApproveTier1 = () => {
-    const assignments = tier1Query.data;
-    if (!Array.isArray(assignments) || assignments.length === 0) return;
+    const rawData = tier1Query.data as unknown;
+    const tierResponse = rawData as any;
+    const assignments: TierAssignment[] = Array.isArray(tierResponse)
+      ? tierResponse
+      : (tierResponse?.data ?? []);
+    if (assignments.length === 0) return;
 
     const ids = assignments.map((a) => a.id);
     let completed = 0;
@@ -286,9 +312,16 @@ export function Validation() {
 
         const meta = TIER_META[tier];
         const query = tierQueries[tier];
-        const assignments: TierAssignment[] = Array.isArray(query.data)
-          ? query.data
-          : [];
+
+        // Handle both response shapes: raw array or { data, meta } envelope
+        const rawData = query.data as unknown;
+        const tierResponse = rawData as any;
+        const assignments: TierAssignment[] = Array.isArray(tierResponse)
+          ? tierResponse
+          : (tierResponse?.data ?? []);
+        const tierTotal = Array.isArray(tierResponse)
+          ? tierResponse.length
+          : (tierResponse?.meta?.total ?? assignments.length);
 
         return (
           <section key={tier} className="space-y-3">
@@ -361,8 +394,8 @@ export function Validation() {
                 </div>
 
                 {assignments.map((a) => (
-                  <div key={a.id}>
-                    {/* Summary Row — click to expand */}
+                  <div key={`${tier}-${a.id}`}>
+                    {/* Summary Row -- click to expand */}
                     <div
                       onClick={() =>
                         setExpandedId(expandedId === a.id ? null : a.id)
@@ -390,7 +423,7 @@ export function Validation() {
                         </span>
                       </div>
 
-                      {/* Destination -> Well */}
+                      {/* Destination -> Well (WellPicker replaces static text) */}
                       <div className="flex-1 flex items-center gap-2 min-w-0">
                         <span className="font-label text-xs text-on-surface/50 truncate max-w-[140px]">
                           {a.destinationName ?? "Unknown"}
@@ -398,9 +431,13 @@ export function Validation() {
                         <span className="material-symbols-outlined text-xs text-on-surface/20">
                           arrow_forward
                         </span>
-                        <span className="text-sm font-bold text-on-surface truncate max-w-[140px]">
-                          {a.wellName ?? `Well ${a.wellId}`}
-                        </span>
+                        <WellPicker
+                          loadId={a.loadId}
+                          assignmentId={tier === 3 ? null : a.id}
+                          currentWellId={a.wellId === 0 ? null : a.wellId}
+                          currentWellName={a.wellName}
+                          onResolved={invalidateAll}
+                        />
                       </div>
 
                       {/* Confidence Score */}
@@ -408,69 +445,76 @@ export function Validation() {
                         <ConfidenceBadge score={a.autoMapScore} />
                       </div>
 
-                      {/* Actions — stop propagation so clicks don't toggle expand */}
-                      <div
-                        className="w-44 flex items-center justify-end gap-2"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {rejectingId === a.id ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              value={rejectReason}
-                              onChange={(e) => setRejectReason(e.target.value)}
-                              placeholder="Reason (optional)"
-                              className="w-28 bg-surface-container-high border border-on-surface/10 rounded px-2 py-1.5 text-xs text-on-surface font-label focus:outline-none focus:border-error/50"
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") handleReject(a.id);
-                                if (e.key === "Escape") {
+                      {/* Actions -- stop propagation so clicks don't toggle expand */}
+                      {tier !== 3 && (
+                        <div
+                          className="w-44 flex items-center justify-end gap-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {rejectingId === a.id ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={rejectReason}
+                                onChange={(e) =>
+                                  setRejectReason(e.target.value)
+                                }
+                                placeholder="Reason (optional)"
+                                className="w-28 bg-surface-container-high border border-on-surface/10 rounded px-2 py-1.5 text-xs text-on-surface font-label focus:outline-none focus:border-error/50"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleReject(a.id);
+                                  if (e.key === "Escape") {
+                                    setRejectingId(null);
+                                    setRejectReason("");
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={() => handleReject(a.id)}
+                                disabled={rejectMutation.isPending}
+                                className="text-error text-xs font-bold cursor-pointer hover:underline"
+                              >
+                                Send
+                              </button>
+                              <button
+                                onClick={() => {
                                   setRejectingId(null);
                                   setRejectReason("");
-                                }
-                              }}
-                            />
-                            <button
-                              onClick={() => handleReject(a.id)}
-                              disabled={rejectMutation.isPending}
-                              className="text-error text-xs font-bold cursor-pointer hover:underline"
-                            >
-                              Send
-                            </button>
-                            <button
-                              onClick={() => {
-                                setRejectingId(null);
-                                setRejectReason("");
-                              }}
-                              className="text-on-surface/30 text-xs cursor-pointer hover:text-on-surface/60"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleConfirm(a.id)}
-                              disabled={confirmMutation.isPending}
-                              className="bg-tertiary/10 text-tertiary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-tertiary/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                            >
-                              <span className="material-symbols-outlined text-sm">
-                                check
-                              </span>
-                              Confirm
-                            </button>
-                            <button
-                              onClick={() => setRejectingId(a.id)}
-                              disabled={rejectMutation.isPending}
-                              className="bg-error/10 text-error px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-error/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                            >
-                              <span className="material-symbols-outlined text-sm">
-                                close
-                              </span>
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </div>
+                                }}
+                                className="text-on-surface/30 text-xs cursor-pointer hover:text-on-surface/60"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleConfirm(a.id)}
+                                disabled={confirmMutation.isPending}
+                                className="bg-tertiary/10 text-tertiary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-tertiary/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-sm">
+                                  check
+                                </span>
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setRejectingId(a.id)}
+                                disabled={rejectMutation.isPending}
+                                className="bg-error/10 text-error px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-error/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-sm">
+                                  close
+                                </span>
+                                Reject
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Spacer for Tier 3 rows where actions column is hidden */}
+                      {tier === 3 && <div className="w-44" />}
                     </div>
 
                     {/* Expanded Detail Panel */}
@@ -521,6 +565,23 @@ export function Validation() {
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Pagination */}
+            {tierTotal > 0 && (
+              <Pagination
+                page={tierPages[tier]}
+                pageSize={tierPageSizes[tier]}
+                total={tierTotal}
+                onPageChange={(p) =>
+                  setTierPages((prev) => ({ ...prev, [tier]: p }))
+                }
+                onPageSizeChange={(s) => {
+                  setTierPageSizes((prev) => ({ ...prev, [tier]: s }));
+                  setTierPages((prev) => ({ ...prev, [tier]: 1 }));
+                }}
+                loading={query.isLoading}
+              />
             )}
           </section>
         );
