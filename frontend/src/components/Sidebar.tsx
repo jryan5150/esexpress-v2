@@ -41,26 +41,26 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 px-3 space-y-1">
         <Link to="/" className={navClass("/")}>
-          <span className="material-symbols-outlined">priority_high</span>
-          <span className="text-sm font-medium">Exception Feed</span>
-        </Link>
-        <Link to="/bol" className={navClass("/bol")}>
-          <span className="material-symbols-outlined">description</span>
-          <span className="text-sm font-medium">BOL Queue</span>
+          <span className="material-symbols-outlined">home</span>
+          <span className="text-sm font-medium">Today's Objectives</span>
         </Link>
         <Link to="/dispatch-desk" className={navClass("/dispatch-desk")}>
           <span className="material-symbols-outlined">local_shipping</span>
           <span className="text-sm font-medium">Dispatch Desk</span>
         </Link>
+        <Link to="/bol" className={navClass("/bol")}>
+          <span className="material-symbols-outlined">description</span>
+          <span className="text-sm font-medium">BOL Queue</span>
+        </Link>
+        <div className="pt-5 pb-1.5 px-4">
+          <span className="text-[10px] uppercase tracking-[0.15em] text-on-surface/25 font-bold font-label">
+            Admin
+          </span>
+        </div>
         <Link to="/validation" className={navClass("/validation")}>
           <span className="material-symbols-outlined">fact_check</span>
           <span className="text-sm font-medium">Validation</span>
         </Link>
-        <div className="pt-5 pb-1.5 px-4">
-          <span className="text-[10px] uppercase tracking-[0.15em] text-on-surface/25 font-bold font-label">
-            Administration
-          </span>
-        </div>
         <Link to="/admin/wells" className={navClass("/admin/wells")}>
           <span className="material-symbols-outlined">oil_barrel</span>
           <span className="text-sm font-medium">Wells</span>
