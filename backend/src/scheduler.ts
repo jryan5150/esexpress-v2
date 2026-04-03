@@ -11,10 +11,36 @@
 
 import cron from "node-cron";
 import type { Database } from "./db/client.js";
+import { syncRuns } from "./db/schema.js";
 
 const TZ = "America/Chicago";
 
 let db: Database | null = null;
+
+export async function recordSyncRun(
+  source: "propx" | "logistiq" | "automap" | "jotform",
+  startedAt: Date,
+  result: {
+    status: "success" | "failed" | "skipped";
+    recordsProcessed?: number;
+    error?: string;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  if (!db) return;
+  const completedAt = new Date();
+  const durationMs = completedAt.getTime() - startedAt.getTime();
+  await db.insert(syncRuns).values({
+    source,
+    startedAt,
+    completedAt,
+    status: result.status,
+    recordsProcessed: result.recordsProcessed || 0,
+    durationMs,
+    error: result.error || null,
+    metadata: result.metadata || null,
+  });
+}
 
 export function startScheduler(database: Database) {
   db = database;
@@ -22,17 +48,17 @@ export function startScheduler(database: Database) {
   // ─── Early Morning Full Sync (4:00 AM CT) ─────────────────────────────
   cron.schedule(
     "0 4 * * *",
-    () => runWithLog("PropX Sync (morning)", syncPropx(7)),
+    () => runWithLog("PropX Sync (morning)", syncPropx(7), "propx"),
     { timezone: TZ },
   );
   cron.schedule(
     "15 4 * * *",
-    () => runWithLog("Logistiq Sync (morning)", syncLogistiq(7)),
+    () => runWithLog("Logistiq Sync (morning)", syncLogistiq(7), "logistiq"),
     { timezone: TZ },
   );
   cron.schedule(
     "30 4 * * *",
-    () => runWithLog("Auto-Map (morning)", runAutoMap()),
+    () => runWithLog("Auto-Map (morning)", runAutoMap(), "automap"),
     { timezone: TZ },
   );
 
@@ -40,9 +66,9 @@ export function startScheduler(database: Database) {
   cron.schedule(
     "0 8,12,16,20 * * *",
     async () => {
-      await runWithLog("PropX Sync (refresh)", syncPropx(2));
-      await runWithLog("Logistiq Sync (refresh)", syncLogistiq(2));
-      await runWithLog("Auto-Map (refresh)", runAutoMap());
+      await runWithLog("PropX Sync (refresh)", syncPropx(2), "propx");
+      await runWithLog("Logistiq Sync (refresh)", syncLogistiq(2), "logistiq");
+      await runWithLog("Auto-Map (refresh)", runAutoMap(), "automap");
     },
     { timezone: TZ },
   );
@@ -56,18 +82,40 @@ export function startScheduler(database: Database) {
   );
 }
 
-async function runWithLog(name: string, promise: Promise<unknown>) {
-  const start = Date.now();
+async function runWithLog(
+  name: string,
+  promise: Promise<unknown>,
+  source?: "propx" | "logistiq" | "automap" | "jotform",
+) {
+  const startedAt = new Date();
   try {
     const result = await promise;
-    const ms = Date.now() - start;
+    const ms = Date.now() - startedAt.getTime();
     console.log(
       `[scheduler] ${name} completed in ${ms}ms`,
       JSON.stringify(result),
     );
+    if (source) {
+      const rec = result as Record<string, unknown> | null;
+      await recordSyncRun(source, startedAt, {
+        status: rec?.skipped ? "skipped" : "success",
+        recordsProcessed:
+          (rec?.mapped as number) ||
+          (rec?.stored as number) ||
+          (rec?.total as number) ||
+          0,
+        metadata: rec as Record<string, unknown>,
+      });
+    }
   } catch (err) {
-    const ms = Date.now() - start;
+    const ms = Date.now() - startedAt.getTime();
     console.error(`[scheduler] ${name} FAILED after ${ms}ms:`, err);
+    if (source) {
+      await recordSyncRun(source, startedAt, {
+        status: "failed",
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 }
 
