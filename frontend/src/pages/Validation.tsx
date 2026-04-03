@@ -180,7 +180,7 @@ export function Validation() {
     );
   };
 
-  const handleBulkApproveTier1 = () => {
+  const handleBulkApproveTier1 = async () => {
     const rawData = tier1Query.data as unknown;
     const tierResponse = rawData as any;
     const assignments: TierAssignment[] = Array.isArray(tierResponse)
@@ -189,27 +189,25 @@ export function Validation() {
     if (assignments.length === 0) return;
 
     const ids = assignments.map((a) => a.id);
-    let completed = 0;
 
-    ids.forEach((id) => {
-      confirmMutation.mutate(
-        { assignmentId: id },
-        {
-          onSuccess: () => {
-            completed++;
-            if (completed === ids.length) {
-              toast(`${ids.length} Tier 1 assignments approved`, "success");
-              invalidateAll();
-            }
-          },
-          onError: (err) =>
-            toast(
-              `Failed on assignment ${id}: ${(err as Error).message}`,
-              "error",
-            ),
-        },
+    if (
+      !window.confirm(
+        `Approve all ${ids.length} Tier 1 assignments? This will move them to dispatch.`,
+      )
+    )
+      return;
+
+    try {
+      await Promise.all(
+        ids.map((id) =>
+          api.post("/dispatch/validation/confirm", { assignmentId: id }),
+        ),
       );
-    });
+      toast(`${ids.length} Tier 1 assignments approved`, "success");
+      invalidateAll();
+    } catch (err) {
+      toast(`Approve failed: ${(err as Error).message}`, "error");
+    }
   };
 
   return (
