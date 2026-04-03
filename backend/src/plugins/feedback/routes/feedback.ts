@@ -1,9 +1,11 @@
 import { type FastifyPluginAsync } from "fastify";
+import { timingSafeEqual } from "node:crypto";
 
 function requirePin(pin: string | undefined): boolean {
   const expected = process.env.DASHBOARD_PIN;
-  if (!expected) return false;
-  return pin === expected;
+  if (!expected || !pin) return false;
+  if (pin.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(pin), Buffer.from(expected));
 }
 
 const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
@@ -70,7 +72,20 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /screenshot — upload screenshot (JWT auth)
   fastify.post(
     "/screenshot",
-    { preHandler: [fastify.authenticate] },
+    {
+      preHandler: [fastify.authenticate],
+      config: { rawBody: false },
+      bodyLimit: 7 * 1024 * 1024, // 7MB (5MB image as base64 ≈ 6.7MB)
+      schema: {
+        body: {
+          type: "object",
+          required: ["base64"],
+          properties: {
+            base64: { type: "string", maxLength: 7_000_000 },
+          },
+        },
+      },
+    },
     async (request, reply) => {
       const { base64 } = request.body as { base64: string };
       if (!base64)
@@ -117,7 +132,7 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
     const limit = Math.min(parseInt(query.limit || "20"), 100);
     const offset = parseInt(query.offset || "0");
 
-    const rows = await db
+    const baseQuery = db
       .select({
         id: feedback.id,
         category: feedback.category,
@@ -129,7 +144,19 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
         userName: users.name,
       })
       .from(feedback)
-      .leftJoin(users, eq(feedback.userId, users.id))
+      .leftJoin(users, eq(feedback.userId, users.id));
+
+    // If category filter provided, add where clause
+    const filtered = query.category
+      ? baseQuery.where(
+          eq(
+            feedback.category,
+            query.category as "issue" | "question" | "suggestion",
+          ),
+        )
+      : baseQuery;
+
+    const rows = await filtered
       .orderBy(desc(feedback.createdAt))
       .limit(limit)
       .offset(offset);
@@ -137,48 +164,8 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
     return { success: true, data: rows };
   });
 
-  // GET /:id — single feedback with full breadcrumbs (PIN auth)
-  fastify.get("/:id", async (request, reply) => {
-    const pin = (request.headers as Record<string, string>)["x-dashboard-pin"];
-    if (!requirePin(pin))
-      return reply.status(401).send({
-        success: false,
-        error: { code: "UNAUTHORIZED", message: "Invalid PIN" },
-      });
-
-    const db = fastify.db;
-    if (!db)
-      return reply.status(503).send({
-        success: false,
-        error: {
-          code: "SERVICE_UNAVAILABLE",
-          message: "Database not connected",
-        },
-      });
-
-    const { feedback, users } = await import("../../../db/schema.js");
-    const { eq } = await import("drizzle-orm");
-
-    const { id } = request.params as { id: string };
-    const [row] = await db
-      .select()
-      .from(feedback)
-      .leftJoin(users, eq(feedback.userId, users.id))
-      .where(eq(feedback.id, parseInt(id)))
-      .limit(1);
-
-    if (!row)
-      return reply.status(404).send({
-        success: false,
-        error: { code: "NOT_FOUND", message: "Feedback not found" },
-      });
-    return {
-      success: true,
-      data: { ...row.feedback, userName: row.users?.name },
-    };
-  });
-
   // GET /stats — category counts + daily submissions (PIN auth)
+  // NOTE: Must be registered BEFORE /:id to avoid parametric match
   fastify.get("/stats", async (request, reply) => {
     const pin = (request.headers as Record<string, string>)["x-dashboard-pin"];
     if (!requirePin(pin))
@@ -223,6 +210,47 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
         byCategory: Object.fromEntries(byCat.map((r) => [r.category, r.count])),
         daily,
       },
+    };
+  });
+
+  // GET /:id — single feedback with full breadcrumbs (PIN auth)
+  fastify.get("/:id", async (request, reply) => {
+    const pin = (request.headers as Record<string, string>)["x-dashboard-pin"];
+    if (!requirePin(pin))
+      return reply.status(401).send({
+        success: false,
+        error: { code: "UNAUTHORIZED", message: "Invalid PIN" },
+      });
+
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: {
+          code: "SERVICE_UNAVAILABLE",
+          message: "Database not connected",
+        },
+      });
+
+    const { feedback, users } = await import("../../../db/schema.js");
+    const { eq } = await import("drizzle-orm");
+
+    const { id } = request.params as { id: string };
+    const [row] = await db
+      .select()
+      .from(feedback)
+      .leftJoin(users, eq(feedback.userId, users.id))
+      .where(eq(feedback.id, parseInt(id)))
+      .limit(1);
+
+    if (!row)
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Feedback not found" },
+      });
+    return {
+      success: true,
+      data: { ...row.feedback, userName: row.users?.name },
     };
   });
 };

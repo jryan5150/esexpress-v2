@@ -42,7 +42,7 @@ function RunDots({ source }: { source: PipelineSource }) {
                 ? "bg-error"
                 : "bg-surface-container-highest"
           }`}
-          title={`${run.status} - ${new Date(run.startedAt).toLocaleString()}`}
+          title={`${run.status} - ${new Date(run.at).toLocaleString()}`}
         />
       ))}
       {/* Pad to 5 if fewer */}
@@ -63,7 +63,7 @@ function PipelineCard({
   config: (typeof sourceConfig)[number];
   source: PipelineSource;
 }) {
-  const lastRun = source.recentRuns[0];
+  const lastRun = source.lastRun;
   const lastStatus = lastRun?.status ?? "skipped";
 
   return (
@@ -96,7 +96,9 @@ function PipelineCard({
             Last Run
           </p>
           <p className="mt-0.5 text-sm font-medium text-on-surface">
-            {source.lastRun ? timeAgo(source.lastRun) : "Never"}
+            {source.lastRun?.startedAt
+              ? timeAgo(source.lastRun.startedAt)
+              : "Never"}
           </p>
         </div>
         <div>
@@ -104,7 +106,9 @@ function PipelineCard({
             Duration
           </p>
           <p className="mt-0.5 text-sm font-medium text-on-surface">
-            {lastRun ? formatDuration(lastRun.durationMs) : "--"}
+            {lastRun?.durationMs != null
+              ? formatDuration(lastRun.durationMs)
+              : "--"}
           </p>
         </div>
         <div>

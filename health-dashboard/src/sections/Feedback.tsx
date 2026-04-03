@@ -118,7 +118,7 @@ function FeedbackDetailPanel({ id }: { id: string }) {
             Browser
           </p>
           <p className="mt-0.5 text-sm text-on-surface">
-            {data.browser || "--"}
+            {data.browser?.userAgent || "--"}
           </p>
         </div>
         <div className="col-span-2">
@@ -135,7 +135,8 @@ function FeedbackDetailPanel({ id }: { id: string }) {
               Session
             </p>
             <p className="mt-0.5 text-sm text-on-surface">
-              {data.sessionSummary}
+              {data.sessionSummary.pageCount} pages &middot;{" "}
+              {Math.round(data.sessionSummary.totalDuration / 1000)}s
             </p>
           </div>
         )}

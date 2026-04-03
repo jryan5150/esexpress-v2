@@ -61,16 +61,26 @@ export interface HealthData {
   timestamp: string;
 }
 
-export interface PipelineSourceRun {
+export interface PipelineLastRun {
+  id: number;
+  source: string;
   startedAt: string;
-  durationMs: number;
-  recordsProcessed: number;
+  completedAt: string | null;
   status: "success" | "error" | "skipped";
+  recordsProcessed: number;
+  durationMs: number | null;
+  error: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+export interface PipelineRecentRun {
+  status: "success" | "error" | "skipped";
+  at: string;
 }
 
 export interface PipelineSource {
-  lastRun: string;
-  recentRuns: PipelineSourceRun[];
+  lastRun: PipelineLastRun | null;
+  recentRuns: PipelineRecentRun[];
 }
 
 export interface PipelineData {
@@ -144,8 +154,16 @@ export interface FeedbackItem {
 
 export interface FeedbackDetail extends FeedbackItem {
   breadcrumbs: FeedbackBreadcrumb[];
-  sessionSummary: string;
-  browser: string;
+  sessionSummary: {
+    pageCount: number;
+    totalDuration: number;
+    pagesVisited: string[];
+  } | null;
+  browser: {
+    userAgent: string;
+    viewport: string;
+    platform: string;
+  } | null;
 }
 
 export interface FeedbackStats {

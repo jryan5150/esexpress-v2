@@ -37,6 +37,14 @@ export function FeedbackWidget() {
     return () => breadcrumbCollector.destroy();
   }, []);
 
+  // Auto-dismiss toast after 4 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   const captureScreenshot = useCallback(async () => {
     setCapturing(true);
     try {

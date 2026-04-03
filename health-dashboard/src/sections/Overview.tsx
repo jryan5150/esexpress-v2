@@ -125,7 +125,7 @@ export function Overview() {
                 const src = pipeline.data[key as keyof typeof pipeline.data];
                 if (!src) return null;
                 const lastStatus =
-                  src.recentRuns[0]?.status === "error" ? "red" : "green";
+                  src.lastRun?.status === "error" ? "red" : "green";
                 return (
                   <li key={key} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -135,7 +135,9 @@ export function Overview() {
                       </span>
                     </div>
                     <span className="font-label text-xs text-on-surface-variant">
-                      {src.lastRun ? timeAgo(src.lastRun) : "never"}
+                      {src.lastRun?.startedAt
+                        ? timeAgo(src.lastRun.startedAt)
+                        : "never"}
                     </span>
                   </li>
                 );
