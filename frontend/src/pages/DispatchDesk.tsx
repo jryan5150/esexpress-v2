@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   useWells,
   useDispatchDeskLoads,
   useBulkApprove,
+  useValidationConfirm,
 } from "../hooks/use-wells";
 import { useMarkEntered, useAdvanceToReady } from "../hooks/use-dispatch-desk";
 import { usePresence, useHeartbeat } from "../hooks/use-presence";
 import { DispatchCard } from "../components/DispatchCard";
+import { PhotoModal } from "../components/PhotoModal";
 import { Pagination } from "../components/Pagination";
 import { Button } from "../components/Button";
 import { useToast } from "../components/Toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { qk } from "../lib/query-client";
 import type { Well } from "../types/api";
 
 export function DispatchDesk() {
@@ -22,6 +26,13 @@ export function DispatchDesk() {
   const [enteredIds, setEnteredIds] = useState<Set<number>>(new Set());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [photoModalLoad, setPhotoModalLoad] = useState<any | null>(null);
+  const [dateFilter, setDateFilter] = useState("");
+
+  const queryClient = useQueryClient();
+  const confirmMutation = useValidationConfirm();
 
   const wellsQuery = useWells();
   const deskQuery = useDispatchDeskLoads(
@@ -67,6 +78,100 @@ export function DispatchDesk() {
       !enteredIds.has(l.assignmentId),
   );
   const activeLoads = [...readyLoads, ...assignedLoads, ...pendingLoads];
+
+  // Filter loads by active tab
+  const filteredLoads = (() => {
+    switch (activeFilter) {
+      case "pending":
+        return allLoads.filter((l) => l.assignmentStatus === "pending");
+      case "assigned":
+        return allLoads.filter((l) => l.assignmentStatus === "assigned");
+      case "ready":
+        return allLoads.filter((l) => l.assignmentStatus === "dispatch_ready");
+      case "validated":
+        return allLoads.filter(
+          (l) =>
+            l.assignmentStatus === "dispatched" ||
+            l.assignmentStatus === "delivered",
+        );
+      default:
+        return allLoads;
+    }
+  })();
+
+  const filterCounts = {
+    all: allLoads.length,
+    pending: allLoads.filter((l) => l.assignmentStatus === "pending").length,
+    assigned: allLoads.filter((l) => l.assignmentStatus === "assigned").length,
+    ready: allLoads.filter((l) => l.assignmentStatus === "dispatch_ready")
+      .length,
+    validated: allLoads.filter(
+      (l) =>
+        l.assignmentStatus === "dispatched" ||
+        l.assignmentStatus === "delivered",
+    ).length,
+  };
+
+  const getValidationStatus = (
+    load: any,
+  ): "validated" | "pending" | "missing" => {
+    if (
+      load.assignmentStatus === "dispatched" ||
+      load.assignmentStatus === "delivered"
+    )
+      return "validated";
+    if (!load.ticketNo) return "missing";
+    return "pending";
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkValidate = () => {
+    const ids = Array.from(selectedIds);
+    let completed = 0;
+    ids.forEach((id) => {
+      confirmMutation.mutate(
+        { assignmentId: id },
+        {
+          onSuccess: () => {
+            completed++;
+            if (completed === ids.length) {
+              toast(`${ids.length} loads validated`, "success");
+              setSelectedIds(new Set());
+              queryClient.invalidateQueries({ queryKey: qk.validation.all });
+              queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+              queryClient.invalidateQueries({ queryKey: qk.wells.all });
+            }
+          },
+          onError: (err) =>
+            toast(`Validate failed: ${(err as Error).message}`, "error"),
+        },
+      );
+    });
+  };
+
+  const handleValidateSingle = (assignmentId: number) => {
+    confirmMutation.mutate(
+      { assignmentId },
+      {
+        onSuccess: () => {
+          toast("Load validated", "success");
+          queryClient.invalidateQueries({ queryKey: qk.validation.all });
+          queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+          queryClient.invalidateQueries({ queryKey: qk.wells.all });
+        },
+        onError: (err) =>
+          toast(`Validate failed: ${(err as Error).message}`, "error"),
+      },
+    );
+  };
 
   const handleSelectWell = (wellId: string) => {
     setSearchParams(wellId ? { wellId } : {});
@@ -218,59 +323,127 @@ export function DispatchDesk() {
         </div>
 
         {selectedWellId && (
-          <div className="flex items-center justify-between pt-2 border-t border-on-surface/5">
-            <div className="flex items-center gap-4">
-              <span className="font-headline font-bold text-on-surface text-lg">
-                {wellName}
-              </span>
-              <span className="font-label text-sm text-on-surface/50">
-                {pendingLoads.length} pending &middot; {assignedLoads.length}{" "}
-                assigned &middot; {readyLoads.length} ready &middot;{" "}
-                {enteredIds.size} entered
-              </span>
-              {/* Live presence — who's on this well */}
-              {usersOnThisWell.length > 0 && (
-                <div className="flex items-center gap-2 bg-surface-container-high/50 px-3 py-1 rounded-full">
-                  {usersOnThisWell.map((u: any) => (
-                    <div key={u.userId} className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(13,150,104,0.5)]" />
-                      <span className="text-xs text-on-surface/70 font-label">
-                        {u.userName?.split(" ")[0] || "User"}
-                      </span>
-                    </div>
-                  ))}
+          <>
+            {/* Well name + presence + actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-on-surface/5">
+              <div className="flex items-center gap-4">
+                <span className="font-headline font-bold text-on-surface text-lg">
+                  {wellName}
+                </span>
+                {usersOnThisWell.length > 0 && (
+                  <div className="flex items-center gap-2 bg-surface-container-high/50 px-3 py-1 rounded-full">
+                    {usersOnThisWell.map((u: any) => (
+                      <div key={u.userId} className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(13,150,104,0.5)]" />
+                        <span className="text-xs text-on-surface/70 font-label">
+                          {u.userName?.split(" ")[0] || "User"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 bg-surface-container-high rounded-lg px-3 py-2">
+                  <span className="material-symbols-outlined text-on-surface/40 text-sm">
+                    calendar_today
+                  </span>
+                  <input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    className="bg-transparent text-xs font-label text-on-surface/70 focus:outline-none cursor-pointer"
+                  />
                 </div>
-              )}
-            </div>
-            <div className="flex gap-3">
-              {assignedLoads.length > 0 && (
+                {assignedLoads.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    icon="upgrade"
+                    onClick={handleAdvanceAll}
+                    disabled={advanceToReady.isPending}
+                  >
+                    Advance All ({assignedLoads.length})
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
-                  icon="upgrade"
-                  onClick={handleAdvanceAll}
-                  disabled={advanceToReady.isPending}
+                  icon="folder_zip"
+                  onClick={handleDownloadZip}
+                  disabled={activeLoads.length === 0}
                 >
-                  Advance All ({assignedLoads.length})
+                  Download Photos
                 </Button>
-              )}
-              <Button
-                variant="secondary"
-                icon="folder_zip"
-                onClick={handleDownloadZip}
-                disabled={activeLoads.length === 0}
-              >
-                Download Photos
-              </Button>
-              <Button
-                variant="primary"
-                icon="done_all"
-                onClick={handleMarkAll}
-                disabled={readyLoads.length === 0 || markEntered.isPending}
-              >
-                Mark All Entered ({readyLoads.length})
-              </Button>
+                <Button
+                  variant="primary"
+                  icon="done_all"
+                  onClick={handleMarkAll}
+                  disabled={readyLoads.length === 0 || markEntered.isPending}
+                >
+                  Mark All Entered ({readyLoads.length})
+                </Button>
+              </div>
             </div>
-          </div>
+
+            {/* Filter tabs */}
+            <div className="flex items-center justify-between">
+              <div className="flex gap-1">
+                {(
+                  ["all", "pending", "assigned", "ready", "validated"] as const
+                ).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setActiveFilter(filter)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all cursor-pointer ${
+                      activeFilter === filter
+                        ? "bg-primary-container/10 text-primary-container"
+                        : "text-on-surface/40 hover:bg-surface-container-high hover:text-on-surface/60"
+                    }`}
+                  >
+                    {filter}{" "}
+                    <span className="font-label opacity-60">
+                      {filterCounts[filter]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-4 text-[10px] text-on-surface/40 font-label">
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-tertiary" />
+                  {filterCounts.validated} validated
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary-container" />
+                  {filterCounts.ready} ready
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-on-surface/30" />
+                  {filterCounts.pending} pending
+                </span>
+              </div>
+            </div>
+
+            {/* Bulk validate bar */}
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-3 pt-3 border-t border-on-surface/5">
+                <button
+                  onClick={handleBulkValidate}
+                  disabled={confirmMutation.isPending}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide bg-tertiary/10 text-tertiary hover:bg-tertiary/20 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    verified
+                  </span>
+                  Validate Selected ({selectedIds.size})
+                </button>
+                <button
+                  onClick={() => setSelectedIds(new Set())}
+                  className="text-xs text-on-surface/40 hover:text-on-surface/60 cursor-pointer"
+                >
+                  Clear selection
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -324,7 +497,7 @@ export function DispatchDesk() {
                   <button
                     key={w.id}
                     onClick={() => handleSelectWell(w.id)}
-                    className="w-full bg-surface-container-lowest hover:bg-surface-container-high rounded-xl p-5 flex items-center justify-between transition-all cursor-pointer group border border-on-surface/5 text-left"
+                    className="w-full bg-surface-container-lowest hover:bg-surface-container-high rounded-xl p-5 flex items-center justify-between transition-all cursor-pointer group border border-on-surface/5 text-left hover-lift"
                   >
                     <div className="flex items-center gap-4">
                       <div
@@ -398,143 +571,107 @@ export function DispatchDesk() {
         </div>
       )}
 
-      {/* Pending approval loads */}
-      {pendingLoads.length > 0 && (
+      {/* Filtered Load List */}
+      {selectedWellId && filteredLoads.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
-              Pending Approval{" "}
-              <span className="text-primary-container">
-                {pendingLoads.length} auto-mapped loads
-              </span>
-            </h3>
-            <Button
-              variant="primary"
-              icon="done_all"
-              onClick={handleApproveAll}
-              disabled={bulkApprove.isPending}
-            >
-              Approve All ({pendingLoads.length})
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {pendingLoads.slice(0, 50).map((load) => (
-              <DispatchCard
+          {filteredLoads.map((load, idx) => {
+            const validationStatus = getValidationStatus(load);
+            const isValidated = validationStatus === "validated";
+            const isMissing = validationStatus === "missing";
+            return (
+              <div
                 key={load.assignmentId}
-                loadNo={load.loadNo}
-                pcsNumber={null}
-                driverName={load.driverName}
-                truckNo={load.truckNo}
-                carrierName={load.carrierName}
-                productDescription={load.productDescription}
-                weightTons={load.weightTons}
-                bolNo={load.bolNo}
-                ticketNo={load.ticketNo}
-                wellName={load.wellName}
-                photoStatus={load.photoStatus}
-                canEnter={false}
-                entered={false}
-                onMarkEntered={() => {}}
-                isPending={false}
-                loadId={load.loadId}
-                deliveredOn={load.deliveredOn}
-                photoUrls={(load as any).photoUrls}
-              />
-            ))}
-            {pendingLoads.length > 50 && (
-              <div className="text-center py-4 text-on-surface/30 text-sm font-label">
-                Showing 50 of {pendingLoads.length} pending loads. Approve all
-                to continue.
+                className={`relative transition-opacity duration-200 ${!isValidated && !enteredIds.has(load.assignmentId) ? "opacity-60" : ""}`}
+              >
+                {/* Validation badge overlay */}
+                <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(load.assignmentId)}
+                    onChange={() => toggleSelect(load.assignmentId)}
+                    disabled={isMissing}
+                    className="w-4 h-4 rounded border-on-surface/20 accent-primary-container cursor-pointer"
+                  />
+                  <div
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      isValidated
+                        ? "bg-tertiary/10 text-tertiary"
+                        : isMissing
+                          ? "bg-error/10 text-error"
+                          : "bg-primary-container/10 text-primary-container"
+                    }`}
+                  >
+                    <span
+                      className="material-symbols-outlined text-xs"
+                      style={{
+                        fontVariationSettings: isValidated
+                          ? "'FILL' 1"
+                          : "'FILL' 0",
+                      }}
+                    >
+                      {isValidated
+                        ? "verified"
+                        : isMissing
+                          ? "warning"
+                          : "schedule"}
+                    </span>
+                    {isValidated
+                      ? "Validated"
+                      : isMissing
+                        ? "Missing Ticket"
+                        : "Pending"}
+                  </div>
+                </div>
+
+                <DispatchCard
+                  loadNo={load.loadNo}
+                  pcsNumber={
+                    activeFilter === "ready" && pcsStart
+                      ? parseInt(pcsStart) + idx
+                      : null
+                  }
+                  driverName={load.driverName}
+                  truckNo={load.truckNo}
+                  carrierName={load.carrierName}
+                  productDescription={load.productDescription}
+                  weightTons={load.weightTons}
+                  bolNo={load.bolNo}
+                  ticketNo={load.ticketNo}
+                  wellName={load.wellName}
+                  photoStatus={load.photoStatus}
+                  canEnter={load.canEnter}
+                  entered={enteredIds.has(load.assignmentId)}
+                  onMarkEntered={() => handleMarkSingle(load.assignmentId)}
+                  isPending={markEntered.isPending}
+                  loadId={load.loadId}
+                  deliveredOn={load.deliveredOn}
+                  photoUrls={(load as any).photoUrls}
+                />
               </div>
-            )}
-          </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Assigned loads section (need to advance to dispatch_ready) */}
-      {assignedLoads.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
-              Assigned{" "}
-              <span className="text-primary-container">
-                needs advance to dispatch ready
-              </span>
-            </h3>
-            <Button
-              variant="secondary"
-              icon="upgrade"
-              onClick={handleAdvanceAll}
-              disabled={advanceToReady.isPending}
-            >
-              Advance All ({assignedLoads.length})
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {assignedLoads.map((load, idx) => (
-              <DispatchCard
-                key={load.assignmentId}
-                loadNo={load.loadNo}
-                pcsNumber={null}
-                driverName={load.driverName}
-                truckNo={load.truckNo}
-                carrierName={load.carrierName}
-                productDescription={load.productDescription}
-                weightTons={load.weightTons}
-                bolNo={load.bolNo}
-                ticketNo={load.ticketNo}
-                wellName={load.wellName}
-                photoStatus={load.photoStatus}
-                canEnter={false}
-                entered={false}
-                onMarkEntered={() => {}}
-                isPending={false}
-                loadId={load.loadId}
-                deliveredOn={load.deliveredOn}
-                photoUrls={(load as any).photoUrls}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Dispatch Ready loads (can be marked as entered) */}
-      {readyLoads.length > 0 && (
-        <div className="space-y-3">
-          {assignedLoads.length > 0 && (
-            <div className="px-2">
-              <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
-                Dispatch Ready{" "}
-                <span className="text-tertiary">ready for PCS entry</span>
-              </h3>
-            </div>
-          )}
-          <div className="space-y-4">
-            {readyLoads.map((load, idx) => (
-              <DispatchCard
-                key={load.assignmentId}
-                loadNo={load.loadNo}
-                pcsNumber={pcsStart ? parseInt(pcsStart) + idx : null}
-                driverName={load.driverName}
-                truckNo={load.truckNo}
-                carrierName={load.carrierName}
-                productDescription={load.productDescription}
-                weightTons={load.weightTons}
-                bolNo={load.bolNo}
-                ticketNo={load.ticketNo}
-                wellName={load.wellName}
-                photoStatus={load.photoStatus}
-                canEnter={load.canEnter}
-                entered={enteredIds.has(load.assignmentId)}
-                onMarkEntered={() => handleMarkSingle(load.assignmentId)}
-                isPending={markEntered.isPending}
-                loadId={load.loadId}
-                deliveredOn={load.deliveredOn}
-                photoUrls={(load as any).photoUrls}
-              />
-            ))}
-          </div>
-        </div>
+      {/* Photo Modal */}
+      {photoModalLoad && (
+        <PhotoModal
+          photoUrls={photoModalLoad.photoUrls || []}
+          loadNo={photoModalLoad.loadNo}
+          wellName={photoModalLoad.wellName}
+          bolNo={photoModalLoad.bolNo}
+          driverName={photoModalLoad.driverName}
+          truckNo={photoModalLoad.truckNo}
+          carrierName={photoModalLoad.carrierName}
+          weightTons={photoModalLoad.weightTons}
+          ticketNo={photoModalLoad.ticketNo}
+          autoMapScore={photoModalLoad.autoMapScore || null}
+          onClose={() => setPhotoModalLoad(null)}
+          onValidate={() => {
+            handleValidateSingle(photoModalLoad.assignmentId);
+            setPhotoModalLoad(null);
+          }}
+        />
       )}
 
       {/* Pagination */}
