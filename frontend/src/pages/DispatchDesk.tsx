@@ -277,7 +277,7 @@ export function DispatchDesk() {
   const wellName = selectedWell?.name ?? "";
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
+    <div className="p-6 space-y-4 max-w-6xl">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="border-l-4 border-primary-container pl-5">
@@ -301,10 +301,10 @@ export function DispatchDesk() {
       </div>
 
       {/* Well Selector + PCS Start */}
-      <div className="bg-surface-container-low rounded-xl p-6 space-y-4 border border-on-surface/5">
-        <div className="flex flex-wrap items-end gap-6">
+      <div className="bg-surface-container-low rounded-xl p-5 space-y-3 ring-1 ring-on-surface/5 shadow-sm">
+        <div className="flex flex-wrap items-end gap-4">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-[10px] font-label font-bold uppercase tracking-[0.15em] text-on-surface/35 mb-2">
+            <label className="block text-[10px] font-label font-bold uppercase tracking-[0.15em] text-on-surface/35 mb-1.5">
               Select Well
             </label>
             <div className="relative">
@@ -327,7 +327,7 @@ export function DispatchDesk() {
           </div>
 
           <div className="w-48">
-            <label className="block text-[10px] font-label font-bold uppercase tracking-[0.15em] text-on-surface/35 mb-2">
+            <label className="block text-[10px] font-label font-bold uppercase tracking-[0.15em] text-on-surface/35 mb-1.5">
               PCS Starting #
             </label>
             <input
@@ -343,7 +343,7 @@ export function DispatchDesk() {
         {selectedWellId && (
           <>
             {/* Well name + presence + actions */}
-            <div className="flex items-center justify-between pt-3 border-t border-on-surface/5">
+            <div className="flex items-center justify-between pt-3">
               <div className="flex items-center gap-4">
                 <span className="font-headline font-bold text-on-surface text-lg">
                   {wellName}
@@ -403,22 +403,24 @@ export function DispatchDesk() {
             </div>
 
             {/* Filter tabs */}
-            <div className="flex items-center justify-between bg-surface-container-high/40 rounded-lg p-1">
-              <div className="flex gap-0.5">
+            <div className="flex items-center justify-between bg-surface-container-high/50 rounded-lg p-0.5">
+              <div className="flex">
                 {(
                   ["all", "pending", "assigned", "ready", "validated"] as const
                 ).map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setActiveFilter(filter)}
-                    className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all cursor-pointer ${
+                    className={`px-4 py-2 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
                       activeFilter === filter
-                        ? "bg-surface-container-lowest text-primary-container shadow-sm"
-                        : "text-on-surface/40 hover:text-on-surface/60"
+                        ? filter === "validated"
+                          ? "bg-tertiary/10 text-tertiary shadow-sm"
+                          : "bg-surface-container-lowest text-primary-container shadow-sm"
+                        : "text-on-surface/35 hover:text-on-surface/60 hover:bg-surface-container-lowest/50"
                     }`}
                   >
-                    {filter}{" "}
-                    <span className="font-label opacity-60">
+                    {filter}
+                    <span className="font-label ml-1.5 opacity-50 tabular-nums">
                       {filterCounts[filter]}
                     </span>
                   </button>
@@ -442,7 +444,7 @@ export function DispatchDesk() {
 
             {/* Bulk validate bar */}
             {selectedIds.size > 0 && (
-              <div className="flex items-center gap-3 pt-3 border-t border-on-surface/5">
+              <div className="flex items-center gap-3 pt-3 bg-surface-container-high/20 -mx-5 px-5 -mb-1 pb-3 rounded-b-xl">
                 <button
                   onClick={handleBulkValidate}
                   disabled={confirmMutation.isPending}
@@ -515,14 +517,14 @@ export function DispatchDesk() {
                   <button
                     key={w.id}
                     onClick={() => handleSelectWell(w.id)}
-                    className={`w-full bg-surface-container-lowest hover:bg-surface-container-high rounded-xl p-5 flex items-center justify-between transition-all cursor-pointer group border border-on-surface/5 text-left hover-lift border-l-4 ${w.ready > 0 ? "border-l-tertiary" : w.assigned > 0 ? "border-l-primary-container" : "border-l-on-surface/10"}`}
+                    className={`w-full bg-surface-container-lowest hover:bg-surface-container-high rounded-xl px-5 py-3.5 flex items-center justify-between transition-all cursor-pointer group ring-1 ring-on-surface/5 text-left hover-lift border-l-4 ${w.ready > 0 ? "border-l-tertiary" : w.assigned > 0 ? "border-l-primary-container" : "border-l-on-surface/10"}`}
                   >
                     <div className="flex items-center gap-4">
                       <div>
                         <h4 className="font-headline font-bold text-on-surface text-lg group-hover:text-primary-container transition-colors">
                           {w.name}
                         </h4>
-                        <span className="font-label text-xs text-on-surface/35 tracking-wide">
+                        <span className="font-label text-xs text-on-surface/35 tracking-wide tabular-nums">
                           {w.totalLoads} total loads
                         </span>
                       </div>
@@ -530,7 +532,7 @@ export function DispatchDesk() {
                     <div className="flex items-center gap-5">
                       {w.ready > 0 && (
                         <div className="text-right bg-tertiary/5 px-3 py-1.5 rounded-lg">
-                          <span className="font-label text-lg font-bold text-tertiary leading-none">
+                          <span className="font-label text-lg font-bold text-tertiary leading-none tabular-nums">
                             {w.ready}
                           </span>
                           <span className="text-[9px] uppercase font-bold text-tertiary/60 block tracking-wider mt-0.5">
@@ -540,7 +542,7 @@ export function DispatchDesk() {
                       )}
                       {w.assigned > 0 && (
                         <div className="text-right bg-primary-container/5 px-3 py-1.5 rounded-lg">
-                          <span className="font-label text-lg font-bold text-primary-container leading-none">
+                          <span className="font-label text-lg font-bold text-primary-container leading-none tabular-nums">
                             {w.assigned}
                           </span>
                           <span className="text-[9px] uppercase font-bold text-primary-container/60 block tracking-wider mt-0.5">
@@ -588,7 +590,7 @@ export function DispatchDesk() {
 
       {/* Filtered Load List */}
       {selectedWellId && filteredLoads.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filteredLoads.map((load, idx) => {
             const validationStatus = getValidationStatus(load);
             const isValidated = validationStatus === "validated";
@@ -596,10 +598,16 @@ export function DispatchDesk() {
             return (
               <div
                 key={load.assignmentId}
-                className={`relative transition-opacity duration-200 ${!isValidated && !enteredIds.has(load.assignmentId) ? "opacity-60" : ""}`}
+                className={`relative transition-all duration-200 rounded-xl overflow-hidden ${
+                  isValidated
+                    ? "ring-1 ring-tertiary/20 shadow-[inset_4px_0_0_0_var(--color-tertiary)]"
+                    : isMissing
+                      ? "ring-1 ring-error/20 shadow-[inset_4px_0_0_0_var(--color-error)]"
+                      : ""
+                } ${!isValidated && !enteredIds.has(load.assignmentId) ? "opacity-60" : ""}`}
               >
                 {/* Validation badge overlay */}
-                <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
+                <div className="absolute top-2.5 left-3 z-10 flex items-center gap-2">
                   <input
                     type="checkbox"
                     checked={selectedIds.has(load.assignmentId)}
@@ -608,11 +616,11 @@ export function DispatchDesk() {
                     className="w-4 h-4 rounded border-on-surface/20 accent-primary-container cursor-pointer"
                   />
                   <div
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
                       isValidated
-                        ? "bg-tertiary/10 text-tertiary"
+                        ? "bg-tertiary/15 text-tertiary"
                         : isMissing
-                          ? "bg-error/10 text-error"
+                          ? "bg-error/15 text-error animate-pulse"
                           : "bg-primary-container/10 text-primary-container"
                     }`}
                   >

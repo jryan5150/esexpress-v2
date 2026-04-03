@@ -21,10 +21,10 @@ interface PhotoModalProps {
 function InfoField({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface/30 block">
+      <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface/30 block leading-tight">
         {label}
       </span>
-      <p className="text-sm text-on-surface font-label mt-0.5">
+      <p className="text-[13px] text-on-surface font-label font-semibold mt-0.5 tabular-nums">
         {value || <span className="text-on-surface/20">--</span>}
       </p>
     </div>
@@ -85,11 +85,11 @@ export function PhotoModal({
       onClick={onClose}
     >
       <div
-        className="bg-surface-container rounded-2xl w-[72vw] max-w-5xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col border border-on-surface/5"
+        className="bg-surface-container rounded-2xl w-[72vw] max-w-5xl max-h-[85vh] overflow-hidden shadow-[0_25px_60px_-12px_rgba(0,0,0,0.25)] flex flex-col ring-1 ring-on-surface/5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-surface-container-high/60 border-b border-on-surface/5">
+        <div className="flex items-center justify-between px-6 py-4 bg-surface-container-high/40">
           <div className="flex items-center gap-4">
             <div className="bg-primary-container/10 p-2 rounded-lg">
               <span className="material-symbols-outlined text-primary-container text-lg">
@@ -97,17 +97,17 @@ export function PhotoModal({
               </span>
             </div>
             <div>
-              <span className="font-label font-bold text-on-surface text-base">
+              <span className="font-label font-bold text-on-surface text-base tabular-nums">
                 BOL #{bolNo || "--"}
               </span>
-              <span className="text-xs text-on-surface/35 ml-3 font-label">
+              <span className="text-xs text-on-surface/35 ml-3 font-label tabular-nums">
                 Load {loadNo} &middot; {wellName}
               </span>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-on-surface/30 hover:text-on-surface hover:bg-surface-container-high p-1.5 rounded-lg transition-all cursor-pointer"
+            className="text-on-surface/30 hover:text-on-surface hover:bg-surface-container-high p-2 rounded-lg transition-all duration-150 cursor-pointer active:scale-95 hover:rotate-90"
           >
             <span className="material-symbols-outlined text-xl">close</span>
           </button>
@@ -134,7 +134,7 @@ export function PhotoModal({
           </div>
 
           {/* Info panel */}
-          <div className="w-72 bg-surface-container-low p-6 space-y-5 overflow-y-auto border-l border-on-surface/5">
+          <div className="w-72 bg-surface-container-low/80 p-5 space-y-4 overflow-y-auto">
             <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface/30">
               Load Details
             </h4>
@@ -162,7 +162,7 @@ export function PhotoModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 bg-surface-container-high/60 border-t border-on-surface/5">
+        <div className="flex items-center justify-between px-6 py-3.5 bg-surface-container-high/40">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -172,7 +172,7 @@ export function PhotoModal({
             >
               Previous
             </Button>
-            <span className="font-label text-xs text-on-surface/40">
+            <span className="font-label text-xs text-on-surface/40 tabular-nums">
               {photoUrls.length > 0
                 ? `${currentIndex + 1} of ${photoUrls.length}`
                 : "No photos"}
@@ -199,7 +199,7 @@ export function PhotoModal({
             {showValidateButton && onValidate && (
               <button
                 onClick={onValidate}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide bg-tertiary text-on-tertiary hover:bg-tertiary/90 transition-colors cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide bg-tertiary text-on-tertiary hover:brightness-110 transition-all duration-150 cursor-pointer shadow-md shadow-tertiary/20 hover:shadow-lg hover:shadow-tertiary/30 active:scale-[0.97]"
               >
                 <span
                   className="material-symbols-outlined text-sm"

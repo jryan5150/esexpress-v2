@@ -9,11 +9,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const styles: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary-container text-on-primary-container hover:brightness-110 shadow-md shadow-primary-container/15 active:scale-[0.98]",
+    "bg-primary-container text-on-primary-container hover:brightness-110 shadow-md shadow-primary-container/20 active:scale-[0.97] active:shadow-sm hover:shadow-lg hover:shadow-primary-container/25",
   secondary:
-    "bg-surface-container-high text-on-surface/80 border border-on-surface/10 hover:bg-surface-container-highest hover:border-on-surface/15 hover:text-on-surface",
+    "bg-surface-container-high text-on-surface/70 border border-on-surface/8 hover:bg-surface-container-highest hover:border-on-surface/15 hover:text-on-surface active:scale-[0.98]",
   ghost:
-    "bg-transparent text-on-surface/50 hover:text-on-surface/80 hover:bg-surface-container-high/60",
+    "bg-transparent text-on-surface/50 hover:text-on-surface/80 hover:bg-surface-container-high/60 active:scale-[0.98]",
 };
 
 export function Button({

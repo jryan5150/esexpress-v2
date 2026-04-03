@@ -63,7 +63,7 @@ export function ExceptionFeed() {
 
   return (
     <>
-      <div className="p-8 space-y-8 max-w-7xl">
+      <div className="p-6 space-y-6 max-w-7xl">
         {/* API Error Banner */}
         {isError && (
           <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 flex items-center gap-3">
@@ -97,7 +97,7 @@ export function ExceptionFeed() {
           {pendingReview > 0 && (
             <button
               onClick={() => navigate("/validation")}
-              className="md:col-span-1 bg-surface-container-low rounded-xl p-8 border-l-4 border-primary-container relative overflow-hidden group text-left transition-all hover:bg-surface-container-high cursor-pointer"
+              className="md:col-span-1 bg-surface-container-low rounded-xl p-6 border-l-4 border-primary-container relative overflow-hidden group text-left transition-all hover:bg-surface-container-high cursor-pointer"
             >
               <div className="absolute -right-8 -bottom-8 w-48 h-48 bg-primary-container/5 rounded-full blur-3xl group-hover:bg-primary-container/10 transition-all duration-700" />
               <div className="relative z-10 space-y-3">
@@ -109,7 +109,7 @@ export function ExceptionFeed() {
                     Needs Attention
                   </span>
                 </div>
-                <div className="font-label text-5xl font-bold text-on-surface">
+                <div className="font-label text-5xl font-black text-on-surface tabular-nums">
                   {validationQuery.isLoading ? "..." : pendingReview}
                 </div>
                 <p className="text-xs text-on-surface/40 font-medium">
@@ -127,7 +127,7 @@ export function ExceptionFeed() {
 
           {/* System Handled — secondary */}
           <div
-            className={`${pendingReview > 0 ? "md:col-span-2" : "md:col-span-3"} bg-surface-container-low rounded-xl p-8 border-l-4 border-tertiary relative overflow-hidden group`}
+            className={`${pendingReview > 0 ? "md:col-span-2" : "md:col-span-3"} bg-surface-container-low rounded-xl p-6 border-l-4 border-tertiary relative overflow-hidden group`}
           >
             <div className="absolute -right-12 -top-12 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl group-hover:bg-tertiary/10 transition-all duration-700" />
             <div className="relative z-10 space-y-5">
@@ -168,7 +168,7 @@ export function ExceptionFeed() {
                       </span>
                     </div>
                     <div>
-                      <div className="font-label text-3xl font-bold text-on-surface leading-none">
+                      <div className="font-label text-3xl font-bold text-on-surface leading-none tabular-nums">
                         {item.value}
                       </div>
                       <div className="text-[10px] uppercase font-bold text-on-surface/35 tracking-wider mt-1">
@@ -193,7 +193,7 @@ export function ExceptionFeed() {
             </h3>
           </div>
 
-          <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/8">
+          <div className="space-y-[1px] bg-on-surface/4 rounded-xl overflow-hidden ring-1 ring-on-surface/5">
             {isLoading ? (
               <>
                 {[1, 2, 3].map((i) => (
@@ -231,7 +231,7 @@ export function ExceptionFeed() {
                 <div
                   key={well.id}
                   onClick={() => navigate(`/dispatch-desk?wellId=${well.id}`)}
-                  className="bg-surface-container-low hover:bg-surface-container-high transition-all group cursor-pointer flex flex-col md:flex-row md:items-center p-6 gap-6 hover-lift"
+                  className="bg-surface-container-low hover:bg-surface-container-high transition-all group cursor-pointer flex flex-col md:flex-row md:items-center px-6 py-4 gap-5 hover-lift"
                 >
                   <div
                     className={`md:w-72 border-l-4 pl-4 ${getBorderColor(well.ready, well.totalLoads)}`}
@@ -239,7 +239,7 @@ export function ExceptionFeed() {
                     <h4 className="font-headline font-bold text-lg text-on-surface group-hover:text-primary-container transition-colors">
                       {well.name}
                     </h4>
-                    <span className="font-label text-xs text-on-surface/40 tracking-wide">
+                    <span className="font-label text-xs text-on-surface/40 tracking-wide tabular-nums">
                       {well.totalLoads} Loads
                     </span>
                   </div>
@@ -257,7 +257,7 @@ export function ExceptionFeed() {
                             }}
                           />
                         </div>
-                        <span className="font-label text-sm font-bold">
+                        <span className="font-label text-sm font-bold tabular-nums">
                           {well.ready}
                         </span>
                       </div>
@@ -275,7 +275,7 @@ export function ExceptionFeed() {
                             }}
                           />
                         </div>
-                        <span className="font-label text-sm font-bold text-tertiary">
+                        <span className="font-label text-sm font-bold text-tertiary tabular-nums">
                           {well.validated}/{well.totalLoads}
                         </span>
                       </div>
@@ -337,8 +337,8 @@ export function ExceptionFeed() {
 
         {/* Bottom Insights */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="col-span-1 md:col-span-2 bg-surface-container-low p-6 rounded-xl border border-on-surface/5">
-            <div className="flex justify-between items-center mb-6">
+          <div className="col-span-1 md:col-span-2 bg-surface-container-low p-5 rounded-xl ring-1 ring-on-surface/5">
+            <div className="flex justify-between items-center mb-4">
               <h4 className="text-xs uppercase font-black text-on-surface/40 tracking-[0.15em]">
                 Dispatch Pipeline
               </h4>
@@ -375,7 +375,7 @@ export function ExceptionFeed() {
               ].map((item) => (
                 <div key={item.label} className="text-center space-y-2.5">
                   <div
-                    className={`font-label text-2xl font-bold ${item.textColor}`}
+                    className={`font-label text-2xl font-bold tabular-nums ${item.textColor}`}
                   >
                     {isLoading ? "..." : item.count}
                   </div>

@@ -57,15 +57,15 @@ function Field({ label, value }: { label: string; value: string | null }) {
 
   return (
     <div
-      className="flex items-center justify-between py-1.5 px-2 hover:bg-surface-container-high/30 rounded transition-colors group cursor-pointer"
+      className="flex items-center justify-between py-1 px-2 hover:bg-surface-container-high/30 rounded transition-colors group cursor-pointer"
       onClick={handleCopy}
     >
       <div className="min-w-0">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface/30 block">
+        <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface/30 block leading-tight">
           {label}
         </span>
         <span
-          className={`font-label text-sm block truncate ${value ? "text-on-surface" : "text-on-surface/15"}`}
+          className={`font-label text-[13px] font-semibold block truncate tabular-nums ${value ? "text-on-surface" : "text-on-surface/15"}`}
         >
           {display}
         </span>
@@ -121,19 +121,23 @@ export function DispatchCard({
   return (
     <>
       <div
-        className={`bg-surface-container-lowest rounded-xl overflow-hidden border border-on-surface/5 transition-all ${entered ? "opacity-40" : ""}`}
+        className={`bg-surface-container-lowest rounded-xl overflow-hidden ring-1 ring-on-surface/5 transition-all hover-lift ${entered ? "opacity-40" : ""}`}
       >
         {/* Header — load ID + timeline + photo status */}
-        <div className="px-5 py-3.5 bg-surface-container-high/30 border-b border-on-surface/5 space-y-2.5">
+        <div className="px-5 py-2.5 bg-surface-container-high/20 space-y-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="font-label text-xl font-bold text-primary-container tracking-tight">
+              <span className="font-headline text-base font-bold text-on-surface tracking-tight">
+                {wellName}
+              </span>
+              <span className="text-on-surface/10">--</span>
+              <span className="font-label text-base font-bold text-primary-container tracking-tight">
                 {loadNo}
               </span>
               {pcsNumber && (
                 <>
                   <span className="text-on-surface/10 font-light">|</span>
-                  <span className="font-label text-sm text-on-surface/40">
+                  <span className="font-label text-xs text-on-surface/35">
                     PCS #{pcsNumber}
                   </span>
                 </>
@@ -147,7 +151,7 @@ export function DispatchCard({
                 >
                   {photoIcon}
                 </span>
-                <span className="font-label text-[10px] text-on-surface/40 uppercase tracking-wide">
+                <span className="font-label text-[10px] font-medium text-on-surface/40 uppercase tracking-[0.1em]">
                   {photoStatus || "missing"}
                 </span>
               </div>
@@ -159,34 +163,34 @@ export function DispatchCard({
             </div>
           </div>
           {/* Timeline row */}
-          <div className="flex items-center gap-5 text-xs">
+          <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-sm text-on-surface/25">
                 local_shipping
               </span>
-              <span className="text-[9px] font-bold uppercase text-on-surface/25">
+              <span className="text-[9px] font-label font-medium uppercase tracking-[0.1em] text-on-surface/25">
                 Pickup
               </span>
-              <span className="font-label text-on-surface/70">
+              <span className="font-label text-[11px] text-on-surface/60 tabular-nums">
                 {formatDeliveryTime(pickupTime)}
               </span>
             </div>
-            <span className="material-symbols-outlined text-on-surface/15 text-xs">
-              arrow_forward
+            <span className="material-symbols-outlined text-on-surface/10 text-[10px]">
+              east
             </span>
             <div className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-sm text-on-surface/25">
                 pin_drop
               </span>
-              <span className="text-[9px] font-bold uppercase text-on-surface/25">
+              <span className="text-[9px] font-label font-medium uppercase tracking-[0.1em] text-on-surface/25">
                 Arrived
               </span>
-              <span className="font-label text-on-surface/70">
+              <span className="font-label text-[11px] text-on-surface/60 tabular-nums">
                 {formatDeliveryTime(arrivalTime)}
               </span>
             </div>
-            <span className="material-symbols-outlined text-on-surface/15 text-xs">
-              arrow_forward
+            <span className="material-symbols-outlined text-on-surface/10 text-[10px]">
+              east
             </span>
             <div className="flex items-center gap-1.5">
               <span
@@ -195,10 +199,10 @@ export function DispatchCard({
               >
                 check_circle
               </span>
-              <span className="text-[9px] font-bold uppercase text-on-surface/25">
+              <span className="text-[9px] font-label font-medium uppercase tracking-[0.1em] text-on-surface/25">
                 Delivered
               </span>
-              <span className="font-label font-bold text-on-surface">
+              <span className="font-label text-[11px] font-bold text-on-surface tabular-nums">
                 {formatDeliveryTime(deliveredOn)}
               </span>
             </div>
@@ -208,31 +212,30 @@ export function DispatchCard({
         {/* Body — two columns: fields left, photos right */}
         <div className="flex">
           {/* Left: load fields */}
-          <div className="flex-1 p-4 space-y-0.5">
+          <div className="flex-1 px-4 py-2.5 space-y-0">
+            <Field label="BOL #" value={bolNo} />
+            <Field label="Ticket #" value={ticketNo} />
             <Field label="Driver" value={driverName} />
             <Field label="Carrier" value={carrierName} />
             <Field label="Truck #" value={truckNo} />
-            <Field label="Well" value={wellName} />
             <Field label="Product" value={productDescription} />
             <Field label="Weight (tons)" value={weightTons} />
-            <Field label="BOL #" value={bolNo} />
-            <Field label="Ticket #" value={ticketNo} />
           </div>
 
           {/* Right: ticket info / weight / attachments */}
-          <div className="w-52 border-l border-on-surface/5 p-3 flex flex-col gap-3">
+          <div className="w-52 bg-surface-container-low/30 p-2.5 flex flex-col gap-2">
             {/* Weight summary */}
             <div className="bg-surface-container-high/50 rounded-lg p-3 space-y-2">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface/30">
+              <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface/30">
                 Weight
               </span>
-              <div className="font-label text-lg font-bold text-on-surface">
+              <div className="font-label text-lg font-bold text-on-surface tabular-nums">
                 {weightTons
                   ? `${parseFloat(weightTons).toFixed(2)} tons`
                   : "--"}
               </div>
               {(grossWeightLbs || netWeightLbs) && (
-                <div className="text-[10px] text-on-surface/40 space-y-0.5">
+                <div className="text-[10px] font-label text-on-surface/40 space-y-0.5 tabular-nums">
                   {grossWeightLbs && (
                     <div>
                       Gross: {Number(grossWeightLbs).toLocaleString()} lbs
@@ -248,7 +251,7 @@ export function DispatchCard({
             {/* Terminal / Origin */}
             {terminalName && (
               <div className="px-1">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface/30 block">
+                <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface/30 block">
                   Origin
                 </span>
                 <span className="text-xs text-on-surface/70 font-label">
@@ -260,7 +263,7 @@ export function DispatchCard({
             {/* Photo / ticket */}
             {hasPhotos ? (
               <div className="space-y-2">
-                <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface/30 px-1">
+                <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface/30 px-1">
                   Weight Ticket
                 </span>
                 {photoUrls.map((url, i) => {
@@ -273,7 +276,7 @@ export function DispatchCard({
                       href={fullUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block w-full aspect-[3/4] rounded-lg overflow-hidden bg-surface-container-high border border-on-surface/10 hover:ring-2 hover:ring-tertiary transition-all"
+                      className="block w-full aspect-[3/4] rounded-lg overflow-hidden bg-surface-container-high ring-1 ring-on-surface/8 hover:ring-2 hover:ring-tertiary transition-all"
                     >
                       <img
                         src={fullUrl}
@@ -306,7 +309,7 @@ export function DispatchCard({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end px-5 py-3 bg-surface-container-high/20 border-t border-on-surface/5">
+        <div className="flex items-center justify-end px-5 py-2 bg-surface-container-high/10">
           <Button
             variant={entered ? "ghost" : "primary"}
             icon={entered ? "check" : "done_all"}

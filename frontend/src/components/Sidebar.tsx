@@ -14,12 +14,12 @@ export function Sidebar() {
 
   const navClass = (path: string) =>
     isActive(path)
-      ? "bg-primary-container/10 text-primary-container border-l-[3px] border-primary-container flex items-center gap-3 px-5 py-2.5 rounded-r-lg transition-all duration-200 font-semibold"
-      : "text-on-surface/40 flex items-center gap-3 px-5 py-2.5 hover:bg-surface-container-high/60 hover:text-on-surface/70 rounded-r-lg transition-all duration-200";
+      ? "bg-primary-container/10 text-primary-container border-l-[3px] border-primary-container flex items-center gap-3 px-5 py-2.5 rounded-r-lg transition-all duration-200 font-semibold shadow-sm shadow-primary-container/5"
+      : "text-on-surface/40 flex items-center gap-3 px-5 py-2.5 hover:bg-surface-container-high/60 hover:text-on-surface/70 hover:translate-x-0.5 rounded-r-lg transition-all duration-200 active:bg-surface-container-high";
 
   return (
-    <aside className="hidden md:flex flex-col h-screen w-64 bg-surface-container-low border-r border-on-surface/5 z-50 shrink-0">
-      <div className="px-5 pt-8 pb-7 flex flex-col gap-2 border-b border-on-surface/5">
+    <aside className="hidden md:flex flex-col h-screen w-64 bg-surface-container-low z-50 shrink-0 shadow-[1px_0_12px_rgba(0,0,0,0.04)]">
+      <div className="px-5 pt-8 pb-7 flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center shadow-sm">
             <span
@@ -84,7 +84,7 @@ export function Sidebar() {
         </Link>
       </nav>
       {/* Live Presence */}
-      <div className="px-5 py-5 border-t border-on-surface/5 space-y-3">
+      <div className="px-5 py-5 bg-surface-container/30 space-y-3">
         <h4 className="text-[10px] uppercase tracking-[0.15em] text-on-surface/25 font-bold font-label">
           Online ({onlineUsers.length})
         </h4>
@@ -117,14 +117,14 @@ export function Sidebar() {
       <div className="px-3 pb-5 flex flex-col gap-0.5">
         <Link
           to="/settings"
-          className="text-on-surface/40 flex items-center gap-3 px-4 py-2 hover:text-on-surface/70 hover:bg-surface-container-high/50 rounded-lg transition-all"
+          className="text-on-surface/40 flex items-center gap-3 px-4 py-2 hover:text-on-surface/70 hover:bg-surface-container-high/50 rounded-lg transition-all duration-150 active:scale-[0.98]"
         >
           <span className="material-symbols-outlined text-lg">settings</span>
           <span className="text-xs font-medium">Settings</span>
         </Link>
         <button
           onClick={logout}
-          className="text-on-surface/40 flex items-center gap-3 px-4 py-2 hover:text-error/80 hover:bg-error/5 rounded-lg transition-all w-full cursor-pointer"
+          className="text-on-surface/40 flex items-center gap-3 px-4 py-2 hover:text-error/80 hover:bg-error/5 rounded-lg transition-all duration-150 w-full cursor-pointer active:scale-[0.98]"
         >
           <span className="material-symbols-outlined text-lg">logout</span>
           <span className="text-xs font-medium">Log Out</span>
