@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
+import { FeedbackWidget } from "./FeedbackWidget";
 import { useCurrentUser } from "../hooks/use-auth";
 
 export function Layout() {
@@ -19,25 +20,22 @@ export function Layout() {
     <div className="flex min-h-screen overflow-hidden">
       <Sidebar />
       <div className="flex-1 flex flex-col min-h-screen relative overflow-y-auto">
-        <header className="flex justify-between items-center px-8 h-16 w-full sticky top-0 z-40 bg-background/80 backdrop-blur-md shadow-xl shadow-primary-container/5">
+        <header className="flex justify-end items-center px-8 h-14 w-full sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-on-surface/5">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-extrabold tracking-tight text-on-surface uppercase">
-              ES Express
-            </h1>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-lg border border-primary-container/10">
-              <span className="material-symbols-outlined text-on-surface/40 text-sm">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-low/50">
+              <span className="material-symbols-outlined text-tertiary text-sm">
                 cloud_done
               </span>
-              <span className="font-label text-xs text-on-surface/40 tracking-wider">
-                Connected
+              <span className="font-label text-[10px] text-on-surface/30 tracking-wider uppercase">
+                Live
               </span>
             </div>
-            <span className="material-symbols-outlined text-on-surface/60 hover:text-primary-container cursor-pointer transition-colors">
-              notifications
-            </span>
-            <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center border border-on-surface/10 text-xs font-bold text-primary-container">
+            <button className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer text-on-surface/40 hover:text-on-surface/70">
+              <span className="material-symbols-outlined text-xl">
+                notifications
+              </span>
+            </button>
+            <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center border border-on-surface/10 text-[11px] font-bold font-headline text-primary-container">
               {initials}
             </div>
           </div>
@@ -46,6 +44,7 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+      <FeedbackWidget />
     </div>
   );
 }

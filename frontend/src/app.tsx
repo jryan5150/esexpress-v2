@@ -12,7 +12,6 @@ import { CompaniesAdmin } from "./pages/admin/CompaniesAdmin";
 import { UsersAdmin } from "./pages/admin/UsersAdmin";
 import { Settings } from "./pages/Settings";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { FeedbackWidget } from "./components/FeedbackWidget";
 import { WellWorkspace } from "./pages/WellWorkspace";
 import { DispatchDesk } from "./pages/DispatchDesk";
 import { Validation } from "./pages/Validation";
@@ -37,7 +36,6 @@ export function App() {
                 <Route path="admin/users" element={<UsersAdmin />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
-              <FeedbackWidget />
             </Route>
           </Routes>
         </BrowserRouter>
