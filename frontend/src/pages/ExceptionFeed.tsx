@@ -40,6 +40,7 @@ export function ExceptionFeed() {
       review: Number(w.review ?? 0),
       assigned: Number(w.assigned ?? 0),
       missing: Number(w.missing ?? 0),
+      validated: Number((w as any).validated ?? 0),
     }))
     .filter((w) => w.totalLoads > 0)
     .sort((a, b) => b.review - a.review || b.totalLoads - a.totalLoads);
@@ -75,7 +76,7 @@ export function ExceptionFeed() {
         {/* Page Header */}
         <div>
           <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
-            Exception Feed
+            Today's Objectives
           </h1>
           <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
             {new Date().toLocaleDateString("en-US", {
@@ -236,7 +237,7 @@ export function ExceptionFeed() {
                       {well.totalLoads} Loads
                     </span>
                   </div>
-                  <div className="flex-1 grid grid-cols-3 gap-8">
+                  <div className="flex-1 grid grid-cols-4 gap-6">
                     <div className="space-y-1">
                       <span className="text-[10px] uppercase font-bold text-on-surface/40 tracking-widest">
                         Ready
@@ -252,6 +253,24 @@ export function ExceptionFeed() {
                         </div>
                         <span className="font-label text-sm font-bold">
                           {well.ready}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-tertiary/70 tracking-widest">
+                        Validated
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-tertiary/60"
+                            style={{
+                              width: pct(well.validated, well.totalLoads),
+                            }}
+                          />
+                        </div>
+                        <span className="font-label text-sm font-bold text-tertiary">
+                          {well.validated}/{well.totalLoads}
                         </span>
                       </div>
                     </div>
