@@ -7,7 +7,11 @@ function getStorage(): Storage {
 
   const keyJson = process.env.GCS_SERVICE_ACCOUNT_KEY;
   if (keyJson) {
-    const credentials = JSON.parse(Buffer.from(keyJson, "base64").toString());
+    // Support both raw JSON and base64-encoded JSON
+    const decoded = keyJson.trimStart().startsWith("{")
+      ? keyJson
+      : Buffer.from(keyJson, "base64").toString();
+    const credentials = JSON.parse(decoded);
     storage = new Storage({ credentials });
   } else {
     storage = new Storage();
