@@ -48,6 +48,7 @@ export function PhotoModal({
   showValidateButton = true,
 }: PhotoModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const modalRef = useRef<HTMLDivElement>(null);
   const currentIndexRef = useRef(currentIndex);
   currentIndexRef.current = currentIndex;
   const onCloseRef = useRef(onClose);
@@ -68,6 +69,37 @@ export function PhotoModal({
     return () => document.removeEventListener("keydown", handleKey);
   }, [photoUrls.length]);
 
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+
+    const focusable = modal.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    first?.focus();
+
+    const trapFocus = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last?.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+
+    modal.addEventListener("keydown", trapFocus);
+    return () => modal.removeEventListener("keydown", trapFocus);
+  }, []);
+
   const matchPct = autoMapScore ? Math.round(Number(autoMapScore) * 100) : null;
   const matchColor =
     matchPct && matchPct >= 90
@@ -85,8 +117,12 @@ export function PhotoModal({
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className="bg-surface-container rounded-2xl w-[72vw] max-w-5xl max-h-[85vh] overflow-hidden shadow-[0_25px_60px_-12px_rgba(0,0,0,0.25)] flex flex-col ring-1 ring-on-surface/5"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="photo-modal-title"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-surface-container-high/40">
@@ -97,7 +133,10 @@ export function PhotoModal({
               </span>
             </div>
             <div>
-              <span className="font-label font-bold text-on-surface text-base tabular-nums">
+              <span
+                id="photo-modal-title"
+                className="font-label font-bold text-on-surface text-base tabular-nums"
+              >
                 BOL #{bolNo || "--"}
               </span>
               <span className="text-xs text-on-surface/35 ml-3 font-label tabular-nums">
@@ -107,6 +146,7 @@ export function PhotoModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close photo viewer"
             className="text-on-surface/30 hover:text-on-surface hover:bg-surface-container-high p-2 rounded-lg transition-all duration-150 cursor-pointer active:scale-95 hover:rotate-90"
           >
             <span className="material-symbols-outlined text-xl">close</span>

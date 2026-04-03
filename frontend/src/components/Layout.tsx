@@ -30,7 +30,10 @@ export function Layout() {
                 Live
               </span>
             </div>
-            <button className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer text-on-surface/40 hover:text-on-surface/70">
+            <button
+              aria-label="Notifications"
+              className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer text-on-surface/40 hover:text-on-surface/70"
+            >
               <span className="material-symbols-outlined text-xl">
                 notifications
               </span>

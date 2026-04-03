@@ -230,7 +230,13 @@ export function ExceptionFeed() {
               wells.map((well) => (
                 <div
                   key={well.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => navigate(`/dispatch-desk?wellId=${well.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ")
+                      navigate(`/dispatch-desk?wellId=${well.id}`);
+                  }}
                   className="bg-surface-container-low hover:bg-surface-container-high transition-all group cursor-pointer flex flex-col md:flex-row md:items-center px-6 py-4 gap-5 hover-lift"
                 >
                   <div

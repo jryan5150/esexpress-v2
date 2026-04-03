@@ -30,6 +30,7 @@ export function Pagination({
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1 || loading}
+          aria-label="Previous page"
           className="p-1.5 rounded-lg hover:bg-surface-container-high disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           <span className="material-symbols-outlined text-base">
@@ -42,6 +43,7 @@ export function Pagination({
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages || loading}
+          aria-label="Next page"
           className="p-1.5 rounded-lg hover:bg-surface-container-high disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           <span className="material-symbols-outlined text-base">
