@@ -8,6 +8,8 @@ import rateLimit from "@fastify/rate-limit";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { AppError } from "./lib/errors.js";
+import diagnosticsPlugin from "./plugins/diagnostics/index.js";
+import { perfBuffer } from "./lib/perf-buffer.js";
 import jwtPlugin from "./plugins/auth/jwt.js";
 import guardsPlugin from "./plugins/auth/guards.js";
 import dbPlugin from "./plugins/db.js";
@@ -18,6 +20,7 @@ import pcsPlugin from "./plugins/pcs/index.js";
 import sheetsPlugin from "./plugins/sheets/index.js";
 import verificationPlugin from "./plugins/verification/index.js";
 import financePlugin from "./plugins/finance/index.js";
+import feedbackPlugin from "./plugins/feedback/index.js";
 
 export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
   const app = Fastify(opts);
@@ -38,6 +41,18 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
   // Rate limiting (global: 100 req/min, tighter on auth)
   app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+
+  // Performance tracking hook
+  app.addHook("onResponse", (request, reply, done) => {
+    perfBuffer.record({
+      method: request.method,
+      path: request.routeOptions?.url || request.url,
+      statusCode: reply.statusCode,
+      responseTimeMs: Math.round(reply.elapsedTime),
+      timestamp: Date.now(),
+    });
+    done();
+  });
 
   // Swagger
   app.register(swagger, {
@@ -84,6 +99,12 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
   // Finance plugin (payment batches, driver payments)
   app.register(financePlugin, { prefix: "/api/v1/finance" });
+
+  // Diagnostics plugin (public — no auth)
+  app.register(diagnosticsPlugin, { prefix: "/api/v1/diag" });
+
+  // Feedback plugin (JWT submit + PIN-auth dashboard reads)
+  app.register(feedbackPlugin, { prefix: "/api/v1/feedback" });
 
   // Health check
   app.get(
