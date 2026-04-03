@@ -233,7 +233,7 @@ export function DispatchDesk() {
                 <div className="flex items-center gap-2 bg-surface-container-high/50 px-3 py-1 rounded-full">
                   {usersOnThisWell.map((u: any) => (
                     <div key={u.userId} className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(69,223,164,0.5)]" />
+                      <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(13,150,104,0.5)]" />
                       <span className="text-xs text-on-surface/70 font-label">
                         {u.userName?.split(" ")[0] || "User"}
                       </span>

@@ -79,7 +79,7 @@ export function Sidebar() {
         <div className="space-y-2">
           {onlineUsers.length === 0 ? (
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(69,223,164,0.5)]" />
+              <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(13,150,104,0.5)]" />
               <span className="text-xs text-on-surface/80">
                 {(userQuery.data as Record<string, unknown>)?.name || "You"}
               </span>
@@ -88,7 +88,7 @@ export function Sidebar() {
             onlineUsers.map((u: any) => (
               <div key={u.userId} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(69,223,164,0.5)]" />
+                  <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(13,150,104,0.5)]" />
                   <span className="text-xs text-on-surface/80">
                     {u.userName?.split(" ")[0] || "User"}
                   </span>

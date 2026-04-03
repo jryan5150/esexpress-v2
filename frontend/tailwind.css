@@ -1,53 +1,64 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0e1320;
-  --color-surface: #0e1320;
-  --color-surface-dim: #0e1320;
-  --color-surface-bright: #343947;
-  --color-surface-container: #1a1f2d;
-  --color-surface-container-low: #161b28;
-  --color-surface-container-high: #252a37;
-  --color-surface-container-highest: #303443;
-  --color-surface-container-lowest: #090e1a;
-  --color-surface-tint: #ffb599;
-  --color-surface-variant: #303443;
-  --color-primary: #ffb599;
-  --color-primary-container: #f0692c;
-  --color-primary-fixed: #ffdbce;
-  --color-primary-fixed-dim: #ffb599;
-  --color-on-primary: #5a1c00;
-  --color-on-primary-container: #511900;
-  --color-on-primary-fixed: #370e00;
-  --color-on-primary-fixed-variant: #7f2b00;
-  --color-secondary: #bfc5e3;
-  --color-secondary-container: #414861;
-  --color-secondary-fixed: #dbe1ff;
-  --color-secondary-fixed-dim: #bfc5e3;
-  --color-on-secondary: #293047;
-  --color-on-secondary-container: #b1b7d4;
-  --color-on-secondary-fixed: #131b31;
-  --color-on-secondary-fixed-variant: #3f465e;
-  --color-tertiary: #45dfa4;
-  --color-tertiary-container: #00a775;
-  --color-tertiary-fixed: #68fcbf;
-  --color-tertiary-fixed-dim: #45dfa4;
-  --color-on-tertiary: #003825;
-  --color-on-tertiary-container: #003321;
-  --color-on-tertiary-fixed: #002114;
-  --color-on-tertiary-fixed-variant: #005137;
-  --color-error: #ffb4ab;
-  --color-error-container: #93000a;
-  --color-on-error: #690005;
-  --color-on-error-container: #ffdad6;
-  --color-on-surface: #dee2f4;
-  --color-on-surface-variant: #e0c0b4;
-  --color-on-background: #dee2f4;
-  --color-outline: #a88a80;
-  --color-outline-variant: #594239;
-  --color-inverse-primary: #a63b00;
-  --color-inverse-surface: #dee2f4;
-  --color-inverse-on-surface: #2b303e;
+  /* Warm cream backgrounds */
+  --color-background: #f5f0e8;
+  --color-surface: #f5f0e8;
+  --color-surface-dim: #ebe5da;
+  --color-surface-bright: #ffffff;
+  --color-surface-container: #ebe5da;
+  --color-surface-container-low: #f0ebe2;
+  --color-surface-container-high: #e0d9cc;
+  --color-surface-container-highest: #d6cfc2;
+  --color-surface-container-lowest: #faf7f2;
+  --color-surface-tint: #8b5cf6;
+  --color-surface-variant: #e0d9cc;
+
+  /* Purple primary */
+  --color-primary: #7c3aed;
+  --color-primary-container: #6d28d9;
+  --color-primary-fixed: #ede9fe;
+  --color-primary-fixed-dim: #c4b5fd;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffffff;
+  --color-on-primary-fixed: #3b0764;
+  --color-on-primary-fixed-variant: #5b21b6;
+
+  /* Warm secondary */
+  --color-secondary: #6b5e50;
+  --color-secondary-container: #d6cfc2;
+  --color-secondary-fixed: #ebe5da;
+  --color-secondary-fixed-dim: #c8bfb2;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #3e3529;
+  --color-on-secondary-fixed: #251e14;
+  --color-on-secondary-fixed-variant: #534838;
+
+  /* Green tertiary (success) */
+  --color-tertiary: #0d9668;
+  --color-tertiary-container: #0d9668;
+  --color-tertiary-fixed: #d1fae5;
+  --color-tertiary-fixed-dim: #6ee7b7;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #ffffff;
+  --color-on-tertiary-fixed: #064e3b;
+  --color-on-tertiary-fixed-variant: #047857;
+
+  /* Error */
+  --color-error: #dc2626;
+  --color-error-container: #fef2f2;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #991b1b;
+
+  /* Text & surfaces */
+  --color-on-surface: #1e1b18;
+  --color-on-surface-variant: #4a4540;
+  --color-on-background: #1e1b18;
+  --color-outline: #8a8279;
+  --color-outline-variant: #d1cac0;
+  --color-inverse-primary: #c4b5fd;
+  --color-inverse-surface: #2e2a25;
+  --color-inverse-on-surface: #f5f0e8;
 
   --font-headline: "Plus Jakarta Sans", sans-serif;
   --font-body: "Inter", sans-serif;
