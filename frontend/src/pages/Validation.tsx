@@ -216,10 +216,10 @@ export function Validation() {
     <div className="p-8 space-y-8 max-w-7xl">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-black font-headline tracking-tight text-on-surface uppercase">
+        <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
           Validation
         </h1>
-        <p className="text-on-surface/40 font-label text-xs uppercase tracking-widest mt-1">
+        <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
           Tier-Based Review // Human Confirms
         </p>
       </div>

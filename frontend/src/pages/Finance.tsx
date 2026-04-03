@@ -197,13 +197,13 @@ export function Finance() {
         </div>
       )}
 
-      <div className="flex justify-between items-end mb-8">
+      <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-black font-headline tracking-tight text-on-surface">
+          <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
             Finance
           </h1>
-          <p className="text-on-surface-variant font-label text-sm mt-1">
-            BATCH MANAGEMENT // PAY CYCLE OPERATIONS
+          <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
+            Batch Management // Pay Cycle Operations
           </p>
         </div>
         <button
@@ -218,7 +218,7 @@ export function Finance() {
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-          <span className="text-[10px] uppercase font-bold text-on-surface/40 tracking-widest">
+          <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
             Open Batches
           </span>
           <div className="mt-2 flex items-end gap-2">
@@ -236,7 +236,7 @@ export function Finance() {
           </div>
         </div>
         <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-          <span className="text-[10px] uppercase font-bold text-on-surface/40 tracking-widest">
+          <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
             Total Pending
           </span>
           <div className="mt-2 flex items-end gap-2">
@@ -259,7 +259,7 @@ export function Finance() {
           </div>
         </div>
         <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-          <span className="text-[10px] uppercase font-bold text-on-surface/40 tracking-widest">
+          <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
             Last Pay Run
           </span>
           <div className="mt-2 flex items-end gap-2">
@@ -277,7 +277,7 @@ export function Finance() {
           </div>
         </div>
         <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-          <span className="text-[10px] uppercase font-bold text-on-surface/40 tracking-widest">
+          <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
             Processing
           </span>
           <div className="mt-2 flex items-end gap-2">
@@ -300,23 +300,22 @@ export function Finance() {
       </div>
 
       {/* Active Payment Cycles */}
-      <section className="bg-surface-container-lowest border-l-4 border-primary-container overflow-hidden rounded-sm shadow-lg">
-        <div className="flex items-center justify-between p-4 bg-surface-container-high/50">
+      <section className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+        <div className="flex items-center justify-between px-6 py-4 bg-surface-container-lowest/50">
           <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-primary-container">
+            <span className="material-symbols-outlined text-primary-container text-lg">
               payments
             </span>
-            <h2 className="font-headline font-bold text-on-surface">
+            <h2 className="font-headline font-bold text-sm text-on-surface">
               Active Payment Cycles
             </h2>
-            <span className="font-mono text-xs bg-primary-container/10 text-primary-container px-2 py-0.5 rounded">
-              {isLoading ? "..." : `${cycles.length} CYCLES`}
+            <span className="font-label text-[10px] bg-primary-container/10 text-primary-container px-2 py-0.5 rounded uppercase tracking-wider font-bold">
+              {isLoading ? "..." : `${cycles.length} Cycles`}
             </span>
           </div>
-          <span className="material-symbols-outlined">expand_more</span>
         </div>
         <div className="p-0">
-          <div className="grid grid-cols-12 gap-1 px-4 py-2 text-[10px] font-label uppercase tracking-widest text-on-surface-variant/60 border-b border-surface-variant/20">
+          <div className="grid grid-cols-12 gap-1 px-6 py-3 text-[10px] font-label uppercase tracking-widest text-on-surface/30 font-bold border-b border-on-surface/5 bg-surface-container-lowest/30">
             <div className="col-span-2">Batch ID</div>
             <div className="col-span-3">Company</div>
             <div className="col-span-1">BOLs</div>
@@ -324,7 +323,7 @@ export function Finance() {
             <div className="col-span-2">Status</div>
             <div className="col-span-2 text-right">Actions</div>
           </div>
-          <div className="divide-y divide-surface-container">
+          <div className="divide-y divide-on-surface/5">
             {isLoading ? (
               <>
                 {[1, 2, 3, 4].map((i) => (
@@ -363,29 +362,29 @@ export function Finance() {
               cycles.map((cycle) => (
                 <div
                   key={cycle.id}
-                  className="grid grid-cols-12 gap-1 items-center px-4 py-3 hover:bg-surface-container-high transition-all group"
+                  className="grid grid-cols-12 gap-1 items-center px-6 py-4 bg-surface-container-low hover:bg-surface-container-high transition-colors group"
                 >
-                  <div className="col-span-2 font-mono text-sm text-primary">
+                  <div className="col-span-2 font-label text-sm text-primary">
                     {cycle.id}
                   </div>
-                  <div className="col-span-3 font-headline text-sm">
+                  <div className="col-span-3 text-sm font-medium text-on-surface">
                     {cycle.company}
                   </div>
-                  <div className="col-span-1 font-mono text-sm">
+                  <div className="col-span-1 font-label text-sm text-on-surface/60">
                     {cycle.bols}
                   </div>
-                  <div className="col-span-2 font-mono text-sm font-bold">
+                  <div className="col-span-2 font-label text-sm font-bold text-on-surface">
                     {cycle.amount}
                   </div>
                   <div className="col-span-2">
                     <span
-                      className={`px-2 py-0.5 font-mono text-[10px] rounded border ${cycle.statusColor}`}
+                      className={`px-2.5 py-0.5 font-label text-[10px] font-bold uppercase tracking-wider rounded-full border ${cycle.statusColor}`}
                     >
-                      {cycle.status.toUpperCase()}
+                      {cycle.status}
                     </span>
                   </div>
                   <div className="col-span-2 flex justify-end gap-2">
-                    <button className="bg-surface-container-high px-3 py-1.5 text-xs font-bold border border-outline-variant/30 hover:bg-surface-container-highest flex items-center gap-2">
+                    <button className="bg-surface-container-high/80 px-3 py-1.5 rounded-lg text-xs font-semibold text-on-surface/60 border border-on-surface/10 hover:bg-surface-container-highest hover:text-on-surface/80 flex items-center gap-1.5 transition-colors cursor-pointer">
                       <span className="material-symbols-outlined text-sm">
                         visibility
                       </span>

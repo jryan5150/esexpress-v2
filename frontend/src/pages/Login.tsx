@@ -140,12 +140,12 @@ export function Login() {
         </div>
 
         {/* Login Card */}
-        <div className="bg-surface-container-low/90 backdrop-blur-md rounded-xl p-8 border border-on-surface/5 shadow-2xl shadow-black/30 space-y-6">
+        <div className="bg-surface-container-low/90 backdrop-blur-md rounded-xl p-8 border border-on-surface/5 shadow-2xl shadow-black/20 space-y-6">
           <div className="space-y-1">
             <h2 className="text-lg font-bold font-headline text-on-surface">
               Operator Access
             </h2>
-            <p className="text-xs text-on-surface/40 font-label uppercase tracking-widest">
+            <p className="text-[10px] text-on-surface/30 font-label uppercase tracking-widest">
               Authenticate to continue
             </p>
           </div>
@@ -166,7 +166,7 @@ export function Login() {
             <div className="space-y-2">
               <label
                 htmlFor="email"
-                className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/50"
+                className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/30"
               >
                 Operator Email
               </label>
@@ -189,7 +189,7 @@ export function Login() {
             <div className="space-y-2">
               <label
                 htmlFor="password"
-                className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/50"
+                className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/30"
               >
                 Access Key
               </label>

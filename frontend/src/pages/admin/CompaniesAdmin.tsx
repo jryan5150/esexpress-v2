@@ -3,10 +3,10 @@ export function CompaniesAdmin() {
     <div className="p-8 max-w-7xl space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-black font-headline tracking-tight text-on-surface uppercase">
+        <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
           Companies Management
         </h1>
-        <p className="text-on-surface/40 font-label text-xs uppercase tracking-widest mt-1">
+        <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
           Administration // Carrier &amp; Client Registry
         </p>
       </div>

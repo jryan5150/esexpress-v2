@@ -172,11 +172,11 @@ export function DispatchDesk() {
                 arrow_back
               </span>
             </button>
-            <h1 className="text-2xl font-headline font-extrabold text-on-surface tracking-tight uppercase">
+            <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
               Dispatch Desk
             </h1>
           </div>
-          <p className="text-on-surface/40 font-label text-xs uppercase tracking-widest ml-8">
+          <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest ml-8">
             Clipboard Bridge // Pre-PCS Staging
           </p>
         </div>
@@ -186,7 +186,7 @@ export function DispatchDesk() {
       <div className="bg-surface-container-low rounded-xl p-6 space-y-4">
         <div className="flex flex-wrap items-end gap-6">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-[10px] font-headline font-bold uppercase tracking-widest text-on-surface/40 mb-2">
+            <label className="block text-[10px] font-label font-bold uppercase tracking-widest text-on-surface/30 mb-2">
               Select Well
             </label>
             <select
@@ -204,7 +204,7 @@ export function DispatchDesk() {
           </div>
 
           <div className="w-48">
-            <label className="block text-[10px] font-headline font-bold uppercase tracking-widest text-on-surface/40 mb-2">
+            <label className="block text-[10px] font-label font-bold uppercase tracking-widest text-on-surface/30 mb-2">
               PCS Starting #
             </label>
             <input

@@ -2,11 +2,11 @@ export function Settings() {
   return (
     <div className="p-8 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-black font-headline tracking-tight text-on-surface">
+        <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
           Settings
         </h1>
-        <p className="text-on-surface-variant font-label text-sm mt-1">
-          SYSTEM CONFIGURATION // PREFERENCES
+        <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
+          System Configuration // Preferences
         </p>
       </div>
       <div className="bg-surface-container-low rounded-xl p-12 border border-on-surface/5 flex flex-col items-center justify-center text-center space-y-4">

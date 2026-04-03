@@ -12,9 +12,9 @@ interface VerificationRowProps {
 }
 
 const statusConfig: Record<VerifyStatus, { icon: string; cls: string }> = {
-  verified: { icon: "✓", cls: "text-tertiary" },
-  mismatch: { icon: "⚠", cls: "text-primary-container" },
-  missing: { icon: "✗", cls: "text-error" },
+  verified: { icon: "check_circle", cls: "text-tertiary" },
+  mismatch: { icon: "warning", cls: "text-primary-container" },
+  missing: { icon: "cancel", cls: "text-error" },
 };
 
 export function VerificationRow({
@@ -28,9 +28,11 @@ export function VerificationRow({
         return (
           <span
             key={item.label}
-            className={`font-label text-[10px] font-medium ${cfg.cls}`}
+            className={`inline-flex items-center gap-1 font-label text-[10px] font-medium ${cfg.cls}`}
           >
-            {cfg.icon}{" "}
+            <span className="material-symbols-outlined text-xs">
+              {cfg.icon}
+            </span>
             {compact
               ? item.label
               : item.detail || `${item.label} ${item.status}`}

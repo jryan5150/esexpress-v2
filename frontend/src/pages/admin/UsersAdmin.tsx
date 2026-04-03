@@ -28,18 +28,18 @@ export function UsersAdmin() {
     <div className="p-8 space-y-6 max-w-5xl">
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-headline font-extrabold text-on-surface tracking-tight uppercase">
+          <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
             User Management
           </h1>
-          <p className="text-on-surface/40 font-label text-xs uppercase tracking-widest mt-1">
+          <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
             {users.length} registered operators
           </p>
         </div>
       </div>
 
-      <div className="bg-surface-container-low rounded-xl overflow-hidden shadow-lg">
-        <div className="px-6 py-4 border-b border-surface-container-high/50 bg-surface-container-lowest/50">
-          <h3 className="font-headline font-bold text-sm uppercase tracking-widest text-on-surface/60">
+      <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+        <div className="bg-surface-container-lowest/50 px-6 py-3">
+          <h3 className="font-label text-[10px] font-bold uppercase tracking-widest text-on-surface/30">
             Team Roster
           </h3>
         </div>
@@ -64,18 +64,18 @@ export function UsersAdmin() {
         {users.length > 0 && (
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="text-on-surface-variant text-[10px] uppercase tracking-widest font-headline border-b border-surface-container-high/50">
-                <th className="px-6 py-4 font-bold">Name</th>
-                <th className="px-6 py-4 font-bold">Email</th>
-                <th className="px-6 py-4 font-bold">Role</th>
-                <th className="px-6 py-4 font-bold text-right">Joined</th>
+              <tr className="text-on-surface/30 text-[10px] uppercase tracking-widest font-label border-b border-on-surface/5">
+                <th className="px-6 py-3 font-bold">Name</th>
+                <th className="px-6 py-3 font-bold">Email</th>
+                <th className="px-6 py-3 font-bold">Role</th>
+                <th className="px-6 py-3 font-bold text-right">Joined</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-surface-container-lowest">
+            <tbody className="divide-y divide-on-surface/5">
               {users.map((user) => (
                 <tr
                   key={user.id}
-                  className="hover:bg-surface-container-high/30 transition-colors"
+                  className="bg-surface-container-low hover:bg-surface-container-high transition-colors"
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">

@@ -31,10 +31,10 @@ export function WellsAdmin() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-black font-headline tracking-tight text-on-surface uppercase">
+          <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
             Wells Management
           </h1>
-          <p className="text-on-surface/40 font-label text-xs uppercase tracking-widest mt-1">
+          <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
             Administration // Well Registry
           </p>
         </div>

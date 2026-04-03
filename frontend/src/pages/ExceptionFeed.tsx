@@ -72,14 +72,14 @@ export function ExceptionFeed() {
           </div>
         )}
 
-        {/* Date */}
-        <div className="flex items-end gap-3">
-          <h2 className="text-3xl font-extrabold tracking-tighter text-on-surface">
-            TODAY
-          </h2>
-          <div className="h-6 w-px bg-on-surface/10 mx-1 mb-1" />
-          <p className="text-lg font-medium text-primary-container/80 font-label tracking-tight mb-0.5">
+        {/* Page Header */}
+        <div>
+          <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
+            Exception Feed
+          </h1>
+          <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
             {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
               month: "long",
               day: "numeric",
               year: "numeric",

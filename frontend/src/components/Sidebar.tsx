@@ -14,18 +14,30 @@ export function Sidebar() {
 
   const navClass = (path: string) =>
     isActive(path)
-      ? "bg-surface-container-high text-primary-container border-l-4 border-primary-container flex items-center gap-3 px-4 py-3 transition-all duration-200"
-      : "text-on-surface/70 flex items-center gap-3 px-4 py-3 hover:bg-surface-container hover:text-on-surface transition-all duration-200";
+      ? "bg-primary-container/10 text-primary-container border-l-[3px] border-primary-container flex items-center gap-3 px-4 py-2.5 rounded-r-lg transition-all duration-200 font-semibold"
+      : "text-on-surface/50 flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-high/50 hover:text-on-surface/80 rounded-r-lg transition-all duration-200";
 
   return (
-    <aside className="hidden md:flex flex-col h-screen w-64 bg-surface-container-low border-r border-transparent z-50 shrink-0">
-      <div className="px-6 py-8 flex flex-col gap-1">
-        <h2 className="text-primary-container font-black text-xl tracking-tighter uppercase">
-          Dispatch Command
-        </h2>
-        <p className="text-xs text-on-surface/50 font-medium">
-          Terminal 04 - Active
-        </p>
+    <aside className="hidden md:flex flex-col h-screen w-64 bg-surface-container-low border-r border-on-surface/5 z-50 shrink-0">
+      <div className="px-5 pt-7 pb-6 flex flex-col gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center">
+            <span
+              className="material-symbols-outlined text-on-primary-container text-lg"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              local_shipping
+            </span>
+          </div>
+          <div>
+            <h2 className="text-on-surface font-headline font-black text-sm tracking-tight uppercase leading-tight">
+              ES Express
+            </h2>
+            <p className="text-[10px] text-on-surface/30 font-label tracking-widest uppercase">
+              Dispatch Command
+            </p>
+          </div>
+        </div>
       </div>
       <nav className="flex-1 px-3 space-y-1">
         <Link to="/" className={navClass("/")}>
@@ -44,8 +56,8 @@ export function Sidebar() {
           <span className="material-symbols-outlined">fact_check</span>
           <span className="text-sm font-medium">Validation</span>
         </Link>
-        <div className="pt-6 pb-2 px-4">
-          <span className="text-[10px] uppercase tracking-widest text-on-surface/40 font-bold">
+        <div className="pt-5 pb-1.5 px-4">
+          <span className="text-[10px] uppercase tracking-[0.15em] text-on-surface/25 font-bold font-label">
             Administration
           </span>
         </div>
@@ -61,8 +73,8 @@ export function Sidebar() {
           <span className="material-symbols-outlined">group</span>
           <span className="text-sm font-medium">Users</span>
         </Link>
-        <div className="pt-6 pb-2 px-4">
-          <span className="text-[10px] uppercase tracking-widest text-on-surface/40 font-bold">
+        <div className="pt-5 pb-1.5 px-4">
+          <span className="text-[10px] uppercase tracking-[0.15em] text-on-surface/25 font-bold font-label">
             Operations
           </span>
         </div>
@@ -72,8 +84,8 @@ export function Sidebar() {
         </Link>
       </nav>
       {/* Live Presence */}
-      <div className="px-6 py-6 border-t border-surface-container space-y-3">
-        <h4 className="text-[10px] uppercase tracking-widest text-on-surface/40 font-bold">
+      <div className="px-5 py-5 border-t border-on-surface/5 space-y-3">
+        <h4 className="text-[10px] uppercase tracking-[0.15em] text-on-surface/25 font-bold font-label">
           Online ({onlineUsers.length})
         </h4>
         <div className="space-y-2">
@@ -102,17 +114,17 @@ export function Sidebar() {
         </div>
       </div>
       {/* Footer */}
-      <div className="px-3 pb-6 flex flex-col gap-1">
+      <div className="px-3 pb-5 flex flex-col gap-0.5">
         <Link
           to="/settings"
-          className="text-on-surface/50 flex items-center gap-3 px-4 py-2 hover:text-primary-container transition-colors"
+          className="text-on-surface/40 flex items-center gap-3 px-4 py-2 hover:text-on-surface/70 hover:bg-surface-container-high/50 rounded-lg transition-all"
         >
           <span className="material-symbols-outlined text-lg">settings</span>
           <span className="text-xs font-medium">Settings</span>
         </Link>
         <button
           onClick={logout}
-          className="text-on-surface/50 flex items-center gap-3 px-4 py-2 hover:text-error transition-colors w-full cursor-pointer"
+          className="text-on-surface/40 flex items-center gap-3 px-4 py-2 hover:text-error/80 hover:bg-error/5 rounded-lg transition-all w-full cursor-pointer"
         >
           <span className="material-symbols-outlined text-lg">logout</span>
           <span className="text-xs font-medium">Log Out</span>

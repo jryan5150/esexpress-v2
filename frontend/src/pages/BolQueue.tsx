@@ -75,10 +75,10 @@ export function BolQueue() {
     <div className="p-8 space-y-6 max-w-7xl">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-black font-headline tracking-tight text-on-surface uppercase">
+        <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
           BOL Queue
         </h1>
-        <p className="text-on-surface/40 font-label text-xs uppercase tracking-widest mt-1">
+        <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
           Weight Ticket Reconciliation // JotForm Pipeline
         </p>
       </div>
@@ -133,15 +133,15 @@ export function BolQueue() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-1.5">
         {(["all", "matched", "pending"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
               filter === f
-                ? "bg-primary-container text-on-primary-container"
-                : "bg-surface-container-high text-on-surface/50 hover:text-on-surface"
+                ? "bg-primary-container/15 text-primary-container"
+                : "text-on-surface/40 hover:bg-surface-container-high hover:text-on-surface/70"
             }`}
           >
             {f === "all"
