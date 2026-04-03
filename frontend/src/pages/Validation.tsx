@@ -33,25 +33,38 @@ interface TierAssignment {
 
 const TIER_META: Record<
   number,
-  { label: string; description: string; icon: string; color: string }
+  {
+    label: string;
+    description: string;
+    icon: string;
+    borderClass: string;
+    textClass: string;
+    bgClass: string;
+  }
 > = {
   1: {
     label: "Tier 1",
     description: "High Confidence -- Job ID Match",
     icon: "verified",
-    color: "tertiary",
+    borderClass: "border-tertiary",
+    textClass: "text-tertiary",
+    bgClass: "bg-tertiary",
   },
   2: {
     label: "Tier 2",
     description: "Medium Confidence -- Fuzzy Match",
     icon: "help",
-    color: "primary-container",
+    borderClass: "border-primary-container",
+    textClass: "text-primary-container",
+    bgClass: "bg-primary-container",
   },
   3: {
     label: "Tier 3",
     description: "Unresolved -- Manual Required",
     icon: "warning",
-    color: "error",
+    borderClass: "border-error",
+    textClass: "text-error",
+    bgClass: "bg-error",
   },
 };
 
@@ -260,12 +273,12 @@ export function Validation() {
             <button
               key={tier}
               onClick={() => toggleTier(tier)}
-              className={`bg-surface-container-low rounded-xl p-6 border-l-4 border-${meta.color} text-left transition-all hover:bg-surface-container-high cursor-pointer group`}
+              className={`bg-surface-container-low rounded-xl p-6 border-l-4 ${meta.borderClass} text-left transition-all hover:bg-surface-container-high cursor-pointer group`}
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`material-symbols-outlined text-${meta.color}`}
+                    className={`material-symbols-outlined ${meta.textClass}`}
                   >
                     {meta.icon}
                   </span>
@@ -280,7 +293,7 @@ export function Validation() {
                 </span>
               </div>
               <div
-                className={`font-label text-3xl font-bold text-${meta.color}`}
+                className={`font-label text-3xl font-bold ${meta.textClass}`}
               >
                 {summaryQuery.isLoading ? "..." : count}
               </div>
@@ -326,12 +339,10 @@ export function Validation() {
             {/* Tier Section Header */}
             <div className="flex items-center justify-between px-2">
               <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full bg-${meta.color}`} />
+                <div className={`w-2 h-2 rounded-full ${meta.bgClass}`} />
                 <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
                   {meta.label}{" "}
-                  <span className={`text-${meta.color}`}>
-                    {meta.description}
-                  </span>
+                  <span className={meta.textClass}>{meta.description}</span>
                 </h3>
               </div>
               {tier === 1 && assignments.length > 0 && (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Button } from "./Button";
 
 interface DispatchCardProps {
@@ -81,7 +81,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-export function DispatchCard({
+export const DispatchCard = memo(function DispatchCard({
   loadNo,
   pcsNumber,
   driverName,
@@ -283,12 +283,7 @@ export function DispatchCard({
                         alt={`Ticket ${i + 1}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          const el = e.target as HTMLImageElement;
-                          el.style.display = "none";
-                          if (el.parentElement) {
-                            el.parentElement.innerHTML =
-                              '<div class="w-full h-full flex flex-col items-center justify-center text-on-surface/20 gap-1 p-2"><span class="material-symbols-outlined">photo_camera</span><span style="font-size:9px">View Ticket</span></div>';
-                          }
+                          (e.target as HTMLImageElement).style.display = "none";
                         }}
                       />
                     </a>
@@ -322,4 +317,4 @@ export function DispatchCard({
       </div>
     </>
   );
-}
+});

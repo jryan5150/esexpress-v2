@@ -14,6 +14,16 @@ export interface Well {
   updatedAt: string;
 }
 
+// Well with aggregated assignment stats (from listing endpoint)
+export interface WellWithStats extends Well {
+  totalLoads: number;
+  ready: number;
+  review: number;
+  assigned: number;
+  missing: number;
+  validated: number;
+}
+
 // Load (from PropX/Logistiq ingestion)
 export interface Load {
   id: number;
@@ -90,6 +100,7 @@ export interface DispatchDeskLoad {
   wellId: number;
   wellName: string;
   canEnter: boolean;
+  photoUrls?: string[];
 }
 
 // Validation tier summary
