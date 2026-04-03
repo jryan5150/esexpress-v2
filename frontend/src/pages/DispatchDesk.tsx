@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   useWells,
@@ -38,7 +38,12 @@ export function DispatchDesk() {
   const wellsQuery = useWells();
   const deskQuery = useDispatchDeskLoads(
     selectedWellId
-      ? { wellId: Number(selectedWellId), page, limit: pageSize }
+      ? {
+          wellId: Number(selectedWellId),
+          page,
+          limit: pageSize,
+          date: dateFilter || undefined,
+        }
       : undefined,
   );
   const markEntered = useMarkEntered();
@@ -153,6 +158,7 @@ export function DispatchDesk() {
   };
 
   const handleBulkValidate = async () => {
+    if (!window.confirm(`Validate ${selectedIds.size} selected loads?`)) return;
     const ids = Array.from(selectedIds);
     try {
       await Promise.all(
@@ -208,6 +214,12 @@ export function DispatchDesk() {
   };
 
   const handleMarkAll = () => {
+    if (
+      !window.confirm(
+        `Mark ${readyLoads.length} loads as entered in PCS? This cannot be undone.`,
+      )
+    )
+      return;
     const ids = readyLoads.map((l) => l.assignmentId);
     const startNum = parseInt(pcsStart) || 0;
     markEntered.mutate(
@@ -224,6 +236,8 @@ export function DispatchDesk() {
   };
 
   const handleApproveAll = () => {
+    if (!window.confirm(`Approve ${pendingLoads.length} pending loads?`))
+      return;
     const ids = pendingLoads.map((l) => l.assignmentId);
     bulkApprove.mutate(ids, {
       onSuccess: () => {
@@ -273,6 +287,57 @@ export function DispatchDesk() {
       toast(`ZIP failed: ${(err as Error).message}`, "error");
     }
   };
+
+  // Keyboard shortcuts: Shift+A (approve all), Shift+E (mark entered), Shift+V (validate selected), Esc (clear)
+  useEffect(() => {
+    const handleKeyboard = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLSelectElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
+
+      // Shift+A: Approve all pending (if on dispatch desk with well selected)
+      if (
+        e.shiftKey &&
+        e.key === "A" &&
+        selectedWellId &&
+        pendingLoads.length > 0
+      ) {
+        e.preventDefault();
+        handleApproveAll();
+      }
+      // Shift+E: Mark all entered
+      if (
+        e.shiftKey &&
+        e.key === "E" &&
+        selectedWellId &&
+        readyLoads.length > 0
+      ) {
+        e.preventDefault();
+        handleMarkAll();
+      }
+      // Shift+V: Validate selected
+      if (e.shiftKey && e.key === "V" && selectedIds.size > 0) {
+        e.preventDefault();
+        handleBulkValidate();
+      }
+      // Escape: Clear selection
+      if (e.key === "Escape" && selectedIds.size > 0 && !photoModalLoad) {
+        setSelectedIds(new Set());
+      }
+    };
+    document.addEventListener("keydown", handleKeyboard);
+    return () => document.removeEventListener("keydown", handleKeyboard);
+  }, [
+    selectedWellId,
+    pendingLoads.length,
+    readyLoads.length,
+    selectedIds.size,
+    photoModalLoad,
+  ]);
 
   const wellName = selectedWell?.name ?? "";
 
@@ -645,6 +710,21 @@ export function DispatchDesk() {
                         : "Pending"}
                   </div>
                 </div>
+
+                {(load as any).photoUrls?.length > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPhotoModalLoad(load);
+                    }}
+                    className="absolute top-3 right-3 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-surface-container-high/80 text-on-surface/60 hover:text-primary-container hover:bg-surface-container-highest transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-xs">
+                      photo_camera
+                    </span>
+                    View BOL
+                  </button>
+                )}
 
                 <DispatchCard
                   loadNo={load.loadNo}
