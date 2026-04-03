@@ -225,7 +225,7 @@ export function ExceptionFeed() {
                 <div
                   key={well.id}
                   onClick={() => navigate(`/dispatch-desk?wellId=${well.id}`)}
-                  className="bg-surface-container-low hover:bg-surface-container-high transition-all group cursor-pointer flex flex-col md:flex-row md:items-center p-6 gap-6"
+                  className="bg-surface-container-low hover:bg-surface-container-high transition-all group cursor-pointer flex flex-col md:flex-row md:items-center p-6 gap-6 hover-lift"
                 >
                   <div
                     className={`md:w-64 border-l-4 pl-4 ${getBorderColor(well.ready, well.totalLoads)}`}
