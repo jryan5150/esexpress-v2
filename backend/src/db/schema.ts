@@ -526,3 +526,53 @@ export const paymentBatchLoads = pgTable(
     index("idx_pbl_load").on(table.loadId),
   ],
 );
+
+// ─── SYNC RUNS (pipeline diagnostics) ────────────────────────────
+export const syncRuns = pgTable(
+  "sync_runs",
+  {
+    id: serial("id").primaryKey(),
+    source: text("source", {
+      enum: ["propx", "logistiq", "automap", "jotform"],
+    }).notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    status: text("status", {
+      enum: ["success", "failed", "skipped"],
+    }).notNull(),
+    recordsProcessed: integer("records_processed").default(0),
+    durationMs: integer("duration_ms"),
+    error: text("error"),
+    metadata: jsonb("metadata"),
+  },
+  (table) => [
+    index("idx_sync_runs_source").on(table.source),
+    index("idx_sync_runs_started").on(table.startedAt),
+  ],
+);
+
+// ─── FEEDBACK ────────────────────────────────────────────────────
+export const feedback = pgTable(
+  "feedback",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id),
+    category: text("category", {
+      enum: ["issue", "question", "suggestion"],
+    }).notNull(),
+    description: text("description").notNull(),
+    pageUrl: text("page_url"),
+    routeName: text("route_name"),
+    screenshotUrl: text("screenshot_url"),
+    breadcrumbs: jsonb("breadcrumbs")
+      .$type<Array<Record<string, unknown>>>()
+      .default([]),
+    sessionSummary: jsonb("session_summary"),
+    browser: jsonb("browser"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("idx_feedback_category").on(table.category),
+    index("idx_feedback_created").on(table.createdAt),
+  ],
+);

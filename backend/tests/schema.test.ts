@@ -20,6 +20,8 @@ import {
   ingestionConflicts,
   paymentBatches,
   paymentBatchLoads,
+  syncRuns,
+  feedback,
 } from "../src/db/schema.js";
 
 describe("Drizzle Schema", () => {
@@ -97,5 +99,13 @@ describe("Drizzle Schema", () => {
 
   it("exports payment_batch_loads table", () => {
     expect(getTableName(paymentBatchLoads)).toBe("payment_batch_loads");
+  });
+
+  it("exports sync_runs table", () => {
+    expect(getTableName(syncRuns)).toBe("sync_runs");
+  });
+
+  it("exports feedback table", () => {
+    expect(getTableName(feedback)).toBe("feedback");
   });
 });
