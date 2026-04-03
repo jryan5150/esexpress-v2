@@ -8,7 +8,7 @@ import {
 } from "../hooks/use-wells";
 import { useMarkEntered, useAdvanceToReady } from "../hooks/use-dispatch-desk";
 import { usePresence, useHeartbeat } from "../hooks/use-presence";
-import { DispatchCard } from "../components/DispatchCard";
+import { LoadRow } from "../components/LoadRow";
 import { PhotoModal } from "../components/PhotoModal";
 import { Pagination } from "../components/Pagination";
 import { Button } from "../components/Button";
@@ -653,106 +653,65 @@ export function DispatchDesk() {
         </div>
       )}
 
+      {/* Column Headers */}
+      {selectedWellId && filteredLoads.length > 0 && (
+        <div
+          className="grid items-center gap-3 px-3.5 pb-1"
+          style={{
+            gridTemplateColumns:
+              "28px 90px minmax(100px, 1fr) 60px 110px 100px 70px auto",
+          }}
+        >
+          <div />
+          <span className="font-label text-[10px] font-semibold uppercase tracking-wide text-on-surface/30">
+            Status
+          </span>
+          <span className="font-label text-[10px] font-semibold uppercase tracking-wide text-on-surface/30">
+            Driver / Load
+          </span>
+          <span className="font-label text-[10px] font-semibold uppercase tracking-wide text-on-surface/30 text-right">
+            Weight
+          </span>
+          <span className="font-label text-[10px] font-semibold uppercase tracking-wide text-on-surface/30">
+            BOL / Truck
+          </span>
+          <span className="font-label text-[10px] font-semibold uppercase tracking-wide text-on-surface/30">
+            Ticket
+          </span>
+          <span className="font-label text-[10px] font-semibold uppercase tracking-wide text-on-surface/30 text-right">
+            Date
+          </span>
+          <div />
+        </div>
+      )}
+
       {/* Filtered Load List */}
       {selectedWellId && filteredLoads.length > 0 && (
-        <div className="space-y-2">
-          {filteredLoads.map((load, idx) => {
-            const validationStatus = getValidationStatus(load);
-            const isValidated = validationStatus === "validated";
-            const isMissing = validationStatus === "missing";
-            return (
-              <div
-                key={load.assignmentId}
-                className={`relative transition-all duration-200 rounded-xl overflow-hidden ${
-                  isValidated
-                    ? "ring-1 ring-tertiary/20 shadow-[inset_4px_0_0_0_var(--color-tertiary)]"
-                    : isMissing
-                      ? "ring-1 ring-error/20 shadow-[inset_4px_0_0_0_var(--color-error)]"
-                      : ""
-                } ${!isValidated && !enteredIds.has(load.assignmentId) ? "opacity-60" : ""}`}
-              >
-                {/* Validation badge overlay */}
-                <div className="absolute top-2.5 left-3 z-10 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(load.assignmentId)}
-                    onChange={() => toggleSelect(load.assignmentId)}
-                    disabled={isMissing}
-                    className="w-4 h-4 rounded border-on-surface/20 accent-primary-container cursor-pointer"
-                  />
-                  <div
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                      isValidated
-                        ? "bg-tertiary/15 text-tertiary"
-                        : isMissing
-                          ? "bg-error/15 text-error animate-pulse"
-                          : "bg-primary-container/10 text-primary-container"
-                    }`}
-                  >
-                    <span
-                      className="material-symbols-outlined text-xs"
-                      style={{
-                        fontVariationSettings: isValidated
-                          ? "'FILL' 1"
-                          : "'FILL' 0",
-                      }}
-                    >
-                      {isValidated
-                        ? "verified"
-                        : isMissing
-                          ? "warning"
-                          : "schedule"}
-                    </span>
-                    {isValidated
-                      ? "Validated"
-                      : isMissing
-                        ? "Missing Ticket"
-                        : "Pending"}
-                  </div>
-                </div>
-
-                {(load as any).photoUrls?.length > 0 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPhotoModalLoad(load);
-                    }}
-                    className="absolute top-3 right-3 z-10 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-surface-container-high/80 text-on-surface/60 hover:text-primary-container hover:bg-surface-container-highest transition-all cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-xs">
-                      photo_camera
-                    </span>
-                    View BOL
-                  </button>
-                )}
-
-                <DispatchCard
-                  loadNo={load.loadNo}
-                  pcsNumber={
-                    activeFilter === "ready" && pcsStart
-                      ? parseInt(pcsStart) + idx
-                      : null
-                  }
-                  driverName={load.driverName}
-                  truckNo={load.truckNo}
-                  carrierName={load.carrierName}
-                  productDescription={load.productDescription}
-                  weightTons={load.weightTons}
-                  bolNo={load.bolNo}
-                  ticketNo={load.ticketNo}
-                  wellName={load.wellName}
-                  photoStatus={load.photoStatus}
-                  canEnter={load.canEnter}
-                  entered={enteredIds.has(load.assignmentId)}
-                  onMarkEntered={() => handleMarkSingle(load.assignmentId)}
-                  isPending={markEntered.isPending}
-                  loadId={load.loadId}
-                  deliveredOn={load.deliveredOn}
-                  photoUrls={(load as any).photoUrls}
-                />
-              </div>
-            );
-          })}
+        <div className="space-y-1.5">
+          {filteredLoads.map((load) => (
+            <LoadRow
+              key={load.assignmentId}
+              assignmentId={load.assignmentId}
+              loadNo={load.loadNo}
+              driverName={load.driverName}
+              carrierName={load.carrierName}
+              weightTons={load.weightTons}
+              bolNo={load.bolNo}
+              truckNo={load.truckNo}
+              ticketNo={load.ticketNo}
+              deliveredOn={load.deliveredOn}
+              validationStatus={getValidationStatus(load)}
+              checked={selectedIds.has(load.assignmentId)}
+              entered={enteredIds.has(load.assignmentId)}
+              canEnter={load.canEnter}
+              hasPhotos={!!load.photoUrls?.length}
+              onToggleSelect={() => toggleSelect(load.assignmentId)}
+              onMarkEntered={() => handleMarkSingle(load.assignmentId)}
+              onValidate={() => handleValidateSingle(load.assignmentId)}
+              onViewPhotos={() => setPhotoModalLoad(load)}
+              isPending={markEntered.isPending}
+            />
+          ))}
         </div>
       )}
 
