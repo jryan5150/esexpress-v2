@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "./Button";
 
 interface PhotoModalProps {
@@ -48,18 +48,25 @@ export function PhotoModal({
   showValidateButton = true,
 }: PhotoModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft" && currentIndex > 0)
-        setCurrentIndex(currentIndex - 1);
-      if (e.key === "ArrowRight" && currentIndex < photoUrls.length - 1)
-        setCurrentIndex(currentIndex + 1);
+      if (e.key === "Escape") onCloseRef.current();
+      if (e.key === "ArrowLeft" && currentIndexRef.current > 0)
+        setCurrentIndex((prev) => prev - 1);
+      if (
+        e.key === "ArrowRight" &&
+        currentIndexRef.current < photoUrls.length - 1
+      )
+        setCurrentIndex((prev) => prev + 1);
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose, currentIndex, photoUrls.length]);
+  }, [photoUrls.length]);
 
   const matchPct = autoMapScore ? Math.round(Number(autoMapScore) * 100) : null;
   const matchColor =

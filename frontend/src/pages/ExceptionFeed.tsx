@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useWells,
@@ -30,20 +31,22 @@ export function ExceptionFeed() {
   const isLoading = wellsQuery.isLoading || readinessQuery.isLoading;
 
   // Wells now return per-well assignment stats from backend
-  const rawWells = Array.isArray(wellsQuery.data) ? wellsQuery.data : [];
-  const wells = (rawWells as Array<Record<string, unknown>>)
-    .map((w) => ({
-      id: String(w.id ?? ""),
-      name: String(w.name ?? ""),
-      totalLoads: Number(w.totalLoads ?? w.total_loads ?? 0),
-      ready: Number(w.ready ?? 0),
-      review: Number(w.review ?? 0),
-      assigned: Number(w.assigned ?? 0),
-      missing: Number(w.missing ?? 0),
-      validated: Number((w as any).validated ?? 0),
-    }))
-    .filter((w) => w.totalLoads > 0)
-    .sort((a, b) => b.review - a.review || b.totalLoads - a.totalLoads);
+  const wells = useMemo(() => {
+    const raw = Array.isArray(wellsQuery.data) ? wellsQuery.data : [];
+    return (raw as Array<Record<string, unknown>>)
+      .map((w) => ({
+        id: String(w.id ?? ""),
+        name: String(w.name ?? ""),
+        totalLoads: Number(w.totalLoads ?? w.total_loads ?? 0),
+        ready: Number(w.ready ?? 0),
+        review: Number(w.review ?? 0),
+        assigned: Number(w.assigned ?? 0),
+        missing: Number(w.missing ?? 0),
+        validated: Number((w as any).validated ?? 0),
+      }))
+      .filter((w) => w.totalLoads > 0)
+      .sort((a, b) => b.review - a.review || b.totalLoads - a.totalLoads);
+  }, [wellsQuery.data]);
 
   const readiness = readinessQuery.data as Record<string, unknown> | undefined;
   const readyCount = Number(

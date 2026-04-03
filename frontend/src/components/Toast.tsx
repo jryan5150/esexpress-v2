@@ -22,6 +22,12 @@ export function useToast() {
   return useContext(ToastContext);
 }
 
+const VARIANT_STYLES: Record<string, string> = {
+  success: "bg-tertiary/10 border-tertiary/30 text-tertiary",
+  error: "bg-error/10 border-error/30 text-error",
+  info: "bg-primary/10 border-primary/30 text-primary",
+};
+
 let nextId = 0;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -45,12 +51,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setMessages((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
-  const variantStyles: Record<string, string> = {
-    success: "bg-tertiary/10 border-tertiary/30 text-tertiary",
-    error: "bg-error/10 border-error/30 text-error",
-    info: "bg-primary/10 border-primary/30 text-primary",
-  };
-
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
@@ -58,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg shadow-black/10 cursor-pointer transition-all hover:scale-[1.02] animate-slide-in-right ${variantStyles[msg.variant]}`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg shadow-black/10 cursor-pointer transition-all hover:scale-[1.02] animate-slide-in-right ${VARIANT_STYLES[msg.variant]}`}
             onClick={() => dismiss(msg.id)}
           >
             <span className="material-symbols-outlined text-sm">

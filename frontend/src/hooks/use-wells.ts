@@ -120,14 +120,9 @@ export function useTransitionStatus() {
 }
 
 export function useValidationConfirm() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (params: { assignmentId: number }) =>
       api.post("/dispatch/validation/confirm", params),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk.validation.all });
-      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
-    },
   });
 }
 

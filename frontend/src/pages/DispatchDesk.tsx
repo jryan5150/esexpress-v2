@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   useWells,
@@ -15,6 +15,7 @@ import { Button } from "../components/Button";
 import { useToast } from "../components/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { qk } from "../lib/query-client";
+import { api } from "../lib/api";
 import type { Well } from "../types/api";
 
 export function DispatchDesk() {
@@ -65,52 +66,70 @@ export function DispatchDesk() {
     deskQuery.data?.items ??
     (Array.isArray(deskQuery.data) ? deskQuery.data : []);
 
-  // Split loads by status for display
-  const pendingLoads = allLoads.filter(
-    (l) => l.assignmentStatus === "pending" && !enteredIds.has(l.assignmentId),
-  );
-  const assignedLoads = allLoads.filter(
-    (l) => l.assignmentStatus === "assigned" && !enteredIds.has(l.assignmentId),
-  );
-  const readyLoads = allLoads.filter(
-    (l) =>
-      l.assignmentStatus === "dispatch_ready" &&
-      !enteredIds.has(l.assignmentId),
-  );
-  const activeLoads = [...readyLoads, ...assignedLoads, ...pendingLoads];
+  // Single-pass load categorization (memoized)
+  const {
+    pendingLoads,
+    assignedLoads,
+    readyLoads,
+    activeLoads,
+    filteredLoads,
+    filterCounts,
+  } = useMemo(() => {
+    const pending: typeof allLoads = [];
+    const assigned: typeof allLoads = [];
+    const ready: typeof allLoads = [];
+    const validated: typeof allLoads = [];
 
-  // Filter loads by active tab
-  const filteredLoads = (() => {
-    switch (activeFilter) {
-      case "pending":
-        return allLoads.filter((l) => l.assignmentStatus === "pending");
-      case "assigned":
-        return allLoads.filter((l) => l.assignmentStatus === "assigned");
-      case "ready":
-        return allLoads.filter((l) => l.assignmentStatus === "dispatch_ready");
-      case "validated":
-        return allLoads.filter(
-          (l) =>
-            l.assignmentStatus === "dispatched" ||
-            l.assignmentStatus === "delivered",
-        );
-      default:
-        return allLoads;
+    for (const l of allLoads) {
+      switch (l.assignmentStatus) {
+        case "pending":
+          pending.push(l);
+          break;
+        case "assigned":
+          assigned.push(l);
+          break;
+        case "dispatch_ready":
+          ready.push(l);
+          break;
+        case "dispatched":
+        case "delivered":
+          validated.push(l);
+          break;
+      }
     }
-  })();
 
-  const filterCounts = {
-    all: allLoads.length,
-    pending: allLoads.filter((l) => l.assignmentStatus === "pending").length,
-    assigned: allLoads.filter((l) => l.assignmentStatus === "assigned").length,
-    ready: allLoads.filter((l) => l.assignmentStatus === "dispatch_ready")
-      .length,
-    validated: allLoads.filter(
-      (l) =>
-        l.assignmentStatus === "dispatched" ||
-        l.assignmentStatus === "delivered",
-    ).length,
-  };
+    const counts = {
+      all: allLoads.length,
+      pending: pending.length,
+      assigned: assigned.length,
+      ready: ready.length,
+      validated: validated.length,
+    };
+
+    const filtered =
+      activeFilter === "pending"
+        ? pending
+        : activeFilter === "assigned"
+          ? assigned
+          : activeFilter === "ready"
+            ? ready
+            : activeFilter === "validated"
+              ? validated
+              : allLoads;
+
+    return {
+      pendingLoads: pending.filter((l) => !enteredIds.has(l.assignmentId)),
+      assignedLoads: assigned.filter((l) => !enteredIds.has(l.assignmentId)),
+      readyLoads: ready.filter((l) => !enteredIds.has(l.assignmentId)),
+      activeLoads: [
+        ...ready.filter((l) => !enteredIds.has(l.assignmentId)),
+        ...assigned.filter((l) => !enteredIds.has(l.assignmentId)),
+        ...pending.filter((l) => !enteredIds.has(l.assignmentId)),
+      ],
+      filteredLoads: filtered,
+      filterCounts: counts,
+    };
+  }, [allLoads, activeFilter, enteredIds]);
 
   const getValidationStatus = (
     load: any,
@@ -133,28 +152,22 @@ export function DispatchDesk() {
     });
   };
 
-  const handleBulkValidate = () => {
+  const handleBulkValidate = async () => {
     const ids = Array.from(selectedIds);
-    let completed = 0;
-    ids.forEach((id) => {
-      confirmMutation.mutate(
-        { assignmentId: id },
-        {
-          onSuccess: () => {
-            completed++;
-            if (completed === ids.length) {
-              toast(`${ids.length} loads validated`, "success");
-              setSelectedIds(new Set());
-              queryClient.invalidateQueries({ queryKey: qk.validation.all });
-              queryClient.invalidateQueries({ queryKey: qk.assignments.all });
-              queryClient.invalidateQueries({ queryKey: qk.wells.all });
-            }
-          },
-          onError: (err) =>
-            toast(`Validate failed: ${(err as Error).message}`, "error"),
-        },
+    try {
+      await Promise.all(
+        ids.map((id) =>
+          api.post("/dispatch/validation/confirm", { assignmentId: id }),
+        ),
       );
-    });
+      toast(`${ids.length} loads validated`, "success");
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: qk.validation.all });
+      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+      queryClient.invalidateQueries({ queryKey: qk.wells.all });
+    } catch (err) {
+      toast(`Validate failed: ${(err as Error).message}`, "error");
+    }
   };
 
   const handleValidateSingle = (assignmentId: number) => {
