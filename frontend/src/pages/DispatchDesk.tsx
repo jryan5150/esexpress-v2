@@ -280,49 +280,54 @@ export function DispatchDesk() {
     <div className="p-8 space-y-6 max-w-5xl">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="border-l-4 border-primary-container pl-5">
           <div className="flex items-center gap-3 mb-1">
             <button
               onClick={() => navigate("/")}
-              className="text-on-surface/40 hover:text-primary-container transition-colors cursor-pointer"
+              className="text-on-surface/30 hover:text-primary-container transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-lg">
                 arrow_back
               </span>
             </button>
-            <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
+            <h1 className="text-3xl font-headline font-black tracking-tight text-on-surface uppercase">
               Dispatch Desk
             </h1>
           </div>
-          <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest ml-8">
+          <p className="text-on-surface/25 font-label text-xs uppercase tracking-[0.2em] ml-8">
             Clipboard Bridge // Pre-PCS Staging
           </p>
         </div>
       </div>
 
       {/* Well Selector + PCS Start */}
-      <div className="bg-surface-container-low rounded-xl p-6 space-y-4">
+      <div className="bg-surface-container-low rounded-xl p-6 space-y-4 border border-on-surface/5">
         <div className="flex flex-wrap items-end gap-6">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-[10px] font-label font-bold uppercase tracking-widest text-on-surface/30 mb-2">
+            <label className="block text-[10px] font-label font-bold uppercase tracking-[0.15em] text-on-surface/35 mb-2">
               Select Well
             </label>
-            <select
-              value={selectedWellId}
-              onChange={(e) => handleSelectWell(e.target.value)}
-              className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 text-sm text-on-surface font-headline focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 appearance-none cursor-pointer"
-            >
-              <option value="">Choose a well...</option>
-              {wells.map((w) => (
-                <option key={w.id} value={String(w.id)}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <span className="material-symbols-outlined text-on-surface/25 absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
+                oil_barrel
+              </span>
+              <select
+                value={selectedWellId}
+                onChange={(e) => handleSelectWell(e.target.value)}
+                className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg pl-10 pr-4 py-3 text-sm text-on-surface font-headline font-semibold focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 appearance-none cursor-pointer"
+              >
+                <option value="">Choose a well...</option>
+                {wells.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    {w.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="w-48">
-            <label className="block text-[10px] font-label font-bold uppercase tracking-widest text-on-surface/30 mb-2">
+            <label className="block text-[10px] font-label font-bold uppercase tracking-[0.15em] text-on-surface/35 mb-2">
               PCS Starting #
             </label>
             <input
@@ -398,18 +403,18 @@ export function DispatchDesk() {
             </div>
 
             {/* Filter tabs */}
-            <div className="flex items-center justify-between">
-              <div className="flex gap-1">
+            <div className="flex items-center justify-between bg-surface-container-high/40 rounded-lg p-1">
+              <div className="flex gap-0.5">
                 {(
                   ["all", "pending", "assigned", "ready", "validated"] as const
                 ).map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setActiveFilter(filter)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all cursor-pointer ${
+                    className={`px-4 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-all cursor-pointer ${
                       activeFilter === filter
-                        ? "bg-primary-container/10 text-primary-container"
-                        : "text-on-surface/40 hover:bg-surface-container-high hover:text-on-surface/60"
+                        ? "bg-surface-container-lowest text-primary-container shadow-sm"
+                        : "text-on-surface/40 hover:text-on-surface/60"
                     }`}
                   >
                     {filter}{" "}
@@ -419,17 +424,17 @@ export function DispatchDesk() {
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-4 text-[10px] text-on-surface/40 font-label">
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-tertiary" />
+              <div className="flex items-center gap-4 text-[10px] text-on-surface/40 font-label pr-2">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-tertiary" />
                   {filterCounts.validated} validated
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary-container" />
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-primary-container" />
                   {filterCounts.ready} ready
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-on-surface/30" />
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-on-surface/20" />
                   {filterCounts.pending} pending
                 </span>
               </div>
@@ -477,7 +482,7 @@ export function DispatchDesk() {
         <div className="space-y-4">
           <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40 px-2">
             Pick a Well{" "}
-            <span className="text-on-surface/20">
+            <span className="text-on-surface/20 font-medium">
               -- showing wells with dispatch-ready or assigned loads
             </span>
           </h3>
@@ -510,44 +515,41 @@ export function DispatchDesk() {
                   <button
                     key={w.id}
                     onClick={() => handleSelectWell(w.id)}
-                    className="w-full bg-surface-container-lowest hover:bg-surface-container-high rounded-xl p-5 flex items-center justify-between transition-all cursor-pointer group border border-on-surface/5 text-left hover-lift"
+                    className={`w-full bg-surface-container-lowest hover:bg-surface-container-high rounded-xl p-5 flex items-center justify-between transition-all cursor-pointer group border border-on-surface/5 text-left hover-lift border-l-4 ${w.ready > 0 ? "border-l-tertiary" : w.assigned > 0 ? "border-l-primary-container" : "border-l-on-surface/10"}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div
-                        className={`w-2 h-10 rounded-full ${w.ready > 0 ? "bg-tertiary" : w.assigned > 0 ? "bg-primary-container" : "bg-on-surface/10"}`}
-                      />
                       <div>
-                        <h4 className="font-bold text-on-surface text-lg group-hover:text-primary-container transition-colors">
+                        <h4 className="font-headline font-bold text-on-surface text-lg group-hover:text-primary-container transition-colors">
                           {w.name}
                         </h4>
-                        <span className="font-label text-xs text-on-surface/40">
+                        <span className="font-label text-xs text-on-surface/35 tracking-wide">
                           {w.totalLoads} total loads
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-5">
                       {w.ready > 0 && (
-                        <div className="text-right">
-                          <span className="font-label text-lg font-bold text-tertiary">
+                        <div className="text-right bg-tertiary/5 px-3 py-1.5 rounded-lg">
+                          <span className="font-label text-lg font-bold text-tertiary leading-none">
                             {w.ready}
                           </span>
-                          <span className="text-[10px] uppercase font-bold text-on-surface/30 block tracking-wider">
+                          <span className="text-[9px] uppercase font-bold text-tertiary/60 block tracking-wider mt-0.5">
                             Ready
                           </span>
                         </div>
                       )}
                       {w.assigned > 0 && (
-                        <div className="text-right">
-                          <span className="font-label text-lg font-bold text-primary-container">
+                        <div className="text-right bg-primary-container/5 px-3 py-1.5 rounded-lg">
+                          <span className="font-label text-lg font-bold text-primary-container leading-none">
                             {w.assigned}
                           </span>
-                          <span className="text-[10px] uppercase font-bold text-on-surface/30 block tracking-wider">
+                          <span className="text-[9px] uppercase font-bold text-primary-container/60 block tracking-wider mt-0.5">
                             Assigned
                           </span>
                         </div>
                       )}
-                      <span className="material-symbols-outlined text-on-surface/20 group-hover:text-primary-container group-hover:translate-x-1 transition-all">
-                        arrow_forward
+                      <span className="material-symbols-outlined text-on-surface/15 group-hover:text-primary-container group-hover:translate-x-1 transition-all">
+                        chevron_right
                       </span>
                     </div>
                   </button>

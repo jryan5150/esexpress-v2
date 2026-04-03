@@ -81,33 +81,35 @@ export function PhotoModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/70 backdrop-blur-md"
       onClick={onClose}
     >
       <div
-        className="bg-surface-container rounded-xl w-[70vw] max-w-5xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col"
+        className="bg-surface-container rounded-2xl w-[72vw] max-w-5xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col border border-on-surface/5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-surface-container-high/60">
+        <div className="flex items-center justify-between px-6 py-4 bg-surface-container-high/60 border-b border-on-surface/5">
           <div className="flex items-center gap-4">
-            <span className="material-symbols-outlined text-primary-container">
-              description
-            </span>
+            <div className="bg-primary-container/10 p-2 rounded-lg">
+              <span className="material-symbols-outlined text-primary-container text-lg">
+                description
+              </span>
+            </div>
             <div>
-              <span className="font-label font-bold text-on-surface">
+              <span className="font-label font-bold text-on-surface text-base">
                 BOL #{bolNo || "--"}
               </span>
-              <span className="text-xs text-on-surface/40 ml-4">
+              <span className="text-xs text-on-surface/35 ml-3 font-label">
                 Load {loadNo} &middot; {wellName}
               </span>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-on-surface/40 hover:text-on-surface transition-colors cursor-pointer"
+            className="text-on-surface/30 hover:text-on-surface hover:bg-surface-container-high p-1.5 rounded-lg transition-all cursor-pointer"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
 
@@ -132,8 +134,8 @@ export function PhotoModal({
           </div>
 
           {/* Info panel */}
-          <div className="w-64 bg-surface-container-low p-5 space-y-4 overflow-y-auto">
-            <h4 className="text-[10px] font-bold uppercase tracking-widest text-on-surface/30">
+          <div className="w-72 bg-surface-container-low p-6 space-y-5 overflow-y-auto border-l border-on-surface/5">
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface/30">
               Load Details
             </h4>
             <div className="space-y-3">
@@ -160,7 +162,7 @@ export function PhotoModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-3 bg-surface-container-high/60">
+        <div className="flex items-center justify-between px-6 py-4 bg-surface-container-high/60 border-t border-on-surface/5">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -197,9 +199,12 @@ export function PhotoModal({
             {showValidateButton && onValidate && (
               <button
                 onClick={onValidate}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wide bg-tertiary/10 text-tertiary hover:bg-tertiary/20 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide bg-tertiary text-on-tertiary hover:bg-tertiary/90 transition-colors cursor-pointer shadow-sm"
               >
-                <span className="material-symbols-outlined text-sm">
+                <span
+                  className="material-symbols-outlined text-sm"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >
                   verified
                 </span>
                 Validate This Load

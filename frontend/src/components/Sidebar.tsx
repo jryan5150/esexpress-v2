@@ -14,14 +14,14 @@ export function Sidebar() {
 
   const navClass = (path: string) =>
     isActive(path)
-      ? "bg-primary-container/10 text-primary-container border-l-[3px] border-primary-container flex items-center gap-3 px-4 py-2.5 rounded-r-lg transition-all duration-200 font-semibold"
-      : "text-on-surface/50 flex items-center gap-3 px-4 py-2.5 hover:bg-surface-container-high/50 hover:text-on-surface/80 rounded-r-lg transition-all duration-200";
+      ? "bg-primary-container/10 text-primary-container border-l-[3px] border-primary-container flex items-center gap-3 px-5 py-2.5 rounded-r-lg transition-all duration-200 font-semibold"
+      : "text-on-surface/40 flex items-center gap-3 px-5 py-2.5 hover:bg-surface-container-high/60 hover:text-on-surface/70 rounded-r-lg transition-all duration-200";
 
   return (
     <aside className="hidden md:flex flex-col h-screen w-64 bg-surface-container-low border-r border-on-surface/5 z-50 shrink-0">
-      <div className="px-5 pt-7 pb-6 flex flex-col gap-2">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center">
+      <div className="px-5 pt-8 pb-7 flex flex-col gap-2 border-b border-on-surface/5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center shadow-sm">
             <span
               className="material-symbols-outlined text-on-primary-container text-lg"
               style={{ fontVariationSettings: "'FILL' 1" }}
@@ -33,13 +33,13 @@ export function Sidebar() {
             <h2 className="text-on-surface font-headline font-black text-sm tracking-tight uppercase leading-tight">
               ES Express
             </h2>
-            <p className="text-[10px] text-on-surface/30 font-label tracking-widest uppercase">
+            <p className="text-[10px] text-on-surface/25 font-label tracking-widest uppercase">
               Dispatch Command
             </p>
           </div>
         </div>
       </div>
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="flex-1 px-3 space-y-0.5 pt-4">
         <Link to="/" className={navClass("/")}>
           <span className="material-symbols-outlined">home</span>
           <span className="text-sm font-medium">Today's Objectives</span>

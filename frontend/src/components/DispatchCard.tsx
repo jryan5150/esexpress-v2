@@ -61,11 +61,11 @@ function Field({ label, value }: { label: string; value: string | null }) {
       onClick={handleCopy}
     >
       <div className="min-w-0">
-        <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface/30 block">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface/30 block">
           {label}
         </span>
         <span
-          className={`font-label text-sm block truncate ${value ? "text-on-surface" : "text-on-surface/20"}`}
+          className={`font-label text-sm block truncate ${value ? "text-on-surface" : "text-on-surface/15"}`}
         >
           {display}
         </span>
@@ -124,70 +124,78 @@ export function DispatchCard({
         className={`bg-surface-container-lowest rounded-xl overflow-hidden border border-on-surface/5 transition-all ${entered ? "opacity-40" : ""}`}
       >
         {/* Header — load ID + timeline + photo status */}
-        <div className="px-5 py-3 bg-surface-container-high/30 border-b border-on-surface/5 space-y-2">
+        <div className="px-5 py-3.5 bg-surface-container-high/30 border-b border-on-surface/5 space-y-2.5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="font-label text-lg font-bold text-primary-container">
+            <div className="flex items-center gap-3">
+              <span className="font-label text-xl font-bold text-primary-container tracking-tight">
                 {loadNo}
               </span>
               {pcsNumber && (
                 <>
-                  <span className="text-on-surface/15">|</span>
-                  <span className="font-label text-sm text-on-surface/50">
+                  <span className="text-on-surface/10 font-light">|</span>
+                  <span className="font-label text-sm text-on-surface/40">
                     PCS #{pcsNumber}
                   </span>
                 </>
               )}
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 bg-surface-container-high/50 px-2.5 py-1 rounded-md">
                 <span
-                  className={`material-symbols-outlined text-base ${photoColor}`}
+                  className={`material-symbols-outlined text-sm ${photoColor}`}
+                  style={{ fontVariationSettings: "'FILL' 1" }}
                 >
                   {photoIcon}
                 </span>
-                <span className="font-label text-[10px] text-on-surface/40 uppercase">
+                <span className="font-label text-[10px] text-on-surface/40 uppercase tracking-wide">
                   {photoStatus || "missing"}
                 </span>
               </div>
               {entered && (
-                <span className="font-label text-[10px] bg-tertiary/10 text-tertiary px-2 py-0.5 rounded-full font-bold uppercase">
+                <span className="font-label text-[10px] bg-tertiary/10 text-tertiary px-2.5 py-1 rounded-md font-bold uppercase tracking-wide">
                   Entered
                 </span>
               )}
             </div>
           </div>
           {/* Timeline row */}
-          <div className="flex items-center gap-6 text-xs">
+          <div className="flex items-center gap-5 text-xs">
             <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm text-on-surface/30">
+              <span className="material-symbols-outlined text-sm text-on-surface/25">
                 local_shipping
               </span>
-              <span className="text-[9px] font-bold uppercase text-on-surface/30">
+              <span className="text-[9px] font-bold uppercase text-on-surface/25">
                 Pickup
               </span>
-              <span className="font-label text-on-surface">
+              <span className="font-label text-on-surface/70">
                 {formatDeliveryTime(pickupTime)}
               </span>
             </div>
-            <span className="text-on-surface/15">→</span>
+            <span className="material-symbols-outlined text-on-surface/15 text-xs">
+              arrow_forward
+            </span>
             <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm text-on-surface/30">
+              <span className="material-symbols-outlined text-sm text-on-surface/25">
                 pin_drop
               </span>
-              <span className="text-[9px] font-bold uppercase text-on-surface/30">
+              <span className="text-[9px] font-bold uppercase text-on-surface/25">
                 Arrived
               </span>
-              <span className="font-label text-on-surface">
+              <span className="font-label text-on-surface/70">
                 {formatDeliveryTime(arrivalTime)}
               </span>
             </div>
-            <span className="text-on-surface/15">→</span>
+            <span className="material-symbols-outlined text-on-surface/15 text-xs">
+              arrow_forward
+            </span>
             <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-sm text-tertiary">
+              <span
+                className="material-symbols-outlined text-sm text-tertiary"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
                 check_circle
               </span>
-              <span className="text-[9px] font-bold uppercase text-on-surface/30">
+              <span className="text-[9px] font-bold uppercase text-on-surface/25">
                 Delivered
               </span>
               <span className="font-label font-bold text-on-surface">

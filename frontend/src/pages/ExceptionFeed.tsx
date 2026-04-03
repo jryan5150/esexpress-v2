@@ -77,11 +77,11 @@ export function ExceptionFeed() {
         )}
 
         {/* Page Header */}
-        <div>
-          <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
+        <div className="border-l-4 border-primary-container pl-5">
+          <h1 className="text-3xl font-headline font-black tracking-tight text-on-surface uppercase">
             Today's Objectives
           </h1>
-          <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
+          <p className="text-on-surface/35 font-label text-xs uppercase tracking-[0.2em] mt-1.5">
             {new Date().toLocaleDateString("en-US", {
               weekday: "long",
               month: "long",
@@ -130,11 +130,11 @@ export function ExceptionFeed() {
             className={`${pendingReview > 0 ? "md:col-span-2" : "md:col-span-3"} bg-surface-container-low rounded-xl p-8 border-l-4 border-tertiary relative overflow-hidden group`}
           >
             <div className="absolute -right-12 -top-12 w-64 h-64 bg-tertiary/5 rounded-full blur-3xl group-hover:bg-tertiary/10 transition-all duration-700" />
-            <div className="relative z-10 space-y-4">
+            <div className="relative z-10 space-y-5">
               <h3 className="text-[10px] uppercase tracking-[0.2em] font-black text-on-surface/40">
                 System Handled
               </h3>
-              <div className="flex flex-wrap gap-8">
+              <div className="flex flex-wrap gap-10">
                 {[
                   {
                     icon: "check_circle",
@@ -158,17 +158,20 @@ export function ExceptionFeed() {
                     label: "Photos Attached",
                   },
                 ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-3">
-                    <div className="bg-tertiary/10 p-2 rounded-lg">
-                      <span className="material-symbols-outlined text-tertiary">
+                  <div key={item.label} className="flex items-center gap-4">
+                    <div className="bg-tertiary/10 p-2.5 rounded-xl">
+                      <span
+                        className="material-symbols-outlined text-tertiary text-xl"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
                         {item.icon}
                       </span>
                     </div>
                     <div>
-                      <div className="font-label text-2xl font-bold text-on-surface">
+                      <div className="font-label text-3xl font-bold text-on-surface leading-none">
                         {item.value}
                       </div>
-                      <div className="text-[10px] uppercase font-bold text-on-surface/40">
+                      <div className="text-[10px] uppercase font-bold text-on-surface/35 tracking-wider mt-1">
                         {item.label}
                       </div>
                     </div>
@@ -190,7 +193,7 @@ export function ExceptionFeed() {
             </h3>
           </div>
 
-          <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+          <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/8">
             {isLoading ? (
               <>
                 {[1, 2, 3].map((i) => (
@@ -231,12 +234,12 @@ export function ExceptionFeed() {
                   className="bg-surface-container-low hover:bg-surface-container-high transition-all group cursor-pointer flex flex-col md:flex-row md:items-center p-6 gap-6 hover-lift"
                 >
                   <div
-                    className={`md:w-64 border-l-4 pl-4 ${getBorderColor(well.ready, well.totalLoads)}`}
+                    className={`md:w-72 border-l-4 pl-4 ${getBorderColor(well.ready, well.totalLoads)}`}
                   >
-                    <h4 className="font-bold text-lg text-on-surface">
+                    <h4 className="font-headline font-bold text-lg text-on-surface group-hover:text-primary-container transition-colors">
                       {well.name}
                     </h4>
-                    <span className="font-label text-sm text-on-surface/60">
+                    <span className="font-label text-xs text-on-surface/40 tracking-wide">
                       {well.totalLoads} Loads
                     </span>
                   </div>
@@ -246,7 +249,7 @@ export function ExceptionFeed() {
                         Ready
                       </span>
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
+                        <div className="h-2 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
                           <div
                             className="h-full bg-tertiary"
                             style={{
@@ -264,7 +267,7 @@ export function ExceptionFeed() {
                         Validated
                       </span>
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
+                        <div className="h-2 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
                           <div
                             className="h-full bg-tertiary/60"
                             style={{
@@ -286,7 +289,7 @@ export function ExceptionFeed() {
                         Review
                       </span>
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
+                        <div className="h-2 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
                           <div
                             className="h-full bg-primary-container"
                             style={{
@@ -310,7 +313,7 @@ export function ExceptionFeed() {
                         Missing Photos
                       </span>
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
+                        <div className="h-2 flex-1 bg-surface-container-lowest rounded-full overflow-hidden">
                           <div
                             className="h-full bg-error"
                             style={{
@@ -334,41 +337,50 @@ export function ExceptionFeed() {
 
         {/* Bottom Insights */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="col-span-1 md:col-span-2 bg-surface-container-low/40 p-6 rounded-xl border border-on-surface/5">
+          <div className="col-span-1 md:col-span-2 bg-surface-container-low p-6 rounded-xl border border-on-surface/5">
             <div className="flex justify-between items-center mb-6">
-              <h4 className="text-xs uppercase font-black text-on-surface/40 tracking-widest">
+              <h4 className="text-xs uppercase font-black text-on-surface/40 tracking-[0.15em]">
                 Dispatch Pipeline
               </h4>
+              <span className="text-[10px] text-on-surface/25 font-label">
+                Today
+              </span>
             </div>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-5">
               {[
                 {
                   label: "Pending Review",
                   count: pendingReview,
                   color: "bg-primary-container",
+                  textColor: "text-primary-container",
                 },
                 {
                   label: "Assigned",
                   count: wells.reduce((s, w) => s + w.assigned, 0),
-                  color: "bg-primary-container/60",
+                  color: "bg-primary-container/50",
+                  textColor: "text-primary-container/70",
                 },
                 {
                   label: "Dispatch Ready",
                   count: readyCount,
                   color: "bg-tertiary",
+                  textColor: "text-tertiary",
                 },
                 {
                   label: "Photos Attached",
                   count: photosAttached,
-                  color: "bg-tertiary/60",
+                  color: "bg-tertiary/50",
+                  textColor: "text-tertiary/70",
                 },
               ].map((item) => (
-                <div key={item.label} className="text-center space-y-2">
-                  <div className="font-label text-2xl font-bold text-on-surface">
+                <div key={item.label} className="text-center space-y-2.5">
+                  <div
+                    className={`font-label text-2xl font-bold ${item.textColor}`}
+                  >
                     {isLoading ? "..." : item.count}
                   </div>
-                  <div className={`h-2 rounded-full ${item.color}`} />
-                  <div className="text-[10px] uppercase font-bold text-on-surface/40 tracking-wider">
+                  <div className={`h-1.5 rounded-full ${item.color}`} />
+                  <div className="text-[10px] uppercase font-bold text-on-surface/35 tracking-wider leading-tight">
                     {item.label}
                   </div>
                 </div>
@@ -380,13 +392,16 @@ export function ExceptionFeed() {
             <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-8xl text-on-primary-container/10 group-hover:rotate-12 transition-transform duration-500">
               rocket_launch
             </span>
-            <div>
-              <h4 className="text-[10px] font-black text-on-primary-container uppercase tracking-[0.2em] mb-4">
+            <div className="relative z-10">
+              <h4 className="text-[10px] font-black text-on-primary-container/80 uppercase tracking-[0.2em] mb-4">
                 Dispatcher Tip
               </h4>
               <p className="text-sm font-medium leading-relaxed text-on-primary-container">
-                Use <span className="font-label font-bold">[Shift + A]</span> to
-                quickly approve matched loads in the Validation page.
+                Use{" "}
+                <span className="font-label font-bold bg-on-primary-container/10 px-1.5 py-0.5 rounded">
+                  [Shift + A]
+                </span>{" "}
+                to quickly approve matched loads in the Validation page.
               </p>
             </div>
           </div>
