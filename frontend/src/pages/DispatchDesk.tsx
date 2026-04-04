@@ -728,11 +728,11 @@ export function DispatchDesk() {
                           w.dailyTargetLoads ?? w.daily_target_loads ?? 0,
                         ),
                       }))
-                      .filter((w) => w.totalLoads > 0)
                       .sort(
                         (a, b) =>
                           b.ready + b.assigned - (a.ready + a.assigned) ||
-                          b.totalLoads - a.totalLoads,
+                          b.totalLoads - a.totalLoads ||
+                          a.name.localeCompare(b.name),
                       ) ?? [];
 
                   // Today's Objectives summary
