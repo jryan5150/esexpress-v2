@@ -31,20 +31,20 @@ const STATUS_CONFIG: Record<
   validated: {
     label: "Validated",
     dotBg: "bg-tertiary",
-    badgeBg: "bg-tertiary/10",
-    badgeText: "text-tertiary",
+    badgeBg: "bg-[#d1fae5]",
+    badgeText: "text-[#065f46]",
   },
   pending: {
     label: "Pending",
     dotBg: "bg-primary-container",
-    badgeBg: "bg-primary-container/10",
+    badgeBg: "bg-[#ede9f8]",
     badgeText: "text-primary-container",
   },
   missing: {
     label: "Missing Ticket",
     dotBg: "bg-error",
-    badgeBg: "bg-error/10",
-    badgeText: "text-error",
+    badgeBg: "bg-[#fee2e2]",
+    badgeText: "text-[#991b1b]",
   },
 };
 
@@ -89,9 +89,9 @@ export const LoadRow = memo(function LoadRow({
 
   return (
     <div
-      className={`grid items-center gap-3 bg-surface-container-lowest ring-1 ring-on-surface/5 rounded-lg px-3.5 py-2.5 transition-all hover:ring-primary-container/20 hover:shadow-md ${
-        dimmed ? "opacity-55 hover:opacity-75" : ""
-      } ${entered ? "opacity-40" : ""}`}
+      className={`grid items-center gap-3 bg-surface-container-lowest border border-on-surface/15 rounded-lg px-3.5 py-2.5 shadow-sm transition-all hover:border-primary-container/30 hover:shadow-md ${
+        dimmed ? "opacity-50 hover:opacity-70" : ""
+      } ${entered ? "opacity-35" : ""}`}
       style={{
         gridTemplateColumns:
           "28px 90px minmax(100px, 1fr) 60px 110px 100px 70px auto",
@@ -124,11 +124,11 @@ export const LoadRow = memo(function LoadRow({
           <span className="font-semibold text-[13px] text-on-surface truncate">
             {driverName || "--"}
           </span>
-          <span className="font-label text-[11px] text-on-surface/40">
+          <span className="font-label text-[11px] text-on-surface/50">
             {loadNo}
           </span>
         </div>
-        <span className="text-[11px] text-on-surface/40 truncate block">
+        <span className="text-[11px] text-on-surface/50 truncate block">
           {carrierName || "--"}
         </span>
       </div>
@@ -142,10 +142,10 @@ export const LoadRow = memo(function LoadRow({
 
       {/* BOL / Truck */}
       <div>
-        <span className="font-label text-[11px] text-on-surface/70 block truncate">
+        <span className="font-label text-[11px] text-on-surface/80 block truncate">
           {bolNo || "--"}
         </span>
-        <span className="text-[11px] text-on-surface/35 block">
+        <span className="text-[11px] text-on-surface/50 block">
           {truckNo || ""}
         </span>
       </div>
@@ -157,7 +157,7 @@ export const LoadRow = memo(function LoadRow({
             Missing
           </span>
         ) : (
-          <span className="font-label text-[11px] text-on-surface/50">
+          <span className="font-label text-[11px] text-on-surface/60">
             {ticketNo || "--"}
           </span>
         )}
@@ -165,7 +165,7 @@ export const LoadRow = memo(function LoadRow({
 
       {/* Date */}
       <div className="text-right">
-        <span className="text-[11px] text-on-surface/40">
+        <span className="text-[11px] text-on-surface/60">
           {formatDate(deliveredOn)}
         </span>
       </div>
