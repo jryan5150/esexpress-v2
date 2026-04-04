@@ -346,7 +346,7 @@ export function DispatchDesk() {
   return (
     <div className="flex flex-col h-full">
       {/* Page Header */}
-      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest shrink-0">
+      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest header-gradient shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div>
@@ -363,7 +363,7 @@ export function DispatchDesk() {
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-4">
         {/* Command Bar */}
         {selectedWellId && (
-          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[14px] px-[18px] py-3.5 flex items-center gap-3 flex-wrap shadow-sm">
+          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[14px] px-[18px] py-3.5 flex items-center gap-3 flex-wrap shadow-sm card-rest">
             {/* Well Picker */}
             <div className="flex items-center gap-[7px] bg-background border border-outline-variant/40 rounded-md px-[11px] py-[7px] cursor-pointer hover:border-primary transition-colors">
               <span className="material-symbols-outlined text-primary text-base">
@@ -471,7 +471,7 @@ export function DispatchDesk() {
             <button
               onClick={handleMarkAll}
               disabled={readyLoads.length === 0 || markEntered.isPending}
-              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-md bg-primary text-on-primary text-[13px] font-semibold hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-md bg-primary text-on-primary text-[13px] font-semibold hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-40 accent-glow"
             >
               <span className="material-symbols-outlined text-[15px]">
                 check_circle
@@ -483,7 +483,7 @@ export function DispatchDesk() {
 
         {/* Filter Tabs */}
         {selectedWellId && (
-          <div className="flex items-center gap-0.5 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-1 overflow-x-auto">
+          <div className="flex items-center gap-0.5 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-1 overflow-x-auto card-rest">
             {(
               ["all", "pending", "assigned", "ready", "validated"] as const
             ).map((filter) => (
@@ -598,7 +598,7 @@ export function DispatchDesk() {
                     <button
                       key={w.id}
                       onClick={() => handleSelectWell(w.id)}
-                      className={`w-full bg-surface-container-lowest border border-outline-variant/40 hover:border-primary/20 hover:shadow-md rounded-[10px] px-5 py-3.5 flex items-center justify-between transition-all cursor-pointer group text-left shadow-sm border-l-4 ${w.ready > 0 ? "border-l-tertiary" : w.assigned > 0 ? "border-l-primary-container" : "border-l-outline-variant/40"}`}
+                      className={`w-full bg-surface-container-lowest border border-outline-variant/40 hover:border-primary/20 hover:shadow-md rounded-[10px] px-5 py-3.5 flex items-center justify-between transition-all cursor-pointer group text-left shadow-sm border-l-4 hover-lift press-scale ${w.ready > 0 ? "border-l-tertiary" : w.assigned > 0 ? "border-l-primary-container" : "border-l-outline-variant/40"}`}
                     >
                       <div className="flex items-center gap-4">
                         <div>

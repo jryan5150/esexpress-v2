@@ -97,7 +97,7 @@ export function BolQueue() {
   return (
     <div className="flex flex-col h-full">
       {/* Page Header */}
-      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest shrink-0">
+      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest shrink-0 header-gradient">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div>
@@ -142,7 +142,7 @@ export function BolQueue() {
           ].map((s) => (
             <div
               key={s.label}
-              className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-4"
+              className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-4 card-rest stat-glow"
             >
               <div className="flex items-center gap-2 mb-2">
                 <span
@@ -164,7 +164,7 @@ export function BolQueue() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-0.5 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-1">
+        <div className="flex items-center gap-0.5 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-1 card-rest">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -562,7 +562,7 @@ export function BolQueue() {
           <>
             {missingTotal > 0 && (
               <div className="flex items-center gap-3 bg-[#fee2e2] border border-error/20 rounded-[10px] px-4 py-3">
-                <span className="material-symbols-outlined text-error text-lg">
+                <span className="material-symbols-outlined text-error text-lg badge-pulse">
                   warning
                 </span>
                 <div>

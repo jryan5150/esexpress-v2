@@ -14,13 +14,13 @@ export function Sidebar() {
 
   const navClass = (path: string) =>
     isActive(path)
-      ? "bg-[#ede9f8] text-primary font-semibold flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md transition-all duration-150 text-[13px]"
-      : "text-on-surface-variant flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md hover:bg-surface-container-high hover:text-on-surface transition-all duration-150 text-[13px] font-medium";
+      ? "bg-[#ede9f8] text-primary font-semibold flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md transition-all duration-150 text-[13px] nav-smooth press-scale"
+      : "text-on-surface-variant flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md hover:bg-surface-container-high hover:text-on-surface transition-all duration-150 text-[13px] font-medium nav-smooth press-scale";
 
   return (
-    <aside className="hidden md:flex flex-col h-screen w-[228px] min-w-[228px] bg-surface-container-lowest border-r border-outline-variant/40 z-50 shrink-0 overflow-y-auto overflow-x-hidden">
+    <aside className="hidden md:flex flex-col h-screen w-[228px] min-w-[228px] bg-surface-container-lowest border-r border-outline-variant/40 z-50 shrink-0 overflow-y-auto overflow-x-hidden header-gradient">
       {/* Logo */}
-      <div className="px-4 pt-[18px] pb-3.5 border-b border-outline-variant/40 flex items-center gap-2.5">
+      <div className="px-4 pt-[18px] pb-3.5 border-b border-outline-variant/30 shadow-[0_1px_3px_rgba(30,27,24,0.04)] flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
           <span className="material-symbols-outlined text-on-primary text-lg">
             local_shipping
@@ -115,7 +115,7 @@ export function Sidebar() {
       {/* Bottom: Presence + Settings + Logout */}
       <div className="border-t border-outline-variant/40 px-3 py-2">
         <div className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-outline">
-          <span className="w-[7px] h-[7px] rounded-full bg-tertiary shrink-0" />
+          <span className="w-[7px] h-[7px] rounded-full bg-tertiary shrink-0 shadow-[0_0_6px_rgba(13,150,104,0.4)]" />
           <span>Online ({Math.max(onlineUsers.length, 1)}) &mdash;</span>
           <span className="font-medium text-on-surface-variant">
             {onlineUsers.length === 0
@@ -135,7 +135,7 @@ export function Sidebar() {
         </Link>
         <button
           onClick={logout}
-          className="w-full text-on-surface-variant flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md hover:bg-error/5 hover:text-error transition-all duration-150 text-[13px] font-medium cursor-pointer"
+          className="w-full text-on-surface-variant flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md hover:bg-error/5 hover:text-error transition-all duration-150 text-[13px] font-medium cursor-pointer press-scale"
         >
           <span className="material-symbols-outlined text-lg shrink-0">
             logout

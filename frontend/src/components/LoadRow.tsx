@@ -96,7 +96,7 @@ export const LoadRow = memo(function LoadRow({
         if ((e.target as HTMLElement).closest("button, input, a")) return;
         onRowClick?.();
       }}
-      className={`grid items-center gap-3 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] px-3.5 py-2.5 shadow-sm transition-all hover:border-primary-container/20 hover:shadow-md cursor-pointer ${
+      className={`grid items-center gap-3 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] px-3.5 py-2.5 shadow-sm card-rest press-scale transition-all hover:border-primary-container/20 hover:shadow-md cursor-pointer ${
         dimmed ? "opacity-55 hover:opacity-75" : ""
       } ${entered ? "opacity-35" : ""}`}
       style={{
@@ -179,7 +179,7 @@ export const LoadRow = memo(function LoadRow({
         {hasPhotos && (
           <button
             onClick={onViewPhotos}
-            className="w-7 h-7 flex items-center justify-center rounded-md border border-outline-variant/40 text-outline hover:bg-surface-container-high hover:text-on-surface transition-all cursor-pointer"
+            className="w-7 h-7 flex items-center justify-center rounded-md border border-outline-variant/40 text-outline hover:bg-surface-container-high hover:text-on-surface transition-all cursor-pointer icon-hover"
             aria-label="View BOL photos"
           >
             <span className="material-symbols-outlined text-sm">image</span>
@@ -205,7 +205,7 @@ export const LoadRow = memo(function LoadRow({
         ) : !isMissing ? (
           <button
             onClick={onValidate}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-tertiary text-on-tertiary hover:brightness-110 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-tertiary text-on-tertiary hover:brightness-110 transition-all cursor-pointer success-glow"
           >
             <span className="material-symbols-outlined text-sm">verified</span>
             Validate

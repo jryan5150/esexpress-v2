@@ -142,25 +142,129 @@ body {
   animation: slide-down 0.25s ease-out forwards;
 }
 
-/* Subtle card hover depth */
+/* ─── Elevation System ─────────────────────────────────── */
+
+/* Card resting state — warm inner shadow for depth */
+.card-rest {
+  box-shadow:
+    0 1px 2px rgba(30, 27, 24, 0.06),
+    0 0 0 1px rgba(110, 98, 85, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Card hover — lift + expand shadow */
 .hover-lift {
   transition:
-    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.15s ease;
 }
 .hover-lift:hover {
   transform: translateY(-1px);
   box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.06),
-    0 1px 3px rgba(0, 0, 0, 0.04);
+    0 4px 12px rgba(30, 27, 24, 0.08),
+    0 1px 3px rgba(30, 27, 24, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
+
+/* Active press feedback */
+.press-scale {
+  transition: transform 0.1s ease;
+}
+.press-scale:active {
+  transform: scale(0.98);
+}
+
+/* Stat card glow on hover */
+.stat-glow:hover {
+  box-shadow:
+    0 4px 16px rgba(30, 27, 24, 0.06),
+    0 0 0 1px rgba(109, 40, 217, 0.08);
+}
+
+/* Subtle gradient header for page headers */
+.header-gradient {
+  background: linear-gradient(
+    180deg,
+    var(--color-surface-container-lowest) 0%,
+    var(--color-surface-container-low) 100%
+  );
+}
+
+/* Row stripe for alternating rows */
+.row-stripe:nth-child(even) {
+  background-color: rgba(245, 240, 232, 0.4);
+}
+
+/* Purple accent glow for primary actions */
+.accent-glow {
+  box-shadow:
+    0 2px 8px rgba(109, 40, 217, 0.2),
+    0 0 0 1px rgba(109, 40, 217, 0.15);
+  transition: box-shadow 0.2s ease;
+}
+.accent-glow:hover {
+  box-shadow:
+    0 4px 16px rgba(109, 40, 217, 0.25),
+    0 0 0 1px rgba(109, 40, 217, 0.2);
+}
+
+/* Green success glow */
+.success-glow {
+  box-shadow:
+    0 2px 8px rgba(13, 150, 104, 0.15),
+    0 0 0 1px rgba(13, 150, 104, 0.1);
+}
+.success-glow:hover {
+  box-shadow:
+    0 4px 16px rgba(13, 150, 104, 0.2),
+    0 0 0 1px rgba(13, 150, 104, 0.15);
+}
+
+/* Smooth number counter transition */
+.num-transition {
+  transition: color 0.3s ease;
+}
+
+/* ─── Micro-interactions ──────────────────────────────── */
 
 /* Checkbox styling */
 input[type="checkbox"] {
-  transition: all 0.15s ease;
+  transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1);
 }
 input[type="checkbox"]:checked {
-  transform: scale(1.05);
+  transform: scale(1.08);
+}
+
+/* Icon button hover ring */
+.icon-hover {
+  transition: all 0.15s ease;
+}
+.icon-hover:hover {
+  background: var(--color-surface-container-high);
+  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.06);
+}
+
+/* Sidebar nav item transition */
+.nav-smooth {
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    padding-left 0.15s ease;
+}
+
+/* Badge pulse for attention items */
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+.badge-pulse {
+  animation: soft-pulse 2s ease-in-out infinite;
 }
 
 /* Active filter tab indicator */
