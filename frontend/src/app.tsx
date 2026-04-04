@@ -6,6 +6,7 @@ import { ToastProvider } from "./components/Toast";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { BreadcrumbProvider } from "./breadcrumbs/BreadcrumbProvider";
 
 const Login = lazy(() =>
   import("./pages/Login").then((m) => ({ default: m.Login })),
@@ -68,6 +69,7 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <BrowserRouter>
+          <BreadcrumbProvider />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<Login />} />
