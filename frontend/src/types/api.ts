@@ -222,3 +222,30 @@ export interface DispatchReadiness {
   missingFields: Array<{ field: string; count: number }>;
   completionRate: number;
 }
+
+// ── Search ────────────────────────────────────────────────
+export interface SearchResult {
+  id: number;
+  loadNo: string;
+  driverName: string | null;
+  carrierName: string | null;
+  bolNo: string | null;
+  ticketNo: string | null;
+  deliveredOn: string | null;
+  wellName: string | null;
+}
+
+export interface SearchResponse {
+  live: SearchResult[];
+  archive: SearchResult[];
+}
+
+// ── Breadcrumbs ───────────────────────────────────────────
+export type BreadcrumbZone = "live" | "archive" | "search";
+
+export interface BreadcrumbEvent {
+  eventType: string;
+  eventData: Record<string, unknown>;
+  zone: BreadcrumbZone;
+  timestamp: string;
+}
