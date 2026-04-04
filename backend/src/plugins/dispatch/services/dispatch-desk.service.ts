@@ -182,8 +182,9 @@ export async function getDispatchDeskLoads(
     .leftJoin(jotformImports, eq(jotformImports.matchedLoadId, loads.id))
     .where(whereClause)
     .orderBy(
+      sql`${loads.deliveredOn} desc nulls last`,
       sql`${assignments.pcsSequence} asc nulls last`,
-      sql`${assignments.createdAt} desc`,
+      sql`${loads.createdAt} desc`,
     )
     .limit(limit)
     .offset(offset);
