@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useUpdateLoad } from "../hooks/use-wells";
+import { useUpdateLoad, useDuplicateLoad } from "../hooks/use-wells";
 import { useToast } from "./Toast";
 
 interface ExpandDrawerProps {
@@ -14,6 +14,8 @@ interface ExpandDrawerProps {
   netWeightTons: string | null;
   bolNo: string | null;
   ticketNo: string | null;
+  rate: string | null;
+  mileage: string | null;
   deliveredOn: string | null;
   photoUrls: string[];
   autoMapScore: string | null;
@@ -21,9 +23,30 @@ interface ExpandDrawerProps {
   assignmentStatus: string;
   pickupTime?: string | null;
   arrivalTime?: string | null;
+  transitTime?: string | null;
+  assignedTime?: string | null;
+  acceptedTime?: string | null;
   grossWeightLbs?: number | null;
   netWeightLbs?: number | null;
+  tareWeightLbs?: number | null;
   terminalName?: string | null;
+  // Financial
+  lineHaul?: string | number | null;
+  fuelSurcharge?: string | number | null;
+  totalCharge?: string | number | null;
+  customerRate?: string | number | null;
+  // Identity
+  orderNo?: string | null;
+  invoiceNo?: string | null;
+  poNo?: string | null;
+  referenceNo?: string | null;
+  // Operations
+  loaderName?: string | null;
+  jobName?: string | null;
+  loadStatus?: string | null;
+  // BOL verification
+  jotformBolNo?: string | null;
+  jotformDriverName?: string | null;
   onValidate?: () => void;
   onClose: () => void;
 }
@@ -44,6 +67,27 @@ function formatTime(d: string | null | undefined): string {
   } catch {
     return d;
   }
+}
+
+function CopyBtn({ text }: { text: string | null }) {
+  const [copied, setCopied] = useState(false);
+  if (!text) return null;
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1200);
+      }}
+      className="text-outline/30 hover:text-primary cursor-pointer transition-colors"
+      title="Copy"
+    >
+      <span className="material-symbols-outlined text-[11px]">
+        {copied ? "check" : "content_copy"}
+      </span>
+    </button>
+  );
 }
 
 /** Inline editable field — click value to edit, blur/Enter to save */
@@ -75,9 +119,12 @@ function EditField({
 
   return (
     <div className="space-y-0.5">
-      <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
-        {label}
-      </span>
+      <div className="flex items-center gap-1">
+        <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
+          {label}
+        </span>
+        <CopyBtn text={value} />
+      </div>
       {editing ? (
         <input
           ref={ref}
@@ -121,6 +168,8 @@ export function ExpandDrawer({
   netWeightTons,
   bolNo,
   ticketNo,
+  rate,
+  mileage,
   deliveredOn,
   photoUrls,
   autoMapScore,
@@ -128,15 +177,35 @@ export function ExpandDrawer({
   assignmentStatus,
   pickupTime,
   arrivalTime,
+  transitTime,
+  assignedTime,
+  acceptedTime,
   grossWeightLbs,
   netWeightLbs,
+  tareWeightLbs,
+  lineHaul,
+  fuelSurcharge,
+  totalCharge,
+  customerRate,
+  orderNo,
+  invoiceNo,
+  poNo,
+  referenceNo,
+  loaderName,
+  jobName,
+  loadStatus,
   terminalName,
+  jotformBolNo,
+  jotformDriverName,
   onValidate,
   onClose,
 }: ExpandDrawerProps) {
   const updateLoad = useUpdateLoad();
+  const dupLoad = useDuplicateLoad();
   const { toast } = useToast();
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [dupCount, setDupCount] = useState(1);
+  const [showDup, setShowDup] = useState(false);
 
   const handleSave = (fieldKey: string, value: string) => {
     updateLoad.mutate(
@@ -150,6 +219,27 @@ export function ExpandDrawer({
   };
 
   const matchPct = autoMapScore ? Math.round(Number(autoMapScore) * 100) : null;
+
+  const handleCopyAll = () => {
+    const lines = [
+      `Load #: ${loadNo}`,
+      driverName && `Driver: ${driverName}`,
+      truckNo && `Truck: ${truckNo}`,
+      carrierName && `Carrier: ${carrierName}`,
+      bolNo && `BOL: ${bolNo}`,
+      ticketNo && `Ticket: ${ticketNo}`,
+      weightTons && `Weight: ${weightTons} tons`,
+      rate && `Rate: $${rate}/ton`,
+      mileage && `Mileage: ${mileage}`,
+      deliveredOn && `Delivered: ${formatTime(deliveredOn)}`,
+      orderNo && `Order #: ${orderNo}`,
+      invoiceNo && `Invoice #: ${invoiceNo}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    navigator.clipboard.writeText(lines);
+    toast("Copied to clipboard", "success");
+  };
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant/40 border-t-0 rounded-b-[10px] -mt-1 shadow-sm overflow-hidden animate-slide-down">
@@ -268,17 +358,50 @@ export function ExpandDrawer({
             fieldKey="productDescription"
             onSave={handleSave}
           />
-          <EditField
-            label="BOL #"
-            value={bolNo}
-            fieldKey="bolNo"
-            onSave={handleSave}
-            mono
-          />
+          <div className="space-y-0.5">
+            <EditField
+              label="BOL #"
+              value={bolNo}
+              fieldKey="bolNo"
+              onSave={handleSave}
+              mono
+            />
+            {jotformBolNo &&
+              bolNo &&
+              (() => {
+                const loadLast4 = bolNo.replace(/\D/g, "").slice(-4);
+                const jotLast4 = jotformBolNo.replace(/\D/g, "").slice(-4);
+                const match = loadLast4 === jotLast4 && loadLast4.length >= 4;
+                return (
+                  <div
+                    className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${match ? "bg-[#d1fae5] text-[#065f46]" : "bg-[#fee2e2] text-[#991b1b]"}`}
+                  >
+                    <span className="material-symbols-outlined text-[10px]">
+                      {match ? "verified" : "warning"}
+                    </span>
+                    {match ? "BOL last-4 match" : `JotForm: ...${jotLast4}`}
+                  </div>
+                );
+              })()}
+          </div>
           <EditField
             label="Ticket #"
             value={ticketNo}
             fieldKey="ticketNo"
+            onSave={handleSave}
+            mono
+          />
+          <EditField
+            label="Rate ($/ton)"
+            value={rate}
+            fieldKey="rate"
+            onSave={handleSave}
+            mono
+          />
+          <EditField
+            label="Mileage"
+            value={mileage}
+            fieldKey="mileage"
             onSave={handleSave}
             mono
           />
@@ -301,20 +424,25 @@ export function ExpandDrawer({
             </span>
             <div className="space-y-1.5 text-xs">
               {[
+                { label: "Assigned", time: assignedTime, icon: "assignment" },
+                { label: "Accepted", time: acceptedTime, icon: "thumb_up" },
                 { label: "Pickup", time: pickupTime, icon: "local_shipping" },
+                { label: "Transit", time: transitTime, icon: "route" },
                 { label: "Arrival", time: arrivalTime, icon: "pin_drop" },
                 { label: "Delivered", time: deliveredOn, icon: "check_circle" },
-              ].map((step) => (
-                <div key={step.label} className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-outline/60">
-                    {step.icon}
-                  </span>
-                  <span className="text-outline w-14">{step.label}</span>
-                  <span className="font-label text-on-surface-variant tabular-nums">
-                    {formatTime(step.time as string | null)}
-                  </span>
-                </div>
-              ))}
+              ]
+                .filter((step) => step.time)
+                .map((step) => (
+                  <div key={step.label} className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm text-outline/60">
+                      {step.icon}
+                    </span>
+                    <span className="text-outline w-14">{step.label}</span>
+                    <span className="font-label text-on-surface-variant tabular-nums">
+                      {formatTime(step.time as string | null)}
+                    </span>
+                  </div>
+                ))}
             </div>
           </div>
 
@@ -340,6 +468,14 @@ export function ExpandDrawer({
                   </span>
                 </div>
               )}
+              {tareWeightLbs && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-outline">Tare</span>
+                  <span className="font-label text-on-surface tabular-nums">
+                    {Number(tareWeightLbs).toLocaleString()} lbs
+                  </span>
+                </div>
+              )}
               {terminalName && (
                 <div className="flex justify-between text-xs">
                   <span className="text-outline">Terminal</span>
@@ -351,8 +487,141 @@ export function ExpandDrawer({
             </div>
           )}
 
+          {/* Financial Detail */}
+          {(lineHaul || fuelSurcharge || totalCharge) && (
+            <div className="bg-surface-container-high/40 rounded-md p-2.5 space-y-1">
+              <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
+                Financial
+              </span>
+              {lineHaul && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-outline">Line Haul</span>
+                  <span className="font-label text-on-surface tabular-nums">
+                    ${Number(lineHaul).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {fuelSurcharge && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-outline">FSC</span>
+                  <span className="font-label text-on-surface tabular-nums">
+                    ${Number(fuelSurcharge).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {totalCharge && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-outline">Total</span>
+                  <span className="font-label text-on-surface font-bold tabular-nums">
+                    ${Number(totalCharge).toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {customerRate && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-outline">Customer Rate</span>
+                  <span className="font-label text-on-surface tabular-nums">
+                    ${Number(customerRate).toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Demurrage / Load Calculator */}
+          {rate && weightTons && (
+            <div className="bg-primary/5 border border-primary/10 rounded-md p-2.5 space-y-1.5">
+              <span className="text-[9px] font-semibold text-primary tracking-[0.08em] uppercase">
+                Load Calculator
+              </span>
+              {(() => {
+                const r = Number(rate);
+                const w = Number(weightTons);
+                const m = mileage ? Number(mileage) : null;
+                const loadTotal = r * w;
+                const perMile = m && m > 0 ? loadTotal / m : null;
+                return (
+                  <>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-outline">Rate x Weight</span>
+                      <span className="font-label text-on-surface font-bold tabular-nums">
+                        ${loadTotal.toFixed(2)}
+                      </span>
+                    </div>
+                    {perMile !== null && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-outline">$/mile</span>
+                        <span className="font-label text-on-surface tabular-nums">
+                          ${perMile.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {fuelSurcharge && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-outline">+ FSC</span>
+                        <span className="font-label text-on-surface tabular-nums">
+                          ${Number(fuelSurcharge).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="border-t border-primary/10 pt-1 flex justify-between text-xs">
+                      <span className="text-primary font-bold">Est. Total</span>
+                      <span className="font-label text-primary font-bold tabular-nums">
+                        $
+                        {(
+                          loadTotal +
+                          (fuelSurcharge ? Number(fuelSurcharge) : 0)
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Identity / References */}
+          {(orderNo ||
+            invoiceNo ||
+            poNo ||
+            referenceNo ||
+            loaderName ||
+            jobName) && (
+            <div className="bg-surface-container-high/40 rounded-md p-2.5 space-y-1">
+              <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
+                References
+              </span>
+              {[
+                { label: "Order #", value: orderNo },
+                { label: "Invoice #", value: invoiceNo },
+                { label: "PO #", value: poNo },
+                { label: "Ref #", value: referenceNo },
+                { label: "Loader", value: loaderName },
+                { label: "Job", value: jobName },
+              ]
+                .filter((f) => f.value)
+                .map((f) => (
+                  <div key={f.label} className="flex justify-between text-xs">
+                    <span className="text-outline">{f.label}</span>
+                    <span className="font-label text-on-surface-variant truncate max-w-[140px]">
+                      {String(f.value)}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="mt-auto flex flex-col gap-1.5">
+            <button
+              onClick={handleCopyAll}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary-container hover:text-on-surface hover:bg-surface-container-high border border-outline-variant/30 transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">
+                content_paste
+              </span>
+              Copy All Fields
+            </button>
             {onValidate &&
               assignmentStatus !== "dispatched" &&
               assignmentStatus !== "delivered" && (
@@ -369,6 +638,64 @@ export function ExpandDrawer({
                   Validate
                 </button>
               )}
+            {/* Duplicate */}
+            {showDup ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={dupCount}
+                  onChange={(e) =>
+                    setDupCount(
+                      Math.max(1, Math.min(100, Number(e.target.value))),
+                    )
+                  }
+                  className="w-14 bg-background border border-outline-variant/40 rounded px-2 py-1.5 text-xs font-label tabular-nums text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/30"
+                />
+                <button
+                  onClick={() => {
+                    dupLoad.mutate(
+                      { loadId, count: dupCount },
+                      {
+                        onSuccess: () => {
+                          toast(`Duplicated ${dupCount} load(s)`, "success");
+                          setShowDup(false);
+                          setDupCount(1);
+                        },
+                        onError: (err) =>
+                          toast(
+                            `Duplicate failed: ${(err as Error).message}`,
+                            "error",
+                          ),
+                      },
+                    );
+                  }}
+                  disabled={dupLoad.isPending}
+                  className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-bold bg-primary text-on-primary hover:brightness-110 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {dupLoad.isPending ? "Creating..." : `Create ${dupCount}`}
+                </button>
+                <button
+                  onClick={() => setShowDup(false)}
+                  className="px-2 py-1.5 rounded-md text-xs text-outline hover:text-on-surface transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    close
+                  </span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowDup(true)}
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-primary-container hover:text-on-surface hover:bg-surface-container-high border border-outline-variant/30 transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  content_copy
+                </span>
+                Duplicate
+              </button>
+            )}
             <button
               onClick={onClose}
               className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"

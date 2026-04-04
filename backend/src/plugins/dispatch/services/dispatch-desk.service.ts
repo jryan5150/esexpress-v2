@@ -5,6 +5,7 @@ import {
   wells,
   photos,
   jotformImports,
+  users,
 } from "../../../db/schema.js";
 import {
   ValidationError,
@@ -130,8 +131,8 @@ export async function getDispatchDeskLoads(
   if (date) {
     // Filter on loads.deliveredOn (the actual delivery date), not assignments.createdAt.
     // Use America/Chicago (CDT) since dispatchers are in Texas.
-    const startOfDay = new Date(`${date}T00:00:00-05:00`);
-    const endOfDay = new Date(`${date}T23:59:59.999-05:00`);
+    const startOfDay = `${date}T00:00:00-05:00`;
+    const endOfDay = `${date}T23:59:59.999-05:00`;
     conditions.push(sql`${loads.deliveredOn} >= ${startOfDay}`);
     conditions.push(sql`${loads.deliveredOn} <= ${endOfDay}`);
   }
@@ -158,8 +159,13 @@ export async function getDispatchDeskLoads(
       netWeightTons: loads.netWeightTons,
       bolNo: loads.bolNo,
       ticketNo: loads.ticketNo,
+      rate: loads.rate,
+      mileage: loads.mileage,
       deliveredOn: loads.deliveredOn,
       rawData: loads.rawData,
+      assignedTo: assignments.assignedTo,
+      assignedToName: users.name,
+      assignedToColor: users.color,
       wellId: wells.id,
       wellName: wells.name,
       // JotForm photo data (left join — may be null)
@@ -172,6 +178,7 @@ export async function getDispatchDeskLoads(
     .from(assignments)
     .innerJoin(loads, eq(assignments.loadId, loads.id))
     .innerJoin(wells, eq(assignments.wellId, wells.id))
+    .leftJoin(users, eq(assignments.assignedTo, users.id))
     .leftJoin(jotformImports, eq(jotformImports.matchedLoadId, loads.id))
     .where(whereClause)
     .orderBy(
@@ -203,13 +210,39 @@ export async function getDispatchDeskLoads(
       deliveredOn: row.deliveredOn,
       wellId: row.wellId,
       wellName: row.wellName,
+      rate: row.rate,
+      mileage: row.mileage,
+      assignedTo: row.assignedTo,
+      assignedToName: row.assignedToName,
+      assignedToColor: row.assignedToColor,
       canEnter: canMarkEntered((row.photoStatus ?? "missing") as PhotoStatus),
       // Times extracted from PropX rawData
       pickupTime: raw.terminal_on ?? null,
       arrivalTime: raw.destination_on ?? null,
+      transitTime: raw.transit_on ?? null,
+      assignedTime: raw.assigned_on ?? null,
+      acceptedTime: raw.accepted_on ?? null,
       grossWeightLbs: raw.gross_weight ?? null,
       netWeightLbs: raw.weight ?? null,
+      tareWeightLbs: raw.tare_weight ?? null,
       terminalName: raw.terminal_name ?? null,
+      // Financial (from rawData)
+      lineHaul: raw.total_hauling ?? raw.total_amount ?? null,
+      fuelSurcharge: raw.fuel_surcharge ?? raw.fuelsurcharge ?? null,
+      totalCharge: raw.total_charge ?? raw.total_revenue ?? null,
+      customerRate: raw.customer_rate ?? null,
+      // Identity (from rawData)
+      orderNo: raw.order_no ?? raw.order_number ?? null,
+      invoiceNo: raw.invoice_no ?? raw.invoice_number ?? null,
+      poNo: raw.carrier_po ?? raw.po ?? raw.po_number ?? null,
+      referenceNo: raw.reference_no ?? raw.reference_number ?? null,
+      // Operations
+      loaderName: raw.crew_name ?? null,
+      jobName: raw.job_name ?? null,
+      loadStatus: raw.load_status ?? raw.status ?? null,
+      // JotForm cross-reference (for BOL verification)
+      jotformBolNo: row.jotformBolNo ?? null,
+      jotformDriverName: row.jotformDriverName ?? null,
       // Photo: use GCS proxy URL if submission ID available, else raw JotForm URL
       jotformSubmissionId: row.jotformSubmissionId ?? null,
       photoUrls: row.jotformSubmissionId

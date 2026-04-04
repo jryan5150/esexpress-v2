@@ -1,18 +1,21 @@
-import type { AssignmentStatus } from '../../../db/schema.js';
+import type { AssignmentStatus } from "../../../db/schema.js";
 
-export const VALID_TRANSITIONS: Partial<Record<AssignmentStatus, AssignmentStatus[]>> = {
-  pending:        ['assigned', 'cancelled'],
-  assigned:       ['dispatch_ready', 'pending', 'cancelled'],
-  dispatch_ready: ['dispatching', 'assigned', 'cancelled'],
-  dispatching:    ['dispatched', 'failed'],
-  dispatched:     ['in_transit'],
-  in_transit:     ['at_terminal', 'at_destination'],
-  at_terminal:    ['loaded'],
-  loaded:         ['at_destination'],
-  at_destination: ['delivered'],
-  delivered:      ['completed'],
-  failed:         ['dispatch_ready', 'cancelled'],
-  cancelled:      ['pending'],
+export const VALID_TRANSITIONS: Partial<
+  Record<AssignmentStatus, AssignmentStatus[]>
+> = {
+  pending: ["assigned", "cancelled"],
+  assigned: ["reconciled", "dispatch_ready", "pending", "cancelled"],
+  reconciled: ["dispatch_ready", "assigned", "cancelled"],
+  dispatch_ready: ["dispatching", "reconciled", "assigned", "cancelled"],
+  dispatching: ["dispatched", "failed"],
+  dispatched: ["in_transit"],
+  in_transit: ["at_terminal", "at_destination"],
+  at_terminal: ["loaded"],
+  loaded: ["at_destination"],
+  at_destination: ["delivered"],
+  delivered: ["completed"],
+  failed: ["dispatch_ready", "cancelled"],
+  cancelled: ["pending"],
 };
 
 export function isValidTransition(from: string, to: string): boolean {
@@ -27,9 +30,9 @@ export function validateDispatchReady(fields: {
   wellId: number | null;
 }): { valid: boolean; missing: string[] } {
   const missing: string[] = [];
-  if (!fields.driverName) missing.push('driverName');
-  if (!fields.loadNo) missing.push('loadNo');
-  if (!fields.wellId) missing.push('wellId');
+  if (!fields.driverName) missing.push("driverName");
+  if (!fields.loadNo) missing.push("loadNo");
+  if (!fields.wellId) missing.push("wellId");
   return { valid: missing.length === 0, missing };
 }
 

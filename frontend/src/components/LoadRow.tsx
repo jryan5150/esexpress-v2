@@ -17,11 +17,14 @@ interface LoadRowProps {
   entered: boolean;
   canEnter: boolean;
   hasPhotos: boolean;
+  assignedToName?: string | null;
+  assignedToColor?: string | null;
   onToggleSelect: () => void;
   onMarkEntered: () => void;
   onValidate: () => void;
   onViewPhotos: () => void;
   onRowClick?: () => void;
+  onClaim?: () => void;
   isPending?: boolean;
 }
 
@@ -77,11 +80,14 @@ export const LoadRow = memo(function LoadRow({
   entered,
   canEnter,
   hasPhotos,
+  assignedToName,
+  assignedToColor,
   onToggleSelect,
   onMarkEntered,
   onValidate,
   onViewPhotos,
   onRowClick,
+  onClaim,
   isPending,
 }: LoadRowProps) {
   const status = STATUS_CONFIG[validationStatus];
@@ -101,6 +107,8 @@ export const LoadRow = memo(function LoadRow({
       } ${entered ? "opacity-35" : ""}`}
       style={{
         gridTemplateColumns: "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
+        borderLeftWidth: assignedToColor ? "3px" : undefined,
+        borderLeftColor: assignedToColor ?? undefined,
       }}
     >
       {/* Checkbox */}
@@ -129,13 +137,43 @@ export const LoadRow = memo(function LoadRow({
         #{loadNo}
       </div>
 
-      {/* Driver + Carrier */}
+      {/* Driver + Carrier + Assignee */}
       <div className="min-w-0">
         <div className="font-semibold text-[13px] text-on-surface truncate">
           {driverName || "--"}
         </div>
-        <div className="text-xs text-outline truncate">
-          {carrierName || "--"}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-outline truncate">
+            {carrierName || "--"}
+          </span>
+          {assignedToName ? (
+            <span
+              className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0 rounded-full shrink-0"
+              style={{
+                backgroundColor: assignedToColor
+                  ? `${assignedToColor}15`
+                  : "var(--md-sys-color-surface-container-high)",
+                color:
+                  assignedToColor ?? "var(--md-sys-color-on-surface-variant)",
+              }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: assignedToColor ?? "currentColor" }}
+              />
+              {assignedToName.split(" ")[0]}
+            </span>
+          ) : onClaim ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onClaim();
+              }}
+              className="text-[9px] font-bold text-outline/40 hover:text-primary-container px-1 cursor-pointer transition-colors"
+            >
+              Claim
+            </button>
+          ) : null}
         </div>
       </div>
 

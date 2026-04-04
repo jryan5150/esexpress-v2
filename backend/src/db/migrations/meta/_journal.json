@@ -29,6 +29,13 @@
       "when": 1775285369213,
       "tag": "0003_stiff_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775294019134,
+      "tag": "0004_aromatic_cobalt_man",
+      "breakpoints": true
     }
   ]
 }

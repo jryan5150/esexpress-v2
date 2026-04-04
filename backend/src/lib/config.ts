@@ -2,10 +2,7 @@ import { z } from "zod";
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url().optional(),
-  JWT_SECRET: z
-    .string()
-    .min(32)
-    .default("dev-secret-change-in-production-minimum-32-chars"),
+  JWT_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   CORS_ORIGINS: z.string().optional(),

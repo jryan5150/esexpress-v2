@@ -3,8 +3,8 @@ import { loads } from "../../../db/schema.js";
 
 export type Era = "live" | "archive";
 
-/** 2026-01-01T00:00:00 CST (America/Chicago) */
-export const ERA_CUTOFF = new Date("2026-01-01T00:00:00-06:00");
+/** 2026-01-01T00:00:00 CST (America/Chicago) as ISO string for postgres driver compatibility */
+export const ERA_CUTOFF = "2026-01-01T00:00:00-06:00";
 
 /** Reconstruct the raw SQL text from Drizzle queryChunks for introspection. */
 function sqlToString(s: SQL): string {

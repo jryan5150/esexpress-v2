@@ -29,6 +29,7 @@ export const users = pgTable("users", {
     .notNull()
     .default("local"),
   ssoProviderId: text("sso_provider_id"),
+  color: text("color"), // hex color for dispatcher identification (e.g. "#3b82f6")
   assignedWells: jsonb("assigned_wells").$type<number[]>().default([]),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
@@ -145,6 +146,7 @@ export const loads = pgTable(
 export const ASSIGNMENT_STATUSES = [
   "pending",
   "assigned",
+  "reconciled",
   "dispatch_ready",
   "dispatching",
   "dispatched",

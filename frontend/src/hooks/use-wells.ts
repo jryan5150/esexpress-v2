@@ -136,6 +136,8 @@ export interface LoadFieldUpdate {
   netWeightTons?: string | null;
   bolNo?: string | null;
   ticketNo?: string | null;
+  rate?: string | null;
+  mileage?: string | null;
 }
 
 export function useUpdateLoad() {
@@ -153,6 +155,62 @@ export function useUpdateLoad() {
       queryClient.invalidateQueries({ queryKey: qk.assignments.all });
       queryClient.invalidateQueries({ queryKey: qk.loads.all });
       queryClient.invalidateQueries({ queryKey: qk.validation.all });
+    },
+  });
+}
+
+export function useBulkUpdateLoads() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      loadIds,
+      updates,
+    }: {
+      loadIds: number[];
+      updates: Record<string, unknown>;
+    }) => api.post("/dispatch/loads/bulk-update", { loadIds, updates }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
+      queryClient.invalidateQueries({ queryKey: qk.wells.all });
+      queryClient.invalidateQueries({ queryKey: qk.loads.all });
+    },
+  });
+}
+
+export function useClaimAssignment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      assignmentId,
+      userId,
+    }: {
+      assignmentId: number;
+      userId: number;
+    }) =>
+      api.put(`/dispatch/assignments/${assignmentId}`, { assignedTo: userId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
+    },
+  });
+}
+
+export function useDuplicateLoad() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      loadId,
+      count,
+      dateOffset,
+    }: {
+      loadId: number;
+      count: number;
+      dateOffset?: number;
+    }) =>
+      api.post(`/dispatch/loads/${loadId}/duplicate`, { count, dateOffset }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
+      queryClient.invalidateQueries({ queryKey: qk.wells.all });
+      queryClient.invalidateQueries({ queryKey: qk.loads.all });
     },
   });
 }

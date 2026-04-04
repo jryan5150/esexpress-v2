@@ -160,6 +160,9 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
 
     // Unknown errors
     const statusCode = error.statusCode ?? 500;
+    if (statusCode === 500) {
+      console.error("[500 ERROR]", error.message, error.stack);
+    }
     return reply.status(statusCode).send({
       success: false,
       error: {

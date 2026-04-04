@@ -211,7 +211,10 @@ const assignmentRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.put(
     "/:id",
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
       schema: {
         params: {
           type: "object",

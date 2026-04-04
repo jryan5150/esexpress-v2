@@ -6,8 +6,11 @@ import {
   useDispatchDeskLoads,
   useBulkApprove,
   useValidationConfirm,
+  useClaimAssignment,
+  useBulkUpdateLoads,
 } from "../hooks/use-wells";
 import { useMarkEntered, useAdvanceToReady } from "../hooks/use-dispatch-desk";
+import { useCurrentUser } from "../hooks/use-auth";
 import { usePresence, useHeartbeat } from "../hooks/use-presence";
 import { LoadRow } from "../components/LoadRow";
 import { PhotoModal } from "../components/PhotoModal";
@@ -35,6 +38,7 @@ export function DispatchDesk() {
   const [photoModalLoad, setPhotoModalLoad] = useState<any | null>(null);
   const [expandedLoadId, setExpandedLoadId] = useState<number | null>(null);
   const [dateFilter, setDateFilter] = useState("");
+  const [pinnedWellIds, setPinnedWellIds] = useState<string[]>([]);
 
   const queryClient = useQueryClient();
   const confirmMutation = useValidationConfirm();
@@ -53,6 +57,11 @@ export function DispatchDesk() {
   const markEntered = useMarkEntered();
   const advanceToReady = useAdvanceToReady();
   const bulkApprove = useBulkApprove();
+  const claimAssignment = useClaimAssignment();
+  const bulkUpdate = useBulkUpdateLoads();
+  const currentUserQuery = useCurrentUser();
+  const currentUserId = (currentUserQuery.data as any)?.id;
+  const [batchDate, setBatchDate] = useState("");
 
   const selectedWell = (wellsQuery.data as any[])?.find(
     (w: any) => String(w.id) === selectedWellId,
@@ -86,6 +95,7 @@ export function DispatchDesk() {
   } = useMemo(() => {
     const pending: typeof allLoads = [];
     const assigned: typeof allLoads = [];
+    const reconciled: typeof allLoads = [];
     const ready: typeof allLoads = [];
     const validated: typeof allLoads = [];
 
@@ -96,6 +106,9 @@ export function DispatchDesk() {
           break;
         case "assigned":
           assigned.push(l);
+          break;
+        case "reconciled":
+          reconciled.push(l);
           break;
         case "dispatch_ready":
           ready.push(l);
@@ -110,7 +123,8 @@ export function DispatchDesk() {
     const counts = {
       all: allLoads.length,
       pending: pending.length,
-      assigned: assigned.length,
+      assigned: assigned.length + reconciled.length,
+      reconciled: reconciled.length,
       ready: ready.length,
       validated: validated.length,
     };
@@ -119,12 +133,14 @@ export function DispatchDesk() {
       activeFilter === "pending"
         ? pending
         : activeFilter === "assigned"
-          ? assigned
-          : activeFilter === "ready"
-            ? ready
-            : activeFilter === "validated"
-              ? validated
-              : allLoads;
+          ? [...assigned, ...reconciled]
+          : activeFilter === "reconciled"
+            ? reconciled
+            : activeFilter === "ready"
+              ? ready
+              : activeFilter === "validated"
+                ? validated
+                : allLoads;
 
     return {
       pendingLoads: pending.filter((l) => !enteredIds.has(l.assignmentId)),
@@ -132,6 +148,7 @@ export function DispatchDesk() {
       readyLoads: ready.filter((l) => !enteredIds.has(l.assignmentId)),
       activeLoads: [
         ...ready.filter((l) => !enteredIds.has(l.assignmentId)),
+        ...reconciled.filter((l) => !enteredIds.has(l.assignmentId)),
         ...assigned.filter((l) => !enteredIds.has(l.assignmentId)),
         ...pending.filter((l) => !enteredIds.has(l.assignmentId)),
       ],
@@ -201,6 +218,21 @@ export function DispatchDesk() {
     setSearchParams(wellId ? { wellId } : {});
     setEnteredIds(new Set());
     setPage(1);
+    // Auto-pin on selection
+    if (wellId && !pinnedWellIds.includes(wellId)) {
+      setPinnedWellIds((prev) => [...prev, wellId]);
+    }
+  };
+
+  const handleUnpinWell = (wellId: string) => {
+    setPinnedWellIds((prev) => prev.filter((id) => id !== wellId));
+    // If unpinning the active well, switch to another pinned well or deselect
+    if (wellId === selectedWellId) {
+      const remaining = pinnedWellIds.filter((id) => id !== wellId);
+      setSearchParams(
+        remaining.length > 0 ? { wellId: remaining[remaining.length - 1] } : {},
+      );
+    }
   };
 
   const handleMarkSingle = (assignmentId: number) => {
@@ -365,6 +397,43 @@ export function DispatchDesk() {
         </div>
       </div>
 
+      {/* Pinned Well Tabs */}
+      {pinnedWellIds.length > 0 && (
+        <div className="px-7 pt-3 pb-0 flex items-center gap-1 overflow-x-auto shrink-0 border-b border-outline-variant/20">
+          {pinnedWellIds.map((wId) => {
+            const w = wells.find((well) => String(well.id) === wId);
+            const isActive = wId === selectedWellId;
+            return (
+              <button
+                key={wId}
+                onClick={() => handleSelectWell(wId)}
+                className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-t-lg transition-all cursor-pointer whitespace-nowrap ${
+                  isActive
+                    ? "bg-surface-container-lowest text-primary border border-outline-variant/40 border-b-transparent -mb-px"
+                    : "text-outline hover:text-on-surface hover:bg-surface-container-high/50"
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">
+                  oil_barrel
+                </span>
+                {w?.name ?? `Well #${wId}`}
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUnpinWell(wId);
+                  }}
+                  className="ml-1 text-outline/40 hover:text-error transition-colors"
+                >
+                  <span className="material-symbols-outlined text-xs">
+                    close
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-4">
         {/* Command Bar */}
         {selectedWellId && (
@@ -496,7 +565,14 @@ export function DispatchDesk() {
         {selectedWellId && (
           <div className="flex items-center gap-0.5 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-1 overflow-x-auto card-rest">
             {(
-              ["all", "pending", "assigned", "ready", "validated"] as const
+              [
+                "all",
+                "pending",
+                "assigned",
+                "reconciled",
+                "ready",
+                "validated",
+              ] as const
             ).map((filter) => (
               <button
                 key={filter}
@@ -556,6 +632,44 @@ export function DispatchDesk() {
               </span>
               Validate Selected ({selectedIds.size})
             </button>
+            {/* Smart Date Batch */}
+            <div className="flex items-center gap-1.5 ml-2 border-l border-tertiary/20 pl-2.5">
+              <span className="material-symbols-outlined text-[13px] text-[#065f46]">
+                calendar_month
+              </span>
+              <input
+                type="date"
+                value={batchDate}
+                onChange={(e) => setBatchDate(e.target.value)}
+                className="bg-white border border-outline-variant/40 rounded px-2 py-[3px] text-xs font-label text-on-surface focus:outline-none focus:ring-1 focus:ring-tertiary/30"
+              />
+              <button
+                onClick={() => {
+                  if (!batchDate) return;
+                  const loadIds = filteredLoads
+                    .filter((l) => selectedIds.has(l.assignmentId))
+                    .map((l) => l.loadId);
+                  bulkUpdate.mutate(
+                    {
+                      loadIds,
+                      updates: { deliveredOn: `${batchDate}T12:00:00-05:00` },
+                    },
+                    {
+                      onSuccess: () => {
+                        toast(`Date set on ${loadIds.length} loads`, "success");
+                        setBatchDate("");
+                      },
+                      onError: (err) =>
+                        toast(`Failed: ${(err as Error).message}`, "error"),
+                    },
+                  );
+                }}
+                disabled={!batchDate || bulkUpdate.isPending}
+                className="inline-flex items-center gap-1 px-2.5 py-[4px] rounded-md bg-primary text-on-primary text-[10px] font-bold uppercase tracking-wide hover:brightness-110 transition-all cursor-pointer disabled:opacity-40"
+              >
+                Apply Date
+              </button>
+            </div>
             <button
               onClick={() => setSelectedIds(new Set())}
               className="inline-flex items-center gap-1.5 ml-1 px-3 py-[5px] rounded-md border border-outline-variant/40 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
@@ -597,63 +711,152 @@ export function DispatchDesk() {
               </div>
             ) : (
               <div className="space-y-2">
-                {(wellsQuery.data as Array<Record<string, unknown>> | undefined)
-                  ?.map((w) => ({
-                    id: String(w.id ?? ""),
-                    name: String(w.name ?? ""),
-                    totalLoads: Number(w.totalLoads ?? w.total_loads ?? 0),
-                    ready: Number(w.ready ?? 0),
-                    assigned: Number(w.assigned ?? 0),
-                  }))
-                  .filter((w) => w.totalLoads > 0)
-                  .sort(
-                    (a, b) =>
-                      b.ready + b.assigned - (a.ready + a.assigned) ||
-                      b.totalLoads - a.totalLoads,
-                  )
-                  .map((w) => (
-                    <button
-                      key={w.id}
-                      onClick={() => handleSelectWell(w.id)}
-                      className={`w-full bg-surface-container-lowest border border-outline-variant/40 hover:border-primary/20 hover:shadow-md rounded-[10px] px-5 py-3.5 flex items-center justify-between transition-all cursor-pointer group text-left shadow-sm border-l-4 hover-lift press-scale ${w.ready > 0 ? "border-l-tertiary" : w.assigned > 0 ? "border-l-primary-container" : "border-l-outline-variant/40"}`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div>
-                          <h4 className="font-headline font-bold text-on-surface text-lg group-hover:text-primary-container transition-colors">
-                            {w.name}
-                          </h4>
-                          <span className="font-label text-xs text-on-surface/35 tracking-wide tabular-nums">
-                            {w.totalLoads} total loads
-                          </span>
+                {(() => {
+                  const wellCards =
+                    (
+                      wellsQuery.data as
+                        | Array<Record<string, unknown>>
+                        | undefined
+                    )
+                      ?.map((w) => ({
+                        id: String(w.id ?? ""),
+                        name: String(w.name ?? ""),
+                        totalLoads: Number(w.totalLoads ?? w.total_loads ?? 0),
+                        ready: Number(w.ready ?? 0),
+                        assigned: Number(w.assigned ?? 0),
+                        dailyTargetLoads: Number(
+                          w.dailyTargetLoads ?? w.daily_target_loads ?? 0,
+                        ),
+                      }))
+                      .filter((w) => w.totalLoads > 0)
+                      .sort(
+                        (a, b) =>
+                          b.ready + b.assigned - (a.ready + a.assigned) ||
+                          b.totalLoads - a.totalLoads,
+                      ) ?? [];
+
+                  // Today's Objectives summary
+                  const withTargets = wellCards.filter(
+                    (w) => w.dailyTargetLoads > 0,
+                  );
+                  const totalActual = withTargets.reduce(
+                    (s, w) => s + w.totalLoads,
+                    0,
+                  );
+                  const totalTarget = withTargets.reduce(
+                    (s, w) => s + w.dailyTargetLoads,
+                    0,
+                  );
+                  const overallPct =
+                    totalTarget > 0
+                      ? Math.round((totalActual / totalTarget) * 100)
+                      : 0;
+
+                  return (
+                    <>
+                      {withTargets.length > 0 && (
+                        <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[14px] px-5 py-4 shadow-sm card-rest mb-3">
+                          <div className="flex items-center justify-between mb-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-primary text-base">
+                                target
+                              </span>
+                              <span className="text-[10px] uppercase tracking-[0.15em] font-black text-on-surface/40">
+                                Today's Objectives
+                              </span>
+                            </div>
+                            <span className="font-label text-sm font-bold text-on-surface tabular-nums">
+                              {totalActual}/{totalTarget} loads
+                              <span className="text-on-surface/30 ml-1.5">
+                                ({overallPct}%)
+                              </span>
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-outline-variant/20 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${overallPct >= 100 ? "bg-tertiary" : overallPct >= 60 ? "bg-primary" : "bg-primary-container"}`}
+                              style={{ width: `${Math.min(overallPct, 100)}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-5">
-                        {w.ready > 0 && (
-                          <div className="text-right bg-tertiary/5 px-3 py-1.5 rounded-lg">
-                            <span className="font-label text-lg font-bold text-tertiary leading-none tabular-nums">
-                              {w.ready}
-                            </span>
-                            <span className="text-[9px] uppercase font-bold text-tertiary/60 block tracking-wider mt-0.5">
-                              Ready
-                            </span>
-                          </div>
-                        )}
-                        {w.assigned > 0 && (
-                          <div className="text-right bg-primary-container/5 px-3 py-1.5 rounded-lg">
-                            <span className="font-label text-lg font-bold text-primary-container leading-none tabular-nums">
-                              {w.assigned}
-                            </span>
-                            <span className="text-[9px] uppercase font-bold text-primary-container/60 block tracking-wider mt-0.5">
-                              Assigned
-                            </span>
-                          </div>
-                        )}
-                        <span className="material-symbols-outlined text-on-surface/15 group-hover:text-primary-container group-hover:translate-x-1 transition-all">
-                          chevron_right
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                      )}
+                      {wellCards.map((w) => {
+                        const pct =
+                          w.dailyTargetLoads > 0
+                            ? Math.round(
+                                (w.totalLoads / w.dailyTargetLoads) * 100,
+                              )
+                            : null;
+                        return (
+                          <button
+                            key={w.id}
+                            onClick={() => handleSelectWell(w.id)}
+                            className={`w-full bg-surface-container-lowest border border-outline-variant/40 hover:border-primary/20 hover:shadow-md rounded-[10px] px-5 py-3.5 flex items-center justify-between transition-all cursor-pointer group text-left shadow-sm border-l-4 hover-lift press-scale ${w.ready > 0 ? "border-l-tertiary" : w.assigned > 0 ? "border-l-primary-container" : "border-l-outline-variant/40"}`}
+                          >
+                            <div className="flex items-center gap-4 min-w-0 flex-1 mr-4">
+                              <div className="min-w-0 flex-1">
+                                <h4 className="font-headline font-bold text-on-surface text-lg group-hover:text-primary-container transition-colors">
+                                  {w.name}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="font-label text-xs text-on-surface/35 tracking-wide tabular-nums">
+                                    {w.totalLoads}
+                                    {pct !== null
+                                      ? `/${w.dailyTargetLoads}`
+                                      : ""}{" "}
+                                    loads
+                                  </span>
+                                  {pct !== null && (
+                                    <span
+                                      className={`font-label text-[10px] font-bold tabular-nums ${pct >= 100 ? "text-tertiary" : pct >= 60 ? "text-primary" : "text-on-surface/40"}`}
+                                    >
+                                      ({pct}%)
+                                    </span>
+                                  )}
+                                </div>
+                                {pct !== null && (
+                                  <div className="w-full max-w-[180px] h-1.5 bg-outline-variant/20 rounded-full overflow-hidden mt-1.5">
+                                    <div
+                                      className={`h-full rounded-full transition-all duration-500 ${pct >= 100 ? "bg-tertiary" : pct >= 60 ? "bg-primary" : "bg-primary-container"}`}
+                                      style={{
+                                        width: `${Math.min(pct, 100)}%`,
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-5">
+                              {w.ready > 0 && (
+                                <div className="text-right bg-tertiary/5 px-3 py-1.5 rounded-lg">
+                                  <span className="font-label text-lg font-bold text-tertiary leading-none tabular-nums">
+                                    {w.ready}
+                                  </span>
+                                  <span className="text-[9px] uppercase font-bold text-tertiary/60 block tracking-wider mt-0.5">
+                                    Ready
+                                  </span>
+                                </div>
+                              )}
+                              {w.assigned > 0 && (
+                                <div className="text-right bg-primary-container/5 px-3 py-1.5 rounded-lg">
+                                  <span className="font-label text-lg font-bold text-primary-container leading-none tabular-nums">
+                                    {w.assigned}
+                                  </span>
+                                  <span className="text-[9px] uppercase font-bold text-primary-container/60 block tracking-wider mt-0.5">
+                                    Assigned
+                                  </span>
+                                </div>
+                              )}
+                              <span className="material-symbols-outlined text-on-surface/15 group-hover:text-primary-container group-hover:translate-x-1 transition-all">
+                                chevron_right
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
                 {wells.length === 0 && (
                   <div className="bg-surface-container-lowest rounded-xl p-12 text-center">
                     <span className="material-symbols-outlined text-4xl text-on-surface/10 mb-2">
@@ -741,6 +944,8 @@ export function DispatchDesk() {
                   entered={enteredIds.has(load.assignmentId)}
                   canEnter={load.canEnter}
                   hasPhotos={!!load.photoUrls?.length}
+                  assignedToName={load.assignedToName ?? null}
+                  assignedToColor={load.assignedToColor ?? null}
                   onToggleSelect={() => toggleSelect(load.assignmentId)}
                   onMarkEntered={() => handleMarkSingle(load.assignmentId)}
                   onValidate={() => handleValidateSingle(load.assignmentId)}
@@ -754,6 +959,15 @@ export function DispatchDesk() {
                     if (nextId !== null)
                       track("load_expanded", { loadId: load.assignmentId });
                   }}
+                  onClaim={
+                    currentUserId && !load.assignedTo
+                      ? () =>
+                          claimAssignment.mutate({
+                            assignmentId: load.assignmentId,
+                            userId: currentUserId,
+                          })
+                      : undefined
+                  }
                   isPending={markEntered.isPending}
                 />
                 {expandedLoadId === load.assignmentId && (
@@ -769,6 +983,8 @@ export function DispatchDesk() {
                     netWeightTons={load.netWeightTons}
                     bolNo={load.bolNo}
                     ticketNo={load.ticketNo}
+                    rate={load.rate ?? null}
+                    mileage={load.mileage ?? null}
                     deliveredOn={load.deliveredOn}
                     photoUrls={load.photoUrls || []}
                     autoMapScore={load.autoMapScore}
@@ -776,9 +992,26 @@ export function DispatchDesk() {
                     assignmentStatus={load.assignmentStatus}
                     pickupTime={load.pickupTime}
                     arrivalTime={load.arrivalTime}
+                    transitTime={load.transitTime}
+                    assignedTime={load.assignedTime}
+                    acceptedTime={load.acceptedTime}
                     grossWeightLbs={load.grossWeightLbs}
                     netWeightLbs={load.netWeightLbs}
+                    tareWeightLbs={load.tareWeightLbs}
                     terminalName={load.terminalName}
+                    lineHaul={load.lineHaul}
+                    fuelSurcharge={load.fuelSurcharge}
+                    totalCharge={load.totalCharge}
+                    customerRate={load.customerRate}
+                    orderNo={load.orderNo}
+                    invoiceNo={load.invoiceNo}
+                    poNo={load.poNo}
+                    referenceNo={load.referenceNo}
+                    loaderName={load.loaderName}
+                    jobName={load.jobName}
+                    loadStatus={load.loadStatus}
+                    jotformBolNo={load.jotformBolNo}
+                    jotformDriverName={load.jotformDriverName}
                     onValidate={() => handleValidateSingle(load.assignmentId)}
                     onClose={() => setExpandedLoadId(null)}
                   />
