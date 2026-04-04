@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useGlobalSearch } from "./useGlobalSearch";
 import { SearchResult } from "./SearchResult";
+import { track as trackBreadcrumb } from "../breadcrumbs/breadcrumb-client";
 
 export function SearchOverlay() {
   const [open, setOpen] = useState(false);
@@ -42,6 +43,21 @@ export function SearchOverlay() {
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
+
+  // Track search queries when results arrive
+  useEffect(() => {
+    if (query.length >= 2 && results) {
+      trackBreadcrumb(
+        "search_query",
+        {
+          query,
+          liveResultCount: results.live.length,
+          archiveResultCount: results.archive.length,
+        },
+        "search",
+      );
+    }
+  }, [results]);
 
   if (!open) return null;
 
@@ -103,7 +119,14 @@ export function SearchOverlay() {
                     key={`live-${r.id}`}
                     result={r}
                     era="live"
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      trackBreadcrumb(
+                        "search_result_click",
+                        { resultEra: "live", loadNo: r.loadNo },
+                        "search",
+                      );
+                      setOpen(false);
+                    }}
                   />
                 ))}
               </div>
@@ -121,7 +144,14 @@ export function SearchOverlay() {
                     key={`archive-${r.id}`}
                     result={r}
                     era="archive"
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      trackBreadcrumb(
+                        "search_result_click",
+                        { resultEra: "archive", loadNo: r.loadNo },
+                        "search",
+                      );
+                      setOpen(false);
+                    }}
                   />
                 ))}
               </div>

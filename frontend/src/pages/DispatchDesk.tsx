@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useBreadcrumb } from "../breadcrumbs/useBreadcrumb";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   useWells,
@@ -22,6 +23,7 @@ import type { Well } from "../types/api";
 export function DispatchDesk() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { track } = useBreadcrumb();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedWellId = searchParams.get("wellId") || "";
   const [pcsStart, setPcsStart] = useState("");
@@ -162,6 +164,7 @@ export function DispatchDesk() {
   const handleBulkValidate = async () => {
     if (!window.confirm(`Validate ${selectedIds.size} selected loads?`)) return;
     const ids = Array.from(selectedIds);
+    track("bulk_action", { action: "bulk_validate", count: ids.length });
     try {
       await Promise.all(
         ids.map((id) =>
@@ -223,6 +226,7 @@ export function DispatchDesk() {
     )
       return;
     const ids = readyLoads.map((l) => l.assignmentId);
+    track("bulk_action", { action: "mark_entered", count: ids.length });
     const startNum = parseInt(pcsStart) || 0;
     markEntered.mutate(
       { assignmentIds: ids, pcsStartingNumber: startNum },
@@ -241,6 +245,7 @@ export function DispatchDesk() {
     if (!window.confirm(`Approve ${pendingLoads.length} pending loads?`))
       return;
     const ids = pendingLoads.map((l) => l.assignmentId);
+    track("bulk_action", { action: "approve_all", count: ids.length });
     bulkApprove.mutate(ids, {
       onSuccess: () => {
         toast(`${ids.length} loads approved`, "success");
@@ -434,7 +439,13 @@ export function DispatchDesk() {
               <input
                 type="date"
                 value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
+                onChange={(e) => {
+                  setDateFilter(e.target.value);
+                  track("filter_changed", {
+                    filterType: "date",
+                    value: e.target.value,
+                  });
+                }}
                 className="bg-transparent text-[13px] font-medium text-on-surface focus:outline-none cursor-pointer"
               />
               <span className="material-symbols-outlined text-sm text-outline">
@@ -489,7 +500,13 @@ export function DispatchDesk() {
             ).map((filter) => (
               <button
                 key={filter}
-                onClick={() => setActiveFilter(filter)}
+                onClick={() => {
+                  setActiveFilter(filter);
+                  track("filter_changed", {
+                    filterType: "status",
+                    value: filter,
+                  });
+                }}
                 className={`px-3.5 py-1.5 rounded-md text-xs font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
                   activeFilter === filter
                     ? "bg-surface-container-high text-on-surface"
@@ -728,13 +745,15 @@ export function DispatchDesk() {
                   onMarkEntered={() => handleMarkSingle(load.assignmentId)}
                   onValidate={() => handleValidateSingle(load.assignmentId)}
                   onViewPhotos={() => setPhotoModalLoad(load)}
-                  onRowClick={() =>
-                    setExpandedLoadId(
+                  onRowClick={() => {
+                    const nextId =
                       expandedLoadId === load.assignmentId
                         ? null
-                        : load.assignmentId,
-                    )
-                  }
+                        : load.assignmentId;
+                    setExpandedLoadId(nextId);
+                    if (nextId !== null)
+                      track("load_expanded", { loadId: load.assignmentId });
+                  }}
                   isPending={markEntered.isPending}
                 />
                 {expandedLoadId === load.assignmentId && (
