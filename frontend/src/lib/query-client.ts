@@ -64,4 +64,14 @@ export const qk = {
   auth: {
     me: ["auth", "me"] as const,
   },
+  search: {
+    all: ["search"] as const,
+    query: (q: string) => ["search", q] as const,
+  },
+  archive: {
+    all: ["archive"] as const,
+    loads: (filters?: Record<string, unknown>) =>
+      [...(["archive", "loads"] as const), filters] as const,
+    load: (id: number) => ["archive", "load", id] as const,
+  },
 } as const;

@@ -111,6 +111,28 @@ export function Sidebar() {
             </Link>
           </div>
         </div>
+
+        <div className="mt-3">
+          <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-outline/60">
+            Reference
+          </div>
+          <Link
+            to="/archive"
+            className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors ${
+              isActive("/archive")
+                ? "bg-[#ede9f8] text-primary font-semibold"
+                : "text-on-surface-variant/60 hover:bg-surface-container-high hover:text-on-surface-variant"
+            }`}
+          >
+            <span
+              className="material-symbols-outlined text-[18px]"
+              style={{ fontVariationSettings: "'FILL' 0, 'wght' 400" }}
+            >
+              inventory_2
+            </span>
+            Archive
+          </Link>
+        </div>
       </nav>
       {/* Bottom: Presence + Settings + Logout */}
       <div className="border-t border-outline-variant/40 px-3 py-2">

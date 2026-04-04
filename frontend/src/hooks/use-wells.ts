@@ -84,6 +84,7 @@ export function useDispatchDeskLoads(filters?: {
   limit?: number;
 }) {
   const params = new URLSearchParams();
+  params.set("era", "live");
   if (filters?.wellId) params.set("wellId", String(filters.wellId));
   if (filters?.photoStatus) params.set("photoStatus", filters.photoStatus);
   if (filters?.date) params.set("date", filters.date);
