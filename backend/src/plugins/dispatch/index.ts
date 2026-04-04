@@ -6,6 +6,7 @@ import { validationRoutes } from "./routes/validation.js";
 import { dispatchDeskRoutes } from "./routes/dispatch-desk.js";
 import { autoMapRoutes } from "./routes/auto-map.js";
 import { presenceRoutes } from "./routes/presence.js";
+import breadcrumbRoutes from "./routes/breadcrumbs.js";
 
 const dispatchPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(wellRoutes, { prefix: "/wells" });
@@ -15,6 +16,7 @@ const dispatchPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(dispatchDeskRoutes, { prefix: "/dispatch-desk" });
   fastify.register(autoMapRoutes, { prefix: "/auto-map" });
   fastify.register(presenceRoutes, { prefix: "/presence" });
+  fastify.register(breadcrumbRoutes, { prefix: "/breadcrumbs" });
 
   // GET /dispatch-readiness — field completeness and readiness metrics
   fastify.get(

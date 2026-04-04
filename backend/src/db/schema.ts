@@ -576,3 +576,22 @@ export const feedback = pgTable(
     index("idx_feedback_created").on(table.createdAt),
   ],
 );
+
+// ── Breadcrumbs (behavioral signal capture) ──────────────────────────
+
+export const breadcrumbs = pgTable(
+  "breadcrumbs",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id),
+    eventType: text("event_type").notNull(),
+    eventData: jsonb("event_data").$type<Record<string, unknown>>().default({}),
+    zone: text("zone", { enum: ["live", "archive", "search"] }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => [
+    index("idx_breadcrumbs_event_type").on(table.eventType),
+    index("idx_breadcrumbs_created_at").on(table.createdAt),
+    index("idx_breadcrumbs_user_id").on(table.userId),
+  ],
+);
