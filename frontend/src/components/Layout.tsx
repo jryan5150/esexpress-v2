@@ -17,10 +17,10 @@ export function Layout() {
     : "??";
 
   return (
-    <div className="flex min-h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex-1 flex flex-col min-h-screen relative overflow-y-auto">
-        <header className="flex justify-end items-center px-8 h-14 w-full sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-on-surface/5">
+      <div className="flex-1 flex flex-col h-screen min-w-0">
+        <header className="flex justify-end items-center px-8 h-14 w-full shrink-0 z-40 bg-background/80 backdrop-blur-md border-b border-outline-variant/40">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-low/50">
               <span className="material-symbols-outlined text-tertiary text-sm">
@@ -43,7 +43,7 @@ export function Layout() {
             </div>
           </div>
         </header>
-        <main className="flex-1">
+        <main className="flex-1 min-h-0 overflow-hidden">
           <Outlet />
         </main>
       </div>

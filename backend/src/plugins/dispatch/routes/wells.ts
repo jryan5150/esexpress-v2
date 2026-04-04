@@ -1,36 +1,36 @@
-import { type FastifyPluginAsync } from 'fastify';
+import { type FastifyPluginAsync } from "fastify";
 import {
   listWells,
   getWellById,
   createWell,
   updateWell,
-} from '../services/wells.service.js';
+} from "../services/wells.service.js";
 
 const wellRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /wells — list all wells
   fastify.get(
-    '/',
+    "/",
     {
       preHandler: [fastify.authenticate],
       schema: {
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
             status: {
-              type: 'string',
-              enum: ['active', 'standby', 'completed', 'closed'],
+              type: "string",
+              enum: ["active", "standby", "completed", "closed"],
             },
           },
         },
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
-              success: { type: 'boolean' },
-              data: { type: 'array' },
+              success: { type: "boolean" },
+              data: { type: "array" },
               meta: {
-                type: 'object',
-                properties: { total: { type: 'number' } },
+                type: "object",
+                properties: { total: { type: "number" } },
               },
             },
           },
@@ -42,25 +42,31 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
       if (!db) {
         return reply.status(503).send({
           success: false,
-          error: { code: 'SERVICE_UNAVAILABLE', message: 'Database not connected' },
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
         });
       }
-      const { status } = request.query as { status?: string };
-      const data = await listWells(db, { status });
+      const { status, date } = request.query as {
+        status?: string;
+        date?: string;
+      };
+      const data = await listWells(db, { status, date });
       return { success: true, data, meta: { total: data.length } };
     },
   );
 
   // GET /wells/:id — get well by id
   fastify.get(
-    '/:id',
+    "/:id",
     {
       preHandler: [fastify.authenticate],
       schema: {
         params: {
-          type: 'object',
-          required: ['id'],
-          properties: { id: { type: 'integer' } },
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" } },
         },
       },
     },
@@ -69,7 +75,10 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
       if (!db) {
         return reply.status(503).send({
           success: false,
-          error: { code: 'SERVICE_UNAVAILABLE', message: 'Database not connected' },
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
         });
       }
       const { id } = request.params as { id: number };
@@ -77,7 +86,7 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
       if (!well) {
         return reply.status(404).send({
           success: false,
-          error: { code: 'NOT_FOUND', message: `Well with id ${id} not found` },
+          error: { code: "NOT_FOUND", message: `Well with id ${id} not found` },
         });
       }
       return { success: true, data: well };
@@ -86,26 +95,29 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /wells — create well (admin/dispatcher only)
   fastify.post(
-    '/',
+    "/",
     {
-      preHandler: [fastify.authenticate, fastify.requireRole(['admin', 'dispatcher'])],
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
       schema: {
         body: {
-          type: 'object',
-          required: ['name'],
+          type: "object",
+          required: ["name"],
           properties: {
-            name: { type: 'string', minLength: 1 },
-            aliases: { type: 'array', items: { type: 'string' } },
+            name: { type: "string", minLength: 1 },
+            aliases: { type: "array", items: { type: "string" } },
             status: {
-              type: 'string',
-              enum: ['active', 'standby', 'completed', 'closed'],
+              type: "string",
+              enum: ["active", "standby", "completed", "closed"],
             },
-            dailyTargetLoads: { type: 'integer' },
-            dailyTargetTons: { type: 'string' },
-            latitude: { type: 'string' },
-            longitude: { type: 'string' },
-            propxJobId: { type: 'string' },
-            propxDestinationId: { type: 'string' },
+            dailyTargetLoads: { type: "integer" },
+            dailyTargetTons: { type: "string" },
+            latitude: { type: "string" },
+            longitude: { type: "string" },
+            propxJobId: { type: "string" },
+            propxDestinationId: { type: "string" },
           },
         },
       },
@@ -115,7 +127,10 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
       if (!db) {
         return reply.status(503).send({
           success: false,
-          error: { code: 'SERVICE_UNAVAILABLE', message: 'Database not connected' },
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
         });
       }
       const well = await createWell(db, request.body as any);
@@ -125,30 +140,33 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
 
   // PUT /wells/:id — update well (admin/dispatcher only)
   fastify.put(
-    '/:id',
+    "/:id",
     {
-      preHandler: [fastify.authenticate, fastify.requireRole(['admin', 'dispatcher'])],
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
       schema: {
         params: {
-          type: 'object',
-          required: ['id'],
-          properties: { id: { type: 'integer' } },
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" } },
         },
         body: {
-          type: 'object',
+          type: "object",
           properties: {
-            name: { type: 'string', minLength: 1 },
-            aliases: { type: 'array', items: { type: 'string' } },
+            name: { type: "string", minLength: 1 },
+            aliases: { type: "array", items: { type: "string" } },
             status: {
-              type: 'string',
-              enum: ['active', 'standby', 'completed', 'closed'],
+              type: "string",
+              enum: ["active", "standby", "completed", "closed"],
             },
-            dailyTargetLoads: { type: 'integer' },
-            dailyTargetTons: { type: 'string' },
-            latitude: { type: 'string' },
-            longitude: { type: 'string' },
-            propxJobId: { type: 'string' },
-            propxDestinationId: { type: 'string' },
+            dailyTargetLoads: { type: "integer" },
+            dailyTargetTons: { type: "string" },
+            latitude: { type: "string" },
+            longitude: { type: "string" },
+            propxJobId: { type: "string" },
+            propxDestinationId: { type: "string" },
           },
         },
       },
@@ -158,7 +176,10 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
       if (!db) {
         return reply.status(503).send({
           success: false,
-          error: { code: 'SERVICE_UNAVAILABLE', message: 'Database not connected' },
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
         });
       }
       const { id } = request.params as { id: number };
@@ -166,7 +187,7 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
       if (!well) {
         return reply.status(404).send({
           success: false,
-          error: { code: 'NOT_FOUND', message: `Well with id ${id} not found` },
+          error: { code: "NOT_FOUND", message: `Well with id ${id} not found` },
         });
       }
       return { success: true, data: well };

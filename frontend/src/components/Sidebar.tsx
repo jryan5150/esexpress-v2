@@ -14,120 +14,133 @@ export function Sidebar() {
 
   const navClass = (path: string) =>
     isActive(path)
-      ? "bg-primary-container/10 text-primary-container border-l-[3px] border-primary-container flex items-center gap-3 px-5 py-2.5 rounded-r-lg transition-all duration-200 font-semibold shadow-sm shadow-primary-container/5"
-      : "text-on-surface/40 flex items-center gap-3 px-5 py-2.5 hover:bg-surface-container-high/60 hover:text-on-surface/70 hover:translate-x-0.5 rounded-r-lg transition-all duration-200 active:bg-surface-container-high";
+      ? "bg-[#ede9f8] text-primary font-semibold flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md transition-all duration-150 text-[13px]"
+      : "text-on-surface-variant flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md hover:bg-surface-container-high hover:text-on-surface transition-all duration-150 text-[13px] font-medium";
 
   return (
-    <aside className="hidden md:flex flex-col h-screen w-64 bg-surface-container-low z-50 shrink-0 shadow-[1px_0_12px_rgba(0,0,0,0.04)]">
-      <div className="px-5 pt-8 pb-7 flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center shadow-sm">
-            <span
-              className="material-symbols-outlined text-on-primary-container text-lg"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              local_shipping
+    <aside className="hidden md:flex flex-col h-screen w-[228px] min-w-[228px] bg-surface-container-lowest border-r border-outline-variant/40 z-50 shrink-0 overflow-y-auto overflow-x-hidden">
+      {/* Logo */}
+      <div className="px-4 pt-[18px] pb-3.5 border-b border-outline-variant/40 flex items-center gap-2.5">
+        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+          <span className="material-symbols-outlined text-on-primary text-lg">
+            local_shipping
+          </span>
+        </div>
+        <div>
+          <h2 className="font-headline font-extrabold text-sm text-on-surface leading-tight">
+            ES Express
+          </h2>
+          <p className="text-[10px] font-medium text-outline tracking-[0.06em]">
+            Field Dispatch v2
+          </p>
+        </div>
+      </div>
+
+      {/* Main Nav */}
+      <nav className="flex-1 py-2.5">
+        <div className="space-y-px">
+          <Link to="/" className={navClass("/")}>
+            <span className="material-symbols-outlined text-lg shrink-0">
+              home
+            </span>
+            Today's Objectives
+          </Link>
+          <Link to="/dispatch-desk" className={navClass("/dispatch-desk")}>
+            <span className="material-symbols-outlined text-lg shrink-0">
+              dashboard
+            </span>
+            Dispatch Desk
+          </Link>
+          <Link to="/bol" className={navClass("/bol")}>
+            <span className="material-symbols-outlined text-lg shrink-0">
+              receipt_long
+            </span>
+            BOL Queue
+          </Link>
+        </div>
+
+        <div className="mt-3">
+          <div className="px-3.5 mx-1.5 py-1.5">
+            <span className="text-[10px] font-semibold text-outline tracking-[0.1em] uppercase">
+              Admin
             </span>
           </div>
-          <div>
-            <h2 className="text-on-surface font-headline font-black text-sm tracking-tight uppercase leading-tight">
-              ES Express
-            </h2>
-            <p className="text-[10px] text-on-surface/25 font-label tracking-widest uppercase">
-              Dispatch Command
-            </p>
+          <div className="space-y-px">
+            <Link to="/validation" className={navClass("/validation")}>
+              <span className="material-symbols-outlined text-lg shrink-0">
+                rule
+              </span>
+              Validation
+            </Link>
+            <Link to="/admin/wells" className={navClass("/admin/wells")}>
+              <span className="material-symbols-outlined text-lg shrink-0">
+                oil_barrel
+              </span>
+              Wells
+            </Link>
+            <Link
+              to="/admin/companies"
+              className={navClass("/admin/companies")}
+            >
+              <span className="material-symbols-outlined text-lg shrink-0">
+                business
+              </span>
+              Companies
+            </Link>
+            <Link to="/admin/users" className={navClass("/admin/users")}>
+              <span className="material-symbols-outlined text-lg shrink-0">
+                group
+              </span>
+              Users
+            </Link>
           </div>
         </div>
-      </div>
-      <nav className="flex-1 px-3 space-y-0.5 pt-4">
-        <Link to="/" className={navClass("/")}>
-          <span className="material-symbols-outlined">home</span>
-          <span className="text-sm font-medium">Today's Objectives</span>
-        </Link>
-        <Link to="/dispatch-desk" className={navClass("/dispatch-desk")}>
-          <span className="material-symbols-outlined">local_shipping</span>
-          <span className="text-sm font-medium">Dispatch Desk</span>
-        </Link>
-        <Link to="/bol" className={navClass("/bol")}>
-          <span className="material-symbols-outlined">description</span>
-          <span className="text-sm font-medium">BOL Queue</span>
-        </Link>
-        <div className="pt-5 pb-1.5 px-4">
-          <span className="text-[10px] uppercase tracking-[0.15em] text-on-surface/25 font-bold font-label">
-            Admin
-          </span>
-        </div>
-        <Link to="/validation" className={navClass("/validation")}>
-          <span className="material-symbols-outlined">fact_check</span>
-          <span className="text-sm font-medium">Validation</span>
-        </Link>
-        <Link to="/admin/wells" className={navClass("/admin/wells")}>
-          <span className="material-symbols-outlined">oil_barrel</span>
-          <span className="text-sm font-medium">Wells</span>
-        </Link>
-        <Link to="/admin/companies" className={navClass("/admin/companies")}>
-          <span className="material-symbols-outlined">business</span>
-          <span className="text-sm font-medium">Companies</span>
-        </Link>
-        <Link to="/admin/users" className={navClass("/admin/users")}>
-          <span className="material-symbols-outlined">group</span>
-          <span className="text-sm font-medium">Users</span>
-        </Link>
-        <div className="pt-5 pb-1.5 px-4">
-          <span className="text-[10px] uppercase tracking-[0.15em] text-on-surface/25 font-bold font-label">
-            Operations
-          </span>
-        </div>
-        <Link to="/finance" className={navClass("/finance")}>
-          <span className="material-symbols-outlined">payments</span>
-          <span className="text-sm font-medium">Finance</span>
-        </Link>
-      </nav>
-      {/* Live Presence */}
-      <div className="px-5 py-5 bg-surface-container/30 space-y-3">
-        <h4 className="text-[10px] uppercase tracking-[0.15em] text-on-surface/25 font-bold font-label">
-          Online ({onlineUsers.length})
-        </h4>
-        <div className="space-y-2">
-          {onlineUsers.length === 0 ? (
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(13,150,104,0.5)]" />
-              <span className="text-xs text-on-surface/80">
-                {(userQuery.data as Record<string, unknown>)?.name || "You"}
+
+        <div className="mt-3">
+          <div className="px-3.5 mx-1.5 py-1.5">
+            <span className="text-[10px] font-semibold text-outline tracking-[0.1em] uppercase">
+              Operations
+            </span>
+          </div>
+          <div className="space-y-px">
+            <Link to="/finance" className={navClass("/finance")}>
+              <span className="material-symbols-outlined text-lg shrink-0">
+                payments
               </span>
-            </div>
-          ) : (
-            onlineUsers.map((u: any) => (
-              <div key={u.userId} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_6px_rgba(13,150,104,0.5)]" />
-                  <span className="text-xs text-on-surface/80">
-                    {u.userName?.split(" ")[0] || "User"}
-                  </span>
-                </div>
-                <span className="font-label text-[10px] text-on-surface/30 truncate max-w-[80px]">
-                  {u.wellName ? u.wellName.slice(0, 15) : u.currentPage}
-                </span>
-              </div>
-            ))
-          )}
+              Finance
+            </Link>
+          </div>
         </div>
-      </div>
-      {/* Footer */}
-      <div className="px-3 pb-5 flex flex-col gap-0.5">
-        <Link
-          to="/settings"
-          className="text-on-surface/40 flex items-center gap-3 px-4 py-2 hover:text-on-surface/70 hover:bg-surface-container-high/50 rounded-lg transition-all duration-150 active:scale-[0.98]"
-        >
-          <span className="material-symbols-outlined text-lg">settings</span>
-          <span className="text-xs font-medium">Settings</span>
+      </nav>
+      {/* Bottom: Presence + Settings + Logout */}
+      <div className="border-t border-outline-variant/40 px-3 py-2">
+        <div className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-outline">
+          <span className="w-[7px] h-[7px] rounded-full bg-tertiary shrink-0" />
+          <span>Online ({Math.max(onlineUsers.length, 1)}) &mdash;</span>
+          <span className="font-medium text-on-surface-variant">
+            {onlineUsers.length === 0
+              ? (
+                  (userQuery.data as Record<string, unknown>)?.name as string
+                )?.split(" ")[0] || "You"
+              : onlineUsers
+                  .map((u: any) => u.userName?.split(" ")[0] || "User")
+                  .join(", ")}
+          </span>
+        </div>
+        <Link to="/settings" className={navClass("/settings")}>
+          <span className="material-symbols-outlined text-lg shrink-0">
+            settings
+          </span>
+          Settings
         </Link>
         <button
           onClick={logout}
-          className="text-on-surface/40 flex items-center gap-3 px-4 py-2 hover:text-error/80 hover:bg-error/5 rounded-lg transition-all duration-150 w-full cursor-pointer active:scale-[0.98]"
+          className="w-full text-on-surface-variant flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md hover:bg-error/5 hover:text-error transition-all duration-150 text-[13px] font-medium cursor-pointer"
         >
-          <span className="material-symbols-outlined text-lg">logout</span>
-          <span className="text-xs font-medium">Log Out</span>
+          <span className="material-symbols-outlined text-lg shrink-0">
+            logout
+          </span>
+          Log Out
         </button>
       </div>
     </aside>

@@ -10,10 +10,17 @@ import type {
   Paginated,
 } from "../types/api";
 
-export function useWells() {
+/** Format as YYYY-MM-DD in local timezone */
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function useWells(date?: string) {
+  const dateParam = date ?? todayStr();
   return useQuery({
-    queryKey: qk.wells.list(),
-    queryFn: () => api.get<Well[]>("/dispatch/wells/"),
+    queryKey: [...qk.wells.list(), dateParam],
+    queryFn: () => api.get<Well[]>(`/dispatch/wells/?date=${dateParam}`),
   });
 }
 
@@ -114,6 +121,36 @@ export function useTransitionStatus() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+      queryClient.invalidateQueries({ queryKey: qk.validation.all });
+    },
+  });
+}
+
+export interface LoadFieldUpdate {
+  driverName?: string | null;
+  truckNo?: string | null;
+  trailerNo?: string | null;
+  carrierName?: string | null;
+  weightTons?: string | null;
+  netWeightTons?: string | null;
+  bolNo?: string | null;
+  ticketNo?: string | null;
+}
+
+export function useUpdateLoad() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      loadId,
+      updates,
+    }: {
+      loadId: number;
+      updates: LoadFieldUpdate;
+    }) => api.patch(`/dispatch/loads/${loadId}`, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
+      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+      queryClient.invalidateQueries({ queryKey: qk.loads.all });
       queryClient.invalidateQueries({ queryKey: qk.validation.all });
     },
   });

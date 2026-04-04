@@ -1,5 +1,5 @@
 import { eq, sql, getTableColumns } from "drizzle-orm";
-import { wells, assignments } from "../../../db/schema.js";
+import { wells, assignments, loads } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 
 export interface CreateWellInput {
@@ -26,38 +26,49 @@ export interface UpdateWellInput {
   propxDestinationId?: string;
 }
 
-export async function listWells(db: Database, filters?: { status?: string }) {
+export async function listWells(
+  db: Database,
+  filters?: { status?: string; date?: string },
+) {
   const wellColumns = getTableColumns(wells);
+
+  // When date is provided, use conditional aggregation scoped to loads.deliveredOn
+  // so counts reflect only loads for that day (CDT timezone).
+  const dateGuard = filters?.date
+    ? sql`AND ${loads.deliveredOn} >= ${new Date(`${filters.date}T00:00:00-05:00`)} AND ${loads.deliveredOn} <= ${new Date(`${filters.date}T23:59:59.999-05:00`)}`
+    : sql``;
+
   const baseQuery = db
     .select({
       ...wellColumns,
-      // Total assignments for this well
-      totalLoads: sql<number>`cast(count(${assignments.id}) as int)`.as(
-        "total_loads",
-      ),
-      // dispatch_ready or beyond = "ready"
+      totalLoads:
+        sql<number>`cast(count(case when ${assignments.id} is not null ${dateGuard} then 1 end) as int)`.as(
+          "total_loads",
+        ),
       ready:
-        sql<number>`cast(count(case when ${assignments.status} in ('dispatch_ready', 'dispatching', 'dispatched', 'delivered', 'completed') then 1 end) as int)`.as(
+        sql<number>`cast(count(case when ${assignments.status} in ('dispatch_ready', 'dispatching', 'dispatched', 'delivered', 'completed') ${dateGuard} then 1 end) as int)`.as(
           "ready",
         ),
-      // pending = needs review
+      validated:
+        sql<number>`cast(count(case when ${assignments.status} in ('dispatched', 'delivered', 'completed') ${dateGuard} then 1 end) as int)`.as(
+          "validated",
+        ),
       review:
-        sql<number>`cast(count(case when ${assignments.status} = 'pending' then 1 end) as int)`.as(
+        sql<number>`cast(count(case when ${assignments.status} = 'pending' ${dateGuard} then 1 end) as int)`.as(
           "review",
         ),
-      // assigned = confirmed but not yet dispatch-ready
       assigned:
-        sql<number>`cast(count(case when ${assignments.status} = 'assigned' then 1 end) as int)`.as(
+        sql<number>`cast(count(case when ${assignments.status} = 'assigned' ${dateGuard} then 1 end) as int)`.as(
           "assigned",
         ),
-      // missing photo status
       missing:
-        sql<number>`cast(count(case when ${assignments.photoStatus} = 'missing' then 1 end) as int)`.as(
+        sql<number>`cast(count(case when ${assignments.photoStatus} = 'missing' ${dateGuard} then 1 end) as int)`.as(
           "missing",
         ),
     })
     .from(wells)
     .leftJoin(assignments, eq(wells.id, assignments.wellId))
+    .leftJoin(loads, eq(assignments.loadId, loads.id))
     .groupBy(wells.id)
     .orderBy(wells.name);
 

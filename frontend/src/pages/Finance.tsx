@@ -184,219 +184,224 @@ export function Finance() {
     : MOCK_CYCLES;
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl">
-      {/* API Error Banner */}
-      {isError && (
-        <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 flex items-center gap-3">
-          <span className="material-symbols-outlined text-error text-lg">
-            cloud_off
-          </span>
-          <p className="text-sm text-error font-medium">
-            Unable to connect to the server. Showing cached data.
-          </p>
+    <div className="flex flex-col h-full">
+      {/* Page Header */}
+      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
+          <div>
+            <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
+              Finance
+            </h1>
+            <p className="text-[11px] font-medium text-outline tracking-[0.08em] uppercase mt-0.5">
+              Payment Cycles // Settlement Batches
+            </p>
+          </div>
+          <button
+            onClick={() => alert("Create Batch functionality coming soon")}
+            className="ml-auto bg-primary-container text-on-primary-container px-6 py-3 rounded-lg font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-primary-container/30"
+          >
+            <span className="material-symbols-outlined text-sm">add</span>
+            Create Batch
+          </button>
         </div>
-      )}
-
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
-            Finance
-          </h1>
-          <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
-            Batch Management // Pay Cycle Operations
-          </p>
-        </div>
-        <button
-          onClick={() => alert("Create Batch functionality coming soon")}
-          className="bg-primary-container text-on-primary-container px-6 py-3 rounded-lg font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all flex items-center gap-2 active:scale-95 shadow-lg shadow-primary-container/30"
-        >
-          <span className="material-symbols-outlined text-sm">add</span>
-          Create Batch
-        </button>
       </div>
+      <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-6">
+        {/* API Error Banner */}
+        {isError && (
+          <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 flex items-center gap-3">
+            <span className="material-symbols-outlined text-error text-lg">
+              cloud_off
+            </span>
+            <p className="text-sm text-error font-medium">
+              Unable to connect to the server. Showing cached data.
+            </p>
+          </div>
+        )}
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-          <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
-            Open Batches
-          </span>
-          <div className="mt-2 flex items-end gap-2">
-            <span className="font-label text-4xl font-black text-on-surface">
-              {isLoading ? "..." : openBatches}
+        {/* Stat Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
+            <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
+              Open Batches
             </span>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-tertiary text-sm">
-              trending_up
-            </span>
-            <span className="text-xs text-tertiary font-bold">
-              {isLoading ? "..." : openBatchesTrend}
-            </span>
-          </div>
-        </div>
-        <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-          <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
-            Total Pending
-          </span>
-          <div className="mt-2 flex items-end gap-2">
-            <span className="font-label text-3xl font-black text-on-surface">
-              {isLoading ? "..." : totalPendingDollars}
-            </span>
-            {!isLoading && totalPendingCents && (
-              <span className="font-label text-lg font-bold text-on-surface/40 mb-0.5">
-                {totalPendingCents}
+            <div className="mt-2 flex items-end gap-2">
+              <span className="font-label text-4xl font-black text-on-surface">
+                {isLoading ? "..." : openBatches}
               </span>
-            )}
+            </div>
+            <div className="mt-3 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-tertiary text-sm">
+                trending_up
+              </span>
+              <span className="text-xs text-tertiary font-bold">
+                {isLoading ? "..." : openBatchesTrend}
+              </span>
+            </div>
           </div>
-          <div className="mt-3 flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-primary-container text-sm">
-              schedule
+          <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
+            <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
+              Total Pending
             </span>
-            <span className="text-xs text-on-surface/50 font-medium">
-              {isLoading ? "..." : `Across ${pendingCarriers} carriers`}
+            <div className="mt-2 flex items-end gap-2">
+              <span className="font-label text-3xl font-black text-on-surface">
+                {isLoading ? "..." : totalPendingDollars}
+              </span>
+              {!isLoading && totalPendingCents && (
+                <span className="font-label text-lg font-bold text-on-surface/40 mb-0.5">
+                  {totalPendingCents}
+                </span>
+              )}
+            </div>
+            <div className="mt-3 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-primary-container text-sm">
+                schedule
+              </span>
+              <span className="text-xs text-on-surface/50 font-medium">
+                {isLoading ? "..." : `Across ${pendingCarriers} carriers`}
+              </span>
+            </div>
+          </div>
+          <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
+            <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
+              Last Pay Run
             </span>
+            <div className="mt-2 flex items-end gap-2">
+              <span className="font-label text-3xl font-black text-on-surface">
+                {isLoading ? "..." : lastPayRun}
+              </span>
+            </div>
+            <div className="mt-3 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-on-surface/30 text-sm">
+                check_circle
+              </span>
+              <span className="text-xs text-on-surface/50 font-medium">
+                {isLoading ? "..." : lastPayRunAmount}
+              </span>
+            </div>
+          </div>
+          <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
+            <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
+              Processing
+            </span>
+            <div className="mt-2 flex items-end gap-2">
+              <span className="font-label text-4xl font-black text-primary-container">
+                {isLoading ? "..." : processingCount}
+              </span>
+              <span className="font-label text-lg font-bold text-on-surface/40 mb-0.5">
+                BOL
+              </span>
+            </div>
+            <div className="mt-3 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-primary-container text-sm animate-pulse">
+                sync
+              </span>
+              <span className="text-xs text-on-surface/50 font-medium">
+                In reconciliation
+              </span>
+            </div>
           </div>
         </div>
-        <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-          <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
-            Last Pay Run
-          </span>
-          <div className="mt-2 flex items-end gap-2">
-            <span className="font-label text-3xl font-black text-on-surface">
-              {isLoading ? "..." : lastPayRun}
-            </span>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-on-surface/30 text-sm">
-              check_circle
-            </span>
-            <span className="text-xs text-on-surface/50 font-medium">
-              {isLoading ? "..." : lastPayRunAmount}
-            </span>
-          </div>
-        </div>
-        <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-          <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
-            Processing
-          </span>
-          <div className="mt-2 flex items-end gap-2">
-            <span className="font-label text-4xl font-black text-primary-container">
-              {isLoading ? "..." : processingCount}
-            </span>
-            <span className="font-label text-lg font-bold text-on-surface/40 mb-0.5">
-              BOL
-            </span>
-          </div>
-          <div className="mt-3 flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-primary-container text-sm animate-pulse">
-              sync
-            </span>
-            <span className="text-xs text-on-surface/50 font-medium">
-              In reconciliation
-            </span>
-          </div>
-        </div>
-      </div>
 
-      {/* Active Payment Cycles */}
-      <section className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
-        <div className="flex items-center justify-between px-6 py-4 bg-surface-container-lowest/50">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-primary-container text-lg">
-              payments
-            </span>
-            <h2 className="font-headline font-bold text-sm text-on-surface">
-              Active Payment Cycles
-            </h2>
-            <span className="font-label text-[10px] bg-primary-container/10 text-primary-container px-2 py-0.5 rounded uppercase tracking-wider font-bold">
-              {isLoading ? "..." : `${cycles.length} Cycles`}
-            </span>
+        {/* Active Payment Cycles */}
+        <section className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+          <div className="flex items-center justify-between px-6 py-4 bg-surface-container-lowest/50">
+            <div className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-primary-container text-lg">
+                payments
+              </span>
+              <h2 className="font-headline font-bold text-sm text-on-surface">
+                Active Payment Cycles
+              </h2>
+              <span className="font-label text-[10px] bg-primary-container/10 text-primary-container px-2 py-0.5 rounded uppercase tracking-wider font-bold">
+                {isLoading ? "..." : `${cycles.length} Cycles`}
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="p-0">
-          <div className="grid grid-cols-12 gap-1 px-6 py-3 text-[10px] font-label uppercase tracking-widest text-on-surface/30 font-bold border-b border-on-surface/5 bg-surface-container-lowest/30">
-            <div className="col-span-2">Batch ID</div>
-            <div className="col-span-3">Company</div>
-            <div className="col-span-1">BOLs</div>
-            <div className="col-span-2">Amount</div>
-            <div className="col-span-2">Status</div>
-            <div className="col-span-2 text-right">Actions</div>
-          </div>
-          <div className="divide-y divide-on-surface/5">
-            {isLoading ? (
-              <>
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="grid grid-cols-12 gap-1 items-center px-4 py-3 animate-pulse"
-                  >
-                    <div className="col-span-2">
-                      <div className="h-4 w-28 bg-on-surface/10 rounded" />
-                    </div>
-                    <div className="col-span-3">
-                      <div className="h-4 w-32 bg-on-surface/5 rounded" />
-                    </div>
-                    <div className="col-span-1">
-                      <div className="h-4 w-8 bg-on-surface/5 rounded" />
-                    </div>
-                    <div className="col-span-2">
-                      <div className="h-4 w-24 bg-on-surface/5 rounded" />
-                    </div>
-                    <div className="col-span-2">
-                      <div className="h-4 w-20 bg-on-surface/5 rounded" />
-                    </div>
-                    <div className="col-span-2 flex justify-end">
-                      <div className="h-7 w-16 bg-on-surface/5 rounded" />
-                    </div>
-                  </div>
-                ))}
-              </>
-            ) : cycles.length === 0 ? (
-              <div className="px-4 py-8 text-center">
-                <p className="text-on-surface/40 font-label text-sm">
-                  No active payment cycles
-                </p>
-              </div>
-            ) : (
-              cycles.map((cycle) => (
-                <div
-                  key={cycle.id}
-                  className="grid grid-cols-12 gap-1 items-center px-6 py-4 bg-surface-container-low hover:bg-surface-container-high transition-colors group"
-                >
-                  <div className="col-span-2 font-label text-sm text-primary">
-                    {cycle.id}
-                  </div>
-                  <div className="col-span-3 text-sm font-medium text-on-surface">
-                    {cycle.company}
-                  </div>
-                  <div className="col-span-1 font-label text-sm text-on-surface/60">
-                    {cycle.bols}
-                  </div>
-                  <div className="col-span-2 font-label text-sm font-bold text-on-surface">
-                    {cycle.amount}
-                  </div>
-                  <div className="col-span-2">
-                    <span
-                      className={`px-2.5 py-0.5 font-label text-[10px] font-bold uppercase tracking-wider rounded-full border ${cycle.statusColor}`}
+          <div className="p-0">
+            <div className="grid grid-cols-12 gap-1 px-6 py-3 text-[10px] font-label uppercase tracking-widest text-on-surface/30 font-bold border-b border-on-surface/5 bg-surface-container-lowest/30">
+              <div className="col-span-2">Batch ID</div>
+              <div className="col-span-3">Company</div>
+              <div className="col-span-1">BOLs</div>
+              <div className="col-span-2">Amount</div>
+              <div className="col-span-2">Status</div>
+              <div className="col-span-2 text-right">Actions</div>
+            </div>
+            <div className="divide-y divide-on-surface/5">
+              {isLoading ? (
+                <>
+                  {[1, 2, 3, 4].map((i) => (
+                    <div
+                      key={i}
+                      className="grid grid-cols-12 gap-1 items-center px-4 py-3 animate-pulse"
                     >
-                      {cycle.status}
-                    </span>
-                  </div>
-                  <div className="col-span-2 flex justify-end gap-2">
-                    <button className="bg-surface-container-high/80 px-3 py-1.5 rounded-lg text-xs font-semibold text-on-surface/60 border border-on-surface/10 hover:bg-surface-container-highest hover:text-on-surface/80 flex items-center gap-1.5 transition-colors cursor-pointer">
-                      <span className="material-symbols-outlined text-sm">
-                        visibility
-                      </span>
-                      View
-                    </button>
-                  </div>
+                      <div className="col-span-2">
+                        <div className="h-4 w-28 bg-on-surface/10 rounded" />
+                      </div>
+                      <div className="col-span-3">
+                        <div className="h-4 w-32 bg-on-surface/5 rounded" />
+                      </div>
+                      <div className="col-span-1">
+                        <div className="h-4 w-8 bg-on-surface/5 rounded" />
+                      </div>
+                      <div className="col-span-2">
+                        <div className="h-4 w-24 bg-on-surface/5 rounded" />
+                      </div>
+                      <div className="col-span-2">
+                        <div className="h-4 w-20 bg-on-surface/5 rounded" />
+                      </div>
+                      <div className="col-span-2 flex justify-end">
+                        <div className="h-7 w-16 bg-on-surface/5 rounded" />
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : cycles.length === 0 ? (
+                <div className="px-4 py-8 text-center">
+                  <p className="text-on-surface/40 font-label text-sm">
+                    No active payment cycles
+                  </p>
                 </div>
-              ))
-            )}
+              ) : (
+                cycles.map((cycle) => (
+                  <div
+                    key={cycle.id}
+                    className="grid grid-cols-12 gap-1 items-center px-6 py-4 bg-surface-container-low hover:bg-surface-container-high transition-colors group"
+                  >
+                    <div className="col-span-2 font-label text-sm text-primary">
+                      {cycle.id}
+                    </div>
+                    <div className="col-span-3 text-sm font-medium text-on-surface">
+                      {cycle.company}
+                    </div>
+                    <div className="col-span-1 font-label text-sm text-on-surface/60">
+                      {cycle.bols}
+                    </div>
+                    <div className="col-span-2 font-label text-sm font-bold text-on-surface">
+                      {cycle.amount}
+                    </div>
+                    <div className="col-span-2">
+                      <span
+                        className={`px-2.5 py-0.5 font-label text-[10px] font-bold uppercase tracking-wider rounded-full border ${cycle.statusColor}`}
+                      >
+                        {cycle.status}
+                      </span>
+                    </div>
+                    <div className="col-span-2 flex justify-end gap-2">
+                      <button className="bg-surface-container-high/80 px-3 py-1.5 rounded-lg text-xs font-semibold text-on-surface/60 border border-on-surface/10 hover:bg-surface-container-highest hover:text-on-surface/80 flex items-center gap-1.5 transition-colors cursor-pointer">
+                        <span className="material-symbols-outlined text-sm">
+                          visibility
+                        </span>
+                        View
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

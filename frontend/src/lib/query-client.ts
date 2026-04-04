@@ -42,6 +42,10 @@ export const qk = {
     all: ["suggestions"] as const,
     forLoad: (loadId: number) => [...qk.suggestions.all, loadId] as const,
   },
+  loads: {
+    all: ["loads"] as const,
+    detail: (id: number) => ["loads", id] as const,
+  },
   bol: {
     all: ["bol"] as const,
     queue: () => [...qk.bol.all, "queue"] as const,

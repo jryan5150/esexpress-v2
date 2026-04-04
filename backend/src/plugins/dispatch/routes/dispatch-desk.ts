@@ -1,27 +1,30 @@
-import { type FastifyPluginAsync } from 'fastify';
-import { AppError } from '../../../lib/errors.js';
-import type { PhotoStatus } from '../../../db/schema.js';
+import { type FastifyPluginAsync } from "fastify";
+import { AppError } from "../../../lib/errors.js";
+import type { PhotoStatus } from "../../../db/schema.js";
 
 const DB_UNAVAILABLE = {
   success: false,
-  error: { code: 'SERVICE_UNAVAILABLE', message: 'Database not connected' },
+  error: { code: "SERVICE_UNAVAILABLE", message: "Database not connected" },
 };
 
 const dispatchDeskRoutes: FastifyPluginAsync = async (fastify) => {
   // GET / — dispatch desk loads with optional filters
   fastify.get(
-    '/',
+    "/",
     {
       preHandler: [fastify.authenticate],
       schema: {
         querystring: {
-          type: 'object',
+          type: "object",
           properties: {
-            wellId: { type: 'integer' },
-            photoStatus: { type: 'string', enum: ['attached', 'pending', 'missing'] },
-            date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
-            page: { type: 'integer', minimum: 1, default: 1 },
-            limit: { type: 'integer', minimum: 1, maximum: 500, default: 100 },
+            wellId: { type: "integer" },
+            photoStatus: {
+              type: "string",
+              enum: ["attached", "pending", "missing"],
+            },
+            date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 500, default: 100 },
           },
         },
       },
@@ -30,7 +33,8 @@ const dispatchDeskRoutes: FastifyPluginAsync = async (fastify) => {
       const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
-      const { getDispatchDeskLoads } = await import('../services/dispatch-desk.service.js');
+      const { getDispatchDeskLoads } =
+        await import("../services/dispatch-desk.service.js");
       const query = request.query as {
         wellId?: number;
         photoStatus?: PhotoStatus;
@@ -53,20 +57,23 @@ const dispatchDeskRoutes: FastifyPluginAsync = async (fastify) => {
 
   // POST /mark-entered — assign PCS sequence numbers + transition to dispatch_ready
   fastify.post(
-    '/mark-entered',
+    "/mark-entered",
     {
-      preHandler: [fastify.authenticate, fastify.requireRole(['admin', 'dispatcher'])],
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
       schema: {
         body: {
-          type: 'object',
-          required: ['assignmentIds', 'pcsStartingNumber'],
+          type: "object",
+          required: ["assignmentIds", "pcsStartingNumber"],
           properties: {
             assignmentIds: {
-              type: 'array',
-              items: { type: 'integer' },
+              type: "array",
+              items: { type: "integer" },
               minItems: 1,
             },
-            pcsStartingNumber: { type: 'integer', minimum: 1 },
+            pcsStartingNumber: { type: "integer", minimum: 1 },
           },
         },
       },
@@ -75,7 +82,8 @@ const dispatchDeskRoutes: FastifyPluginAsync = async (fastify) => {
       const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
-      const { markEntered } = await import('../services/dispatch-desk.service.js');
+      const { markEntered } =
+        await import("../services/dispatch-desk.service.js");
       const { assignmentIds, pcsStartingNumber } = request.body as {
         assignmentIds: number[];
         pcsStartingNumber: number;
@@ -112,6 +120,36 @@ const dispatchDeskRoutes: FastifyPluginAsync = async (fastify) => {
         }
         throw err;
       }
+    },
+  );
+
+  // GET /missing-tickets — loads with no ticket and no matched JotForm submission
+  fastify.get(
+    "/missing-tickets",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
+
+      const { getMissingTicketLoads } =
+        await import("../services/dispatch-desk.service.js");
+      const { page, limit } = request.query as {
+        page?: number;
+        limit?: number;
+      };
+      const result = await getMissingTicketLoads(db, { page, limit });
+      return { success: true, ...result };
     },
   );
 };

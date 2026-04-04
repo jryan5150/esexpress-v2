@@ -53,6 +53,22 @@ export function useBolDiscrepancies() {
   });
 }
 
+export function useMissingTickets(opts?: { page?: number; limit?: number }) {
+  const params = new URLSearchParams();
+  if (opts?.page) params.set("page", String(opts.page));
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString() ? `?${params}` : "";
+  return useQuery({
+    queryKey: [...qk.bol.all, "missing-tickets", opts] as const,
+    queryFn: () =>
+      api.get<{
+        data: any[];
+        meta: { page: number; limit: number; total: number };
+      }>(`/dispatch/dispatch-desk/missing-tickets${qs}`),
+    refetchInterval: 30_000,
+  });
+}
+
 export function useAutoMatch() {
   const queryClient = useQueryClient();
   return useMutation({

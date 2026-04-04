@@ -21,6 +21,7 @@ interface LoadRowProps {
   onMarkEntered: () => void;
   onValidate: () => void;
   onViewPhotos: () => void;
+  onRowClick?: () => void;
   isPending?: boolean;
 }
 
@@ -80,6 +81,7 @@ export const LoadRow = memo(function LoadRow({
   onMarkEntered,
   onValidate,
   onViewPhotos,
+  onRowClick,
   isPending,
 }: LoadRowProps) {
   const status = STATUS_CONFIG[validationStatus];
@@ -89,12 +91,16 @@ export const LoadRow = memo(function LoadRow({
 
   return (
     <div
-      className={`grid items-center gap-3 bg-surface-container-lowest border border-on-surface/15 rounded-lg px-3.5 py-2.5 shadow-sm transition-all hover:border-primary-container/30 hover:shadow-md ${
-        dimmed ? "opacity-50 hover:opacity-70" : ""
+      onClick={(e) => {
+        // Don't trigger row click for interactive elements
+        if ((e.target as HTMLElement).closest("button, input, a")) return;
+        onRowClick?.();
+      }}
+      className={`grid items-center gap-3 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] px-3.5 py-2.5 shadow-sm transition-all hover:border-primary-container/20 hover:shadow-md cursor-pointer ${
+        dimmed ? "opacity-55 hover:opacity-75" : ""
       } ${entered ? "opacity-35" : ""}`}
       style={{
-        gridTemplateColumns:
-          "28px 90px minmax(100px, 1fr) 60px 110px 100px 70px auto",
+        gridTemplateColumns: "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
       }}
     >
       {/* Checkbox */}
@@ -118,46 +124,44 @@ export const LoadRow = memo(function LoadRow({
         </span>
       </div>
 
-      {/* Driver + Load # + Carrier */}
+      {/* Load # */}
+      <div className="font-label text-xs font-medium text-on-surface-variant tabular-nums">
+        #{loadNo}
+      </div>
+
+      {/* Driver + Carrier */}
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-[13px] text-on-surface truncate">
-            {driverName || "--"}
-          </span>
-          <span className="font-label text-[11px] text-on-surface/50">
-            {loadNo}
-          </span>
+        <div className="font-semibold text-[13px] text-on-surface truncate">
+          {driverName || "--"}
         </div>
-        <span className="text-[11px] text-on-surface/50 truncate block">
+        <div className="text-xs text-outline truncate">
           {carrierName || "--"}
-        </span>
+        </div>
       </div>
 
       {/* Weight */}
       <div className="text-right">
-        <span className="font-label text-[13px] font-medium text-on-surface tabular-nums">
+        <span className="font-label text-[13px] font-medium text-on-surface-variant tabular-nums">
           {weightTons ? `${parseFloat(weightTons).toFixed(1)}t` : "--"}
         </span>
       </div>
 
       {/* BOL / Truck */}
-      <div>
-        <span className="font-label text-[11px] text-on-surface/80 block truncate">
+      <div className="flex flex-col gap-0.5">
+        <span className="font-label text-[11px] text-on-surface-variant truncate">
           {bolNo || "--"}
         </span>
-        <span className="text-[11px] text-on-surface/50 block">
-          {truckNo || ""}
-        </span>
+        <span className="text-[11px] text-outline">{truckNo || ""}</span>
       </div>
 
       {/* Ticket */}
       <div>
         {isMissing ? (
           <span className="font-label text-[11px] font-bold text-error uppercase">
-            Missing
+            MISSING
           </span>
         ) : (
-          <span className="font-label text-[11px] text-on-surface/60">
+          <span className="font-label text-[11px] text-outline">
             {ticketNo || "--"}
           </span>
         )}
@@ -165,7 +169,7 @@ export const LoadRow = memo(function LoadRow({
 
       {/* Date */}
       <div className="text-right">
-        <span className="text-[11px] text-on-surface/60">
+        <span className="text-[11px] text-outline whitespace-nowrap">
           {formatDate(deliveredOn)}
         </span>
       </div>
@@ -175,12 +179,10 @@ export const LoadRow = memo(function LoadRow({
         {hasPhotos && (
           <button
             onClick={onViewPhotos}
-            className="w-7 h-7 flex items-center justify-center rounded-md ring-1 ring-on-surface/10 text-on-surface/40 hover:bg-surface-container-high hover:text-primary-container transition-all cursor-pointer"
+            className="w-7 h-7 flex items-center justify-center rounded-md border border-outline-variant/40 text-outline hover:bg-surface-container-high hover:text-on-surface transition-all cursor-pointer"
             aria-label="View BOL photos"
           >
-            <span className="material-symbols-outlined text-sm">
-              photo_camera
-            </span>
+            <span className="material-symbols-outlined text-sm">image</span>
           </button>
         )}
         {isValidated ? (
@@ -188,9 +190,12 @@ export const LoadRow = memo(function LoadRow({
             <button
               onClick={onMarkEntered}
               disabled={isPending}
-              className="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-primary-container text-on-primary-container hover:brightness-110 transition-all cursor-pointer disabled:opacity-40"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-outline-variant/40 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer disabled:opacity-40"
             >
-              Enter
+              <span className="material-symbols-outlined text-sm">
+                content_copy
+              </span>
+              Copy
             </button>
           ) : entered ? (
             <span className="text-[10px] font-bold uppercase tracking-wide text-tertiary">
@@ -200,11 +205,17 @@ export const LoadRow = memo(function LoadRow({
         ) : !isMissing ? (
           <button
             onClick={onValidate}
-            className="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-tertiary/10 text-tertiary hover:bg-tertiary/20 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-tertiary text-on-tertiary hover:brightness-110 transition-all cursor-pointer"
           >
+            <span className="material-symbols-outlined text-sm">verified</span>
             Validate
           </button>
-        ) : null}
+        ) : (
+          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-error/25 text-[10px] font-bold uppercase tracking-wide text-error hover:bg-error/5 transition-all cursor-pointer">
+            <span className="material-symbols-outlined text-sm">report</span>
+            Missing Ticket
+          </button>
+        )}
       </div>
     </div>
   );

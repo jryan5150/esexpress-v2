@@ -126,10 +126,12 @@ export async function getDispatchDeskLoads(
   }
 
   if (date) {
-    const startOfDay = new Date(`${date}T00:00:00.000Z`);
-    const endOfDay = new Date(`${date}T23:59:59.999Z`);
-    conditions.push(sql`${assignments.createdAt} >= ${startOfDay}`);
-    conditions.push(sql`${assignments.createdAt} <= ${endOfDay}`);
+    // Filter on loads.deliveredOn (the actual delivery date), not assignments.createdAt.
+    // Use America/Chicago (CDT) since dispatchers are in Texas.
+    const startOfDay = new Date(`${date}T00:00:00-05:00`);
+    const endOfDay = new Date(`${date}T23:59:59.999-05:00`);
+    conditions.push(sql`${loads.deliveredOn} >= ${startOfDay}`);
+    conditions.push(sql`${loads.deliveredOn} <= ${endOfDay}`);
   }
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -398,4 +400,68 @@ export async function getDispatchReadiness(
       weightTons: Math.round((Number(fs.hasWeightTons) / fsTotal) * 100) / 100,
     },
   };
+}
+
+// ─── MISSING TICKETS ─────────────────────────────────────────────
+
+/**
+ * Loads with active assignments that have no ticketNo AND no matched JotForm submission.
+ * These loads cannot be safely dispatched to PCS (POST-only, no corrections).
+ */
+export async function getMissingTicketLoads(
+  db: Database,
+  opts: { page?: number; limit?: number } = {},
+) {
+  const page = opts.page ?? 1;
+  const limit = opts.limit ?? 50;
+  const offset = (page - 1) * limit;
+
+  const activeStatuses = ["pending", "assigned", "dispatch_ready"];
+
+  const [countResult] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(assignments)
+    .innerJoin(loads, eq(assignments.loadId, loads.id))
+    .leftJoin(jotformImports, eq(jotformImports.matchedLoadId, loads.id))
+    .where(
+      and(
+        inArray(assignments.status, activeStatuses),
+        sql`${loads.ticketNo} IS NULL`,
+        sql`${jotformImports.id} IS NULL`,
+      ),
+    );
+
+  const total = countResult?.count ?? 0;
+
+  const rows = await db
+    .select({
+      assignmentId: assignments.id,
+      assignmentStatus: assignments.status,
+      loadId: loads.id,
+      loadNo: loads.loadNo,
+      driverName: loads.driverName,
+      truckNo: loads.truckNo,
+      carrierName: loads.carrierName,
+      weightTons: loads.weightTons,
+      bolNo: loads.bolNo,
+      deliveredOn: loads.deliveredOn,
+      wellId: wells.id,
+      wellName: wells.name,
+    })
+    .from(assignments)
+    .innerJoin(loads, eq(assignments.loadId, loads.id))
+    .innerJoin(wells, eq(assignments.wellId, wells.id))
+    .leftJoin(jotformImports, eq(jotformImports.matchedLoadId, loads.id))
+    .where(
+      and(
+        inArray(assignments.status, activeStatuses),
+        sql`${loads.ticketNo} IS NULL`,
+        sql`${jotformImports.id} IS NULL`,
+      ),
+    )
+    .orderBy(sql`${loads.deliveredOn} desc nulls last`)
+    .limit(limit)
+    .offset(offset);
+
+  return { data: rows, meta: { page, limit, total } };
 }

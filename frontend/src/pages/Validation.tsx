@@ -224,377 +224,390 @@ export function Validation() {
   };
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-headline font-black tracking-tight text-on-surface uppercase">
-          Validation
-        </h1>
-        <p className="text-on-surface/30 font-label text-xs uppercase tracking-widest mt-1">
-          Tier-Based Review // Human Confirms
-        </p>
-      </div>
-
-      {/* Quick Action: Bulk Approve Tier 1 */}
-      {tierCounts[1] > 0 && !summaryQuery.isLoading && (
-        <div className="bg-surface-container-low rounded-xl p-6 border border-tertiary/20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-tertiary/10 p-3 rounded-lg">
-              <span className="material-symbols-outlined text-tertiary text-2xl">
-                verified
-              </span>
-            </div>
-            <div>
-              <p className="text-on-surface font-bold text-lg">
-                {tierCounts[1]} high-confidence matches ready
-              </p>
-              <p className="text-on-surface/40 text-xs font-label">
-                Job ID matched -- bulk approve to move to dispatch
-              </p>
-            </div>
+    <div className="flex flex-col h-full">
+      {/* Page Header */}
+      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
+          <div>
+            <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
+              Validation
+            </h1>
+            <p className="text-[11px] font-medium text-outline tracking-[0.08em] uppercase mt-0.5">
+              Tier-Based Review // Human Confirms
+            </p>
           </div>
-          <button
-            onClick={handleBulkApproveTier1}
-            disabled={confirmMutation.isPending}
-            className="bg-tertiary/15 text-tertiary px-6 py-3 rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-tertiary/25 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2 active:scale-95"
-          >
-            <span className="material-symbols-outlined text-lg">done_all</span>
-            Approve All Tier 1
-          </button>
         </div>
-      )}
-
-      {/* Tier Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map((tier) => {
-          const meta = TIER_META[tier];
-          const count = tierCounts[tier];
-          return (
-            <button
-              key={tier}
-              onClick={() => toggleTier(tier)}
-              className={`bg-surface-container-low rounded-xl p-6 border-l-4 ${meta.borderClass} text-left transition-all hover:bg-surface-container-high cursor-pointer group`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`material-symbols-outlined ${meta.textClass}`}
-                  >
-                    {meta.icon}
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-widest text-on-surface/40">
-                    {meta.label}
-                  </span>
-                </div>
-                <span
-                  className={`material-symbols-outlined text-sm text-on-surface/30 transition-transform ${expandedTiers.has(tier) ? "rotate-180" : ""}`}
-                >
-                  expand_more
+      </div>
+      <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-6">
+        {/* Quick Action: Bulk Approve Tier 1 */}
+        {tierCounts[1] > 0 && !summaryQuery.isLoading && (
+          <div className="bg-surface-container-low rounded-xl p-6 border border-tertiary/20 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-tertiary/10 p-3 rounded-lg">
+                <span className="material-symbols-outlined text-tertiary text-2xl">
+                  verified
                 </span>
               </div>
-              <div
-                className={`font-label text-3xl font-bold ${meta.textClass}`}
-              >
-                {summaryQuery.isLoading ? "..." : count}
+              <div>
+                <p className="text-on-surface font-bold text-lg">
+                  {tierCounts[1]} high-confidence matches ready
+                </p>
+                <p className="text-on-surface/40 text-xs font-label">
+                  Job ID matched -- bulk approve to move to dispatch
+                </p>
               </div>
-              <p className="text-[10px] text-on-surface/40 uppercase tracking-wider mt-1">
-                {meta.description}
-              </p>
+            </div>
+            <button
+              onClick={handleBulkApproveTier1}
+              disabled={confirmMutation.isPending}
+              className="bg-tertiary/15 text-tertiary px-6 py-3 rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-tertiary/25 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2 active:scale-95"
+            >
+              <span className="material-symbols-outlined text-lg">
+                done_all
+              </span>
+              Approve All Tier 1
             </button>
+          </div>
+        )}
+
+        {/* Tier Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((tier) => {
+            const meta = TIER_META[tier];
+            const count = tierCounts[tier];
+            return (
+              <button
+                key={tier}
+                onClick={() => toggleTier(tier)}
+                className={`bg-surface-container-low rounded-xl p-6 border-l-4 ${meta.borderClass} text-left transition-all hover:bg-surface-container-high cursor-pointer group`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`material-symbols-outlined ${meta.textClass}`}
+                    >
+                      {meta.icon}
+                    </span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-on-surface/40">
+                      {meta.label}
+                    </span>
+                  </div>
+                  <span
+                    className={`material-symbols-outlined text-sm text-on-surface/30 transition-transform ${expandedTiers.has(tier) ? "rotate-180" : ""}`}
+                  >
+                    expand_more
+                  </span>
+                </div>
+                <div
+                  className={`font-label text-3xl font-bold ${meta.textClass}`}
+                >
+                  {summaryQuery.isLoading ? "..." : count}
+                </div>
+                <p className="text-[10px] text-on-surface/40 uppercase tracking-wider mt-1">
+                  {meta.description}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Total */}
+        <div className="flex items-center gap-4 px-2">
+          <span className="text-xs text-on-surface/30 uppercase tracking-widest font-bold">
+            Total Pending
+          </span>
+          <span className="font-label text-lg font-bold text-on-surface">
+            {summaryQuery.isLoading
+              ? "..."
+              : tierCounts[1] + tierCounts[2] + tierCounts[3]}
+          </span>
+        </div>
+
+        {/* Tier Sections */}
+        {[1, 2, 3].map((tier) => {
+          if (!expandedTiers.has(tier)) return null;
+
+          const meta = TIER_META[tier];
+          const query = tierQueries[tier];
+
+          // Handle both response shapes: raw array or { data, meta } envelope
+          const rawData = query.data as unknown;
+          const tierResponse = rawData as any;
+          const assignments: TierAssignment[] = Array.isArray(tierResponse)
+            ? tierResponse
+            : (tierResponse?.data ?? []);
+          const tierTotal = Array.isArray(tierResponse)
+            ? tierResponse.length
+            : (tierResponse?.meta?.total ?? assignments.length);
+
+          return (
+            <section key={tier} className="space-y-3">
+              {/* Tier Section Header */}
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${meta.bgClass}`} />
+                  <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
+                    {meta.label}{" "}
+                    <span className={meta.textClass}>{meta.description}</span>
+                  </h3>
+                </div>
+                {tier === 1 && assignments.length > 0 && (
+                  <button
+                    onClick={handleBulkApproveTier1}
+                    disabled={confirmMutation.isPending}
+                    className="bg-tertiary/10 text-tertiary px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-tertiary/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-sm">
+                      done_all
+                    </span>
+                    Approve All Tier 1 ({assignments.length})
+                  </button>
+                )}
+              </div>
+
+              {/* Loading */}
+              {query.isLoading && (
+                <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="bg-surface-container-low p-5 animate-pulse flex items-center gap-6"
+                    >
+                      <div className="h-4 w-24 bg-on-surface/10 rounded" />
+                      <div className="h-4 w-32 bg-on-surface/5 rounded" />
+                      <div className="h-4 w-48 bg-on-surface/5 rounded" />
+                      <div className="flex-1" />
+                      <div className="h-8 w-20 bg-on-surface/5 rounded-lg" />
+                      <div className="h-8 w-20 bg-on-surface/5 rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Empty */}
+              {!query.isLoading && assignments.length === 0 && (
+                <div className="bg-surface-container-low rounded-xl p-8 text-center border border-on-surface/5">
+                  <span className="material-symbols-outlined text-3xl text-on-surface/15 mb-2">
+                    inbox
+                  </span>
+                  <p className="text-on-surface/30 font-label text-sm">
+                    No {meta.label.toLowerCase()} assignments pending
+                  </p>
+                </div>
+              )}
+
+              {/* Rows */}
+              {assignments.length > 0 && (
+                <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+                  {/* Table Header */}
+                  <div className="bg-surface-container-lowest/50 px-6 py-3 flex items-center gap-6 text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                    <div className="w-28">Load #</div>
+                    <div className="w-36">Driver</div>
+                    <div className="flex-1">Destination &rarr; Well</div>
+                    <div className="w-20 text-center">Score</div>
+                    <div className="w-44 text-right">Actions</div>
+                  </div>
+
+                  {assignments.map((a) => (
+                    <div key={`${tier}-${a.id}`}>
+                      {/* Summary Row -- click to expand */}
+                      <div
+                        onClick={() =>
+                          setExpandedId(expandedId === a.id ? null : a.id)
+                        }
+                        className="bg-surface-container-low hover:bg-surface-container-high transition-all px-6 py-4 flex items-center gap-6 cursor-pointer"
+                      >
+                        {/* Expand indicator */}
+                        <span
+                          className={`material-symbols-outlined text-sm text-on-surface/30 transition-transform ${expandedId === a.id ? "rotate-90" : ""}`}
+                        >
+                          chevron_right
+                        </span>
+
+                        {/* Load Number */}
+                        <div className="w-24">
+                          <span className="font-label text-sm font-bold text-on-surface">
+                            {a.loadNo || `#${a.loadId}`}
+                          </span>
+                        </div>
+
+                        {/* Driver */}
+                        <div className="w-36">
+                          <span className="text-sm text-on-surface/80 truncate block">
+                            {a.driverName ?? "--"}
+                          </span>
+                        </div>
+
+                        {/* Destination -> Well (WellPicker replaces static text) */}
+                        <div className="flex-1 flex items-center gap-2 min-w-0">
+                          <span className="font-label text-xs text-on-surface/50 truncate max-w-[140px]">
+                            {a.destinationName ?? "Unknown"}
+                          </span>
+                          <span className="material-symbols-outlined text-xs text-on-surface/20">
+                            arrow_forward
+                          </span>
+                          <WellPicker
+                            loadId={a.loadId}
+                            assignmentId={tier === 3 ? null : a.id}
+                            currentWellId={a.wellId === 0 ? null : a.wellId}
+                            currentWellName={a.wellName}
+                            onResolved={invalidateAll}
+                          />
+                        </div>
+
+                        {/* Confidence Score */}
+                        <div className="w-20 text-center">
+                          <ConfidenceBadge score={a.autoMapScore} />
+                        </div>
+
+                        {/* Actions -- stop propagation so clicks don't toggle expand */}
+                        {tier !== 3 && (
+                          <div
+                            className="w-44 flex items-center justify-end gap-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {rejectingId === a.id ? (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={rejectReason}
+                                  onChange={(e) =>
+                                    setRejectReason(e.target.value)
+                                  }
+                                  placeholder="Reason (optional)"
+                                  className="w-28 bg-surface-container-high border border-on-surface/10 rounded px-2 py-1.5 text-xs text-on-surface font-label focus:outline-none focus:border-error/50"
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleReject(a.id);
+                                    if (e.key === "Escape") {
+                                      setRejectingId(null);
+                                      setRejectReason("");
+                                    }
+                                  }}
+                                />
+                                <button
+                                  onClick={() => handleReject(a.id)}
+                                  disabled={rejectMutation.isPending}
+                                  className="text-error text-xs font-bold cursor-pointer hover:underline"
+                                >
+                                  Send
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setRejectingId(null);
+                                    setRejectReason("");
+                                  }}
+                                  className="text-on-surface/30 text-xs cursor-pointer hover:text-on-surface/60"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleConfirm(a.id)}
+                                  disabled={confirmMutation.isPending}
+                                  className="bg-tertiary/10 text-tertiary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-tertiary/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                                >
+                                  <span className="material-symbols-outlined text-sm">
+                                    check
+                                  </span>
+                                  Confirm
+                                </button>
+                                <button
+                                  onClick={() => setRejectingId(a.id)}
+                                  disabled={rejectMutation.isPending}
+                                  className="bg-error/10 text-error px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-error/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
+                                >
+                                  <span className="material-symbols-outlined text-sm">
+                                    close
+                                  </span>
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Spacer for Tier 3 rows where actions column is hidden */}
+                        {tier === 3 && <div className="w-44" />}
+                      </div>
+
+                      {/* Expanded Detail Panel */}
+                      {expandedId === a.id && (
+                        <div className="bg-surface-container-lowest px-6 py-5 border-t border-on-surface/5">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[
+                              { label: "Load #", value: a.loadNo },
+                              { label: "Driver", value: a.driverName },
+                              { label: "Carrier", value: a.carrierName },
+                              {
+                                label: "Destination",
+                                value: a.destinationName,
+                              },
+                              { label: "Well", value: a.wellName },
+                              { label: "Weight (tons)", value: a.weightTons },
+                              { label: "Ticket #", value: a.ticketNo },
+                              { label: "BOL #", value: a.bolNo },
+                              {
+                                label: "Tier",
+                                value: a.autoMapTier
+                                  ? `Tier ${a.autoMapTier}`
+                                  : "--",
+                              },
+                              {
+                                label: "Score",
+                                value: a.autoMapScore
+                                  ? `${Math.round(Number(a.autoMapScore) * 100)}%`
+                                  : "--",
+                              },
+                              {
+                                label: "Photo Status",
+                                value: a.photoStatus ?? "missing",
+                              },
+                              { label: "Assignment ID", value: `#${a.id}` },
+                            ].map((field) => (
+                              <div key={field.label} className="space-y-1">
+                                <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                                  {field.label}
+                                </span>
+                                <p className="text-sm text-on-surface font-label">
+                                  {field.value || (
+                                    <span className="text-on-surface/20">
+                                      --
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {tierTotal > 0 && (
+                <Pagination
+                  page={tierPages[tier]}
+                  pageSize={tierPageSizes[tier]}
+                  total={tierTotal}
+                  onPageChange={(p) =>
+                    setTierPages((prev) => ({ ...prev, [tier]: p }))
+                  }
+                  onPageSizeChange={(s) => {
+                    setTierPageSizes((prev) => ({ ...prev, [tier]: s }));
+                    setTierPages((prev) => ({ ...prev, [tier]: 1 }));
+                  }}
+                  loading={query.isLoading}
+                />
+              )}
+            </section>
           );
         })}
       </div>
-
-      {/* Total */}
-      <div className="flex items-center gap-4 px-2">
-        <span className="text-xs text-on-surface/30 uppercase tracking-widest font-bold">
-          Total Pending
-        </span>
-        <span className="font-label text-lg font-bold text-on-surface">
-          {summaryQuery.isLoading
-            ? "..."
-            : tierCounts[1] + tierCounts[2] + tierCounts[3]}
-        </span>
-      </div>
-
-      {/* Tier Sections */}
-      {[1, 2, 3].map((tier) => {
-        if (!expandedTiers.has(tier)) return null;
-
-        const meta = TIER_META[tier];
-        const query = tierQueries[tier];
-
-        // Handle both response shapes: raw array or { data, meta } envelope
-        const rawData = query.data as unknown;
-        const tierResponse = rawData as any;
-        const assignments: TierAssignment[] = Array.isArray(tierResponse)
-          ? tierResponse
-          : (tierResponse?.data ?? []);
-        const tierTotal = Array.isArray(tierResponse)
-          ? tierResponse.length
-          : (tierResponse?.meta?.total ?? assignments.length);
-
-        return (
-          <section key={tier} className="space-y-3">
-            {/* Tier Section Header */}
-            <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-3">
-                <div className={`w-2 h-2 rounded-full ${meta.bgClass}`} />
-                <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
-                  {meta.label}{" "}
-                  <span className={meta.textClass}>{meta.description}</span>
-                </h3>
-              </div>
-              {tier === 1 && assignments.length > 0 && (
-                <button
-                  onClick={handleBulkApproveTier1}
-                  disabled={confirmMutation.isPending}
-                  className="bg-tertiary/10 text-tertiary px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-tertiary/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-sm">
-                    done_all
-                  </span>
-                  Approve All Tier 1 ({assignments.length})
-                </button>
-              )}
-            </div>
-
-            {/* Loading */}
-            {query.isLoading && (
-              <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="bg-surface-container-low p-5 animate-pulse flex items-center gap-6"
-                  >
-                    <div className="h-4 w-24 bg-on-surface/10 rounded" />
-                    <div className="h-4 w-32 bg-on-surface/5 rounded" />
-                    <div className="h-4 w-48 bg-on-surface/5 rounded" />
-                    <div className="flex-1" />
-                    <div className="h-8 w-20 bg-on-surface/5 rounded-lg" />
-                    <div className="h-8 w-20 bg-on-surface/5 rounded-lg" />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Empty */}
-            {!query.isLoading && assignments.length === 0 && (
-              <div className="bg-surface-container-low rounded-xl p-8 text-center border border-on-surface/5">
-                <span className="material-symbols-outlined text-3xl text-on-surface/15 mb-2">
-                  inbox
-                </span>
-                <p className="text-on-surface/30 font-label text-sm">
-                  No {meta.label.toLowerCase()} assignments pending
-                </p>
-              </div>
-            )}
-
-            {/* Rows */}
-            {assignments.length > 0 && (
-              <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
-                {/* Table Header */}
-                <div className="bg-surface-container-lowest/50 px-6 py-3 flex items-center gap-6 text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
-                  <div className="w-28">Load #</div>
-                  <div className="w-36">Driver</div>
-                  <div className="flex-1">Destination &rarr; Well</div>
-                  <div className="w-20 text-center">Score</div>
-                  <div className="w-44 text-right">Actions</div>
-                </div>
-
-                {assignments.map((a) => (
-                  <div key={`${tier}-${a.id}`}>
-                    {/* Summary Row -- click to expand */}
-                    <div
-                      onClick={() =>
-                        setExpandedId(expandedId === a.id ? null : a.id)
-                      }
-                      className="bg-surface-container-low hover:bg-surface-container-high transition-all px-6 py-4 flex items-center gap-6 cursor-pointer"
-                    >
-                      {/* Expand indicator */}
-                      <span
-                        className={`material-symbols-outlined text-sm text-on-surface/30 transition-transform ${expandedId === a.id ? "rotate-90" : ""}`}
-                      >
-                        chevron_right
-                      </span>
-
-                      {/* Load Number */}
-                      <div className="w-24">
-                        <span className="font-label text-sm font-bold text-on-surface">
-                          {a.loadNo || `#${a.loadId}`}
-                        </span>
-                      </div>
-
-                      {/* Driver */}
-                      <div className="w-36">
-                        <span className="text-sm text-on-surface/80 truncate block">
-                          {a.driverName ?? "--"}
-                        </span>
-                      </div>
-
-                      {/* Destination -> Well (WellPicker replaces static text) */}
-                      <div className="flex-1 flex items-center gap-2 min-w-0">
-                        <span className="font-label text-xs text-on-surface/50 truncate max-w-[140px]">
-                          {a.destinationName ?? "Unknown"}
-                        </span>
-                        <span className="material-symbols-outlined text-xs text-on-surface/20">
-                          arrow_forward
-                        </span>
-                        <WellPicker
-                          loadId={a.loadId}
-                          assignmentId={tier === 3 ? null : a.id}
-                          currentWellId={a.wellId === 0 ? null : a.wellId}
-                          currentWellName={a.wellName}
-                          onResolved={invalidateAll}
-                        />
-                      </div>
-
-                      {/* Confidence Score */}
-                      <div className="w-20 text-center">
-                        <ConfidenceBadge score={a.autoMapScore} />
-                      </div>
-
-                      {/* Actions -- stop propagation so clicks don't toggle expand */}
-                      {tier !== 3 && (
-                        <div
-                          className="w-44 flex items-center justify-end gap-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {rejectingId === a.id ? (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
-                                value={rejectReason}
-                                onChange={(e) =>
-                                  setRejectReason(e.target.value)
-                                }
-                                placeholder="Reason (optional)"
-                                className="w-28 bg-surface-container-high border border-on-surface/10 rounded px-2 py-1.5 text-xs text-on-surface font-label focus:outline-none focus:border-error/50"
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleReject(a.id);
-                                  if (e.key === "Escape") {
-                                    setRejectingId(null);
-                                    setRejectReason("");
-                                  }
-                                }}
-                              />
-                              <button
-                                onClick={() => handleReject(a.id)}
-                                disabled={rejectMutation.isPending}
-                                className="text-error text-xs font-bold cursor-pointer hover:underline"
-                              >
-                                Send
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setRejectingId(null);
-                                  setRejectReason("");
-                                }}
-                                className="text-on-surface/30 text-xs cursor-pointer hover:text-on-surface/60"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => handleConfirm(a.id)}
-                                disabled={confirmMutation.isPending}
-                                className="bg-tertiary/10 text-tertiary px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-tertiary/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                              >
-                                <span className="material-symbols-outlined text-sm">
-                                  check
-                                </span>
-                                Confirm
-                              </button>
-                              <button
-                                onClick={() => setRejectingId(a.id)}
-                                disabled={rejectMutation.isPending}
-                                className="bg-error/10 text-error px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-error/20 transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
-                              >
-                                <span className="material-symbols-outlined text-sm">
-                                  close
-                                </span>
-                                Reject
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Spacer for Tier 3 rows where actions column is hidden */}
-                      {tier === 3 && <div className="w-44" />}
-                    </div>
-
-                    {/* Expanded Detail Panel */}
-                    {expandedId === a.id && (
-                      <div className="bg-surface-container-lowest px-6 py-5 border-t border-on-surface/5">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {[
-                            { label: "Load #", value: a.loadNo },
-                            { label: "Driver", value: a.driverName },
-                            { label: "Carrier", value: a.carrierName },
-                            { label: "Destination", value: a.destinationName },
-                            { label: "Well", value: a.wellName },
-                            { label: "Weight (tons)", value: a.weightTons },
-                            { label: "Ticket #", value: a.ticketNo },
-                            { label: "BOL #", value: a.bolNo },
-                            {
-                              label: "Tier",
-                              value: a.autoMapTier
-                                ? `Tier ${a.autoMapTier}`
-                                : "--",
-                            },
-                            {
-                              label: "Score",
-                              value: a.autoMapScore
-                                ? `${Math.round(Number(a.autoMapScore) * 100)}%`
-                                : "--",
-                            },
-                            {
-                              label: "Photo Status",
-                              value: a.photoStatus ?? "missing",
-                            },
-                            { label: "Assignment ID", value: `#${a.id}` },
-                          ].map((field) => (
-                            <div key={field.label} className="space-y-1">
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
-                                {field.label}
-                              </span>
-                              <p className="text-sm text-on-surface font-label">
-                                {field.value || (
-                                  <span className="text-on-surface/20">--</span>
-                                )}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Pagination */}
-            {tierTotal > 0 && (
-              <Pagination
-                page={tierPages[tier]}
-                pageSize={tierPageSizes[tier]}
-                total={tierTotal}
-                onPageChange={(p) =>
-                  setTierPages((prev) => ({ ...prev, [tier]: p }))
-                }
-                onPageSizeChange={(s) => {
-                  setTierPageSizes((prev) => ({ ...prev, [tier]: s }));
-                  setTierPages((prev) => ({ ...prev, [tier]: 1 }));
-                }}
-                loading={query.isLoading}
-              />
-            )}
-          </section>
-        );
-      })}
     </div>
   );
 }
