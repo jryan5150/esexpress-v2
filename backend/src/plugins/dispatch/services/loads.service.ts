@@ -1,12 +1,14 @@
 import { eq, and, sql, desc } from "drizzle-orm";
 import { loads } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
+import { eraFilter } from "../lib/era-filter.js";
 
 export interface LoadFilters {
   source?: "propx" | "logistiq" | "manual";
   status?: string;
   driverName?: string;
   destinationName?: string;
+  era?: string;
   page?: number;
   limit?: number;
 }
@@ -19,6 +21,7 @@ export async function queryLoads(db: Database, filters: LoadFilters) {
   const conditions = [];
   if (filters.source) conditions.push(eq(loads.source, filters.source));
   if (filters.status) conditions.push(eq(loads.status, filters.status));
+  conditions.push(eraFilter(filters.era));
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 

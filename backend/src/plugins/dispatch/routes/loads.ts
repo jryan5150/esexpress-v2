@@ -16,6 +16,7 @@ const loadRoutes: FastifyPluginAsync = async (fastify) => {
           properties: {
             source: { type: "string", enum: ["propx", "logistiq", "manual"] },
             status: { type: "string" },
+            era: { type: "string", enum: ["live", "archive"] },
             page: { type: "integer", minimum: 1, default: 1 },
             limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
           },
