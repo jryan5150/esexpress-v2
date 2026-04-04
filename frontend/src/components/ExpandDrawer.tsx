@@ -416,7 +416,7 @@ export function ExpandDrawer({
         </div>
 
         {/* Right Panel: Timeline + Actions */}
-        <div className="border-l border-outline-variant/30 p-4 flex flex-col gap-3">
+        <div className="border-l border-outline-variant/30 p-4 flex flex-col gap-3 max-h-[420px] overflow-y-auto">
           {/* Timeline */}
           <div className="space-y-2">
             <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">

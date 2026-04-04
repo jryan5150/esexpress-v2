@@ -17,10 +17,10 @@ function todayStr(): string {
 }
 
 export function useWells(date?: string) {
-  const dateParam = date ?? todayStr();
+  const qs = date ? `?date=${date}` : "";
   return useQuery({
-    queryKey: [...qk.wells.list(), dateParam],
-    queryFn: () => api.get<Well[]>(`/dispatch/wells/?date=${dateParam}`),
+    queryKey: [...qk.wells.list(), date ?? "all"],
+    queryFn: () => api.get<Well[]>(`/dispatch/wells/${qs}`),
   });
 }
 

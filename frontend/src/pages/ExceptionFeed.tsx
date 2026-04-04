@@ -29,8 +29,12 @@ export function ExceptionFeed() {
         missing: Number(w.missing ?? 0),
         validated: Number((w as any).validated ?? 0),
       }))
-      .filter((w) => w.totalLoads > 0)
-      .sort((a, b) => b.review - a.review || b.totalLoads - a.totalLoads);
+      .sort(
+        (a, b) =>
+          b.review - a.review ||
+          b.totalLoads - a.totalLoads ||
+          a.name.localeCompare(b.name),
+      );
   }, [wellsQuery.data]);
 
   const readiness = readinessQuery.data as Record<string, unknown> | undefined;
