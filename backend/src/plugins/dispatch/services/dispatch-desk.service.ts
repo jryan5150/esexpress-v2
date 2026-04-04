@@ -252,7 +252,7 @@ export async function getDispatchDeskLoads(
     };
   });
 
-  return { data, meta: { page, limit, count: data.length } };
+  return { items: data, total: data.length, page, limit };
 }
 
 // ─── MUTATION FUNCTIONS ───────────────────────────────────────────
