@@ -14,6 +14,7 @@ import {
 import { transitionStatus } from "./assignments.service.js";
 import type { Database } from "../../../db/client.js";
 import type { PhotoStatus } from "../../../db/schema.js";
+import { eraFilter } from "../lib/era-filter.js";
 
 // ─── PURE FUNCTIONS ───────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ export interface DispatchDeskFilters {
   wellId?: number;
   photoStatus?: PhotoStatus;
   date?: string;
+  era?: string;
   page?: number;
   limit?: number;
 }
@@ -105,7 +107,7 @@ export async function getDispatchDeskLoads(
   data: DispatchDeskRow[];
   meta: { page: number; limit: number; count: number };
 }> {
-  const { wellId, photoStatus, date, page = 1, limit = 100 } = filters;
+  const { wellId, photoStatus, date, era, page = 1, limit = 100 } = filters;
   const offset = (page - 1) * limit;
 
   // Build where conditions — show pending + assigned + dispatch_ready
@@ -133,6 +135,8 @@ export async function getDispatchDeskLoads(
     conditions.push(sql`${loads.deliveredOn} >= ${startOfDay}`);
     conditions.push(sql`${loads.deliveredOn} <= ${endOfDay}`);
   }
+
+  conditions.push(eraFilter(era));
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
