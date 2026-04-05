@@ -19,6 +19,7 @@ interface LoadRowProps {
   hasPhotos: boolean;
   assignedToName?: string | null;
   assignedToColor?: string | null;
+  bolMatchStatus?: "match" | "mismatch" | null;
   onToggleSelect: () => void;
   onMarkEntered: () => void;
   onValidate: () => void;
@@ -82,6 +83,7 @@ export const LoadRow = memo(function LoadRow({
   hasPhotos,
   assignedToName,
   assignedToColor,
+  bolMatchStatus,
   onToggleSelect,
   onMarkEntered,
   onValidate,
@@ -187,8 +189,24 @@ export const LoadRow = memo(function LoadRow({
 
       {/* BOL / Truck */}
       <div className="flex flex-col gap-0.5">
-        <span className="font-label text-[11px] text-on-surface-variant truncate">
+        <span className="font-label text-[11px] text-on-surface-variant truncate inline-flex items-center gap-1">
           {bolNo || "--"}
+          {bolMatchStatus === "match" && (
+            <span
+              className="material-symbols-outlined text-[11px] text-tertiary"
+              title="BOL last-4 match"
+            >
+              verified
+            </span>
+          )}
+          {bolMatchStatus === "mismatch" && (
+            <span
+              className="material-symbols-outlined text-[11px] text-error"
+              title="BOL mismatch"
+            >
+              warning
+            </span>
+          )}
         </span>
         <span className="text-[11px] text-outline">{truckNo || ""}</span>
       </div>

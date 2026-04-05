@@ -130,6 +130,12 @@ export function DispatchDesk() {
       reconciled: reconciled.length,
       ready: ready.length,
       validated: validated.length,
+      bol_mismatch: allLoads.filter((l) => {
+        if (!l.jotformBolNo || !l.bolNo) return false;
+        const loadLast4 = l.bolNo.replace(/\D/g, "").slice(-4);
+        const jotLast4 = l.jotformBolNo.replace(/\D/g, "").slice(-4);
+        return loadLast4.length >= 4 && loadLast4 !== jotLast4;
+      }).length,
     };
 
     const filtered =
@@ -143,7 +149,16 @@ export function DispatchDesk() {
               ? ready
               : activeFilter === "validated"
                 ? validated
-                : allLoads;
+                : activeFilter === "bol_mismatch"
+                  ? allLoads.filter((l) => {
+                      if (!l.jotformBolNo || !l.bolNo) return false;
+                      const loadLast4 = l.bolNo.replace(/\D/g, "").slice(-4);
+                      const jotLast4 = l.jotformBolNo
+                        .replace(/\D/g, "")
+                        .slice(-4);
+                      return loadLast4.length >= 4 && loadLast4 !== jotLast4;
+                    })
+                  : allLoads;
 
     return {
       pendingLoads: pending.filter((l) => !enteredIds.has(l.assignmentId)),
@@ -838,6 +853,15 @@ export function DispatchDesk() {
                   bolNo={load.bolNo}
                   truckNo={load.truckNo}
                   ticketNo={load.ticketNo}
+                  bolMatchStatus={
+                    load.jotformBolNo && load.bolNo
+                      ? load.bolNo.replace(/\D/g, "").slice(-4) ===
+                          load.jotformBolNo.replace(/\D/g, "").slice(-4) &&
+                        load.bolNo.replace(/\D/g, "").slice(-4).length >= 4
+                        ? "match"
+                        : "mismatch"
+                      : null
+                  }
                   deliveredOn={load.deliveredOn}
                   validationStatus={getValidationStatus(load)}
                   checked={selectedIds.has(load.assignmentId)}

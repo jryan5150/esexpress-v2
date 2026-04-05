@@ -11,6 +11,7 @@ const FILTERS = [
   "reconciled",
   "ready",
   "validated",
+  "bol_mismatch",
 ] as const;
 
 export function FilterTabs({
@@ -55,6 +56,10 @@ export function FilterTabs({
         <span className="flex items-center gap-[5px] text-[11px] font-medium text-outline">
           <span className="w-2 h-2 rounded-full bg-surface-container-highest shrink-0" />
           {filterCounts.pending ?? 0} pending
+        </span>
+        <span className="flex items-center gap-[5px] text-[11px] font-medium text-outline">
+          <span className="w-2 h-2 rounded-full bg-error shrink-0" />
+          {filterCounts.bol_mismatch ?? 0} BOL issues
         </span>
       </div>
     </div>
