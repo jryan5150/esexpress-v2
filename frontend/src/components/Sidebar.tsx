@@ -21,18 +21,18 @@ export function Sidebar() {
     <aside className="hidden md:flex flex-col h-screen w-[228px] min-w-[228px] bg-surface-container-lowest border-r border-outline-variant/40 z-50 shrink-0 overflow-y-auto overflow-x-hidden header-gradient">
       {/* Logo */}
       <div className="px-4 pt-[18px] pb-3.5 border-b border-outline-variant/30 shadow-[0_1px_3px_rgba(30,27,24,0.04)] flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-          <span className="material-symbols-outlined text-on-primary text-lg">
-            local_shipping
-          </span>
+        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 p-1">
+          <img
+            src="/trailer-icon.svg"
+            alt=""
+            className="w-full h-full"
+            style={{ filter: "brightness(0) invert(1)" }}
+          />
         </div>
         <div>
           <h2 className="font-headline font-extrabold text-sm text-on-surface leading-tight">
             ES Express
           </h2>
-          <p className="text-[10px] font-medium text-outline tracking-[0.06em]">
-            Field Dispatch v2
-          </p>
         </div>
       </div>
 

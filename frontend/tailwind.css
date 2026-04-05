@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  /* Warm cream backgrounds */
-  --color-background: #f5f0e8;
-  --color-surface: #f5f0e8;
-  --color-surface-dim: #ebe5da;
-  --color-surface-bright: #ffffff;
-  --color-surface-container: #ebe5da;
-  --color-surface-container-low: #f0ebe2;
-  --color-surface-container-high: #e0d9cc;
-  --color-surface-container-highest: #d6cfc2;
-  --color-surface-container-lowest: #faf7f2;
+  /* Warm parchment backgrounds — deeper warmth, less flat */
+  --color-background: #f0ebe1;
+  --color-surface: #f0ebe1;
+  --color-surface-dim: #e5dfd3;
+  --color-surface-bright: #faf8f4;
+  --color-surface-container: #e8e2d6;
+  --color-surface-container-low: #ede7dc;
+  --color-surface-container-high: #ddd6c8;
+  --color-surface-container-highest: #d2cab9;
+  --color-surface-container-lowest: #f7f4ee;
   --color-surface-tint: #8b5cf6;
   --color-surface-variant: #e0d9cc;
 
@@ -66,7 +66,13 @@
 }
 
 body {
-  background-color: var(--color-background);
+  background: linear-gradient(
+    165deg,
+    var(--color-surface-bright) 0%,
+    var(--color-background) 40%,
+    var(--color-surface-dim) 100%
+  );
+  background-attachment: fixed;
   color: var(--color-on-surface);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;

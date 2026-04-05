@@ -125,17 +125,20 @@ export function Login() {
         {/* Branding */}
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-surface-container-high/80 backdrop-blur-sm rounded-2xl border border-on-surface/10 mx-auto shadow-2xl shadow-primary-container/20">
-            <span className="material-symbols-outlined text-primary-container text-4xl">
-              local_shipping
-            </span>
+            <img
+              src="/trailer-icon.svg"
+              alt="ES Express"
+              className="w-12 h-12 text-primary-container"
+              style={{
+                filter:
+                  "invert(17%) sepia(82%) saturate(5765%) hue-rotate(262deg) brightness(91%) contrast(92%)",
+              }}
+            />
           </div>
           <div>
             <h1 className="text-4xl font-black font-headline tracking-tighter text-on-surface uppercase">
               EsExpress
             </h1>
-            <p className="text-sm font-label text-on-surface/40 tracking-widest uppercase mt-1">
-              Dispatch Command
-            </p>
           </div>
         </div>
 
@@ -143,11 +146,8 @@ export function Login() {
         <div className="bg-surface-container-low/90 backdrop-blur-md rounded-xl p-8 border border-on-surface/5 shadow-2xl shadow-black/20 space-y-6">
           <div className="space-y-1">
             <h2 className="text-lg font-bold font-headline text-on-surface">
-              Operator Access
+              Login
             </h2>
-            <p className="text-[10px] text-on-surface/30 font-label uppercase tracking-widest">
-              Authenticate to continue
-            </p>
           </div>
 
           {login.isError && (
