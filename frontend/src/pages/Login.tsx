@@ -234,14 +234,9 @@ export function Login() {
 
         {/* Login Card */}
         <div className="glass rounded-xl p-8 border border-on-surface/8 shadow-2xl shadow-black/15 space-y-6 accent-line">
-          <div className="space-y-1">
-            <h2 className="text-lg font-bold font-headline text-on-surface tracking-tight">
-              Operator Sign-In
-            </h2>
-            <p className="text-[11px] text-on-surface/35 font-body">
-              Authenticate to access dispatch operations
-            </p>
-          </div>
+          <h2 className="text-lg font-bold font-headline text-on-surface tracking-tight">
+            Sign In
+          </h2>
 
           {login.isError && (
             <div className="bg-error/8 border border-error/15 rounded-lg px-4 py-3 flex items-center gap-3">
@@ -261,7 +256,7 @@ export function Login() {
                 htmlFor="email"
                 className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/30"
               >
-                Operator Email
+                Email / Username
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface/25 text-lg">
@@ -272,7 +267,7 @@ export function Login() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="operator@esexpressllc.com"
+                  placeholder="you@esexpressllc.com"
                   className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all pressed-metal"
                   required
                 />
@@ -284,7 +279,7 @@ export function Login() {
                 htmlFor="password"
                 className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/30"
               >
-                Access Key
+                Password
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface/25 text-lg">
@@ -295,7 +290,7 @@ export function Login() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter access key"
+                  placeholder="Enter password"
                   className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all pressed-metal"
                   required
                 />
