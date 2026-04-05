@@ -44,6 +44,22 @@ interface ExpandDrawerProps {
   loaderName?: string | null;
   jobName?: string | null;
   loadStatus?: string | null;
+  // Demurrage
+  demurrageAtLoader?: string | number | null;
+  demurrageAtLoaderHours?: string | number | null;
+  demurrageAtLoaderMinutes?: string | number | null;
+  demurrageAtDestination?: string | number | null;
+  demurrageAtDestHours?: string | number | null;
+  demurrageAtDestMinutes?: string | number | null;
+  // Timeline gaps
+  loadOutTime?: string | null;
+  loadTotalTime?: string | number | null;
+  unloadTotalTime?: string | number | null;
+  appointmentTime?: string | null;
+  // Additional identity
+  settlementDate?: string | null;
+  shipperBol?: string | null;
+  dispatcherNotes?: string | null;
   // BOL verification
   jotformBolNo?: string | null;
   jotformDriverName?: string | null;
@@ -196,6 +212,19 @@ export function ExpandDrawer({
   jobName,
   loadStatus,
   terminalName,
+  demurrageAtLoader,
+  demurrageAtLoaderHours,
+  demurrageAtLoaderMinutes,
+  demurrageAtDestination,
+  demurrageAtDestHours,
+  demurrageAtDestMinutes,
+  loadOutTime,
+  loadTotalTime,
+  unloadTotalTime,
+  appointmentTime,
+  settlementDate,
+  shipperBol,
+  dispatcherNotes,
   jotformBolNo,
   jotformDriverName,
   onValidate,
@@ -428,7 +457,9 @@ export function ExpandDrawer({
                 { label: "Assigned", time: assignedTime, icon: "assignment" },
                 { label: "Accepted", time: acceptedTime, icon: "thumb_up" },
                 { label: "Pickup", time: pickupTime, icon: "local_shipping" },
+                { label: "Load Out", time: loadOutTime, icon: "logout" },
                 { label: "Transit", time: transitTime, icon: "route" },
+                { label: "ETA", time: appointmentTime, icon: "schedule" },
                 { label: "Arrival", time: arrivalTime, icon: "pin_drop" },
                 { label: "Delivered", time: deliveredOn, icon: "check_circle" },
               ]
@@ -445,6 +476,26 @@ export function ExpandDrawer({
                   </div>
                 ))}
             </div>
+            {(loadTotalTime || unloadTotalTime) && (
+              <div className="flex gap-3">
+                {loadTotalTime && (
+                  <div className="flex items-center gap-1 text-[10px] text-outline">
+                    <span className="material-symbols-outlined text-xs">
+                      timer
+                    </span>
+                    Load: {loadTotalTime}m
+                  </div>
+                )}
+                {unloadTotalTime && (
+                  <div className="flex items-center gap-1 text-[10px] text-outline">
+                    <span className="material-symbols-outlined text-xs">
+                      timer
+                    </span>
+                    Unload: {unloadTotalTime}m
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Weight Detail */}
@@ -529,7 +580,51 @@ export function ExpandDrawer({
             </div>
           )}
 
-          {/* Demurrage / Load Calculator */}
+          {/* Demurrage */}
+          {(demurrageAtLoader || demurrageAtDestination) && (
+            <div className="bg-[#fef3c7] border border-[#f59e0b]/20 rounded-md p-2.5 space-y-1.5">
+              <span className="text-[9px] font-semibold text-[#92400e] tracking-[0.08em] uppercase">
+                Demurrage
+              </span>
+              {demurrageAtLoader && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#92400e]/70">At Loader</span>
+                  <span className="font-label text-[#92400e] font-bold tabular-nums">
+                    ${Number(demurrageAtLoader).toFixed(2)}
+                    {demurrageAtLoaderHours || demurrageAtLoaderMinutes
+                      ? ` (${demurrageAtLoaderHours ?? 0}h ${demurrageAtLoaderMinutes ?? 0}m)`
+                      : ""}
+                  </span>
+                </div>
+              )}
+              {demurrageAtDestination && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-[#92400e]/70">At Destination</span>
+                  <span className="font-label text-[#92400e] font-bold tabular-nums">
+                    ${Number(demurrageAtDestination).toFixed(2)}
+                    {demurrageAtDestHours || demurrageAtDestMinutes
+                      ? ` (${demurrageAtDestHours ?? 0}h ${demurrageAtDestMinutes ?? 0}m)`
+                      : ""}
+                  </span>
+                </div>
+              )}
+              {demurrageAtLoader && demurrageAtDestination && (
+                <div className="border-t border-[#f59e0b]/20 pt-1 flex justify-between text-xs">
+                  <span className="text-[#92400e] font-bold">
+                    Total Demurrage
+                  </span>
+                  <span className="font-label text-[#92400e] font-bold tabular-nums">
+                    $
+                    {(
+                      Number(demurrageAtLoader) + Number(demurrageAtDestination)
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Load Calculator */}
           {rate && weightTons && (
             <div className="bg-primary/5 border border-primary/10 rounded-md p-2.5 space-y-1.5">
               <span className="text-[9px] font-semibold text-primary tracking-[0.08em] uppercase">
@@ -599,6 +694,8 @@ export function ExpandDrawer({
                 { label: "Ref #", value: referenceNo },
                 { label: "Loader", value: loaderName },
                 { label: "Job", value: jobName },
+                { label: "Shipper BOL", value: shipperBol },
+                { label: "Settlement", value: settlementDate },
               ]
                 .filter((f) => f.value)
                 .map((f) => (
@@ -609,6 +706,18 @@ export function ExpandDrawer({
                     </span>
                   </div>
                 ))}
+            </div>
+          )}
+
+          {/* Dispatcher Notes */}
+          {dispatcherNotes && (
+            <div className="bg-surface-container-high/40 rounded-md p-2.5">
+              <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
+                Dispatcher Notes
+              </span>
+              <p className="text-xs text-on-surface-variant mt-1 whitespace-pre-wrap">
+                {dispatcherNotes}
+              </p>
             </div>
           )}
 

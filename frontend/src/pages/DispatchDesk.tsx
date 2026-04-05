@@ -910,6 +910,19 @@ export function DispatchDesk() {
                     loaderName={load.loaderName}
                     jobName={load.jobName}
                     loadStatus={load.loadStatus}
+                    demurrageAtLoader={load.demurrageAtLoader}
+                    demurrageAtLoaderHours={load.demurrageAtLoaderHours}
+                    demurrageAtLoaderMinutes={load.demurrageAtLoaderMinutes}
+                    demurrageAtDestination={load.demurrageAtDestination}
+                    demurrageAtDestHours={load.demurrageAtDestHours}
+                    demurrageAtDestMinutes={load.demurrageAtDestMinutes}
+                    loadOutTime={load.loadOutTime}
+                    loadTotalTime={load.loadTotalTime}
+                    unloadTotalTime={load.unloadTotalTime}
+                    appointmentTime={load.appointmentTime}
+                    settlementDate={load.settlementDate}
+                    shipperBol={load.shipperBol}
+                    dispatcherNotes={load.dispatcherNotes}
                     jotformBolNo={load.jotformBolNo}
                     jotformDriverName={load.jotformDriverName}
                     onValidate={() => handleValidateSingle(load.assignmentId)}

@@ -241,6 +241,22 @@ export async function getDispatchDeskLoads(
       loaderName: raw.crew_name ?? null,
       jobName: raw.job_name ?? null,
       loadStatus: raw.load_status ?? raw.status ?? null,
+      // Demurrage (from rawData)
+      demurrageAtLoader: raw.demurrage_at_loader ?? null,
+      demurrageAtLoaderHours: raw.demurrage_at_loader_hour ?? null,
+      demurrageAtLoaderMinutes: raw.demurrage_at_loader_minutes ?? null,
+      demurrageAtDestination: raw.demurrage_at_destination ?? null,
+      demurrageAtDestHours: raw.demurrage_at_destination_hour ?? null,
+      demurrageAtDestMinutes: raw.demurrage_at_destination_minutes ?? null,
+      // Timeline gaps (from rawData)
+      loadOutTime: raw.terminal_off ?? raw.terminal_off_time ?? null,
+      loadTotalTime: raw.terminal_total_time ?? null,
+      unloadTotalTime: raw.destination_total_time ?? null,
+      appointmentTime: raw.appt_time ?? null,
+      // Additional identity
+      settlementDate: raw.settlement_date ?? null,
+      shipperBol: raw.shipper_bol ?? raw.shipper_bol_no ?? null,
+      dispatcherNotes: raw.dispatcher_notes ?? null,
       // JotForm cross-reference (for BOL verification)
       jotformBolNo: row.jotformBolNo ?? null,
       jotformDriverName: row.jotformDriverName ?? null,
