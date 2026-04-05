@@ -11,5 +11,6 @@ FROM node:22-alpine
 WORKDIR /app
 RUN npm install -g serve
 COPY --from=build /app/dist ./dist
-CMD ["serve", "dist", "-s", "-l", "tcp://0.0.0.0:3000"]
+ENV PORT=3000
 EXPOSE 3000
+CMD ["sh", "-c", "serve dist -s -l tcp://0.0.0.0:${PORT}"]
