@@ -40,10 +40,7 @@ export function DispatchDesk() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [photoModalLoad, setPhotoModalLoad] = useState<any | null>(null);
   const [expandedLoadId, setExpandedLoadId] = useState<number | null>(null);
-  const [dateFilter, setDateFilter] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  });
+  const [dateFilter, setDateFilter] = useState("");
   const [pinnedWellIds, setPinnedWellIds] = useState<string[]>([]);
 
   const queryClient = useQueryClient();
@@ -58,7 +55,13 @@ export function DispatchDesk() {
           limit: pageSize,
           date: dateFilter || undefined,
         }
-      : undefined,
+      : dateFilter
+        ? {
+            page,
+            limit: pageSize,
+            date: dateFilter,
+          }
+        : undefined,
   );
   const markEntered = useMarkEntered();
   const advanceToReady = useAdvanceToReady();
@@ -803,6 +806,95 @@ export function DispatchDesk() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Date-filtered loads across all wells (no well selected) */}
+        {!selectedWellId && dateFilter && allLoads.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
+                All Loads for{" "}
+                {new Date(dateFilter + "T12:00:00").toLocaleDateString(
+                  "en-US",
+                  { weekday: "short", month: "short", day: "numeric" },
+                )}
+                <span className="text-on-surface/20 font-medium ml-2">
+                  -- {allLoads.length} loads across all wells
+                </span>
+              </h3>
+            </div>
+            {/* Column Headers */}
+            <div
+              className="grid items-center gap-3 px-3.5 py-1"
+              style={{
+                gridTemplateColumns:
+                  "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
+              }}
+            >
+              <div />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                Status
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                Load #
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                Driver / Carrier
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
+                Weight
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                BOL / Truck
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                Ticket
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
+                Well
+              </span>
+              <div />
+            </div>
+            <div className="space-y-1.5">
+              {allLoads.map((load) => (
+                <div key={load.assignmentId}>
+                  <LoadRow
+                    assignmentId={load.assignmentId}
+                    loadNo={load.loadNo}
+                    driverName={load.driverName}
+                    carrierName={load.carrierName}
+                    weightTons={load.weightTons}
+                    bolNo={load.bolNo}
+                    truckNo={load.truckNo}
+                    ticketNo={load.ticketNo}
+                    deliveredOn={load.wellName ?? null}
+                    validationStatus={getValidationStatus(load)}
+                    checked={selectedIds.has(load.assignmentId)}
+                    entered={enteredIds.has(load.assignmentId)}
+                    canEnter={load.canEnter}
+                    hasPhotos={!!load.photoUrls?.length}
+                    assignedToName={load.assignedToName ?? null}
+                    assignedToColor={load.assignedToColor ?? null}
+                    bolMatchStatus={
+                      load.jotformBolNo && load.bolNo
+                        ? load.bolNo.replace(/\D/g, "").slice(-4) ===
+                            load.jotformBolNo.replace(/\D/g, "").slice(-4) &&
+                          load.bolNo.replace(/\D/g, "").slice(-4).length >= 4
+                          ? "match"
+                          : "mismatch"
+                        : null
+                    }
+                    onToggleSelect={() => toggleSelect(load.assignmentId)}
+                    onMarkEntered={() => handleMarkSingle(load.assignmentId)}
+                    onValidate={() => handleValidateSingle(load.assignmentId)}
+                    onViewPhotos={() => setPhotoModalLoad(load)}
+                    onRowClick={() => handleSelectWell(String(load.wellId))}
+                    isPending={markEntered.isPending}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
