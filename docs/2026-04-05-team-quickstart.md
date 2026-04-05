@@ -44,7 +44,7 @@ Click a well card to drill into its loads. The card shows:
 - **Total loads** for the selected date
 - **Ready** count (green) — loads ready for dispatch
 - **Assigned** count (purple) — loads assigned to a dispatcher
-- **Progress bar** — if daily targets are set, shows % complete
+- **Progress %** — if daily targets are set, shows load count vs target (e.g., 14/30)
 
 ### Step 3: Work Through Loads
 
@@ -59,7 +59,7 @@ Each load row shows:
 
 Click any load row to expand it. The expanded view shows:
 
-- **Editable fields** — click any field to edit: Driver, Truck, Trailer, Carrier, Weight, BOL, Ticket, Rate, Mileage, Delivered Date
+- **Editable fields** — click any field to edit: Driver, Truck, Carrier, Weight, Net Weight, Product, BOL, Ticket, Rate, Mileage (Delivered Date is set via batch date on selected loads)
 - **BOL photo** — click the image to view full-screen
 - **Timeline** — Assigned, Accepted, Pickup, Load Out, Transit, ETA, Arrival, Delivered
 - **Load/Unload Duration** — time at terminal and destination
