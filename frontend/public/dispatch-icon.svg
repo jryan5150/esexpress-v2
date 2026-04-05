@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Compass rose / dispatch command icon -->
+  <!-- Outer ring -->
+  <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2" opacity="0.2"/>
+  <circle cx="32" cy="32" r="24" stroke="currentColor" stroke-width="1.5" opacity="0.35"/>
+  <!-- Cardinal tick marks -->
+  <line x1="32" y1="4" x2="32" y2="10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="32" y1="54" x2="32" y2="60" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="4" y1="32" x2="10" y2="32" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="54" y1="32" x2="60" y2="32" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Ordinal tick marks (smaller) -->
+  <line x1="12.2" y1="12.2" x2="15.4" y2="15.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="48.6" y1="48.6" x2="51.8" y2="51.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="51.8" y1="12.2" x2="48.6" y2="15.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="15.4" y1="48.6" x2="12.2" y2="51.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <!-- Compass needle — North (filled) -->
+  <polygon points="32,12 27,32 32,28 37,32" fill="currentColor" opacity="0.85"/>
+  <!-- Compass needle — South (hollow) -->
+  <polygon points="32,52 37,32 32,36 27,32" fill="currentColor" opacity="0.2" stroke="currentColor" stroke-width="0.75"/>
+  <!-- Center hub -->
+  <circle cx="32" cy="32" r="3.5" fill="currentColor" opacity="0.5"/>
+  <circle cx="32" cy="32" r="1.5" fill="currentColor" opacity="0.9"/>
+  <!-- Signal waves (dispatch radio element) -->
+  <path d="M46 18 Q50 14 54 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.3"/>
+  <path d="M49 15 Q52 12 55 15" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.2"/>
+</svg>

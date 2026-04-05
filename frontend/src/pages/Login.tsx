@@ -126,7 +126,7 @@ export function Login() {
         <div className="text-center space-y-4">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-surface-container-high/80 backdrop-blur-sm rounded-2xl border border-on-surface/10 mx-auto shadow-2xl shadow-primary-container/20">
             <img
-              src="/trailer-icon.svg"
+              src="/dispatch-icon.svg"
               alt="ES Express"
               className="w-12 h-12"
               style={{

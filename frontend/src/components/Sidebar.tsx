@@ -65,7 +65,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
         <div className="px-4 pt-[18px] pb-3.5 border-b border-outline-variant/30 shadow-[0_1px_3px_rgba(30,27,24,0.04)] flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 p-1">
             <img
-              src="/trailer-icon.svg"
+              src="/dispatch-icon.svg"
               alt=""
               className="w-full h-full"
               style={{ filter: "brightness(0) invert(1)" }}
