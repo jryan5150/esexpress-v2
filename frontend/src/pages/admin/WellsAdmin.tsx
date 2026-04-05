@@ -28,7 +28,7 @@ export function WellsAdmin() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest shrink-0">
+      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest header-gradient shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div>
@@ -50,8 +50,8 @@ export function WellsAdmin() {
               onClick={() => setFilter(btn.value)}
               className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 filter === btn.value
-                  ? "bg-primary-container/15 text-primary-container"
-                  : "text-on-surface/40 hover:bg-surface-container-high hover:text-on-surface/70"
+                  ? "bg-primary-container/12 text-primary-container shadow-sm"
+                  : "text-on-surface/40 hover:bg-surface-container-high/60 hover:text-on-surface/70"
               }`}
             >
               {btn.label}
@@ -70,7 +70,7 @@ export function WellsAdmin() {
 
         {/* Loading */}
         {wellsQuery.isLoading && (
-          <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+          <div className="space-y-[1px] bg-on-surface/5 rounded-[12px] overflow-hidden border border-outline-variant/40 card-rest">
             {[1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}
@@ -120,7 +120,7 @@ export function WellsAdmin() {
 
         {/* Table */}
         {!wellsQuery.isLoading && filtered.length > 0 && (
-          <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+          <div className="space-y-[1px] bg-on-surface/5 rounded-[12px] overflow-hidden border border-outline-variant/40 card-rest">
             {/* Header Row */}
             <div className="bg-surface-container-lowest/50 px-6 py-3 flex items-center gap-6 text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
               <div className="flex-1 min-w-[180px]">Name</div>

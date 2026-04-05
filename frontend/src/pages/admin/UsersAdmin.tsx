@@ -26,7 +26,7 @@ export function UsersAdmin() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest shrink-0">
+      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest header-gradient shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div>
@@ -40,9 +40,9 @@ export function UsersAdmin() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-6">
-        <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+        <div className="space-y-[1px] bg-on-surface/5 rounded-[12px] overflow-hidden border border-outline-variant/40 card-rest">
           <div className="bg-surface-container-lowest/50 px-6 py-3">
-            <h3 className="font-label text-[10px] font-bold uppercase tracking-widest text-on-surface/30">
+            <h3 className="font-label text-[10px] font-bold uppercase tracking-[0.06em] text-outline">
               Team Roster
             </h3>
           </div>
@@ -67,14 +67,14 @@ export function UsersAdmin() {
           {users.length > 0 && (
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="text-on-surface/30 text-[10px] uppercase tracking-widest font-label border-b border-on-surface/5">
+                <tr className="text-outline text-[10px] uppercase tracking-[0.06em] font-label border-b border-outline-variant/40">
                   <th className="px-6 py-3 font-bold">Name</th>
                   <th className="px-6 py-3 font-bold">Email</th>
                   <th className="px-6 py-3 font-bold">Role</th>
                   <th className="px-6 py-3 font-bold text-right">Joined</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-on-surface/5">
+              <tbody className="divide-y divide-outline-variant/40">
                 {users.map((user) => (
                   <tr
                     key={user.id}

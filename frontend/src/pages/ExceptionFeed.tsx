@@ -56,7 +56,7 @@ export function ExceptionFeed() {
   return (
     <div className="flex flex-col h-full">
       {/* Page Header */}
-      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 header-gradient shrink-0">
+      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest header-gradient shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div>
@@ -81,7 +81,7 @@ export function ExceptionFeed() {
           {/* Needs Attention */}
           <button
             onClick={() => navigate("/validation")}
-            className="bg-surface-container-lowest border border-outline-variant/40 rounded-[14px] p-5 border-l-4 border-l-primary shadow-sm text-left cursor-pointer hover:shadow-md transition-shadow group hover-lift press-scale stat-glow accent-glow"
+            className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-5 border-l-4 border-l-primary shadow-sm text-left cursor-pointer hover:shadow-md transition-shadow group hover-lift press-scale stat-glow accent-glow"
           >
             <div className="font-headline text-5xl font-extrabold num-transition text-primary leading-none mb-1 tabular-nums">
               {validationQuery.isLoading ? "..." : pendingReview}
@@ -95,7 +95,7 @@ export function ExceptionFeed() {
           </button>
 
           {/* Confirmed & Ready */}
-          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[14px] p-5 border-l-4 border-l-tertiary shadow-sm card-rest stat-glow">
+          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-5 border-l-4 border-l-tertiary shadow-sm card-rest stat-glow">
             <div className="font-headline text-5xl font-extrabold num-transition text-tertiary leading-none mb-1 tabular-nums">
               {readinessQuery.isLoading ? "..." : readyCount}
             </div>
@@ -105,8 +105,8 @@ export function ExceptionFeed() {
           </div>
 
           {/* System Metrics */}
-          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[14px] p-5 border-l-4 border-l-surface-container-highest shadow-sm card-rest stat-glow">
-            <div className="text-[10px] font-bold text-outline tracking-[0.1em] uppercase mb-3.5">
+          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-5 border-l-4 border-l-surface-container-highest shadow-sm card-rest stat-glow">
+            <div className="text-[10px] font-bold text-outline tracking-[0.06em] uppercase mb-3.5 font-label">
               System
             </div>
             <div className="flex flex-col gap-2.5">

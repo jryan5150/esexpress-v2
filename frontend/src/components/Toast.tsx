@@ -61,7 +61,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg shadow-black/10 cursor-pointer transition-all hover:scale-[1.02] animate-slide-in-right ${VARIANT_STYLES[msg.variant]}`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg shadow-black/10 backdrop-blur-sm cursor-pointer transition-all hover:scale-[1.02] animate-slide-in-right ${VARIANT_STYLES[msg.variant]}`}
             onClick={() => dismiss(msg.id)}
           >
             <span className="material-symbols-outlined text-sm">

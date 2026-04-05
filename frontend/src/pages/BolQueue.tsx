@@ -142,7 +142,7 @@ export function BolQueue() {
           ].map((s) => (
             <div
               key={s.label}
-              className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-4 card-rest stat-glow"
+              className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-5 card-rest stat-glow"
             >
               <div className="flex items-center gap-2 mb-2">
                 <span
@@ -150,7 +150,7 @@ export function BolQueue() {
                 >
                   {s.icon}
                 </span>
-                <span className="text-[9px] uppercase tracking-[0.08em] font-semibold text-outline">
+                <span className="text-[10px] uppercase tracking-[0.06em] font-bold text-outline">
                   {s.label}
                 </span>
               </div>
@@ -164,7 +164,7 @@ export function BolQueue() {
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-0.5 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-1 card-rest">
+        <div className="flex items-center gap-0.5 bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-1 card-rest">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -174,8 +174,8 @@ export function BolQueue() {
               }}
               className={`px-3.5 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === tab.id
-                  ? "bg-surface-container-high text-on-surface"
-                  : "text-outline hover:text-on-surface"
+                  ? "bg-primary-container/12 text-primary-container shadow-sm"
+                  : "text-outline hover:text-on-surface hover:bg-surface-container-high/60"
               }`}
             >
               {tab.label}
@@ -183,7 +183,9 @@ export function BolQueue() {
                 className={`inline-flex items-center justify-center rounded-[10px] text-[10px] font-bold px-1.5 py-px ml-1.5 tabular-nums ${
                   tab.color
                     ? `bg-error/10 ${tab.color}`
-                    : "bg-surface-container-highest text-outline"
+                    : activeTab === tab.id
+                      ? "bg-primary-container/15 text-primary-container"
+                      : "bg-surface-container-highest text-outline"
                 }`}
               >
                 {tab.count}
@@ -203,8 +205,8 @@ export function BolQueue() {
                   onClick={() => setFilter(f)}
                   className={`px-3 py-1.5 rounded-md text-xs font-semibold capitalize transition-all cursor-pointer ${
                     filter === f
-                      ? "bg-primary/10 text-primary"
-                      : "text-outline hover:bg-surface-container-high hover:text-on-surface"
+                      ? "bg-primary-container/12 text-primary-container shadow-sm"
+                      : "text-outline hover:bg-surface-container-high/60 hover:text-on-surface"
                   }`}
                 >
                   {f === "all"
@@ -366,7 +368,7 @@ export function BolQueue() {
                                   ]),
                             ].map((f) => (
                               <div key={f.label} className="space-y-0.5">
-                                <span className="text-[9px] uppercase tracking-[0.08em] font-semibold text-outline">
+                                <span className="text-[10px] uppercase tracking-[0.06em] font-bold text-outline">
                                   {f.label}
                                 </span>
                                 <p className="text-[13px] text-on-surface font-label">

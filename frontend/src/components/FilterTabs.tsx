@@ -19,19 +19,25 @@ export function FilterTabs({
   onFilterChange,
 }: FilterTabsProps) {
   return (
-    <div className="flex items-center gap-0.5 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-1 overflow-x-auto card-rest">
+    <div className="flex items-center gap-0.5 bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-1 overflow-x-auto card-rest">
       {FILTERS.map((filter) => (
         <button
           key={filter}
           onClick={() => onFilterChange(filter)}
           className={`px-3.5 py-1.5 rounded-md text-xs font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
             activeFilter === filter
-              ? "bg-surface-container-high text-on-surface"
-              : "text-outline hover:text-on-surface"
+              ? "bg-primary-container/12 text-primary-container shadow-sm"
+              : "text-outline hover:text-on-surface hover:bg-surface-container-high/60"
           }`}
         >
           {filter}
-          <span className="inline-flex items-center justify-center bg-surface-container-highest text-outline rounded-[10px] text-[10px] font-bold px-1.5 py-px ml-1 tabular-nums">
+          <span
+            className={`inline-flex items-center justify-center rounded-[10px] text-[10px] font-bold px-1.5 py-px ml-1 tabular-nums ${
+              activeFilter === filter
+                ? "bg-primary-container/15 text-primary-container"
+                : "bg-surface-container-highest text-outline"
+            }`}
+          >
             {filterCounts[filter] ?? 0}
           </span>
         </button>

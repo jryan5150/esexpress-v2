@@ -226,7 +226,7 @@ export function Validation() {
   return (
     <div className="flex flex-col h-full">
       {/* Page Header */}
-      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest shrink-0">
+      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest header-gradient shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div>
@@ -242,7 +242,7 @@ export function Validation() {
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-6">
         {/* Quick Action: Bulk Approve Tier 1 */}
         {tierCounts[1] > 0 && !summaryQuery.isLoading && (
-          <div className="bg-surface-container-low rounded-xl p-6 border border-tertiary/20 flex items-center justify-between">
+          <div className="bg-surface-container-lowest rounded-[12px] p-6 border border-tertiary/20 flex items-center justify-between card-rest">
             <div className="flex items-center gap-4">
               <div className="bg-tertiary/10 p-3 rounded-lg">
                 <span className="material-symbols-outlined text-tertiary text-2xl">
@@ -280,7 +280,7 @@ export function Validation() {
               <button
                 key={tier}
                 onClick={() => toggleTier(tier)}
-                className={`bg-surface-container-low rounded-xl p-6 border-l-4 ${meta.borderClass} text-left transition-all hover:bg-surface-container-high cursor-pointer group`}
+                className={`bg-surface-container-lowest rounded-[12px] p-6 border border-outline-variant/40 border-l-4 ${meta.borderClass} text-left transition-all hover:bg-surface-container-high cursor-pointer group card-rest`}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">

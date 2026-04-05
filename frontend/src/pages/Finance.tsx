@@ -186,7 +186,7 @@ export function Finance() {
   return (
     <div className="flex flex-col h-full">
       {/* Page Header */}
-      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest shrink-0">
+      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest header-gradient shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div>
@@ -221,8 +221,8 @@ export function Finance() {
 
         {/* Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-            <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
+          <div className="bg-surface-container-lowest rounded-[12px] p-6 border border-outline-variant/40 card-rest stat-glow">
+            <span className="text-[10px] uppercase font-bold text-outline tracking-[0.06em] font-label">
               Open Batches
             </span>
             <div className="mt-2 flex items-end gap-2">
@@ -239,8 +239,8 @@ export function Finance() {
               </span>
             </div>
           </div>
-          <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-            <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
+          <div className="bg-surface-container-lowest rounded-[12px] p-6 border border-outline-variant/40 card-rest stat-glow">
+            <span className="text-[10px] uppercase font-bold text-outline tracking-[0.06em] font-label">
               Total Pending
             </span>
             <div className="mt-2 flex items-end gap-2">
@@ -262,8 +262,8 @@ export function Finance() {
               </span>
             </div>
           </div>
-          <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-            <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
+          <div className="bg-surface-container-lowest rounded-[12px] p-6 border border-outline-variant/40 card-rest stat-glow">
+            <span className="text-[10px] uppercase font-bold text-outline tracking-[0.06em] font-label">
               Last Pay Run
             </span>
             <div className="mt-2 flex items-end gap-2">
@@ -280,8 +280,8 @@ export function Finance() {
               </span>
             </div>
           </div>
-          <div className="bg-surface-container-low rounded-xl p-6 border border-on-surface/5">
-            <span className="text-[10px] uppercase font-bold text-on-surface/30 tracking-widest font-label">
+          <div className="bg-surface-container-lowest rounded-[12px] p-6 border border-outline-variant/40 card-rest stat-glow">
+            <span className="text-[10px] uppercase font-bold text-outline tracking-[0.06em] font-label">
               Processing
             </span>
             <div className="mt-2 flex items-end gap-2">
@@ -304,7 +304,7 @@ export function Finance() {
         </div>
 
         {/* Active Payment Cycles */}
-        <section className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
+        <section className="space-y-[1px] bg-on-surface/5 rounded-[12px] overflow-hidden border border-outline-variant/40 card-rest">
           <div className="flex items-center justify-between px-6 py-4 bg-surface-container-lowest/50">
             <div className="flex items-center gap-3">
               <span className="material-symbols-outlined text-primary-container text-lg">
@@ -319,7 +319,7 @@ export function Finance() {
             </div>
           </div>
           <div className="p-0">
-            <div className="grid grid-cols-12 gap-1 px-6 py-3 text-[10px] font-label uppercase tracking-widest text-on-surface/30 font-bold border-b border-on-surface/5 bg-surface-container-lowest/30">
+            <div className="grid grid-cols-12 gap-1 px-6 py-3 text-[10px] font-label uppercase tracking-[0.06em] text-outline font-bold border-b border-outline-variant/40 bg-surface-container-lowest/30">
               <div className="col-span-2">Batch ID</div>
               <div className="col-span-3">Company</div>
               <div className="col-span-1">BOLs</div>
@@ -327,7 +327,7 @@ export function Finance() {
               <div className="col-span-2">Status</div>
               <div className="col-span-2 text-right">Actions</div>
             </div>
-            <div className="divide-y divide-on-surface/5">
+            <div className="divide-y divide-outline-variant/40">
               {isLoading ? (
                 <>
                   {[1, 2, 3, 4].map((i) => (

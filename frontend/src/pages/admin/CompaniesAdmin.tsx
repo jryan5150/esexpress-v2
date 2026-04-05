@@ -1,7 +1,7 @@
 export function CompaniesAdmin() {
   return (
     <div className="flex flex-col h-full">
-      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest shrink-0">
+      <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest header-gradient shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div>
@@ -16,7 +16,7 @@ export function CompaniesAdmin() {
       </div>
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-6">
         {/* Coming Soon Card */}
-        <div className="bg-surface-container-low rounded-xl border border-on-surface/5 overflow-hidden">
+        <div className="bg-surface-container-lowest rounded-[12px] border border-outline-variant/40 overflow-hidden card-rest">
           <div className="p-12 flex flex-col items-center justify-center text-center space-y-6">
             <div className="bg-primary-container/10 p-5 rounded-2xl">
               <span className="material-symbols-outlined text-5xl text-primary-container/60">
