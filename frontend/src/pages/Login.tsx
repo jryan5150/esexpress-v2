@@ -124,35 +124,38 @@ export function Login() {
       <div className="w-full max-w-md space-y-8 relative z-10">
         {/* Branding */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-surface-container-high/80 backdrop-blur-sm rounded-2xl border border-on-surface/10 mx-auto shadow-2xl shadow-primary-container/20">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-container rounded-2xl border border-primary/30 mx-auto shadow-2xl shadow-primary-container/30">
             <img
               src="/trailer-icon.svg"
               alt="ES Express"
-              className="w-12 h-12 text-primary-container"
-              style={{
-                filter:
-                  "invert(17%) sepia(82%) saturate(5765%) hue-rotate(262deg) brightness(91%) contrast(92%)",
-              }}
+              className="w-12 h-12"
+              style={{ filter: "brightness(0) invert(1)" }}
             />
           </div>
-          <div>
+          <div className="space-y-1">
             <h1 className="text-4xl font-black font-headline tracking-tighter text-on-surface uppercase">
               EsExpress
             </h1>
+            <p className="text-[11px] font-label font-medium text-on-surface/30 tracking-[0.2em] uppercase">
+              Logistics Command Center
+            </p>
           </div>
         </div>
 
         {/* Login Card */}
-        <div className="bg-surface-container-low/90 backdrop-blur-md rounded-xl p-8 border border-on-surface/5 shadow-2xl shadow-black/20 space-y-6">
+        <div className="glass rounded-xl p-8 border border-on-surface/8 shadow-2xl shadow-black/15 space-y-6 accent-line">
           <div className="space-y-1">
-            <h2 className="text-lg font-bold font-headline text-on-surface">
-              Login
+            <h2 className="text-lg font-bold font-headline text-on-surface tracking-tight">
+              Operator Sign-In
             </h2>
+            <p className="text-[11px] text-on-surface/35 font-body">
+              Authenticate to access dispatch operations
+            </p>
           </div>
 
           {login.isError && (
-            <div className="bg-error/10 border border-error/20 rounded-lg px-4 py-3 flex items-center gap-3">
-              <span className="material-symbols-outlined text-error text-lg">
+            <div className="bg-error/8 border border-error/15 rounded-lg px-4 py-3 flex items-center gap-3">
+              <span className="material-symbols-outlined icon-filled text-error text-lg">
                 error
               </span>
               <p className="text-sm text-error font-medium">
@@ -171,7 +174,7 @@ export function Login() {
                 Operator Email
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface/30 text-lg">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface/25 text-lg">
                   mail
                 </span>
                 <input
@@ -180,7 +183,7 @@ export function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="operator@esexpressllc.com"
-                  className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all"
+                  className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all pressed-metal"
                   required
                 />
               </div>
@@ -194,7 +197,7 @@ export function Login() {
                 Access Key
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface/30 text-lg">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface/25 text-lg">
                   lock
                 </span>
                 <input
@@ -203,7 +206,7 @@ export function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter access key"
-                  className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all"
+                  className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all pressed-metal"
                   required
                 />
               </div>
@@ -223,10 +226,10 @@ export function Login() {
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-sm">
-                    login
-                  </span>
                   Sign In
+                  <span className="material-symbols-outlined icon-filled text-sm">
+                    arrow_forward
+                  </span>
                 </>
               )}
             </button>
@@ -235,7 +238,7 @@ export function Login() {
 
         {/* Footer */}
         <div className="text-center space-y-2">
-          <p className="text-[10px] text-on-surface/20 font-mono tracking-wider">
+          <p className="text-[10px] text-on-surface/20 font-data tracking-[0.15em] uppercase">
             ES Express LLC // Secure Access Portal
           </p>
         </div>

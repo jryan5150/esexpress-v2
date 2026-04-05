@@ -30,8 +30,13 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
 
   const navClass = (path: string) =>
     isActive(path)
-      ? "bg-[#ede9f8] text-primary font-semibold flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md transition-all duration-150 text-[13px] nav-smooth press-scale"
-      : "text-on-surface-variant flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md hover:bg-surface-container-high hover:text-on-surface transition-all duration-150 text-[13px] font-medium nav-smooth press-scale";
+      ? "bg-[#ede9f8] text-primary font-semibold flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md transition-all duration-150 text-[13px] nav-smooth press-scale border-l-2 border-l-primary"
+      : "text-on-surface-variant flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md hover:bg-surface-container-high hover:text-on-surface transition-all duration-150 text-[13px] font-medium nav-smooth press-scale border-l-2 border-l-transparent";
+
+  const iconClass = (path: string) =>
+    isActive(path)
+      ? "material-symbols-outlined icon-filled text-lg shrink-0"
+      : "material-symbols-outlined text-lg shrink-0";
 
   const handleNavClick = () => {
     onMobileClose?.();
@@ -77,89 +82,71 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
         <nav className="flex-1 py-2.5" onClick={handleNavClick}>
           <div className="space-y-px">
             <Link to="/" className={navClass("/")}>
-              <span className="material-symbols-outlined text-lg shrink-0">
-                home
-              </span>
+              <span className={iconClass("/")}>home</span>
               Today's Objectives
             </Link>
             <Link to="/dispatch-desk" className={navClass("/dispatch-desk")}>
-              <span className="material-symbols-outlined text-lg shrink-0">
-                dashboard
-              </span>
+              <span className={iconClass("/dispatch-desk")}>dashboard</span>
               Dispatch Desk
             </Link>
             <Link to="/bol" className={navClass("/bol")}>
-              <span className="material-symbols-outlined text-lg shrink-0">
-                receipt_long
-              </span>
+              <span className={iconClass("/bol")}>receipt_long</span>
               BOL Queue
             </Link>
           </div>
 
-          <div className="mt-3">
-            <div className="px-3.5 mx-1.5 py-1.5">
-              <span className="text-[10px] font-semibold text-outline tracking-[0.1em] uppercase">
+          <div className="mt-3 pt-2 border-t border-outline-variant/25 mx-3">
+            <div className="px-2 py-1.5">
+              <span className="text-[9px] font-label font-bold text-outline/60 tracking-[0.15em] uppercase">
                 Admin
               </span>
             </div>
             <div className="space-y-px">
               <Link to="/validation" className={navClass("/validation")}>
-                <span className="material-symbols-outlined text-lg shrink-0">
-                  rule
-                </span>
+                <span className={iconClass("/validation")}>rule</span>
                 Validation
               </Link>
               <Link to="/admin/wells" className={navClass("/admin/wells")}>
-                <span className="material-symbols-outlined text-lg shrink-0">
-                  oil_barrel
-                </span>
+                <span className={iconClass("/admin/wells")}>oil_barrel</span>
                 Wells
               </Link>
               <Link
                 to="/admin/companies"
                 className={navClass("/admin/companies")}
               >
-                <span className="material-symbols-outlined text-lg shrink-0">
-                  business
-                </span>
+                <span className={iconClass("/admin/companies")}>business</span>
                 Companies
               </Link>
               <Link to="/admin/users" className={navClass("/admin/users")}>
-                <span className="material-symbols-outlined text-lg shrink-0">
-                  group
-                </span>
+                <span className={iconClass("/admin/users")}>group</span>
                 Users
               </Link>
             </div>
           </div>
 
-          <div className="mt-3">
-            <div className="px-3.5 mx-1.5 py-1.5">
-              <span className="text-[10px] font-semibold text-outline tracking-[0.1em] uppercase">
+          <div className="mt-3 pt-2 border-t border-outline-variant/25 mx-3">
+            <div className="px-2 py-1.5">
+              <span className="text-[9px] font-label font-bold text-outline/60 tracking-[0.15em] uppercase">
                 Operations
               </span>
             </div>
             <div className="space-y-px">
               <Link to="/finance" className={navClass("/finance")}>
-                <span className="material-symbols-outlined text-lg shrink-0">
-                  payments
-                </span>
+                <span className={iconClass("/finance")}>payments</span>
                 Finance
               </Link>
             </div>
           </div>
 
-          <div className="mt-3">
-            <div className="px-3.5 mx-1.5 py-1.5">
-              <span className="text-[10px] font-semibold text-outline tracking-[0.1em] uppercase">
+          <div className="mt-3 pt-2 border-t border-outline-variant/25 mx-3">
+            <div className="px-2 py-1.5">
+              <span className="text-[9px] font-label font-bold text-outline/60 tracking-[0.15em] uppercase">
                 Reference
               </span>
             </div>
             <div className="space-y-px">
               <Link to="/archive" className={navClass("/archive")}>
-                <span className="material-symbols-outlined text-lg shrink-0">
-                  inventory_2
-                </span>
+                <span className={iconClass("/archive")}>inventory_2</span>
                 Archive
               </Link>
             </div>
@@ -181,9 +168,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
             </span>
           </div>
           <Link to="/settings" className={navClass("/settings")}>
-            <span className="material-symbols-outlined text-lg shrink-0">
-              settings
-            </span>
+            <span className={iconClass("/settings")}>settings</span>
             Settings
           </Link>
           <button

@@ -245,7 +245,7 @@ export function Validation() {
           <div className="bg-surface-container-lowest rounded-[12px] p-6 border border-tertiary/20 flex items-center justify-between card-rest">
             <div className="flex items-center gap-4">
               <div className="bg-tertiary/10 p-3 rounded-lg">
-                <span className="material-symbols-outlined text-tertiary text-2xl">
+                <span className="material-symbols-outlined icon-filled text-tertiary text-2xl">
                   verified
                 </span>
               </div>
@@ -285,7 +285,7 @@ export function Validation() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`material-symbols-outlined ${meta.textClass}`}
+                      className={`material-symbols-outlined icon-filled ${meta.textClass}`}
                     >
                       {meta.icon}
                     </span>
@@ -300,7 +300,7 @@ export function Validation() {
                   </span>
                 </div>
                 <div
-                  className={`font-label text-3xl font-bold ${meta.textClass}`}
+                  className={`font-data text-3xl font-bold ${meta.textClass}`}
                 >
                   {summaryQuery.isLoading ? "..." : count}
                 </div>
@@ -317,7 +317,7 @@ export function Validation() {
           <span className="text-xs text-on-surface/30 uppercase tracking-widest font-bold">
             Total Pending
           </span>
-          <span className="font-label text-lg font-bold text-on-surface">
+          <span className="font-data text-lg font-bold text-on-surface">
             {summaryQuery.isLoading
               ? "..."
               : tierCounts[1] + tierCounts[2] + tierCounts[3]}

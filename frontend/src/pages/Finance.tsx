@@ -226,7 +226,7 @@ export function Finance() {
               Open Batches
             </span>
             <div className="mt-2 flex items-end gap-2">
-              <span className="font-label text-4xl font-black text-on-surface">
+              <span className="font-data text-4xl font-black text-on-surface">
                 {isLoading ? "..." : openBatches}
               </span>
             </div>
@@ -244,11 +244,11 @@ export function Finance() {
               Total Pending
             </span>
             <div className="mt-2 flex items-end gap-2">
-              <span className="font-label text-3xl font-black text-on-surface">
+              <span className="font-data text-3xl font-black text-on-surface">
                 {isLoading ? "..." : totalPendingDollars}
               </span>
               {!isLoading && totalPendingCents && (
-                <span className="font-label text-lg font-bold text-on-surface/40 mb-0.5">
+                <span className="font-data text-lg font-bold text-on-surface/40 mb-0.5">
                   {totalPendingCents}
                 </span>
               )}
@@ -267,7 +267,7 @@ export function Finance() {
               Last Pay Run
             </span>
             <div className="mt-2 flex items-end gap-2">
-              <span className="font-label text-3xl font-black text-on-surface">
+              <span className="font-data text-3xl font-black text-on-surface">
                 {isLoading ? "..." : lastPayRun}
               </span>
             </div>
@@ -285,10 +285,10 @@ export function Finance() {
               Processing
             </span>
             <div className="mt-2 flex items-end gap-2">
-              <span className="font-label text-4xl font-black text-primary-container">
+              <span className="font-data text-4xl font-black text-primary-container">
                 {isLoading ? "..." : processingCount}
               </span>
-              <span className="font-label text-lg font-bold text-on-surface/40 mb-0.5">
+              <span className="font-data text-lg font-bold text-on-surface/40 mb-0.5">
                 BOL
               </span>
             </div>

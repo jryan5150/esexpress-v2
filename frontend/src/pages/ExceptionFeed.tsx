@@ -81,9 +81,9 @@ export function ExceptionFeed() {
           {/* Needs Attention */}
           <button
             onClick={() => navigate("/validation")}
-            className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-5 border-l-4 border-l-primary shadow-sm text-left cursor-pointer hover:shadow-md transition-shadow group hover-lift press-scale stat-glow accent-glow"
+            className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-5 border-l-4 border-l-primary shadow-sm text-left cursor-pointer hover:shadow-md transition-shadow group hover-lift press-scale stat-glow accent-glow accent-line"
           >
-            <div className="font-headline text-5xl font-extrabold num-transition text-primary leading-none mb-1 tabular-nums">
+            <div className="font-data text-5xl font-extrabold num-transition text-primary leading-none mb-1 tabular-nums">
               {validationQuery.isLoading ? "..." : pendingReview}
             </div>
             <div className="text-[13px] font-medium text-on-surface-variant mb-3.5">
@@ -96,7 +96,7 @@ export function ExceptionFeed() {
 
           {/* Confirmed & Ready */}
           <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-5 border-l-4 border-l-tertiary shadow-sm card-rest stat-glow">
-            <div className="font-headline text-5xl font-extrabold num-transition text-tertiary leading-none mb-1 tabular-nums">
+            <div className="font-data text-5xl font-extrabold num-transition text-tertiary leading-none mb-1 tabular-nums">
               {readinessQuery.isLoading ? "..." : readyCount}
             </div>
             <div className="text-[13px] font-medium text-on-surface-variant">
@@ -128,7 +128,7 @@ export function ExceptionFeed() {
                 },
               ].map((m) => (
                 <div key={m.label} className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-base text-tertiary">
+                  <span className="material-symbols-outlined icon-filled text-base text-tertiary">
                     {m.icon}
                   </span>
                   <span className="font-label text-sm font-medium text-on-surface tabular-nums">

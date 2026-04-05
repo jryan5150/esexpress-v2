@@ -36,7 +36,7 @@ export function Layout() {
           </button>
           <div className="flex items-center gap-4 ml-auto">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-low/50 shadow-[0_0_0_1px_rgba(13,150,104,0.1)]">
-              <span className="material-symbols-outlined text-tertiary text-sm">
+              <span className="material-symbols-outlined icon-filled text-tertiary text-sm">
                 cloud_done
               </span>
               <span className="font-label text-[10px] text-on-surface/30 tracking-wider uppercase">

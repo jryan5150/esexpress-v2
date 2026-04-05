@@ -9,9 +9,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const styles: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary-container text-on-primary-container hover:brightness-110 shadow-md shadow-primary-container/20 active:scale-[0.97] active:shadow-sm hover:shadow-lg hover:shadow-primary-container/25",
+    "bg-primary-container text-on-primary-container hover:brightness-110 shadow-md shadow-primary-container/20 active:scale-[0.97] active:shadow-sm hover:shadow-lg hover:shadow-primary-container/30 accent-glow",
   secondary:
-    "bg-surface-container-high text-on-surface/70 border border-outline-variant/50 hover:bg-surface-container-highest hover:border-outline/30 hover:text-on-surface active:scale-[0.98]",
+    "bg-surface-container-high text-on-surface/70 border border-outline-variant/50 hover:bg-surface-container-highest hover:border-outline/30 hover:text-on-surface active:scale-[0.98] card-rest",
   ghost:
     "bg-transparent text-on-surface/50 hover:text-on-surface/80 hover:bg-surface-container-high/60 active:scale-[0.98]",
 };
@@ -29,7 +29,11 @@ export function Button({
       {...props}
     >
       {icon && (
-        <span className="material-symbols-outlined text-sm">{icon}</span>
+        <span
+          className={`material-symbols-outlined text-sm ${variant === "primary" ? "icon-filled" : ""}`}
+        >
+          {icon}
+        </span>
       )}
       {children}
     </button>

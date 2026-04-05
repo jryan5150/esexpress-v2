@@ -155,7 +155,7 @@ export function BolQueue() {
                 </span>
               </div>
               <div
-                className={`font-label text-2xl font-bold text-${s.color} tabular-nums`}
+                className={`font-data text-2xl font-bold text-${s.color} tabular-nums`}
               >
                 {statsQuery.isLoading ? "..." : s.value}
               </div>
