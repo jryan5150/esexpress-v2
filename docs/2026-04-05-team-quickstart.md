@@ -59,7 +59,7 @@ Each load row shows:
 
 Click any load row to expand it. The expanded view shows:
 
-- **Editable fields** — click any field to edit: Driver, Truck, Carrier, Weight, Net Weight, Product, BOL, Ticket, Rate, Mileage (Delivered Date is set via batch date on selected loads)
+- **Editable fields** — click any field to edit: Driver, Truck, Trailer, Carrier, Weight, Net Weight, Product, BOL, Ticket, Rate, Mileage, Delivered Date
 - **BOL photo** — click the image to view full-screen
 - **Timeline** — Assigned, Accepted, Pickup, Load Out, Transit, ETA, Arrival, Delivered
 - **Load/Unload Duration** — time at terminal and destination
