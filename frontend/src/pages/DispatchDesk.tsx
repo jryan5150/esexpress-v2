@@ -42,6 +42,7 @@ export function DispatchDesk() {
   const [expandedLoadId, setExpandedLoadId] = useState<number | null>(null);
   const [dateFilter, setDateFilter] = useState("");
   const [pinnedWellIds, setPinnedWellIds] = useState<string[]>([]);
+  const [pickerView, setPickerView] = useState<"wells" | "loads">("wells");
 
   const queryClient = useQueryClient();
   const confirmMutation = useValidationConfirm();
@@ -629,273 +630,364 @@ export function DispatchDesk() {
           </div>
         )}
 
-        {/* Smart Well Picker: No well selected */}
+        {/* Well Picker / All Loads toggle: No well selected */}
         {!selectedWellId && (
           <div className="space-y-4">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40 px-2">
-              Pick a Well{" "}
-              <span className="text-on-surface/20 font-medium">
-                -- showing wells with dispatch-ready or assigned loads
-              </span>
-            </h3>
-            {wellsQuery.isLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => (
+            <div className="flex items-center gap-1 px-2">
+              <button
+                onClick={() => setPickerView("wells")}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  pickerView === "wells"
+                    ? "bg-primary-container/12 text-primary-container shadow-sm"
+                    : "text-outline hover:text-on-surface hover:bg-surface-container-high/60"
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm align-middle mr-1">
+                  oil_barrel
+                </span>
+                Wells
+                <span
+                  className={`ml-1.5 text-[10px] font-bold tabular-nums px-1.5 py-px rounded-[10px] ${
+                    pickerView === "wells"
+                      ? "bg-primary-container/15 text-primary-container"
+                      : "bg-surface-container-highest text-outline"
+                  }`}
+                >
+                  {wells.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setPickerView("loads")}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                  pickerView === "loads"
+                    ? "bg-primary-container/12 text-primary-container shadow-sm"
+                    : "text-outline hover:text-on-surface hover:bg-surface-container-high/60"
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm align-middle mr-1">
+                  list_alt
+                </span>
+                Loads {dateFilter ? "" : "(set date)"}
+                {dateFilter && (
+                  <span
+                    className={`ml-1.5 text-[10px] font-bold tabular-nums px-1.5 py-px rounded-[10px] ${
+                      pickerView === "loads"
+                        ? "bg-primary-container/15 text-primary-container"
+                        : "bg-surface-container-highest text-outline"
+                    }`}
+                  >
+                    {allLoads.length}
+                  </span>
+                )}
+              </button>
+            </div>
+            {pickerView === "wells" &&
+              (wellsQuery.isLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="bg-surface-container-lowest rounded-xl h-20 animate-pulse"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {(() => {
+                    const wellCards =
+                      (
+                        wellsQuery.data as
+                          | Array<Record<string, unknown>>
+                          | undefined
+                      )
+                        ?.map((w) => ({
+                          id: String(w.id ?? ""),
+                          name: String(w.name ?? ""),
+                          totalLoads: Number(
+                            w.totalLoads ?? w.total_loads ?? 0,
+                          ),
+                          ready: Number(w.ready ?? 0),
+                          assigned: Number(w.assigned ?? 0),
+                          dailyTargetLoads: Number(
+                            w.dailyTargetLoads ?? w.daily_target_loads ?? 0,
+                          ),
+                        }))
+                        .sort(
+                          (a, b) =>
+                            b.ready + b.assigned - (a.ready + a.assigned) ||
+                            b.totalLoads - a.totalLoads ||
+                            a.name.localeCompare(b.name),
+                        ) ?? [];
+
+                    // Today's Objectives summary
+                    const withTargets = wellCards.filter(
+                      (w) => w.dailyTargetLoads > 0,
+                    );
+                    const totalActual = withTargets.reduce(
+                      (s, w) => s + w.totalLoads,
+                      0,
+                    );
+                    const totalTarget = withTargets.reduce(
+                      (s, w) => s + w.dailyTargetLoads,
+                      0,
+                    );
+                    const overallPct =
+                      totalTarget > 0
+                        ? Math.round((totalActual / totalTarget) * 100)
+                        : 0;
+
+                    return (
+                      <>
+                        {withTargets.length > 0 && (
+                          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[14px] px-5 py-4 shadow-sm card-rest mb-3">
+                            <div className="flex items-center justify-between mb-2.5">
+                              <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-primary text-base">
+                                  target
+                                </span>
+                                <span className="text-[10px] uppercase tracking-[0.15em] font-black text-on-surface/40">
+                                  Today's Objectives
+                                </span>
+                              </div>
+                              <span className="font-label text-sm font-bold text-on-surface tabular-nums">
+                                {totalActual}/{totalTarget} loads
+                                <span className="text-on-surface/30 ml-1.5">
+                                  ({overallPct}%)
+                                </span>
+                              </span>
+                            </div>
+                            <div className="w-full h-2 bg-outline-variant/20 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${overallPct >= 100 ? "bg-tertiary" : overallPct >= 60 ? "bg-primary" : "bg-primary-container"}`}
+                                style={{
+                                  width: `${Math.min(overallPct, 100)}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        {wellCards.map((w) => {
+                          const pct =
+                            w.dailyTargetLoads > 0
+                              ? Math.round(
+                                  (w.totalLoads / w.dailyTargetLoads) * 100,
+                                )
+                              : null;
+                          return (
+                            <button
+                              key={w.id}
+                              onClick={() => handleSelectWell(w.id)}
+                              className={`w-full bg-surface-container-lowest border border-outline-variant/40 hover:border-primary/20 hover:shadow-md rounded-[10px] px-5 py-3.5 flex items-center justify-between transition-all cursor-pointer group text-left shadow-sm border-l-4 hover-lift press-scale ${w.ready > 0 ? "border-l-tertiary" : w.assigned > 0 ? "border-l-primary-container" : "border-l-outline-variant/40"}`}
+                            >
+                              <div className="flex items-center gap-4 min-w-0 flex-1 mr-4">
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="font-headline font-bold text-on-surface text-lg group-hover:text-primary-container transition-colors">
+                                    {w.name}
+                                  </h4>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="font-label text-xs text-on-surface/35 tracking-wide tabular-nums">
+                                      {w.totalLoads}
+                                      {pct !== null
+                                        ? `/${w.dailyTargetLoads}`
+                                        : ""}{" "}
+                                      loads
+                                    </span>
+                                    {pct !== null && (
+                                      <span
+                                        className={`font-label text-[10px] font-bold tabular-nums ${pct >= 100 ? "text-tertiary" : pct >= 60 ? "text-primary" : "text-on-surface/40"}`}
+                                      >
+                                        ({pct}%)
+                                      </span>
+                                    )}
+                                  </div>
+                                  {pct !== null && (
+                                    <div className="w-full max-w-[180px] h-1.5 bg-outline-variant/20 rounded-full overflow-hidden mt-1.5">
+                                      <div
+                                        className={`h-full rounded-full transition-all duration-500 ${pct >= 100 ? "bg-tertiary" : pct >= 60 ? "bg-primary" : "bg-primary-container"}`}
+                                        style={{
+                                          width: `${Math.min(pct, 100)}%`,
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-5">
+                                {w.ready > 0 && (
+                                  <div className="text-right bg-tertiary/5 px-3 py-1.5 rounded-lg">
+                                    <span className="font-label text-lg font-bold text-tertiary leading-none tabular-nums">
+                                      {w.ready}
+                                    </span>
+                                    <span className="text-[9px] uppercase font-bold text-tertiary/60 block tracking-wider mt-0.5">
+                                      Ready
+                                    </span>
+                                  </div>
+                                )}
+                                {w.assigned > 0 && (
+                                  <div className="text-right bg-primary-container/5 px-3 py-1.5 rounded-lg">
+                                    <span className="font-label text-lg font-bold text-primary-container leading-none tabular-nums">
+                                      {w.assigned}
+                                    </span>
+                                    <span className="text-[9px] uppercase font-bold text-primary-container/60 block tracking-wider mt-0.5">
+                                      Assigned
+                                    </span>
+                                  </div>
+                                )}
+                                <span className="material-symbols-outlined text-on-surface/15 group-hover:text-primary-container group-hover:translate-x-1 transition-all">
+                                  chevron_right
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
+                  {wells.length === 0 && (
+                    <div className="bg-surface-container-lowest rounded-xl p-12 text-center">
+                      <span className="material-symbols-outlined text-4xl text-on-surface/10 mb-2">
+                        oil_barrel
+                      </span>
+                      <p className="text-on-surface/30 font-label text-sm">
+                        No wells with loads found
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+            {/* Loads view (all wells, date required) */}
+            {pickerView === "loads" && !dateFilter && (
+              <div className="bg-surface-container-lowest rounded-xl p-12 text-center">
+                <span className="material-symbols-outlined text-4xl text-on-surface/10 mb-2">
+                  calendar_month
+                </span>
+                <p className="text-on-surface/30 font-label text-sm">
+                  Set a date above to view loads across all wells
+                </p>
+              </div>
+            )}
+            {pickerView === "loads" && dateFilter && deskQuery.isLoading && (
+              <div className="space-y-1.5">
+                {[1, 2, 3, 4, 5].map((i) => (
                   <div
                     key={i}
-                    className="bg-surface-container-lowest rounded-xl h-20 animate-pulse"
+                    className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] h-11 animate-pulse"
                   />
                 ))}
               </div>
-            ) : (
-              <div className="space-y-2">
-                {(() => {
-                  const wellCards =
-                    (
-                      wellsQuery.data as
-                        | Array<Record<string, unknown>>
-                        | undefined
-                    )
-                      ?.map((w) => ({
-                        id: String(w.id ?? ""),
-                        name: String(w.name ?? ""),
-                        totalLoads: Number(w.totalLoads ?? w.total_loads ?? 0),
-                        ready: Number(w.ready ?? 0),
-                        assigned: Number(w.assigned ?? 0),
-                        dailyTargetLoads: Number(
-                          w.dailyTargetLoads ?? w.daily_target_loads ?? 0,
-                        ),
-                      }))
-                      .sort(
-                        (a, b) =>
-                          b.ready + b.assigned - (a.ready + a.assigned) ||
-                          b.totalLoads - a.totalLoads ||
-                          a.name.localeCompare(b.name),
-                      ) ?? [];
-
-                  // Today's Objectives summary
-                  const withTargets = wellCards.filter(
-                    (w) => w.dailyTargetLoads > 0,
-                  );
-                  const totalActual = withTargets.reduce(
-                    (s, w) => s + w.totalLoads,
-                    0,
-                  );
-                  const totalTarget = withTargets.reduce(
-                    (s, w) => s + w.dailyTargetLoads,
-                    0,
-                  );
-                  const overallPct =
-                    totalTarget > 0
-                      ? Math.round((totalActual / totalTarget) * 100)
-                      : 0;
-
-                  return (
-                    <>
-                      {withTargets.length > 0 && (
-                        <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[14px] px-5 py-4 shadow-sm card-rest mb-3">
-                          <div className="flex items-center justify-between mb-2.5">
-                            <div className="flex items-center gap-2">
-                              <span className="material-symbols-outlined text-primary text-base">
-                                target
-                              </span>
-                              <span className="text-[10px] uppercase tracking-[0.15em] font-black text-on-surface/40">
-                                Today's Objectives
-                              </span>
-                            </div>
-                            <span className="font-label text-sm font-bold text-on-surface tabular-nums">
-                              {totalActual}/{totalTarget} loads
-                              <span className="text-on-surface/30 ml-1.5">
-                                ({overallPct}%)
-                              </span>
-                            </span>
-                          </div>
-                          <div className="w-full h-2 bg-outline-variant/20 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ${overallPct >= 100 ? "bg-tertiary" : overallPct >= 60 ? "bg-primary" : "bg-primary-container"}`}
-                              style={{ width: `${Math.min(overallPct, 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                      {wellCards.map((w) => {
-                        const pct =
-                          w.dailyTargetLoads > 0
-                            ? Math.round(
-                                (w.totalLoads / w.dailyTargetLoads) * 100,
-                              )
-                            : null;
-                        return (
-                          <button
-                            key={w.id}
-                            onClick={() => handleSelectWell(w.id)}
-                            className={`w-full bg-surface-container-lowest border border-outline-variant/40 hover:border-primary/20 hover:shadow-md rounded-[10px] px-5 py-3.5 flex items-center justify-between transition-all cursor-pointer group text-left shadow-sm border-l-4 hover-lift press-scale ${w.ready > 0 ? "border-l-tertiary" : w.assigned > 0 ? "border-l-primary-container" : "border-l-outline-variant/40"}`}
-                          >
-                            <div className="flex items-center gap-4 min-w-0 flex-1 mr-4">
-                              <div className="min-w-0 flex-1">
-                                <h4 className="font-headline font-bold text-on-surface text-lg group-hover:text-primary-container transition-colors">
-                                  {w.name}
-                                </h4>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="font-label text-xs text-on-surface/35 tracking-wide tabular-nums">
-                                    {w.totalLoads}
-                                    {pct !== null
-                                      ? `/${w.dailyTargetLoads}`
-                                      : ""}{" "}
-                                    loads
-                                  </span>
-                                  {pct !== null && (
-                                    <span
-                                      className={`font-label text-[10px] font-bold tabular-nums ${pct >= 100 ? "text-tertiary" : pct >= 60 ? "text-primary" : "text-on-surface/40"}`}
-                                    >
-                                      ({pct}%)
-                                    </span>
-                                  )}
-                                </div>
-                                {pct !== null && (
-                                  <div className="w-full max-w-[180px] h-1.5 bg-outline-variant/20 rounded-full overflow-hidden mt-1.5">
-                                    <div
-                                      className={`h-full rounded-full transition-all duration-500 ${pct >= 100 ? "bg-tertiary" : pct >= 60 ? "bg-primary" : "bg-primary-container"}`}
-                                      style={{
-                                        width: `${Math.min(pct, 100)}%`,
-                                      }}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-5">
-                              {w.ready > 0 && (
-                                <div className="text-right bg-tertiary/5 px-3 py-1.5 rounded-lg">
-                                  <span className="font-label text-lg font-bold text-tertiary leading-none tabular-nums">
-                                    {w.ready}
-                                  </span>
-                                  <span className="text-[9px] uppercase font-bold text-tertiary/60 block tracking-wider mt-0.5">
-                                    Ready
-                                  </span>
-                                </div>
-                              )}
-                              {w.assigned > 0 && (
-                                <div className="text-right bg-primary-container/5 px-3 py-1.5 rounded-lg">
-                                  <span className="font-label text-lg font-bold text-primary-container leading-none tabular-nums">
-                                    {w.assigned}
-                                  </span>
-                                  <span className="text-[9px] uppercase font-bold text-primary-container/60 block tracking-wider mt-0.5">
-                                    Assigned
-                                  </span>
-                                </div>
-                              )}
-                              <span className="material-symbols-outlined text-on-surface/15 group-hover:text-primary-container group-hover:translate-x-1 transition-all">
-                                chevron_right
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </>
-                  );
-                })()}
-                {wells.length === 0 && (
+            )}
+            {pickerView === "loads" && dateFilter && allLoads.length > 0 && (
+              <>
+                {/* Column Headers */}
+                <div
+                  className="grid items-center gap-3 px-3.5 py-1"
+                  style={{
+                    gridTemplateColumns:
+                      "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
+                  }}
+                >
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={
+                        allLoads.length > 0 &&
+                        selectedIds.size === allLoads.length
+                      }
+                      onChange={() => {
+                        if (selectedIds.size === allLoads.length) {
+                          setSelectedIds(new Set());
+                        } else {
+                          setSelectedIds(
+                            new Set(allLoads.map((l) => l.assignmentId)),
+                          );
+                        }
+                      }}
+                      className="w-4 h-4 rounded accent-primary-container cursor-pointer"
+                      title="Select all"
+                    />
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                    Status
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                    Load #
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                    Driver / Carrier
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
+                    Weight
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                    BOL / Truck
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                    Ticket
+                  </span>
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
+                    Well
+                  </span>
+                  <div />
+                </div>
+                <div className="space-y-1.5">
+                  {allLoads.map((load) => (
+                    <div key={load.assignmentId}>
+                      <LoadRow
+                        assignmentId={load.assignmentId}
+                        loadNo={load.loadNo}
+                        driverName={load.driverName}
+                        carrierName={load.carrierName}
+                        weightTons={load.weightTons}
+                        bolNo={load.bolNo}
+                        truckNo={load.truckNo}
+                        ticketNo={load.ticketNo}
+                        deliveredOn={load.wellName ?? null}
+                        validationStatus={getValidationStatus(load)}
+                        checked={selectedIds.has(load.assignmentId)}
+                        entered={enteredIds.has(load.assignmentId)}
+                        canEnter={load.canEnter}
+                        hasPhotos={!!load.photoUrls?.length}
+                        assignedToName={load.assignedToName ?? null}
+                        assignedToColor={load.assignedToColor ?? null}
+                        bolMatchStatus={
+                          load.jotformBolNo && load.bolNo
+                            ? load.bolNo.replace(/\D/g, "").slice(-4) ===
+                                load.jotformBolNo
+                                  .replace(/\D/g, "")
+                                  .slice(-4) &&
+                              load.bolNo.replace(/\D/g, "").slice(-4).length >=
+                                4
+                              ? "match"
+                              : "mismatch"
+                            : null
+                        }
+                        onToggleSelect={() => toggleSelect(load.assignmentId)}
+                        onMarkEntered={() =>
+                          handleMarkSingle(load.assignmentId)
+                        }
+                        onValidate={() =>
+                          handleValidateSingle(load.assignmentId)
+                        }
+                        onViewPhotos={() => setPhotoModalLoad(load)}
+                        onRowClick={() => handleSelectWell(String(load.wellId))}
+                        isPending={markEntered.isPending}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {allLoads.length === 0 && (
                   <div className="bg-surface-container-lowest rounded-xl p-12 text-center">
                     <span className="material-symbols-outlined text-4xl text-on-surface/10 mb-2">
-                      oil_barrel
+                      check_circle
                     </span>
                     <p className="text-on-surface/30 font-label text-sm">
-                      No wells with loads found
+                      No loads found for this date
                     </p>
                   </div>
                 )}
-              </div>
+              </>
             )}
-          </div>
-        )}
-
-        {/* Date-filtered loads across all wells (no well selected) */}
-        {!selectedWellId && dateFilter && allLoads.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
-                All Loads for{" "}
-                {new Date(dateFilter + "T12:00:00").toLocaleDateString(
-                  "en-US",
-                  { weekday: "short", month: "short", day: "numeric" },
-                )}
-                <span className="text-on-surface/20 font-medium ml-2">
-                  -- {allLoads.length} loads across all wells
-                </span>
-              </h3>
-            </div>
-            {/* Column Headers */}
-            <div
-              className="grid items-center gap-3 px-3.5 py-1"
-              style={{
-                gridTemplateColumns:
-                  "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
-              }}
-            >
-              <div />
-              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
-                Status
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
-                Load #
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
-                Driver / Carrier
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
-                Weight
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
-                BOL / Truck
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
-                Ticket
-              </span>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
-                Well
-              </span>
-              <div />
-            </div>
-            <div className="space-y-1.5">
-              {allLoads.map((load) => (
-                <div key={load.assignmentId}>
-                  <LoadRow
-                    assignmentId={load.assignmentId}
-                    loadNo={load.loadNo}
-                    driverName={load.driverName}
-                    carrierName={load.carrierName}
-                    weightTons={load.weightTons}
-                    bolNo={load.bolNo}
-                    truckNo={load.truckNo}
-                    ticketNo={load.ticketNo}
-                    deliveredOn={load.wellName ?? null}
-                    validationStatus={getValidationStatus(load)}
-                    checked={selectedIds.has(load.assignmentId)}
-                    entered={enteredIds.has(load.assignmentId)}
-                    canEnter={load.canEnter}
-                    hasPhotos={!!load.photoUrls?.length}
-                    assignedToName={load.assignedToName ?? null}
-                    assignedToColor={load.assignedToColor ?? null}
-                    bolMatchStatus={
-                      load.jotformBolNo && load.bolNo
-                        ? load.bolNo.replace(/\D/g, "").slice(-4) ===
-                            load.jotformBolNo.replace(/\D/g, "").slice(-4) &&
-                          load.bolNo.replace(/\D/g, "").slice(-4).length >= 4
-                          ? "match"
-                          : "mismatch"
-                        : null
-                    }
-                    onToggleSelect={() => toggleSelect(load.assignmentId)}
-                    onMarkEntered={() => handleMarkSingle(load.assignmentId)}
-                    onValidate={() => handleValidateSingle(load.assignmentId)}
-                    onViewPhotos={() => setPhotoModalLoad(load)}
-                    onRowClick={() => handleSelectWell(String(load.wellId))}
-                    isPending={markEntered.isPending}
-                  />
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
