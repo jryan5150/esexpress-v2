@@ -226,7 +226,7 @@ export function Login() {
         <div className="text-center space-y-3">
           <h1 className="text-7xl font-black font-headline tracking-tighter leading-none">
             <span className="text-primary-container">Es</span>
-            <GhostTitle text="Express" className="text-on-surface/[0.12]" />
+            <GhostTitle text="Express" className="text-on-surface/[0.25]" />
           </h1>
           <div className="w-10 h-0.5 bg-primary-container rounded-full mx-auto" />
           <p className="text-[10px] font-label font-bold text-on-surface/25 tracking-[0.35em] uppercase">
