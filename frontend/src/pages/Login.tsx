@@ -222,12 +222,14 @@ export function Login() {
       <div className="fixed bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-background to-transparent pointer-events-none" />
 
       <div className="w-full max-w-md space-y-8 relative z-10">
-        {/* Branding — text only, no logo */}
+        {/* Branding — Typographic Monogram */}
         <div className="text-center space-y-3">
-          <h1 className="text-5xl font-black font-headline tracking-tighter text-on-surface uppercase">
-            <GhostTitle text="EsExpress" />
+          <h1 className="text-7xl font-black font-headline tracking-tighter leading-none">
+            <span className="text-primary-container">Es</span>
+            <GhostTitle text="Express" className="text-on-surface/[0.12]" />
           </h1>
-          <p className="text-[11px] font-label font-medium text-on-surface/30 tracking-[0.2em] uppercase">
+          <div className="w-10 h-0.5 bg-primary-container rounded-full mx-auto" />
+          <p className="text-[10px] font-label font-bold text-on-surface/25 tracking-[0.35em] uppercase">
             Command Center
           </p>
         </div>
