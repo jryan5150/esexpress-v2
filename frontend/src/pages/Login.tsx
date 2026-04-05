@@ -10,6 +10,7 @@ function GhostTitle({ text, className }: { text: string; className?: string }) {
   const [opacities, setOpacities] = useState<number[]>(() =>
     Array(text.length).fill(0),
   );
+  const [hovered, setHovered] = useState(false);
   const timers = useRef<number[]>([]);
   const mounted = useRef(true);
 
@@ -83,13 +84,21 @@ function GhostTitle({ text, className }: { text: string; className?: string }) {
     return () => clearTimeout(t);
   }, [text, startBreathing]);
 
+  // Hover boost: when hovered, minimum opacity is higher
+  const hoverBoost = hovered ? 0.35 : 0;
+
   return (
-    <span className={className} aria-label={text}>
+    <span
+      className={className}
+      aria-label={text}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       {text.split("").map((char, i) => (
         <span
           key={i}
           style={{
-            opacity: opacities[i] ?? 0,
+            opacity: Math.max(opacities[i] ?? 0, hoverBoost),
             transition: "opacity 0.8s ease-in-out",
             display: "inline-block",
             minWidth: char === " " ? "0.3em" : undefined,
@@ -221,21 +230,53 @@ export function Login() {
       <div className="fixed inset-0 bg-gradient-to-br from-primary-container/5 via-transparent to-tertiary/5 pointer-events-none" />
       <div className="fixed bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-background to-transparent pointer-events-none" />
 
-      <div className="w-full max-w-md space-y-8 relative z-10">
+      <div
+        className="w-full max-w-md space-y-8 relative z-10"
+        style={{
+          animation: "loginEntrance 1.2s ease-out both",
+        }}
+      >
+        <style>{`
+          @keyframes loginEntrance {
+            0% { opacity: 0; transform: translateY(20px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+          }
+          @keyframes accentGrow {
+            0% { width: 0; opacity: 0; }
+            100% { width: 2.5rem; opacity: 1; }
+          }
+          @keyframes subtitleFade {
+            0% { opacity: 0; letter-spacing: 0.5em; }
+            100% { opacity: 1; letter-spacing: 0.35em; }
+          }
+          @keyframes fieldSlide {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
         {/* Branding — Typographic Monogram */}
         <div className="text-center space-y-3">
           <h1 className="text-7xl font-black font-headline tracking-tighter leading-none">
             <span className="text-primary-container">Es</span>
             <GhostTitle text="Express" className="text-on-surface/[0.25]" />
           </h1>
-          <div className="w-10 h-0.5 bg-primary-container rounded-full mx-auto" />
-          <p className="text-[10px] font-label font-bold text-on-surface/25 tracking-[0.35em] uppercase">
+          <div
+            className="h-0.5 bg-primary-container rounded-full mx-auto"
+            style={{ animation: "accentGrow 0.8s ease-out 1s both" }}
+          />
+          <p
+            className="text-[10px] font-label font-bold text-on-surface/25 tracking-[0.35em] uppercase"
+            style={{ animation: "subtitleFade 0.8s ease-out 1.2s both" }}
+          >
             Command Center
           </p>
         </div>
 
         {/* Login Fields — no card, just fields */}
-        <div className="space-y-5 max-w-xs mx-auto">
+        <div
+          className="space-y-5 max-w-xs mx-auto"
+          style={{ animation: "fieldSlide 0.6s ease-out 1.4s both" }}
+        >
           {login.isError && (
             <p className="text-sm text-error font-medium text-center">
               {login.error?.message || "Authentication failed."}

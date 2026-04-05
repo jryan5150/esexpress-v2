@@ -114,13 +114,19 @@ export const LoadRow = memo(function LoadRow({
       }}
     >
       {/* Checkbox */}
-      <div className="flex items-center justify-center">
+      <div
+        className="flex items-center justify-center"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isMissing) onToggleSelect();
+        }}
+      >
         <input
           type="checkbox"
           checked={checked}
-          onChange={onToggleSelect}
+          readOnly
           disabled={isMissing}
-          className="w-4 h-4 rounded accent-primary-container cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-4 h-4 rounded accent-primary-container cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed pointer-events-none"
         />
       </div>
 
