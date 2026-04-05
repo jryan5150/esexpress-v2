@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useCurrentUser, useLogoutFn } from "../hooks/use-auth";
 import { usePresence } from "../hooks/use-presence";
@@ -16,6 +17,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
     ? presenceQuery.data
     : [];
   const isActive = (path: string) => location.pathname === path;
+
+  // Close mobile menu on Escape
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onMobileClose?.();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [mobileOpen, onMobileClose]);
 
   const navClass = (path: string) =>
     isActive(path)

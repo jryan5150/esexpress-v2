@@ -21,6 +21,7 @@ export function useWells(date?: string) {
   return useQuery({
     queryKey: [...qk.wells.list(), date ?? "all"],
     queryFn: () => api.get<Well[]>(`/dispatch/wells/${qs}`),
+    staleTime: 60_000, // Wells don't change often — 1 min cache
   });
 }
 
@@ -95,6 +96,7 @@ export function useDispatchDeskLoads(filters?: {
     queryKey: qk.dispatchDesk.loads(filters),
     queryFn: () =>
       api.get<Paginated<DispatchDeskLoad>>(`/dispatch/dispatch-desk/${qs}`),
+    staleTime: 15_000,
     refetchInterval: 30_000,
   });
 }

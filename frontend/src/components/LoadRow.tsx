@@ -165,6 +165,7 @@ export const LoadRow = memo(function LoadRow({
             </span>
           ) : onClaim ? (
             <button
+              aria-label="Claim this load"
               onClick={(e) => {
                 e.stopPropagation();
                 onClaim();

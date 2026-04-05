@@ -17,6 +17,9 @@ import { PhotoModal } from "../components/PhotoModal";
 import { ExpandDrawer } from "../components/ExpandDrawer";
 import { Pagination } from "../components/Pagination";
 import { Button } from "../components/Button";
+import { WellTabBar } from "../components/WellTabBar";
+import { BatchActions } from "../components/BatchActions";
+import { FilterTabs } from "../components/FilterTabs";
 import { useToast } from "../components/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { qk } from "../lib/query-client";
@@ -398,41 +401,13 @@ export function DispatchDesk() {
       </div>
 
       {/* Pinned Well Tabs */}
-      {pinnedWellIds.length > 0 && (
-        <div className="px-7 pt-3 pb-0 flex items-center gap-1 overflow-x-auto shrink-0 border-b border-outline-variant/20">
-          {pinnedWellIds.map((wId) => {
-            const w = wells.find((well) => String(well.id) === wId);
-            const isActive = wId === selectedWellId;
-            return (
-              <button
-                key={wId}
-                onClick={() => handleSelectWell(wId)}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-t-lg transition-all cursor-pointer whitespace-nowrap ${
-                  isActive
-                    ? "bg-surface-container-lowest text-primary border border-outline-variant/40 border-b-transparent -mb-px"
-                    : "text-outline hover:text-on-surface hover:bg-surface-container-high/50"
-                }`}
-              >
-                <span className="material-symbols-outlined text-sm">
-                  oil_barrel
-                </span>
-                {w?.name ?? `Well #${wId}`}
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleUnpinWell(wId);
-                  }}
-                  className="ml-1 text-outline/40 hover:text-error transition-colors"
-                >
-                  <span className="material-symbols-outlined text-xs">
-                    close
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <WellTabBar
+        pinnedWellIds={pinnedWellIds}
+        selectedWellId={selectedWellId}
+        wells={wells}
+        onSelectWell={handleSelectWell}
+        onUnpinWell={handleUnpinWell}
+      />
 
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-4">
         {/* Command Bar */}
@@ -563,121 +538,46 @@ export function DispatchDesk() {
 
         {/* Filter Tabs */}
         {selectedWellId && (
-          <div className="flex items-center gap-0.5 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-1 overflow-x-auto card-rest">
-            {(
-              [
-                "all",
-                "pending",
-                "assigned",
-                "reconciled",
-                "ready",
-                "validated",
-              ] as const
-            ).map((filter) => (
-              <button
-                key={filter}
-                onClick={() => {
-                  setActiveFilter(filter);
-                  track("filter_changed", {
-                    filterType: "status",
-                    value: filter,
-                  });
-                }}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
-                  activeFilter === filter
-                    ? "bg-surface-container-high text-on-surface"
-                    : "text-outline hover:text-on-surface"
-                }`}
-              >
-                {filter}
-                <span className="inline-flex items-center justify-center bg-surface-container-highest text-outline rounded-[10px] text-[10px] font-bold px-1.5 py-px ml-1 tabular-nums">
-                  {filterCounts[filter]}
-                </span>
-              </button>
-            ))}
-            <div className="flex-1 min-w-2" />
-            <div className="flex items-center gap-3 px-1.5 shrink-0">
-              <span className="flex items-center gap-[5px] text-[11px] font-medium text-outline">
-                <span className="w-2 h-2 rounded-full bg-tertiary shrink-0" />
-                {filterCounts.validated} validated
-              </span>
-              <span className="flex items-center gap-[5px] text-[11px] font-medium text-outline">
-                <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
-                {filterCounts.ready} ready
-              </span>
-              <span className="flex items-center gap-[5px] text-[11px] font-medium text-outline">
-                <span className="w-2 h-2 rounded-full bg-surface-container-highest shrink-0" />
-                {filterCounts.pending} pending
-              </span>
-            </div>
-          </div>
+          <FilterTabs
+            activeFilter={activeFilter}
+            filterCounts={filterCounts}
+            onFilterChange={(filter) => {
+              setActiveFilter(filter);
+              track("filter_changed", { filterType: "status", value: filter });
+            }}
+          />
         )}
 
         {/* Bulk Validate Bar */}
-        {selectedIds.size > 0 && (
-          <div className="flex items-center gap-2.5 bg-[#ecfdf5] border border-tertiary/20 rounded-md px-3.5 py-2">
-            <span className="material-symbols-outlined text-[15px] text-tertiary">
-              checklist
-            </span>
-            <span className="text-xs font-medium text-[#065f46]">
-              {selectedIds.size} loads selected
-            </span>
-            <button
-              onClick={handleBulkValidate}
-              disabled={confirmMutation.isPending}
-              className="inline-flex items-center gap-1.5 ml-1 px-3 py-[5px] rounded-md bg-tertiary text-on-tertiary text-xs font-semibold hover:brightness-110 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-sm">
-                verified
-              </span>
-              Validate Selected ({selectedIds.size})
-            </button>
-            {/* Smart Date Batch */}
-            <div className="flex items-center gap-1.5 ml-2 border-l border-tertiary/20 pl-2.5">
-              <span className="material-symbols-outlined text-[13px] text-[#065f46]">
-                calendar_month
-              </span>
-              <input
-                type="date"
-                value={batchDate}
-                onChange={(e) => setBatchDate(e.target.value)}
-                className="bg-white border border-outline-variant/40 rounded px-2 py-[3px] text-xs font-label text-on-surface focus:outline-none focus:ring-1 focus:ring-tertiary/30"
-              />
-              <button
-                onClick={() => {
-                  if (!batchDate) return;
-                  const loadIds = filteredLoads
-                    .filter((l) => selectedIds.has(l.assignmentId))
-                    .map((l) => l.loadId);
-                  bulkUpdate.mutate(
-                    {
-                      loadIds,
-                      updates: { deliveredOn: `${batchDate}T12:00:00-05:00` },
-                    },
-                    {
-                      onSuccess: () => {
-                        toast(`Date set on ${loadIds.length} loads`, "success");
-                        setBatchDate("");
-                      },
-                      onError: (err) =>
-                        toast(`Failed: ${(err as Error).message}`, "error"),
-                    },
-                  );
-                }}
-                disabled={!batchDate || bulkUpdate.isPending}
-                className="inline-flex items-center gap-1 px-2.5 py-[4px] rounded-md bg-primary text-on-primary text-[10px] font-bold uppercase tracking-wide hover:brightness-110 transition-all cursor-pointer disabled:opacity-40"
-              >
-                Apply Date
-              </button>
-            </div>
-            <button
-              onClick={() => setSelectedIds(new Set())}
-              className="inline-flex items-center gap-1.5 ml-1 px-3 py-[5px] rounded-md border border-outline-variant/40 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
-            >
-              Clear selection
-            </button>
-          </div>
-        )}
+        <BatchActions
+          selectedCount={selectedIds.size}
+          batchDate={batchDate}
+          onBatchDateChange={setBatchDate}
+          onValidateSelected={handleBulkValidate}
+          onApplyDate={() => {
+            if (!batchDate) return;
+            const loadIds = filteredLoads
+              .filter((l) => selectedIds.has(l.assignmentId))
+              .map((l) => l.loadId);
+            bulkUpdate.mutate(
+              {
+                loadIds,
+                updates: { deliveredOn: `${batchDate}T12:00:00-05:00` },
+              },
+              {
+                onSuccess: () => {
+                  toast(`Date set on ${loadIds.length} loads`, "success");
+                  setBatchDate("");
+                },
+                onError: (err) =>
+                  toast(`Failed: ${(err as Error).message}`, "error"),
+              },
+            );
+          }}
+          onClearSelection={() => setSelectedIds(new Set())}
+          isValidating={confirmMutation.isPending}
+          isUpdating={bulkUpdate.isPending}
+        />
 
         {/* Loading State */}
         {deskQuery.isLoading && selectedWellId && (

@@ -82,6 +82,7 @@ function CopyBtn({ text }: { text: string | null }) {
       }}
       className="text-outline/30 hover:text-primary cursor-pointer transition-colors"
       title="Copy"
+      aria-label="Copy value"
     >
       <span className="material-symbols-outlined text-[11px]">
         {copied ? "check" : "content_copy"}
