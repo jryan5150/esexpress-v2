@@ -93,6 +93,10 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               <span className={iconClass("/bol")}>receipt_long</span>
               BOL Queue
             </Link>
+            <Link to="/validation" className={navClass("/validation")}>
+              <span className={iconClass("/validation")}>rule</span>
+              Validation
+            </Link>
           </div>
 
           <div className="mt-3 pt-2 border-t border-outline-variant/25 mx-3">
@@ -102,10 +106,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               </span>
             </div>
             <div className="space-y-px">
-              <Link to="/validation" className={navClass("/validation")}>
-                <span className={iconClass("/validation")}>rule</span>
-                Validation
-              </Link>
               <Link to="/admin/wells" className={navClass("/admin/wells")}>
                 <span className={iconClass("/admin/wells")}>oil_barrel</span>
                 Wells
