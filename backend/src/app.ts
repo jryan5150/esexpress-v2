@@ -54,21 +54,23 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     done();
   });
 
-  // Swagger
-  app.register(swagger, {
-    openapi: {
-      info: {
-        title: "EsExpress v2 API",
-        description: "Oilfield dispatch platform API",
-        version: "1.0.0",
+  // Swagger (disabled in production)
+  if (process.env.NODE_ENV !== "production") {
+    app.register(swagger, {
+      openapi: {
+        info: {
+          title: "EsExpress v2 API",
+          description: "Oilfield dispatch platform API",
+          version: "1.0.0",
+        },
+        servers: [{ url: "/api/v1" }],
       },
-      servers: [{ url: "/api/v1" }],
-    },
-  });
+    });
 
-  app.register(swaggerUi, {
-    routePrefix: "/api/v1/docs",
-  });
+    app.register(swaggerUi, {
+      routePrefix: "/api/v1/docs",
+    });
+  }
 
   // JWT
   app.register(jwtPlugin);

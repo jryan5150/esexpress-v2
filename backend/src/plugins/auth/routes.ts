@@ -1,10 +1,11 @@
 import { type FastifyPluginAsync } from "fastify";
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
-  // POST /auth/login — local email/password login
+  // POST /auth/login — local email/password login (stricter rate limit)
   fastify.post(
     "/login",
     {
+      config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
       schema: {
         body: {
           type: "object",

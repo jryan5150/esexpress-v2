@@ -240,7 +240,8 @@ export async function getSession(db: Database): Promise<string> {
     .limit(1);
 
   if (existing) {
-    return existing.token;
+    // Session still valid — return the key from env (not from DB)
+    return accessKey;
   }
 
   // Verify the access key works via lightweight IsOnline check
@@ -273,10 +274,10 @@ export async function getSession(db: Database): Promise<string> {
     );
   }
 
-  // Access key IS the sKey -- store for TTL tracking
+  // Store session marker for TTL tracking — hash the key, don't store plaintext
   await db.insert(pcsSessions).values({
     sessionType: "soap",
-    token: accessKey,
+    token: `session:${Date.now()}`,
     companyId,
     expiresAt: new Date(Date.now() + SESSION_TTL_MS),
   });
