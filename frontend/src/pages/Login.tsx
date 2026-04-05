@@ -234,100 +234,61 @@ export function Login() {
           </p>
         </div>
 
-        {/* Login Card */}
-        <div className="glass rounded-xl p-8 border border-on-surface/8 shadow-2xl shadow-black/15 space-y-6 accent-line">
-          <h2 className="text-lg font-bold font-headline text-on-surface tracking-tight">
-            Sign In
-          </h2>
-
+        {/* Login Fields — no card, just fields */}
+        <div className="space-y-5 max-w-xs mx-auto">
           {login.isError && (
-            <div className="bg-error/8 border border-error/15 rounded-lg px-4 py-3 flex items-center gap-3">
-              <span className="material-symbols-outlined icon-filled text-error text-lg">
-                error
-              </span>
-              <p className="text-sm text-error font-medium">
-                {login.error?.message ||
-                  "Authentication failed. Check your credentials."}
-              </p>
-            </div>
+            <p className="text-sm text-error font-medium text-center">
+              {login.error?.message || "Authentication failed."}
+            </p>
           )}
 
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/30"
-              >
-                Email / Username
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface/25 text-lg">
-                  mail
-                </span>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@esexpressllc.com"
-                  className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all pressed-metal"
-                  required
-                />
-              </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface/20 text-lg">
+                mail
+              </span>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                className="w-full bg-on-surface/[0.06] border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/25 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all"
+                required
+              />
             </div>
 
-            <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/30"
-              >
-                Password
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface/25 text-lg">
-                  lock
-                </span>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all pressed-metal"
-                  required
-                />
-              </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface/20 text-lg">
+                lock
+              </span>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className="w-full bg-on-surface/[0.06] border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/25 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all"
+                required
+              />
             </div>
 
             <button
               type="submit"
               disabled={login.isPending}
-              className="w-full bg-primary-container text-on-primary-container py-3.5 rounded-lg font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all active:scale-[0.98] shadow-lg shadow-primary-container/30 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full bg-primary-container text-on-primary-container py-3 rounded-lg font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all active:scale-[0.98] shadow-lg shadow-primary-container/25 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {login.isPending ? (
                 <>
                   <span className="material-symbols-outlined text-sm animate-spin">
                     progress_activity
                   </span>
-                  Authenticating...
                 </>
               ) : (
-                <>
-                  Sign In
-                  <span className="material-symbols-outlined icon-filled text-sm">
-                    arrow_forward
-                  </span>
-                </>
+                "Sign In"
               )}
             </button>
           </form>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center space-y-2">
-          <p className="text-[10px] text-on-surface/20 font-data tracking-[0.15em] uppercase">
-            ES Express LLC // Secure Access Portal
-          </p>
         </div>
       </div>
     </div>
