@@ -10,6 +10,7 @@ import {
   listAccessibleSheets,
   getGoogleAuth,
   diagnostics,
+  validateFromSheet,
   type ExportFilters,
   type ColumnMap,
   type PreviewResult,
@@ -377,6 +378,62 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
           message:
             "Reconciliation endpoint ready. Configure a target spreadsheet to compare.",
           comparison: [],
+        },
+      };
+    },
+  );
+
+  // ─── POST /validate-from-sheet — cross-reference sheet for bulk validation ─
+  fastify.post(
+    "/validate-from-sheet",
+    {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
+      schema: {
+        body: {
+          type: "object",
+          required: ["spreadsheetId", "sheetName", "columnMap"],
+          properties: {
+            spreadsheetId: { type: "string", minLength: 1 },
+            sheetName: { type: "string", minLength: 1 },
+            columnMap: { type: "object" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+
+      const { spreadsheetId, sheetName, columnMap } = request.body as {
+        spreadsheetId: string;
+        sheetName: string;
+        columnMap: ColumnMap;
+      };
+      const user = request.user as { id: number };
+
+      const result = await validateFromSheet(
+        db,
+        spreadsheetId,
+        sheetName,
+        columnMap,
+        user.id,
+      );
+      return {
+        success: true,
+        data: result,
+        meta: {
+          summary: `${result.matched} validated, ${result.alreadyValidated} already done, ${result.unmatched} not found`,
         },
       };
     },

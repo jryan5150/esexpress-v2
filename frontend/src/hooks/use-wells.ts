@@ -278,3 +278,18 @@ export function useCreateWell() {
     },
   });
 }
+
+export function useSheetValidation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      spreadsheetId: string;
+      sheetName: string;
+      columnMap: Record<string, string>;
+    }) => api.post("/sheets/validate-from-sheet", params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk._def });
+      queryClient.invalidateQueries({ queryKey: qk.wells._def });
+    },
+  });
+}

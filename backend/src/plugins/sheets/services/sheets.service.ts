@@ -931,6 +931,146 @@ export async function listAccessibleSheets(
 // Diagnostics
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Sheet-Based Validation — cross-reference Google Sheet against v2 loads
+// ---------------------------------------------------------------------------
+
+export interface SheetValidationResult {
+  matched: number;
+  unmatched: number;
+  alreadyValidated: number;
+  errors: string[];
+  details: Array<{
+    row: number;
+    loadNo: string;
+    wellName: string;
+    status: "validated" | "already_validated" | "not_found" | "error";
+  }>;
+}
+
+export async function validateFromSheet(
+  db: Database,
+  spreadsheetId: string,
+  sheetName: string,
+  columnMap: ColumnMap,
+  userId: number,
+): Promise<SheetValidationResult> {
+  const auth = await getGoogleAuth();
+  const sheetsApi = google.sheets({ version: "v4", auth });
+
+  const result = await sheetsApi.spreadsheets.values.get({
+    spreadsheetId,
+    range: `${sheetName}!A1:ZZ`,
+  });
+
+  const allRows = result.data.values ?? [];
+  if (allRows.length < 2) {
+    return {
+      matched: 0,
+      unmatched: 0,
+      alreadyValidated: 0,
+      errors: ["Sheet has no data rows"],
+      details: [],
+    };
+  }
+
+  const headers = allRows[0] as string[];
+  const dataRows = allRows.slice(1);
+
+  // Pre-load all wells for matching
+  const allWells = await db
+    .select({ id: wells.id, name: wells.name, aliases: wells.aliases })
+    .from(wells);
+
+  const stats: SheetValidationResult = {
+    matched: 0,
+    unmatched: 0,
+    alreadyValidated: 0,
+    errors: [],
+    details: [],
+  };
+
+  for (let i = 0; i < dataRows.length; i++) {
+    const row = dataRows[i];
+    const mapped: Record<string, string> = {};
+
+    for (let j = 0; j < headers.length; j++) {
+      const header = headers[j];
+      const dbField = columnMap[header];
+      if (dbField && dbField !== "skip") {
+        mapped[dbField] = sanitizeCell(row[j] ?? "");
+      }
+    }
+
+    const loadNo = mapped["load_no"] ?? mapped["loadNo"] ?? "";
+    const wellName = mapped["well_name"] ?? mapped["name"] ?? "";
+
+    if (!loadNo) {
+      stats.details.push({ row: i + 2, loadNo: "", wellName, status: "error" });
+      continue;
+    }
+
+    // Resolve well
+    const lowerWellName = wellName.toLowerCase().trim();
+    const wellMatch = allWells.find(
+      (w) =>
+        w.name.toLowerCase() === lowerWellName ||
+        ((w.aliases as string[]) ?? []).some(
+          (a) => a.toLowerCase() === lowerWellName,
+        ),
+    );
+
+    if (!wellMatch) {
+      stats.unmatched++;
+      stats.details.push({ row: i + 2, loadNo, wellName, status: "not_found" });
+      continue;
+    }
+
+    // Find load by loadNo in this well
+    const loadRows = await db
+      .select({
+        assignmentId: assignments.id,
+        photoStatus: assignments.photoStatus,
+      })
+      .from(assignments)
+      .innerJoin(loads, eq(assignments.loadId, loads.id))
+      .where(
+        and(eq(loads.loadNo, loadNo), eq(assignments.wellId, wellMatch.id)),
+      )
+      .limit(1);
+
+    if (loadRows.length === 0) {
+      stats.unmatched++;
+      stats.details.push({ row: i + 2, loadNo, wellName, status: "not_found" });
+      continue;
+    }
+
+    const assignment = loadRows[0];
+
+    if (assignment.photoStatus === "matched") {
+      stats.alreadyValidated++;
+      stats.details.push({
+        row: i + 2,
+        loadNo,
+        wellName,
+        status: "already_validated",
+      });
+      continue;
+    }
+
+    // Validate: set photoStatus to 'matched'
+    await db
+      .update(assignments)
+      .set({ photoStatus: "matched" as any })
+      .where(eq(assignments.id, assignment.assignmentId));
+
+    stats.matched++;
+    stats.details.push({ row: i + 2, loadNo, wellName, status: "validated" });
+  }
+
+  return stats;
+}
+
 export function diagnostics(): {
   name: string;
   status: "healthy" | "degraded" | "error";
