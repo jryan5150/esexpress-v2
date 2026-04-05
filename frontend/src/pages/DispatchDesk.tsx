@@ -419,7 +419,14 @@ export function DispatchDesk() {
       <WellTabBar
         pinnedWellIds={pinnedWellIds}
         selectedWellId={selectedWellId}
-        wells={wells}
+        wellStats={((wellsQuery.data as any[]) ?? []).map((w: any) => ({
+          id: String(w.id ?? ""),
+          name: String(w.name ?? ""),
+          totalLoads: Number(w.totalLoads ?? w.total_loads ?? 0),
+          dailyTargetLoads: Number(
+            w.dailyTargetLoads ?? w.daily_target_loads ?? 0,
+          ),
+        }))}
         onSelectWell={handleSelectWell}
         onUnpinWell={handleUnpinWell}
       />
