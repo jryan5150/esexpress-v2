@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { FeedbackWidget } from "./FeedbackWidget";
@@ -5,6 +6,7 @@ import { useCurrentUser } from "../hooks/use-auth";
 import { SearchOverlay } from "../search/SearchOverlay";
 
 export function Layout() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const userQuery = useCurrentUser();
   const userName =
     ((userQuery.data as Record<string, unknown>)?.name as string) || "";
@@ -19,10 +21,20 @@ export function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
+      <Sidebar
+        mobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
+      />
       <div className="flex-1 flex flex-col h-screen min-w-0">
-        <header className="flex justify-end items-center px-8 h-14 w-full shrink-0 z-40 bg-background/80 backdrop-blur-md border-b border-outline-variant/30 shadow-[0_1px_2px_rgba(30,27,24,0.03)]">
-          <div className="flex items-center gap-4">
+        <header className="flex justify-between items-center px-4 md:px-8 h-14 w-full shrink-0 z-40 bg-background/80 backdrop-blur-md border-b border-outline-variant/30 shadow-[0_1px_2px_rgba(30,27,24,0.03)]">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden p-1.5 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer text-on-surface/60"
+            aria-label="Open menu"
+          >
+            <span className="material-symbols-outlined text-xl">menu</span>
+          </button>
+          <div className="flex items-center gap-4 ml-auto">
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-low/50 shadow-[0_0_0_1px_rgba(13,150,104,0.1)]">
               <span className="material-symbols-outlined text-tertiary text-sm">
                 cloud_done
