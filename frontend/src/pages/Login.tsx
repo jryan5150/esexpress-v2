@@ -36,7 +36,7 @@ function ParticleBackground() {
         vx: (Math.random() - 0.5) * 0.4,
         vy: (Math.random() - 0.5) * 0.4,
         r: Math.random() * 2 + 0.5,
-        opacity: Math.random() * 0.3 + 0.05,
+        opacity: Math.random() * 0.4 + 0.08,
       }));
     }
 
@@ -69,7 +69,7 @@ function ParticleBackground() {
             ctx!.beginPath();
             ctx!.moveTo(particles[i].x, particles[i].y);
             ctx!.lineTo(particles[j].x, particles[j].y);
-            ctx!.strokeStyle = `rgba(124, 58, 237, ${0.06 * (1 - dist / 150)})`;
+            ctx!.strokeStyle = `rgba(124, 58, 237, ${0.1 * (1 - dist / 150)})`;
             ctx!.lineWidth = 0.5;
             ctx!.stroke();
           }
@@ -124,12 +124,15 @@ export function Login() {
       <div className="w-full max-w-md space-y-8 relative z-10">
         {/* Branding */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-container rounded-2xl border border-primary/30 mx-auto shadow-2xl shadow-primary-container/30">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-surface-container-high/80 backdrop-blur-sm rounded-2xl border border-on-surface/10 mx-auto shadow-2xl shadow-primary-container/20">
             <img
               src="/trailer-icon.svg"
               alt="ES Express"
               className="w-12 h-12"
-              style={{ filter: "brightness(0) invert(1)" }}
+              style={{
+                filter:
+                  "invert(17%) sepia(82%) saturate(5765%) hue-rotate(262deg) brightness(91%) contrast(92%)",
+              }}
             />
           </div>
           <div className="space-y-1">
