@@ -1,6 +1,106 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLogin } from "../hooks/use-auth";
+
+/**
+ * Animated title where individual letters randomly fade in/out
+ * at staggered intervals, creating a subtle breathing effect.
+ */
+function GhostTitle({ text, className }: { text: string; className?: string }) {
+  const [opacities, setOpacities] = useState<number[]>(() =>
+    Array(text.length).fill(0),
+  );
+  const timers = useRef<number[]>([]);
+  const mounted = useRef(true);
+
+  // Initial fade-in: each letter fades in with a stagger
+  useEffect(() => {
+    mounted.current = true;
+    text.split("").forEach((_, i) => {
+      const delay = 300 + i * 80;
+      const t = window.setTimeout(() => {
+        if (!mounted.current) return;
+        setOpacities((prev) => {
+          const next = [...prev];
+          next[i] = 1;
+          return next;
+        });
+      }, delay);
+      timers.current.push(t);
+    });
+    return () => {
+      mounted.current = false;
+      timers.current.forEach(clearTimeout);
+    };
+  }, [text]);
+
+  // After initial fade-in, start random breathing per letter
+  const startBreathing = useCallback(() => {
+    if (!mounted.current) return;
+
+    const breathe = (index: number) => {
+      if (!mounted.current) return;
+      // Random interval: 2-6 seconds
+      const interval = 2000 + Math.random() * 4000;
+      const t = window.setTimeout(() => {
+        if (!mounted.current) return;
+        // Dim to 0.25-0.5, then return to full
+        const dimTo = 0.25 + Math.random() * 0.25;
+        setOpacities((prev) => {
+          const next = [...prev];
+          next[index] = dimTo;
+          return next;
+        });
+        const restore = window.setTimeout(
+          () => {
+            if (!mounted.current) return;
+            setOpacities((prev) => {
+              const next = [...prev];
+              next[index] = 1;
+              return next;
+            });
+            breathe(index);
+          },
+          800 + Math.random() * 600,
+        );
+        timers.current.push(restore);
+      }, interval);
+      timers.current.push(t);
+    };
+
+    text.split("").forEach((_, i) => {
+      // Stagger breathing start so letters aren't synchronized
+      const startDelay = 1500 + Math.random() * 3000;
+      const t = window.setTimeout(() => breathe(i), startDelay);
+      timers.current.push(t);
+    });
+  }, [text]);
+
+  // Start breathing after initial fade-in completes
+  useEffect(() => {
+    const totalFadeIn = 300 + text.length * 80 + 400;
+    const t = window.setTimeout(startBreathing, totalFadeIn);
+    return () => clearTimeout(t);
+  }, [text, startBreathing]);
+
+  return (
+    <span className={className} aria-label={text}>
+      {text.split("").map((char, i) => (
+        <span
+          key={i}
+          style={{
+            opacity: opacities[i] ?? 0,
+            transition: "opacity 0.8s ease-in-out",
+            display: "inline-block",
+            minWidth: char === " " ? "0.3em" : undefined,
+          }}
+        >
+          {char}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 // Animated particle field — responsive, GPU-accelerated
 function ParticleBackground() {
@@ -122,27 +222,14 @@ export function Login() {
       <div className="fixed bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-background to-transparent pointer-events-none" />
 
       <div className="w-full max-w-md space-y-8 relative z-10">
-        {/* Branding */}
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-surface-container-high/80 backdrop-blur-sm rounded-2xl border border-on-surface/10 mx-auto shadow-2xl shadow-primary-container/20">
-            <img
-              src="/dispatch-icon.svg"
-              alt="ES Express"
-              className="w-12 h-12"
-              style={{
-                filter:
-                  "invert(17%) sepia(82%) saturate(5765%) hue-rotate(262deg) brightness(91%) contrast(92%)",
-              }}
-            />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-4xl font-black font-headline tracking-tighter text-on-surface uppercase">
-              EsExpress
-            </h1>
-            <p className="text-[11px] font-label font-medium text-on-surface/30 tracking-[0.2em] uppercase">
-              Logistics Command Center
-            </p>
-          </div>
+        {/* Branding — text only, no logo */}
+        <div className="text-center space-y-3">
+          <h1 className="text-5xl font-black font-headline tracking-tighter text-on-surface uppercase">
+            <GhostTitle text="EsExpress" />
+          </h1>
+          <p className="text-[11px] font-label font-medium text-on-surface/30 tracking-[0.2em] uppercase">
+            Command Center
+          </p>
         </div>
 
         {/* Login Card */}
