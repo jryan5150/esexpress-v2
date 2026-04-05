@@ -498,13 +498,14 @@ export function DispatchDesk() {
             </div>
 
             {/* PCS Starting # */}
-            <div className="flex items-center gap-[7px] bg-background border border-outline-variant/40 rounded-md px-[11px] py-[7px] hover:border-primary transition-colors">
+            <div
+              className="flex items-center gap-[7px] bg-background border border-outline-variant/40 rounded-md px-[11px] py-[7px] hover:border-primary transition-colors"
+              title="The starting sequence number in PCS for this batch. Loads are numbered sequentially from this value when marked as entered."
+            >
               <span className="material-symbols-outlined text-primary text-base">
                 tag
               </span>
-              <span className="text-outline text-xs mr-0.5">
-                PCS Starting #
-              </span>
+              <span className="text-outline text-xs mr-0.5">PCS Start #</span>
               <input
                 type="number"
                 value={pcsStart}
@@ -924,7 +925,26 @@ export function DispatchDesk() {
                 "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
             }}
           >
-            <div />
+            <div className="flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={
+                  filteredLoads.length > 0 &&
+                  selectedIds.size === filteredLoads.length
+                }
+                onChange={() => {
+                  if (selectedIds.size === filteredLoads.length) {
+                    setSelectedIds(new Set());
+                  } else {
+                    setSelectedIds(
+                      new Set(filteredLoads.map((l) => l.assignmentId)),
+                    );
+                  }
+                }}
+                className="w-4 h-4 rounded accent-primary-container cursor-pointer"
+                title="Select all"
+              />
+            </div>
             <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
               Status
             </span>

@@ -115,12 +115,14 @@ function EditField({
   fieldKey,
   onSave,
   mono = false,
+  inputType = "text",
 }: {
   label: string;
   value: string | null;
   fieldKey: string;
   onSave: (key: string, val: string) => void;
   mono?: boolean;
+  inputType?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || "");
@@ -146,6 +148,7 @@ function EditField({
       {editing ? (
         <input
           ref={ref}
+          type={inputType}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -286,7 +289,11 @@ export function ExpandDrawer({
               <img
                 src={resolveUrl(photoUrls[photoIdx])}
                 alt={`Ticket ${photoIdx + 1}`}
-                className="w-full h-36 object-cover rounded-lg border border-outline-variant/30"
+                className="w-full h-48 object-cover rounded-lg border border-outline-variant/30 cursor-zoom-in hover:opacity-90 transition-opacity"
+                onClick={() =>
+                  window.open(resolveUrl(photoUrls[photoIdx]), "_blank")
+                }
+                title="Click to view full size"
               />
               <div className="flex items-center gap-2">
                 <button
@@ -418,7 +425,7 @@ export function ExpandDrawer({
                     <span className="material-symbols-outlined text-[10px]">
                       {match ? "verified" : "warning"}
                     </span>
-                    {match ? "BOL last-4 match" : `JotForm: ...${jotLast4}`}
+                    {match ? "BOL last-4 match" : `Photo BOL: ...${jotLast4}`}
                   </div>
                 );
               })()}
@@ -454,6 +461,7 @@ export function ExpandDrawer({
             fieldKey="deliveredOn"
             onSave={handleSave}
             mono
+            inputType="date"
           />
         </div>
 

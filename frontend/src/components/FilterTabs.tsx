@@ -14,6 +14,16 @@ const FILTERS = [
   "bol_mismatch",
 ] as const;
 
+const FILTER_LABELS: Record<string, string> = {
+  all: "All",
+  pending: "Pending",
+  assigned: "Assigned",
+  reconciled: "Reconciled",
+  ready: "Ready to Build",
+  validated: "Validated",
+  bol_mismatch: "BOL Issues",
+};
+
 export function FilterTabs({
   activeFilter,
   filterCounts,
@@ -31,7 +41,7 @@ export function FilterTabs({
               : "text-outline hover:text-on-surface hover:bg-surface-container-high/60"
           }`}
         >
-          {filter}
+          {FILTER_LABELS[filter] ?? filter}
           <span
             className={`inline-flex items-center justify-center rounded-[10px] text-[10px] font-bold px-1.5 py-px ml-1 tabular-nums ${
               activeFilter === filter

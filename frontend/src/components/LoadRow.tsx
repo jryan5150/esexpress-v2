@@ -250,9 +250,9 @@ export const LoadRow = memo(function LoadRow({
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-outline-variant/40 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer disabled:opacity-40"
             >
               <span className="material-symbols-outlined text-sm">
-                content_copy
+                check_circle
               </span>
-              Copy
+              Entered
             </button>
           ) : entered ? (
             <span className="text-[10px] font-bold uppercase tracking-wide text-tertiary">
