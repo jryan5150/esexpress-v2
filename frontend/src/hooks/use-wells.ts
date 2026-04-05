@@ -288,8 +288,8 @@ export function useSheetValidation() {
       columnMap: Record<string, string>;
     }) => api.post("/sheets/validate-from-sheet", params),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk._def });
-      queryClient.invalidateQueries({ queryKey: qk.wells._def });
+      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
+      queryClient.invalidateQueries({ queryKey: qk.wells.all });
     },
   });
 }
