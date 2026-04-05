@@ -175,7 +175,7 @@ async function runAutoMap() {
   const { processLoadBatch } =
     await import("./plugins/dispatch/services/auto-mapper.service.js");
   const { loads, assignments } = await import("./db/schema.js");
-  const { isNull, gte, sql } = await import("drizzle-orm");
+  const { isNull, gte, sql, and } = await import("drizzle-orm");
   const { eq } = await import("drizzle-orm");
 
   // Find unmapped loads from last 30 days
@@ -185,7 +185,7 @@ async function runAutoMap() {
     .select({ id: loads.id })
     .from(loads)
     .leftJoin(assignments, eq(loads.id, assignments.loadId))
-    .where(isNull(assignments.id))
+    .where(and(isNull(assignments.id), gte(loads.createdAt, fromDate)))
     .limit(5000);
 
   if (unmapped.length === 0) {

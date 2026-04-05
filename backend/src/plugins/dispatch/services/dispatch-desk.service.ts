@@ -1,4 +1,4 @@
-import { eq, and, inArray, sql, or } from "drizzle-orm";
+import { eq, and, inArray, sql, or, count } from "drizzle-orm";
 import {
   assignments,
   loads,
@@ -131,10 +131,11 @@ export async function getDispatchDeskLoads(
   if (date) {
     // Filter on loads.deliveredOn (the actual delivery date), not assignments.createdAt.
     // Use America/Chicago (CDT) since dispatchers are in Texas.
+    // Explicit ::timestamptz cast ensures PostgreSQL uses the deliveredOn index.
     const startOfDay = `${date}T00:00:00-05:00`;
     const endOfDay = `${date}T23:59:59.999-05:00`;
-    conditions.push(sql`${loads.deliveredOn} >= ${startOfDay}`);
-    conditions.push(sql`${loads.deliveredOn} <= ${endOfDay}`);
+    conditions.push(sql`${loads.deliveredOn} >= ${startOfDay}::timestamptz`);
+    conditions.push(sql`${loads.deliveredOn} <= ${endOfDay}::timestamptz`);
   }
 
   conditions.push(eraFilter(era));
@@ -153,6 +154,7 @@ export async function getDispatchDeskLoads(
       loadNo: loads.loadNo,
       driverName: loads.driverName,
       truckNo: loads.truckNo,
+      trailerNo: loads.trailerNo,
       carrierName: loads.carrierName,
       productDescription: loads.productDescription,
       weightTons: loads.weightTons,
@@ -202,6 +204,7 @@ export async function getDispatchDeskLoads(
       loadNo: row.loadNo,
       driverName: row.driverName,
       truckNo: row.truckNo,
+      trailerNo: row.trailerNo,
       carrierName: row.carrierName,
       productDescription: row.productDescription,
       weightTons: row.weightTons,
@@ -268,7 +271,15 @@ export async function getDispatchDeskLoads(
     };
   });
 
-  return { items: data, total: data.length, page, limit };
+  // Parallel count query for accurate pagination
+  const [countResult] = await db
+    .select({ total: sql<number>`cast(count(*) as int)` })
+    .from(assignments)
+    .innerJoin(loads, eq(assignments.loadId, loads.id))
+    .innerJoin(wells, eq(assignments.wellId, wells.id))
+    .where(whereClause);
+
+  return { items: data, total: countResult?.total ?? data.length, page, limit };
 }
 
 // ─── MUTATION FUNCTIONS ───────────────────────────────────────────

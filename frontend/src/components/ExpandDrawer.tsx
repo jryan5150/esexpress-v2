@@ -8,6 +8,7 @@ interface ExpandDrawerProps {
   wellName: string;
   driverName: string | null;
   truckNo: string | null;
+  trailerNo: string | null;
   carrierName: string | null;
   productDescription: string | null;
   weightTons: string | null;
@@ -179,6 +180,7 @@ export function ExpandDrawer({
   wellName,
   driverName,
   truckNo,
+  trailerNo,
   carrierName,
   productDescription,
   weightTons,
@@ -363,6 +365,13 @@ export function ExpandDrawer({
             mono
           />
           <EditField
+            label="Trailer #"
+            value={trailerNo}
+            fieldKey="trailerNo"
+            onSave={handleSave}
+            mono
+          />
+          <EditField
             label="Carrier"
             value={carrierName}
             fieldKey="carrierName"
@@ -435,14 +444,17 @@ export function ExpandDrawer({
             onSave={handleSave}
             mono
           />
-          <div className="space-y-0.5">
-            <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
-              Delivered
-            </span>
-            <p className="text-[13px] font-medium text-on-surface font-label tabular-nums">
-              {formatTime(deliveredOn)}
-            </p>
-          </div>
+          <EditField
+            label="Delivered"
+            value={
+              deliveredOn
+                ? new Date(deliveredOn).toISOString().slice(0, 10)
+                : null
+            }
+            fieldKey="deliveredOn"
+            onSave={handleSave}
+            mono
+          />
         </div>
 
         {/* Right Panel: Timeline + Actions */}

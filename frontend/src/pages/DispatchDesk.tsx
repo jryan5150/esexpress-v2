@@ -1012,6 +1012,7 @@ export function DispatchDesk() {
                     wellName={load.wellName}
                     driverName={load.driverName}
                     truckNo={load.truckNo}
+                    trailerNo={load.trailerNo ?? null}
                     carrierName={load.carrierName}
                     productDescription={load.productDescription}
                     weightTons={load.weightTons}

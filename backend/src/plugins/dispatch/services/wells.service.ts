@@ -35,7 +35,7 @@ export async function listWells(
   // When date is provided, use conditional aggregation scoped to loads.deliveredOn
   // so counts reflect only loads for that day (CDT timezone).
   const dateGuard = filters?.date
-    ? sql`AND ${loads.deliveredOn} >= ${`${filters.date}T00:00:00-05:00`} AND ${loads.deliveredOn} <= ${`${filters.date}T23:59:59.999-05:00`}`
+    ? sql`AND ${loads.deliveredOn} >= ${`${filters.date}T00:00:00-05:00`}::timestamptz AND ${loads.deliveredOn} <= ${`${filters.date}T23:59:59.999-05:00`}::timestamptz`
     : sql``;
 
   const baseQuery = db
