@@ -40,13 +40,16 @@ export function DispatchDesk() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [photoModalLoad, setPhotoModalLoad] = useState<any | null>(null);
   const [expandedLoadId, setExpandedLoadId] = useState<number | null>(null);
-  const [dateFilter, setDateFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
   const [pinnedWellIds, setPinnedWellIds] = useState<string[]>([]);
 
   const queryClient = useQueryClient();
   const confirmMutation = useValidationConfirm();
 
-  const wellsQuery = useWells();
+  const wellsQuery = useWells(dateFilter || undefined);
   const deskQuery = useDispatchDeskLoads(
     selectedWellId
       ? {
@@ -402,15 +405,49 @@ export function DispatchDesk() {
     <div className="flex flex-col h-full">
       {/* Page Header */}
       <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest header-gradient shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
-          <div>
-            <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
-              Dispatch Desk
-            </h1>
-            <p className="text-[11px] font-medium text-outline tracking-[0.08em] uppercase mt-0.5">
-              Clipboard Bridge &nbsp;//&nbsp; Pre-PCS Staging
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
+            <div>
+              <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
+                Dispatch Desk
+              </h1>
+              <p className="text-[11px] font-medium text-outline tracking-[0.08em] uppercase mt-0.5">
+                Clipboard Bridge &nbsp;//&nbsp; Pre-PCS Staging
+              </p>
+            </div>
+          </div>
+          {/* Date filter — parent level, applies to well cards + loads */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-[7px] bg-background border border-outline-variant/40 rounded-md px-[11px] py-[7px] cursor-pointer hover:border-primary transition-colors">
+              <span className="material-symbols-outlined text-primary text-base">
+                calendar_month
+              </span>
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => {
+                  setDateFilter(e.target.value);
+                  setPage(1);
+                  track("filter_changed", {
+                    filterType: "date",
+                    value: e.target.value,
+                  });
+                }}
+                className="bg-transparent text-[13px] font-medium text-on-surface focus:outline-none cursor-pointer"
+              />
+            </div>
+            {dateFilter && (
+              <button
+                onClick={() => {
+                  setDateFilter("");
+                  setPage(1);
+                }}
+                className="text-[10px] font-bold text-outline hover:text-error transition-colors cursor-pointer uppercase tracking-wide"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -492,31 +529,6 @@ export function DispatchDesk() {
               ) : (
                 <span className="text-xs text-outline">No others online</span>
               )}
-            </div>
-
-            {/* Divider */}
-            <div className="w-px h-7 bg-outline-variant/40" />
-
-            {/* Date Filter */}
-            <div className="flex items-center gap-[7px] bg-background border border-outline-variant/40 rounded-md px-[11px] py-[7px] cursor-pointer hover:border-primary transition-colors">
-              <span className="material-symbols-outlined text-primary text-base">
-                calendar_month
-              </span>
-              <input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => {
-                  setDateFilter(e.target.value);
-                  track("filter_changed", {
-                    filterType: "date",
-                    value: e.target.value,
-                  });
-                }}
-                className="bg-transparent text-[13px] font-medium text-on-surface focus:outline-none cursor-pointer"
-              />
-              <span className="material-symbols-outlined text-sm text-outline">
-                expand_more
-              </span>
             </div>
 
             {/* Spacer */}
