@@ -1,15 +1,87 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useValidationSummary,
   useValidationConfirm,
   useValidationReject,
+  useUpdateLoad,
 } from "../hooks/use-wells";
 import { api } from "../lib/api";
 import { qk } from "../lib/query-client";
 import { useToast } from "../components/Toast";
 import { WellPicker } from "../components/WellPicker";
 import { Pagination } from "../components/Pagination";
+
+/** Inline editable field for Validation page */
+function InlineEdit({
+  label,
+  value,
+  fieldKey,
+  loadId,
+}: {
+  label: string;
+  value: string | null;
+  fieldKey: string;
+  loadId: number;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value || "");
+  const ref = useRef<HTMLInputElement>(null);
+  const updateLoad = useUpdateLoad();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (editing) ref.current?.focus();
+  }, [editing]);
+
+  const commit = () => {
+    if (draft !== (value || "")) {
+      updateLoad.mutate(
+        { loadId, updates: { [fieldKey]: draft } },
+        {
+          onSuccess: () => toast(`${label} updated`, "success"),
+          onError: () => toast(`Failed to update ${label}`, "error"),
+        },
+      );
+    }
+    setEditing(false);
+  };
+
+  return (
+    <div className="space-y-1">
+      <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+        {label}
+      </span>
+      {editing ? (
+        <input
+          ref={ref}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit();
+            if (e.key === "Escape") {
+              setDraft(value || "");
+              setEditing(false);
+            }
+          }}
+          className="block w-full bg-background border border-primary/30 rounded px-2 py-1 text-sm text-on-surface font-label focus:outline-none focus:ring-1 focus:ring-primary/30"
+        />
+      ) : (
+        <button
+          onClick={() => {
+            setDraft(value || "");
+            setEditing(true);
+          }}
+          className="block text-sm text-on-surface font-label hover:text-primary cursor-pointer transition-colors"
+          title="Click to edit"
+        >
+          {value || <span className="text-on-surface/20">--</span>}
+        </button>
+      )}
+    </div>
+  );
+}
 
 interface TierAssignment {
   id: number;
@@ -533,53 +605,102 @@ export function Validation() {
                         {tier === 3 && <div className="w-44" />}
                       </div>
 
-                      {/* Expanded Detail Panel */}
+                      {/* Expanded Detail Panel — editable fields */}
                       {expandedId === a.id && (
                         <div className="bg-surface-container-lowest px-6 py-5 border-t border-on-surface/5">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                              { label: "Load #", value: a.loadNo },
-                              { label: "Driver", value: a.driverName },
-                              { label: "Carrier", value: a.carrierName },
-                              {
-                                label: "Destination",
-                                value: a.destinationName,
-                              },
-                              { label: "Well", value: a.wellName },
-                              { label: "Weight (tons)", value: a.weightTons },
-                              { label: "Ticket #", value: a.ticketNo },
-                              { label: "BOL #", value: a.bolNo },
-                              {
-                                label: "Tier",
-                                value: a.autoMapTier
-                                  ? `Tier ${a.autoMapTier}`
-                                  : "--",
-                              },
-                              {
-                                label: "Score",
-                                value: a.autoMapScore
+                            {/* Read-only fields */}
+                            <div className="space-y-1">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                                Load #
+                              </span>
+                              <p className="text-sm text-on-surface font-label">
+                                {a.loadNo}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                                Well
+                              </span>
+                              <p className="text-sm text-on-surface font-label">
+                                {a.wellName}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                                Tier
+                              </span>
+                              <p className="text-sm text-on-surface font-label">
+                                {a.autoMapTier ? `Tier ${a.autoMapTier}` : "--"}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                                Score
+                              </span>
+                              <p className="text-sm text-on-surface font-label">
+                                {a.autoMapScore
                                   ? `${Math.round(Number(a.autoMapScore) * 100)}%`
-                                  : "--",
-                              },
-                              {
-                                label: "Photo Status",
-                                value: a.photoStatus ?? "missing",
-                              },
-                              { label: "Assignment ID", value: `#${a.id}` },
-                            ].map((field) => (
-                              <div key={field.label} className="space-y-1">
-                                <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
-                                  {field.label}
-                                </span>
-                                <p className="text-sm text-on-surface font-label">
-                                  {field.value || (
-                                    <span className="text-on-surface/20">
-                                      --
-                                    </span>
-                                  )}
-                                </p>
-                              </div>
-                            ))}
+                                  : "--"}
+                              </p>
+                            </div>
+                            {/* Editable fields */}
+                            <InlineEdit
+                              label="Driver"
+                              value={a.driverName}
+                              fieldKey="driverName"
+                              loadId={a.loadId}
+                            />
+                            <InlineEdit
+                              label="Carrier"
+                              value={a.carrierName}
+                              fieldKey="carrierName"
+                              loadId={a.loadId}
+                            />
+                            <InlineEdit
+                              label="Weight (tons)"
+                              value={a.weightTons}
+                              fieldKey="weightTons"
+                              loadId={a.loadId}
+                            />
+                            <InlineEdit
+                              label="BOL #"
+                              value={a.bolNo}
+                              fieldKey="bolNo"
+                              loadId={a.loadId}
+                            />
+                            <InlineEdit
+                              label="Ticket #"
+                              value={a.ticketNo}
+                              fieldKey="ticketNo"
+                              loadId={a.loadId}
+                            />
+                            <div className="space-y-1">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                                Destination
+                              </span>
+                              <p className="text-sm text-on-surface font-label">
+                                {a.destinationName || (
+                                  <span className="text-on-surface/20">--</span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                                Photo Status
+                              </span>
+                              <p className="text-sm text-on-surface font-label">
+                                {a.photoStatus ?? "missing"}
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                                Assignment
+                              </span>
+                              <p className="text-sm text-on-surface font-label">
+                                #{a.id}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       )}

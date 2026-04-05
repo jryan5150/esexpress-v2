@@ -1047,7 +1047,10 @@ export async function validateFromSheet(
 
     const assignment = loadRows[0];
 
-    if (assignment.photoStatus === "matched") {
+    if (
+      assignment.photoStatus === "attached" ||
+      assignment.photoStatus === "matched"
+    ) {
       stats.alreadyValidated++;
       stats.details.push({
         row: i + 2,
@@ -1058,10 +1061,10 @@ export async function validateFromSheet(
       continue;
     }
 
-    // Validate: set photoStatus to 'matched'
+    // Validate: set photoStatus to 'attached' (sheet-verified)
     await db
       .update(assignments)
-      .set({ photoStatus: "matched" as any })
+      .set({ photoStatus: "attached" })
       .where(eq(assignments.id, assignment.assignmentId));
 
     stats.matched++;
