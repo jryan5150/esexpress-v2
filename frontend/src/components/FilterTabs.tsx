@@ -35,7 +35,7 @@ export function FilterTabs({
         <button
           key={filter}
           onClick={() => onFilterChange(filter)}
-          className={`px-3.5 py-1.5 rounded-md text-xs font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
+          className={`px-3.5 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
             activeFilter === filter
               ? "bg-primary-container/12 text-primary-container shadow-sm"
               : "text-outline hover:text-on-surface hover:bg-surface-container-high/60"
