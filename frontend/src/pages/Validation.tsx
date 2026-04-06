@@ -361,7 +361,10 @@ export function Validation() {
                     >
                       {meta.icon}
                     </span>
-                    <span className="text-xs font-bold uppercase tracking-widest text-on-surface/40">
+                    <span
+                      className="text-xs font-bold uppercase tracking-widest text-on-surface/40"
+                      title={`${meta.label} — ${meta.description.replace(/--/g, "—")}`}
+                    >
                       {meta.label}
                     </span>
                   </div>

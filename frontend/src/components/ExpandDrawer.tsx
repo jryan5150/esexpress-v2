@@ -575,7 +575,12 @@ export function ExpandDrawer({
               )}
               {fuelSurcharge && (
                 <div className="flex justify-between text-xs">
-                  <span className="text-outline">FSC</span>
+                  <span
+                    className="text-outline"
+                    title="FSC (Fuel Surcharge): per-load fee that adjusts with diesel price index"
+                  >
+                    FSC
+                  </span>
                   <span className="font-label text-on-surface tabular-nums">
                     ${Number(fuelSurcharge).toFixed(2)}
                   </span>
@@ -674,7 +679,12 @@ export function ExpandDrawer({
                     )}
                     {fuelSurcharge && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-outline">+ FSC</span>
+                        <span
+                          className="text-outline"
+                          title="FSC (Fuel Surcharge): per-load fee that adjusts with diesel price index"
+                        >
+                          + FSC
+                        </span>
                         <span className="font-label text-on-surface tabular-nums">
                           ${Number(fuelSurcharge).toFixed(2)}
                         </span>
