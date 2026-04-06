@@ -1047,10 +1047,7 @@ export async function validateFromSheet(
 
     const assignment = loadRows[0];
 
-    if (
-      assignment.photoStatus === "attached" ||
-      assignment.photoStatus === "matched"
-    ) {
+    if (assignment.photoStatus === "attached") {
       stats.alreadyValidated++;
       stats.details.push({
         row: i + 2,
