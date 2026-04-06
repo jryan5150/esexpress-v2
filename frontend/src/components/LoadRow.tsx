@@ -260,7 +260,7 @@ export const LoadRow = memo(function LoadRow({
               <span className="material-symbols-outlined text-sm">
                 check_circle
               </span>
-              Entered
+              Mark Entered
             </button>
           ) : entered ? (
             <span className="text-[10px] font-bold uppercase tracking-wide text-tertiary">
