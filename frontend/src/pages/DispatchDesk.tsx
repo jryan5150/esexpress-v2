@@ -635,7 +635,10 @@ export function DispatchDesk() {
           <div className="space-y-4">
             <div className="flex items-center gap-1 px-2">
               <button
-                onClick={() => setPickerView("wells")}
+                onClick={() => {
+                  setPickerView("wells");
+                  setPage(1);
+                }}
                 className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                   pickerView === "wells"
                     ? "bg-primary-container/12 text-primary-container shadow-sm"
@@ -657,7 +660,10 @@ export function DispatchDesk() {
                 </span>
               </button>
               <button
-                onClick={() => setPickerView("loads")}
+                onClick={() => {
+                  setPickerView("loads");
+                  setPage(1);
+                }}
                 className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                   pickerView === "loads"
                     ? "bg-primary-container/12 text-primary-container shadow-sm"
@@ -1204,8 +1210,12 @@ export function DispatchDesk() {
           />
         )}
 
-        {/* Pagination */}
-        {selectedWellId && allLoads.length > 0 && (
+        {/* Pagination — shown when viewing loads (either in a well or all-wells view) */}
+        {((selectedWellId && allLoads.length > 0) ||
+          (!selectedWellId &&
+            pickerView === "loads" &&
+            dateFilter &&
+            allLoads.length > 0)) && (
           <Pagination
             page={page}
             pageSize={pageSize}

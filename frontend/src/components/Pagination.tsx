@@ -1,4 +1,4 @@
-const PAGE_SIZES = [25, 50, 100] as const;
+const PAGE_SIZES = [25, 50, 100, 200] as const;
 
 interface PaginationProps {
   page: number;
