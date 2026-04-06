@@ -61,15 +61,13 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
         transition-transform duration-200 ease-out
       `}
       >
-        {/* Brand — matches login monogram */}
-        <div className="px-4 pt-[18px] pb-3.5 border-b border-outline-variant/30 shadow-[0_1px_3px_rgba(30,27,24,0.04)]">
-          <h2 className="font-headline font-black text-lg tracking-tighter leading-none">
-            <span className="text-primary-container">Es</span>
-            <span className="text-on-surface/20">Express</span>
-          </h2>
-          <p className="text-[8px] font-label font-bold text-on-surface/20 tracking-[0.25em] uppercase mt-1">
-            Command Center
-          </p>
+        {/* Brand — ES Express LLC logo */}
+        <div className="px-4 pt-3 pb-3 border-b border-outline-variant/30 shadow-[0_1px_3px_rgba(30,27,24,0.04)] flex items-center justify-center">
+          <img
+            src="/es-express-logo.png"
+            alt="ES Express LLC"
+            className="h-12 w-auto object-contain"
+          />
         </div>
 
         {/* Main Nav */}

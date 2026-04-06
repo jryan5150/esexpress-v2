@@ -1,115 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLogin } from "../hooks/use-auth";
-
-/**
- * Animated title where individual letters randomly fade in/out
- * at staggered intervals, creating a subtle breathing effect.
- */
-function GhostTitle({ text, className }: { text: string; className?: string }) {
-  const [opacities, setOpacities] = useState<number[]>(() =>
-    Array(text.length).fill(0),
-  );
-  const [hovered, setHovered] = useState(false);
-  const timers = useRef<number[]>([]);
-  const mounted = useRef(true);
-
-  // Initial fade-in: each letter fades in with a stagger
-  useEffect(() => {
-    mounted.current = true;
-    text.split("").forEach((_, i) => {
-      const delay = 300 + i * 80;
-      const t = window.setTimeout(() => {
-        if (!mounted.current) return;
-        setOpacities((prev) => {
-          const next = [...prev];
-          next[i] = 1;
-          return next;
-        });
-      }, delay);
-      timers.current.push(t);
-    });
-    return () => {
-      mounted.current = false;
-      timers.current.forEach(clearTimeout);
-    };
-  }, [text]);
-
-  // After initial fade-in, start random breathing per letter
-  const startBreathing = useCallback(() => {
-    if (!mounted.current) return;
-
-    const breathe = (index: number) => {
-      if (!mounted.current) return;
-      // Random interval: 2-6 seconds
-      const interval = 2000 + Math.random() * 4000;
-      const t = window.setTimeout(() => {
-        if (!mounted.current) return;
-        // Dim to 0.25-0.5, then return to full
-        const dimTo = 0.25 + Math.random() * 0.25;
-        setOpacities((prev) => {
-          const next = [...prev];
-          next[index] = dimTo;
-          return next;
-        });
-        const restore = window.setTimeout(
-          () => {
-            if (!mounted.current) return;
-            setOpacities((prev) => {
-              const next = [...prev];
-              next[index] = 1;
-              return next;
-            });
-            breathe(index);
-          },
-          800 + Math.random() * 600,
-        );
-        timers.current.push(restore);
-      }, interval);
-      timers.current.push(t);
-    };
-
-    text.split("").forEach((_, i) => {
-      // Stagger breathing start so letters aren't synchronized
-      const startDelay = 1500 + Math.random() * 3000;
-      const t = window.setTimeout(() => breathe(i), startDelay);
-      timers.current.push(t);
-    });
-  }, [text]);
-
-  // Start breathing after initial fade-in completes
-  useEffect(() => {
-    const totalFadeIn = 300 + text.length * 80 + 400;
-    const t = window.setTimeout(startBreathing, totalFadeIn);
-    return () => clearTimeout(t);
-  }, [text, startBreathing]);
-
-  // Hover boost: when hovered, minimum opacity is higher
-  const hoverBoost = hovered ? 0.35 : 0;
-
-  return (
-    <span
-      className={className}
-      aria-label={text}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {text.split("").map((char, i) => (
-        <span
-          key={i}
-          style={{
-            opacity: Math.max(opacities[i] ?? 0, hoverBoost),
-            transition: "opacity 0.8s ease-in-out",
-            display: "inline-block",
-            minWidth: char === " " ? "0.3em" : undefined,
-          }}
-        >
-          {char}
-        </span>
-      ))}
-    </span>
-  );
-}
 
 // Animated particle field — responsive, GPU-accelerated
 function ParticleBackground() {
@@ -254,12 +145,13 @@ export function Login() {
             100% { opacity: 1; transform: translateY(0); }
           }
         `}</style>
-        {/* Branding — Typographic Monogram */}
+        {/* Branding — ES Express LLC logo */}
         <div className="text-center space-y-3">
-          <h1 className="text-7xl font-black font-headline tracking-tighter leading-none">
-            <span className="text-primary-container">Es</span>
-            <GhostTitle text="Express" className="text-on-surface/[0.25]" />
-          </h1>
+          <img
+            src="/es-express-logo.png"
+            alt="ES Express LLC"
+            className="mx-auto h-32 w-auto object-contain drop-shadow-lg"
+          />
           <div
             className="h-0.5 bg-primary-container rounded-full mx-auto"
             style={{ animation: "accentGrow 0.8s ease-out 1s both" }}
