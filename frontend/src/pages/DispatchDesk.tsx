@@ -224,6 +224,7 @@ export function DispatchDesk() {
   };
 
   const handleValidateSingle = (assignmentId: number) => {
+    if (!window.confirm("Validate this load?")) return;
     confirmMutation.mutate(
       { assignmentId },
       {
