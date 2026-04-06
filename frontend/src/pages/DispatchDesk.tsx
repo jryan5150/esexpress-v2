@@ -979,9 +979,6 @@ export function DispatchDesk() {
                         onValidate={() =>
                           handleValidateSingle(load.assignmentId)
                         }
-                        onMissingTicket={() =>
-                          handleValidateSingle(load.assignmentId)
-                        }
                         onViewPhotos={() => setPhotoModalLoad(load)}
                         onRowClick={() => handleSelectWell(String(load.wellId))}
                         onClaim={
@@ -1118,9 +1115,6 @@ export function DispatchDesk() {
                   onToggleSelect={() => toggleSelect(load.assignmentId)}
                   onMarkEntered={() => handleMarkSingle(load.assignmentId)}
                   onValidate={() => handleValidateSingle(load.assignmentId)}
-                  onMissingTicket={() =>
-                    handleValidateSingle(load.assignmentId)
-                  }
                   onViewPhotos={() => setPhotoModalLoad(load)}
                   onRowClick={() => {
                     const nextId =

@@ -279,7 +279,12 @@ export const LoadRow = memo(function LoadRow({
           <button
             onClick={onMissingTicket}
             disabled={!onMissingTicket}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-error/25 text-[10px] font-bold uppercase tracking-wide text-error hover:bg-error/5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            title={
+              onMissingTicket
+                ? "Flag this load for review"
+                : "Flag-for-review coming soon — message Jessica directly for now"
+            }
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-error/25 text-[10px] font-bold uppercase tracking-wide text-error hover:bg-error/5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           >
             <span className="material-symbols-outlined text-sm">report</span>
             Missing Ticket
