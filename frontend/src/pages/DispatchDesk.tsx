@@ -585,6 +585,7 @@ export function DispatchDesk() {
             filterCounts={filterCounts}
             onFilterChange={(filter) => {
               setActiveFilter(filter);
+              setPage(1);
               track("filter_changed", { filterType: "status", value: filter });
             }}
           />
