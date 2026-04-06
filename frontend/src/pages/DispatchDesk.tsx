@@ -315,6 +315,8 @@ export function DispatchDesk() {
 
   const handleAdvanceAll = () => {
     const ids = assignedLoads.map((l) => l.assignmentId);
+    if (!window.confirm(`Advance ${ids.length} loads to dispatch ready?`))
+      return;
     advanceToReady.mutate(ids, {
       onSuccess: () => {
         toast(`${ids.length} loads advanced to dispatch ready`, "success");
