@@ -981,6 +981,15 @@ export function DispatchDesk() {
                         }
                         onViewPhotos={() => setPhotoModalLoad(load)}
                         onRowClick={() => handleSelectWell(String(load.wellId))}
+                        onClaim={
+                          currentUserId && !load.assignedTo
+                            ? () =>
+                                claimAssignment.mutate({
+                                  assignmentId: load.assignmentId,
+                                  userId: currentUserId,
+                                })
+                            : undefined
+                        }
                         isPending={markEntered.isPending}
                       />
                     </div>
