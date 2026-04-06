@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  /* Warm parchment backgrounds — deeper warmth, less flat */
-  --color-background: #f0ebe1;
-  --color-surface: #f0ebe1;
-  --color-surface-dim: #e5dfd3;
-  --color-surface-bright: #faf8f4;
-  --color-surface-container: #e8e2d6;
-  --color-surface-container-low: #ede7dc;
-  --color-surface-container-high: #ddd6c8;
-  --color-surface-container-highest: #d2cab9;
-  --color-surface-container-lowest: #f7f4ee;
-  --color-surface-tint: #8b5cf6;
-  --color-surface-variant: #e0d9cc;
+  /* Cooled parchment backgrounds — modern off-white, still warm */
+  --color-background: #ece8df;
+  --color-surface: #ece8df;
+  --color-surface-dim: #e1dcd0;
+  --color-surface-bright: #f7f5ef;
+  --color-surface-container: #e4ded3;
+  --color-surface-container-low: #e9e4d9;
+  --color-surface-container-high: #d9d3c5;
+  --color-surface-container-highest: #cec7b6;
+  --color-surface-container-lowest: #f4f0ea;
+  --color-surface-tint: #4747d4;
+  --color-surface-variant: #dcd6c9;
 
-  /* Purple primary */
-  --color-primary: #7c3aed;
-  --color-primary-container: #6d28d9;
-  --color-primary-fixed: #ede9fe;
-  --color-primary-fixed-dim: #c4b5fd;
+  /* Cobalt primary — pulled from ES Express logo */
+  --color-primary: #2323c7;
+  --color-primary-container: #1a1aae;
+  --color-primary-fixed: #e0e0f8;
+  --color-primary-fixed-dim: #9e9ee8;
   --color-on-primary: #ffffff;
   --color-on-primary-container: #ffffff;
-  --color-on-primary-fixed: #3b0764;
-  --color-on-primary-fixed-variant: #5b21b6;
+  --color-on-primary-fixed: #0a0a4d;
+  --color-on-primary-fixed-variant: #15158a;
 
   /* Warm secondary */
   --color-secondary: #6b5e50;
@@ -56,7 +56,7 @@
   --color-on-background: #1e1b18;
   --color-outline: #8a8279;
   --color-outline-variant: #d1cac0;
-  --color-inverse-primary: #c4b5fd;
+  --color-inverse-primary: #9e9ee8;
   --color-inverse-surface: #2e2a25;
   --color-inverse-on-surface: #f5f0e8;
 
@@ -185,7 +185,7 @@ body {
 .stat-glow:hover {
   box-shadow:
     0 4px 16px rgba(30, 27, 24, 0.06),
-    0 0 0 1px rgba(109, 40, 217, 0.08);
+    0 0 0 1px rgba(26, 26, 174, 0.08);
 }
 
 /* Subtle gradient header for page headers */
@@ -203,17 +203,17 @@ body {
   background-color: rgba(245, 240, 232, 0.4);
 }
 
-/* Purple accent glow for primary actions */
+/* Cobalt accent glow for primary actions */
 .accent-glow {
   box-shadow:
-    0 2px 8px rgba(109, 40, 217, 0.2),
-    0 0 0 1px rgba(109, 40, 217, 0.15);
+    0 2px 8px rgba(26, 26, 174, 0.2),
+    0 0 0 1px rgba(26, 26, 174, 0.15);
   transition: box-shadow 0.2s ease;
 }
 .accent-glow:hover {
   box-shadow:
-    0 4px 16px rgba(109, 40, 217, 0.25),
-    0 0 0 1px rgba(109, 40, 217, 0.2);
+    0 4px 16px rgba(26, 26, 174, 0.25),
+    0 0 0 1px rgba(26, 26, 174, 0.2);
 }
 
 /* Green success glow */
@@ -249,7 +249,7 @@ input[type="checkbox"]:checked {
 }
 .icon-hover:hover {
   background: var(--color-surface-container-high);
-  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.06);
+  box-shadow: 0 0 0 3px rgba(26, 26, 174, 0.06);
 }
 
 /* Sidebar nav item transition */
