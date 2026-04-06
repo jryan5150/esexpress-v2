@@ -104,13 +104,17 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 <span className={iconClass("/admin/wells")}>oil_barrel</span>
                 Wells
               </Link>
-              <Link
-                to="/admin/companies"
-                className={navClass("/admin/companies")}
-              >
-                <span className={iconClass("/admin/companies")}>business</span>
-                Companies
-              </Link>
+              {import.meta.env.VITE_FEATURE_COMPANIES === "true" && (
+                <Link
+                  to="/admin/companies"
+                  className={navClass("/admin/companies")}
+                >
+                  <span className={iconClass("/admin/companies")}>
+                    business
+                  </span>
+                  Companies
+                </Link>
+              )}
               <Link to="/admin/users" className={navClass("/admin/users")}>
                 <span className={iconClass("/admin/users")}>group</span>
                 Users
