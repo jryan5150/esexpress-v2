@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useCurrentUser, useLogoutFn } from "../hooks/use-auth";
 import { usePresence } from "../hooks/use-presence";
@@ -7,6 +7,8 @@ interface SidebarProps {
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }
+
+const COLLAPSE_STORAGE_KEY = "sidebar:collapsed";
 
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   const location = useLocation();
@@ -17,6 +19,29 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
     ? presenceQuery.data
     : [];
   const isActive = (path: string) => location.pathname === path;
+  const isAdminRoute =
+    location.pathname.startsWith("/admin") || location.pathname === "/finance";
+
+  // Collapse state — persisted
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === "1";
+  });
+  useEffect(() => {
+    window.localStorage.setItem(COLLAPSE_STORAGE_KEY, collapsed ? "1" : "0");
+  }, [collapsed]);
+
+  const [adminOpen, setAdminOpen] = useState(isAdminRoute);
+
+  // Auto-open admin group when navigating into an admin/finance route
+  useEffect(() => {
+    if (isAdminRoute && !collapsed) setAdminOpen(true);
+  }, [isAdminRoute, collapsed]);
+
+  // Close admin submenu whenever sidebar collapses
+  useEffect(() => {
+    if (collapsed) setAdminOpen(false);
+  }, [collapsed]);
 
   // Close mobile menu on Escape
   useEffect(() => {
@@ -28,10 +53,19 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
     return () => document.removeEventListener("keydown", handler);
   }, [mobileOpen, onMobileClose]);
 
-  const navClass = (path: string) =>
-    isActive(path)
-      ? "bg-[#ede9f8] text-primary font-semibold flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md transition-all duration-150 text-[13px] nav-smooth press-scale border-l-2 border-l-primary"
-      : "text-on-surface-variant flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md hover:bg-surface-container-high hover:text-on-surface transition-all duration-150 text-[13px] font-medium nav-smooth press-scale border-l-2 border-l-transparent";
+  // Nav item classes — adapt for collapsed state
+  const navClass = (path: string) => {
+    const active = isActive(path);
+    const base =
+      "flex items-center rounded-md transition-all duration-150 text-[13px] nav-smooth press-scale border-l-2";
+    const layout = collapsed
+      ? "justify-center px-0 py-2 mx-2"
+      : "gap-2.5 px-3.5 py-2 mx-1.5";
+    const state = active
+      ? "bg-[#ede9f8] text-primary font-semibold border-l-primary"
+      : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-medium border-l-transparent";
+    return `${base} ${layout} ${state}`;
+  };
 
   const iconClass = (path: string) =>
     isActive(path)
@@ -40,6 +74,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
 
   const handleNavClick = () => {
     onMobileClose?.();
+  };
+
+  // When Admin is clicked while collapsed: expand the sidebar AND open submenu.
+  const handleAdminClick = () => {
+    if (collapsed) {
+      setCollapsed(false);
+      setAdminOpen(true);
+      return;
+    }
+    setAdminOpen((v) => !v);
   };
 
   return (
@@ -55,122 +99,244 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
         className={`
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
         md:translate-x-0 fixed md:relative
-        flex flex-col h-screen w-[228px] min-w-[228px]
+        flex flex-col h-screen
+        ${collapsed ? "w-[68px] min-w-[68px]" : "w-[228px] min-w-[228px]"}
         bg-surface-container-lowest border-r border-outline-variant/40
         z-[70] md:z-50 shrink-0 overflow-y-auto overflow-x-hidden header-gradient
-        transition-transform duration-200 ease-out
+        transition-[width,min-width,transform] duration-250 ease-out
       `}
       >
-        {/* Brand — ES Express LLC logo */}
-        <div className="px-4 pt-3 pb-3 border-b border-outline-variant/30 shadow-[0_1px_3px_rgba(30,27,24,0.04)] flex items-center justify-center">
-          <img
-            src="/es-express-logo.png"
-            alt="ES Express LLC"
-            className="h-12 w-auto object-contain"
-          />
-        </div>
+        {/* Brand / collapse toggle — full logo expanded, cropped truck collapsed */}
+        <button
+          type="button"
+          onClick={() => setCollapsed((v) => !v)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-pressed={collapsed}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className={`group relative border-b border-outline-variant/30 shadow-[0_1px_3px_rgba(30,27,24,0.04)] flex items-center justify-center cursor-pointer press-scale transition-all duration-200 hover:bg-surface-container-high/40 ${
+            collapsed ? "px-2 pt-3 pb-3" : "px-4 pt-3 pb-3"
+          }`}
+        >
+          {collapsed ? (
+            // Cropped truck — overflow-hidden wrapper with oversized img
+            <span className="relative block w-[52px] h-[30px] rounded-md overflow-hidden ring-1 ring-outline-variant/30 group-hover:ring-primary-container/40 group-hover:shadow-[0_2px_8px_rgba(26,26,174,0.12)] transition-all duration-200">
+              <img
+                src="/es-express-logo.png"
+                alt="ES Express LLC"
+                className="absolute max-w-none pointer-events-none select-none transition-transform duration-200 group-hover:scale-[1.06]"
+                style={{
+                  width: 77,
+                  height: 56,
+                  left: -13,
+                  top: -1,
+                }}
+              />
+            </span>
+          ) : (
+            <img
+              src="/es-express-logo.png"
+              alt="ES Express LLC"
+              className="h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+            />
+          )}
+          {/* Direction chevron — corner indicator, appears on hover */}
+          <span
+            className={`absolute bg-primary-container text-white rounded-full flex items-center justify-center shadow-sm transition-all duration-200 opacity-0 group-hover:opacity-100 ${
+              collapsed ? "bottom-1.5 right-1.5" : "bottom-2 right-2"
+            }`}
+            style={{ width: 16, height: 16 }}
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{
+                fontSize: 12,
+                transform: collapsed ? "rotate(0deg)" : "rotate(180deg)",
+                transition: "transform 0.2s ease",
+              }}
+            >
+              chevron_right
+            </span>
+          </span>
+        </button>
 
         {/* Main Nav */}
-        <nav className="flex-1 py-2.5" onClick={handleNavClick}>
+        <nav className="flex-1 py-1.5" onClick={handleNavClick}>
           <div className="space-y-px">
-            <Link to="/" className={navClass("/")}>
+            <Link to="/" className={navClass("/")} title="Today's Objectives">
               <span className={iconClass("/")}>home</span>
-              Today's Objectives
+              {!collapsed && "Today's Objectives"}
             </Link>
-            <Link to="/dispatch-desk" className={navClass("/dispatch-desk")}>
+            <Link
+              to="/dispatch-desk"
+              className={navClass("/dispatch-desk")}
+              title="Dispatch Desk"
+            >
               <span className={iconClass("/dispatch-desk")}>dashboard</span>
-              Dispatch Desk
+              {!collapsed && "Dispatch Desk"}
             </Link>
-            <Link to="/bol" className={navClass("/bol")}>
+            <Link to="/bol" className={navClass("/bol")} title="BOL Queue">
               <span className={iconClass("/bol")}>receipt_long</span>
-              BOL Queue
+              {!collapsed && "BOL Queue"}
             </Link>
-            <Link to="/validation" className={navClass("/validation")}>
+            <Link
+              to="/validation"
+              className={navClass("/validation")}
+              title="Validation"
+            >
               <span className={iconClass("/validation")}>rule</span>
-              Validation
+              {!collapsed && "Validation"}
             </Link>
           </div>
 
-          <div className="mt-3 pt-2 border-t border-outline-variant/25 mx-3">
-            <div className="px-2 py-1.5">
-              <span className="text-[9px] font-label font-bold text-outline/60 tracking-[0.15em] uppercase">
-                Admin
+          <div
+            className={`mt-3 pt-2 border-t border-outline-variant/25 ${collapsed ? "mx-2" : "mx-3"}`}
+          >
+            {!collapsed && (
+              <div className="px-2 py-1.5">
+                <span className="text-[9px] font-label font-bold text-outline/60 tracking-[0.15em] uppercase">
+                  Reference
+                </span>
+              </div>
+            )}
+            <div className={`space-y-px ${collapsed ? "pt-1" : ""}`}>
+              <Link
+                to="/archive"
+                className={navClass("/archive")}
+                title="Archive"
+              >
+                <span className={iconClass("/archive")}>inventory_2</span>
+                {!collapsed && "Archive"}
+              </Link>
+            </div>
+          </div>
+        </nav>
+
+        {/* Bottom: Presence + Admin + Settings + Logout */}
+        <div
+          className={`border-t border-outline-variant/40 ${collapsed ? "px-2" : "px-3"} py-2`}
+        >
+          {/* Presence indicator */}
+          {collapsed ? (
+            <div
+              className="flex items-center justify-center py-1.5"
+              title={`Online (${Math.max(onlineUsers.length, 1)})`}
+            >
+              <span className="w-[9px] h-[9px] rounded-full bg-tertiary shrink-0 shadow-[0_0_8px_rgba(13,150,104,0.5)]" />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-outline">
+              <span className="w-[7px] h-[7px] rounded-full bg-tertiary shrink-0 shadow-[0_0_6px_rgba(13,150,104,0.4)]" />
+              <span>Online ({Math.max(onlineUsers.length, 1)}) &mdash;</span>
+              <span className="font-medium text-on-surface-variant truncate">
+                {onlineUsers.length === 0
+                  ? (
+                      (userQuery.data as Record<string, unknown>)
+                        ?.name as string
+                    )?.split(" ")[0] || "You"
+                  : onlineUsers
+                      .map((u: any) => u.userName?.split(" ")[0] || "User")
+                      .join(", ")}
               </span>
             </div>
-            <div className="space-y-px">
-              <Link to="/admin/wells" className={navClass("/admin/wells")}>
+          )}
+
+          {/* Admin — collapsible group (Wells / Companies / Users / Finance) */}
+          <button
+            type="button"
+            onClick={handleAdminClick}
+            aria-expanded={adminOpen}
+            aria-controls="sidebar-admin-submenu"
+            title="Admin"
+            className={`w-full ${
+              isAdminRoute
+                ? "bg-[#ede9f8] text-primary font-semibold border-l-primary"
+                : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-medium border-l-transparent"
+            } flex items-center ${
+              collapsed
+                ? "justify-center px-0 py-2 mx-0"
+                : "gap-2.5 px-3.5 py-2 mx-1.5"
+            } rounded-md transition-all duration-150 text-[13px] nav-smooth press-scale cursor-pointer border-l-2`}
+          >
+            <span
+              className={
+                isAdminRoute
+                  ? "material-symbols-outlined icon-filled text-lg shrink-0"
+                  : "material-symbols-outlined text-lg shrink-0"
+              }
+            >
+              admin_panel_settings
+            </span>
+            {!collapsed && (
+              <>
+                <span className="flex-1 text-left">Admin</span>
+                <span
+                  className="material-symbols-outlined text-base shrink-0 transition-transform duration-200"
+                  style={{
+                    transform: adminOpen ? "rotate(90deg)" : "rotate(0deg)",
+                  }}
+                >
+                  chevron_right
+                </span>
+              </>
+            )}
+          </button>
+          {adminOpen && !collapsed && (
+            <div
+              id="sidebar-admin-submenu"
+              className="overflow-hidden animate-slide-down"
+            >
+              <Link
+                to="/admin/wells"
+                className={`${navClass("/admin/wells")} !pl-9`}
+              >
                 <span className={iconClass("/admin/wells")}>oil_barrel</span>
                 Wells
               </Link>
               <Link
                 to="/admin/companies"
-                className={navClass("/admin/companies")}
+                className={`${navClass("/admin/companies")} !pl-9`}
               >
                 <span className={iconClass("/admin/companies")}>business</span>
                 Companies
               </Link>
-              <Link to="/admin/users" className={navClass("/admin/users")}>
+              <Link
+                to="/admin/users"
+                className={`${navClass("/admin/users")} !pl-9`}
+              >
                 <span className={iconClass("/admin/users")}>group</span>
                 Users
               </Link>
-            </div>
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-outline-variant/25 mx-3">
-            <div className="px-2 py-1.5">
-              <span className="text-[9px] font-label font-bold text-outline/60 tracking-[0.15em] uppercase">
-                Operations
-              </span>
-            </div>
-            <div className="space-y-px">
-              <Link to="/finance" className={navClass("/finance")}>
+              <Link
+                to="/finance"
+                className={`${navClass("/finance")} !pl-9`}
+              >
                 <span className={iconClass("/finance")}>payments</span>
                 Finance
               </Link>
             </div>
-          </div>
+          )}
 
-          <div className="mt-3 pt-2 border-t border-outline-variant/25 mx-3">
-            <div className="px-2 py-1.5">
-              <span className="text-[9px] font-label font-bold text-outline/60 tracking-[0.15em] uppercase">
-                Reference
-              </span>
-            </div>
-            <div className="space-y-px">
-              <Link to="/archive" className={navClass("/archive")}>
-                <span className={iconClass("/archive")}>inventory_2</span>
-                Archive
-              </Link>
-            </div>
-          </div>
-        </nav>
-        {/* Bottom: Presence + Settings + Logout */}
-        <div className="border-t border-outline-variant/40 px-3 py-2">
-          <div className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-outline">
-            <span className="w-[7px] h-[7px] rounded-full bg-tertiary shrink-0 shadow-[0_0_6px_rgba(13,150,104,0.4)]" />
-            <span>Online ({Math.max(onlineUsers.length, 1)}) &mdash;</span>
-            <span className="font-medium text-on-surface-variant">
-              {onlineUsers.length === 0
-                ? (
-                    (userQuery.data as Record<string, unknown>)?.name as string
-                  )?.split(" ")[0] || "You"
-                : onlineUsers
-                    .map((u: any) => u.userName?.split(" ")[0] || "User")
-                    .join(", ")}
-            </span>
-          </div>
-          <Link to="/settings" className={navClass("/settings")}>
+          <Link
+            to="/settings"
+            className={navClass("/settings")}
+            title="Settings"
+          >
             <span className={iconClass("/settings")}>settings</span>
-            Settings
+            {!collapsed && "Settings"}
           </Link>
           <button
             onClick={logout}
-            className="w-full text-on-surface-variant flex items-center gap-2.5 px-3.5 py-2 mx-1.5 rounded-md hover:bg-error/5 hover:text-error transition-all duration-150 text-[13px] font-medium cursor-pointer press-scale"
+            title="Log Out"
+            className={`w-full text-on-surface-variant flex items-center ${
+              collapsed
+                ? "justify-center px-0 py-2 mx-0"
+                : "gap-2.5 px-3.5 py-2 mx-1.5"
+            } rounded-md hover:bg-error/5 hover:text-error transition-all duration-150 text-[13px] font-medium cursor-pointer press-scale border-l-2 border-l-transparent`}
           >
             <span className="material-symbols-outlined text-lg shrink-0">
               logout
             </span>
-            Log Out
+            {!collapsed && "Log Out"}
           </button>
         </div>
       </aside>
