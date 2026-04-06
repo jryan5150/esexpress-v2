@@ -1,7 +1,7 @@
 # ES Express v2 — Workflow Architecture Validation Walkthrough
 
 **Date:** 2026-04-06
-**Audience:** Jace + Jessica (and Stephanie if time permits)
+**Audience:** Jace + Jessica
 **Purpose:** Validate the four-surface workflow model + chain coordination concept + the Round 4+ ordering before any more code ships
 **Format:** ~30 minute conversation, screen-share optional
 **Companion doc:** `2026-04-06-workflow-architecture.md`
