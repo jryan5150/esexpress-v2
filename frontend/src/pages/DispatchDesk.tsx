@@ -913,25 +913,25 @@ export function DispatchDesk() {
                       title="Select all"
                     />
                   </div>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
                     Status
                   </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
                     Load #
                   </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
                     Driver / Carrier
                   </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant text-right">
                     Weight
                   </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
                     BOL / Truck
                   </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
                     Ticket
                   </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant text-right">
                     Well
                   </span>
                   <div />
@@ -1043,25 +1043,25 @@ export function DispatchDesk() {
                 title="Select all"
               />
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+            <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
               Status
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+            <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
               Load #
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+            <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
               Driver
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
+            <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant text-right">
               Weight
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+            <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
               BOL / Truck
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
+            <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
               Ticket
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
+            <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant text-right">
               Date
             </span>
             <div />

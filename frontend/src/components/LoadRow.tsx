@@ -105,8 +105,8 @@ export const LoadRow = memo(function LoadRow({
         onRowClick?.();
       }}
       className={`grid items-center gap-3 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] px-3.5 py-2.5 shadow-sm card-rest press-scale transition-all hover:border-primary-container/20 hover:shadow-md cursor-pointer ${
-        dimmed ? "opacity-55 hover:opacity-75" : ""
-      } ${entered ? "opacity-35" : ""}`}
+        dimmed ? "opacity-95 hover:opacity-100" : ""
+      } ${entered ? "opacity-40" : ""}`}
       style={{
         gridTemplateColumns: "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
         borderLeftWidth: assignedToColor ? "3px" : undefined,
@@ -141,17 +141,17 @@ export const LoadRow = memo(function LoadRow({
       </div>
 
       {/* Load # */}
-      <div className="font-label text-xs font-medium text-on-surface-variant tabular-nums">
+      <div className="font-label text-[13px] font-bold text-on-surface tabular-nums">
         #{loadNo}
       </div>
 
       {/* Driver + Carrier + Assignee */}
       <div className="min-w-0">
-        <div className="font-semibold text-[13px] text-on-surface truncate">
+        <div className="font-bold text-[14px] text-on-surface truncate">
           {driverName || "--"}
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-outline truncate">
+          <span className="text-[12px] font-medium text-on-surface-variant truncate">
             {carrierName || "--"}
           </span>
           {assignedToName ? (
@@ -188,14 +188,14 @@ export const LoadRow = memo(function LoadRow({
 
       {/* Weight */}
       <div className="text-right">
-        <span className="font-label text-[13px] font-medium text-on-surface-variant tabular-nums">
+        <span className="font-label text-[14px] font-bold text-on-surface tabular-nums">
           {weightTons ? `${parseFloat(weightTons).toFixed(1)}t` : "--"}
         </span>
       </div>
 
       {/* BOL / Truck */}
       <div className="flex flex-col gap-0.5">
-        <span className="font-label text-[11px] text-on-surface-variant truncate inline-flex items-center gap-1">
+        <span className="font-label text-[13px] font-bold text-on-surface truncate inline-flex items-center gap-1 tabular-nums">
           {bolNo || "--"}
           {bolMatchStatus === "match" && (
             <span
@@ -214,7 +214,9 @@ export const LoadRow = memo(function LoadRow({
             </span>
           )}
         </span>
-        <span className="text-[11px] text-outline">{truckNo || ""}</span>
+        <span className="text-[12px] font-medium text-on-surface-variant tabular-nums">
+          {truckNo || ""}
+        </span>
       </div>
 
       {/* Ticket */}
@@ -224,7 +226,7 @@ export const LoadRow = memo(function LoadRow({
             MISSING
           </span>
         ) : (
-          <span className="font-label text-[11px] text-outline">
+          <span className="font-label text-[13px] font-bold text-on-surface tabular-nums">
             {ticketNo || "--"}
           </span>
         )}
@@ -232,7 +234,7 @@ export const LoadRow = memo(function LoadRow({
 
       {/* Date */}
       <div className="text-right">
-        <span className="text-[11px] text-outline whitespace-nowrap">
+        <span className="text-[12px] font-semibold text-on-surface-variant whitespace-nowrap">
           {formatDate(deliveredOn)}
         </span>
       </div>
