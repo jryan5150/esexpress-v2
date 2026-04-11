@@ -117,6 +117,7 @@ export const loads = pgTable(
     destinationName: text("destination_name"),
     weightTons: numeric("weight_tons", { precision: 10, scale: 4 }),
     netWeightTons: numeric("net_weight_tons", { precision: 10, scale: 4 }),
+    weightLbs: numeric("weight_lbs", { precision: 12, scale: 2 }),
     rate: numeric("rate", { precision: 10, scale: 2 }),
     mileage: numeric("mileage", { precision: 10, scale: 2 }),
     bolNo: text("bol_no"),

@@ -36,6 +36,13 @@
       "when": 1775294019134,
       "tag": "0004_aromatic_cobalt_man",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775918322664,
+      "tag": "0005_brave_human_robot",
+      "breakpoints": true
     }
   ]
 }
