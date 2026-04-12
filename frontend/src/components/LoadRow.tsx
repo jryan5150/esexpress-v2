@@ -26,6 +26,7 @@ interface LoadRowProps {
   onViewPhotos: () => void;
   onRowClick?: () => void;
   onClaim?: () => void;
+  onMissingTicket?: () => void;
   isPending?: boolean;
 }
 
@@ -90,6 +91,7 @@ export const LoadRow = memo(function LoadRow({
   onViewPhotos,
   onRowClick,
   onClaim,
+  onMissingTicket,
   isPending,
 }: LoadRowProps) {
   const status = STATUS_CONFIG[validationStatus];
@@ -258,7 +260,7 @@ export const LoadRow = memo(function LoadRow({
               <span className="material-symbols-outlined text-sm">
                 check_circle
               </span>
-              Entered
+              Mark Entered
             </button>
           ) : entered ? (
             <span className="text-[10px] font-bold uppercase tracking-wide text-tertiary">
@@ -274,7 +276,16 @@ export const LoadRow = memo(function LoadRow({
             Validate
           </button>
         ) : (
-          <button className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-error/25 text-[10px] font-bold uppercase tracking-wide text-error hover:bg-error/5 transition-all cursor-pointer">
+          <button
+            onClick={onMissingTicket}
+            disabled={!onMissingTicket}
+            title={
+              onMissingTicket
+                ? "Flag this load for review"
+                : "Flag-for-review coming soon — message Jessica directly for now"
+            }
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-error/25 text-[10px] font-bold uppercase tracking-wide text-error hover:bg-error/5 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+          >
             <span className="material-symbols-outlined text-sm">report</span>
             Missing Ticket
           </button>

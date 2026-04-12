@@ -24,6 +24,13 @@ const FILTER_LABELS: Record<string, string> = {
   bol_mismatch: "BOL Issues",
 };
 
+const FILTER_TOOLTIPS: Record<string, string> = {
+  reconciled:
+    "Reconciled: load is matched against finance/payment records and ready for billing",
+  bol_mismatch:
+    "BOL (Bill of Lading): the driver-submitted BOL number does not match the company-of-record number",
+};
+
 export function FilterTabs({
   activeFilter,
   filterCounts,
@@ -35,7 +42,8 @@ export function FilterTabs({
         <button
           key={filter}
           onClick={() => onFilterChange(filter)}
-          className={`px-3.5 py-1.5 rounded-md text-xs font-semibold capitalize whitespace-nowrap transition-all cursor-pointer ${
+          title={FILTER_TOOLTIPS[filter]}
+          className={`px-3.5 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
             activeFilter === filter
               ? "bg-primary-container/12 text-primary-container shadow-sm"
               : "text-outline hover:text-on-surface hover:bg-surface-container-high/60"

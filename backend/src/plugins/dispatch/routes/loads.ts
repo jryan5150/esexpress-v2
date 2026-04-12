@@ -105,6 +105,7 @@ const loadRoutes: FastifyPluginAsync = async (fastify) => {
             ticketNo: { type: ["string", "null"] },
             rate: { type: ["string", "null"] },
             mileage: { type: ["string", "null"] },
+            deliveredOn: { type: ["string", "null"], format: "date" },
           },
           additionalProperties: false,
           minProperties: 1,

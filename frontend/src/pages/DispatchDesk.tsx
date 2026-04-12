@@ -224,6 +224,7 @@ export function DispatchDesk() {
   };
 
   const handleValidateSingle = (assignmentId: number) => {
+    if (!window.confirm("Validate this load?")) return;
     confirmMutation.mutate(
       { assignmentId },
       {
@@ -314,6 +315,8 @@ export function DispatchDesk() {
 
   const handleAdvanceAll = () => {
     const ids = assignedLoads.map((l) => l.assignmentId);
+    if (!window.confirm(`Advance ${ids.length} loads to dispatch ready?`))
+      return;
     advanceToReady.mutate(ids, {
       onSuccess: () => {
         toast(`${ids.length} loads advanced to dispatch ready`, "success");
@@ -582,6 +585,7 @@ export function DispatchDesk() {
             filterCounts={filterCounts}
             onFilterChange={(filter) => {
               setActiveFilter(filter);
+              setPage(1);
               track("filter_changed", { filterType: "status", value: filter });
             }}
           />
@@ -977,6 +981,15 @@ export function DispatchDesk() {
                         }
                         onViewPhotos={() => setPhotoModalLoad(load)}
                         onRowClick={() => handleSelectWell(String(load.wellId))}
+                        onClaim={
+                          currentUserId && !load.assignedTo
+                            ? () =>
+                                claimAssignment.mutate({
+                                  assignmentId: load.assignmentId,
+                                  userId: currentUserId,
+                                })
+                            : undefined
+                        }
                         isPending={markEntered.isPending}
                       />
                     </div>

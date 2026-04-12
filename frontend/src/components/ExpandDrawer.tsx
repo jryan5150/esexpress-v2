@@ -575,7 +575,12 @@ export function ExpandDrawer({
               )}
               {fuelSurcharge && (
                 <div className="flex justify-between text-xs">
-                  <span className="text-outline">FSC</span>
+                  <span
+                    className="text-outline"
+                    title="FSC (Fuel Surcharge): per-load fee that adjusts with diesel price index"
+                  >
+                    FSC
+                  </span>
                   <span className="font-label text-on-surface tabular-nums">
                     ${Number(fuelSurcharge).toFixed(2)}
                   </span>
@@ -602,14 +607,17 @@ export function ExpandDrawer({
 
           {/* Demurrage */}
           {(demurrageAtLoader || demurrageAtDestination) && (
-            <div className="bg-[#fef3c7] border border-[#f59e0b]/20 rounded-md p-2.5 space-y-1.5">
-              <span className="text-[9px] font-semibold text-[#92400e] tracking-[0.08em] uppercase">
+            <div className="bg-surface-container-high/40 rounded-md p-2.5 space-y-1">
+              <span
+                className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase"
+                title="Demurrage: detention fees billed when a truck waits beyond the contracted free time at loader or destination"
+              >
                 Demurrage
               </span>
               {demurrageAtLoader && (
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#92400e]/70">At Loader</span>
-                  <span className="font-label text-[#92400e] font-bold tabular-nums">
+                  <span className="text-outline">At Loader</span>
+                  <span className="font-label text-on-surface tabular-nums">
                     ${Number(demurrageAtLoader).toFixed(2)}
                     {demurrageAtLoaderHours || demurrageAtLoaderMinutes
                       ? ` (${demurrageAtLoaderHours ?? 0}h ${demurrageAtLoaderMinutes ?? 0}m)`
@@ -619,8 +627,8 @@ export function ExpandDrawer({
               )}
               {demurrageAtDestination && (
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#92400e]/70">At Destination</span>
-                  <span className="font-label text-[#92400e] font-bold tabular-nums">
+                  <span className="text-outline">At Destination</span>
+                  <span className="font-label text-on-surface tabular-nums">
                     ${Number(demurrageAtDestination).toFixed(2)}
                     {demurrageAtDestHours || demurrageAtDestMinutes
                       ? ` (${demurrageAtDestHours ?? 0}h ${demurrageAtDestMinutes ?? 0}m)`
@@ -629,11 +637,11 @@ export function ExpandDrawer({
                 </div>
               )}
               {demurrageAtLoader && demurrageAtDestination && (
-                <div className="border-t border-[#f59e0b]/20 pt-1 flex justify-between text-xs">
-                  <span className="text-[#92400e] font-bold">
+                <div className="border-t border-outline-variant/30 pt-1 flex justify-between text-xs">
+                  <span className="text-outline font-semibold">
                     Total Demurrage
                   </span>
-                  <span className="font-label text-[#92400e] font-bold tabular-nums">
+                  <span className="font-label text-on-surface font-semibold tabular-nums">
                     $
                     {(
                       Number(demurrageAtLoader) + Number(demurrageAtDestination)
@@ -674,7 +682,12 @@ export function ExpandDrawer({
                     )}
                     {fuelSurcharge && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-outline">+ FSC</span>
+                        <span
+                          className="text-outline"
+                          title="FSC (Fuel Surcharge): per-load fee that adjusts with diesel price index"
+                        >
+                          + FSC
+                        </span>
                         <span className="font-label text-on-surface tabular-nums">
                           ${Number(fuelSurcharge).toFixed(2)}
                         </span>

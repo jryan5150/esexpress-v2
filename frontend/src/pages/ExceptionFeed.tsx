@@ -72,6 +72,21 @@ export function ExceptionFeed() {
               })}
             </p>
           </div>
+          <div className="flex-1" />
+          {wellsQuery.dataUpdatedAt > 0 && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-surface-container-highest text-[10px] font-semibold uppercase tracking-wide text-outline tabular-nums"
+              title={new Date(wellsQuery.dataUpdatedAt).toLocaleString()}
+            >
+              <span className="material-symbols-outlined text-xs">refresh</span>
+              Updated{" "}
+              {new Date(wellsQuery.dataUpdatedAt).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })}
+            </span>
+          )}
         </div>
       </div>
 
