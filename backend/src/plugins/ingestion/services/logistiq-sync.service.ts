@@ -23,6 +23,7 @@ export interface NormalizedLoad {
   destinationName: string | null;
   weightTons: string | null;
   netWeightTons: string | null;
+  weightLbs: string | null;
   rate: string | null;
   mileage: string | null;
   bolNo: string | null;
@@ -575,6 +576,7 @@ export function normalizeFromLogistiq(
       null,
     weightTons,
     netWeightTons,
+    weightLbs: numericToString(weightLbs, 2),
     rate: numericToString(rateVal, 2),
     mileage: numericToString(mileageVal, 2),
     bolNo:
@@ -692,6 +694,7 @@ export async function syncLogistiqLoads(
           destinationName: load.destinationName,
           weightTons: load.weightTons,
           netWeightTons: load.netWeightTons,
+          weightLbs: load.weightLbs,
           rate: load.rate,
           mileage: load.mileage,
           bolNo: load.bolNo,
@@ -718,6 +721,7 @@ export async function syncLogistiqLoads(
             destinationName: load.destinationName,
             weightTons: load.weightTons,
             netWeightTons: load.netWeightTons,
+            weightLbs: load.weightLbs,
             rate: load.rate,
             mileage: load.mileage,
             bolNo: load.bolNo,

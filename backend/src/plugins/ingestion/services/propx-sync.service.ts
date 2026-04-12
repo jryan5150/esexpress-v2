@@ -22,6 +22,7 @@ export interface NormalizedLoad {
   destinationName: string | null;
   weightTons: string | null;
   netWeightTons: string | null;
+  weightLbs: string | null;
   rate: string | null;
   mileage: string | null;
   bolNo: string | null;
@@ -528,6 +529,7 @@ export function normalizeFromPropx(
     destinationName: extractString(raw, "destination_name") ?? null,
     weightTons: lbsToTons(weightLbs),
     netWeightTons: lbsToTons(netWeightLbs),
+    weightLbs: numericToString(weightLbs, 2),
     rate: numericToString(rateVal, 2),
     mileage: numericToString(mileageVal, 2),
     bolNo: extractString(raw, "bol_no") ?? null,
@@ -631,6 +633,7 @@ export async function syncPropxLoads(
           destinationName: load.destinationName,
           weightTons: load.weightTons,
           netWeightTons: load.netWeightTons,
+          weightLbs: load.weightLbs,
           rate: load.rate,
           mileage: load.mileage,
           bolNo: load.bolNo,
@@ -657,6 +660,7 @@ export async function syncPropxLoads(
             destinationName: load.destinationName,
             weightTons: load.weightTons,
             netWeightTons: load.netWeightTons,
+            weightLbs: load.weightLbs,
             rate: load.rate,
             mileage: load.mileage,
             bolNo: load.bolNo,
