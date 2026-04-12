@@ -6,9 +6,9 @@ import { HttpError, NetworkError } from "../../../lib/errors.js";
 
 export interface LogistiqConfig {
   baseUrl?: string;
-  email: string;
-  password: string;
-  apiKey?: string; // for carrier export
+  email?: string; // required for session auth (searchOrders)
+  password?: string; // required for session auth (searchOrders)
+  apiKey?: string; // required for carrier export (no session needed)
   carrierId?: number;
   entityId?: number;
   roleId?: number;
@@ -157,16 +157,21 @@ export class LogistiqClient {
   private lastError: string | null = null;
 
   constructor(config: LogistiqConfig) {
-    if (!config.email) {
-      throw new Error("LogistiqClient requires an email");
+    // Allow API-key-only mode for carrier export (no session auth needed)
+    if (!config.apiKey && !config.email) {
+      throw new Error(
+        "LogistiqClient requires an email (session auth) or apiKey (carrier export)",
+      );
     }
-    if (!config.password) {
-      throw new Error("LogistiqClient requires a password");
+    if (config.email && !config.password) {
+      throw new Error(
+        "LogistiqClient requires a password when email is provided",
+      );
     }
 
     this.baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
-    this.email = config.email;
-    this.password = config.password;
+    this.email = config.email ?? "";
+    this.password = config.password ?? "";
     this.apiKey = config.apiKey;
     this.carrierId = config.carrierId ?? 413;
     this.entityId = config.entityId ?? 413;

@@ -154,6 +154,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   "trailer no": "trailer_no",
   trailer_no: "trailer_no",
   trailerno: "trailer_no",
+  trailer_number: "trailer_no", // carrier export API field
 
   // Product
   product: "product_name",
@@ -163,6 +164,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   "product description": "product_name",
   product_description: "product_name",
   material: "product_name",
+  sand_type_name: "product_name", // carrier export API field
 
   // Dates
   delivered: "delivered_on",
@@ -191,6 +193,7 @@ const COLUMN_ALIASES: Record<string, string> = {
 
   // Weight (tons) — direct ton values from source
   tons: "weight_tons_direct",
+  ton: "weight_tons_direct", // carrier export API field (singular)
   "net tons": "net_weight_tons_direct",
   net_tons: "net_weight_tons_direct",
   "gross tons": "gross_weight_tons_direct",
@@ -628,6 +631,7 @@ export async function syncLogistiqLoads(
   db: Database,
   client: LogistiqClient,
   dateRange: { from: Date; to: Date },
+  prefetchedRecords?: unknown[],
 ): Promise<SyncResult> {
   const result: SyncResult = {
     fetched: 0,
@@ -637,8 +641,10 @@ export async function syncLogistiqLoads(
     errors: [],
   };
 
-  // 1. Fetch raw orders from Logistiq
-  const rawOrders = await client.searchOrders(dateRange.from, dateRange.to);
+  // 1. Fetch raw orders — use prefetched (carrier export) or session-based searchOrders
+  const rawOrders =
+    prefetchedRecords ??
+    (await client.searchOrders(dateRange.from, dateRange.to));
   result.fetched = rawOrders.length;
 
   if (rawOrders.length === 0) return result;

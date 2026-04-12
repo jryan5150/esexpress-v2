@@ -152,21 +152,27 @@ async function syncLogistiq(daysBack: number) {
   const { syncLogistiqLoads } =
     await import("./plugins/ingestion/services/logistiq-sync.service.js");
 
-  const email = process.env.LOGISTIQ_EMAIL;
-  const password = process.env.LOGISTIQ_PASSWORD;
-  if (!email || !password) {
+  const apiKey = process.env.LOGISTIQ_API_KEY;
+  const carrierId = process.env.LOGISTIQ_CARRIER_ID;
+  if (!apiKey) {
     console.warn(
-      "[scheduler] LOGISTIQ_EMAIL/PASSWORD not set, skipping Logistiq sync",
+      "[scheduler] LOGISTIQ_API_KEY not set, skipping Logistiq sync",
     );
-    return { skipped: true, reason: "no credentials" };
+    return { skipped: true, reason: "no API key" };
   }
 
-  const client = new LogistiqClient({ email, password });
+  // Carrier export: API-key auth only, no session credentials needed
+  const client = new LogistiqClient({
+    apiKey,
+    carrierId: carrierId ? parseInt(carrierId, 10) : undefined,
+  });
 
   const to = new Date();
   const from = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
 
-  return syncLogistiqLoads(db, client, { from, to });
+  // Fetch via carrier export API, pass pre-fetched records to sync pipeline
+  const records = await client.getCarrierExport(from, to);
+  return syncLogistiqLoads(db, client, { from, to }, records);
 }
 
 async function runAutoMap() {
