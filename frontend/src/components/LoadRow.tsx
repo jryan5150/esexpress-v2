@@ -21,6 +21,7 @@ interface LoadRowProps {
   validationStatus: ValidationStatus;
   assignmentStatus?: string | null;
   historicalComplete?: boolean;
+  wellNeedsRateInfo?: boolean;
   checked: boolean;
   entered: boolean;
   canEnter: boolean;
@@ -66,6 +67,7 @@ export const LoadRow = memo(function LoadRow({
   validationStatus,
   assignmentStatus,
   historicalComplete,
+  wellNeedsRateInfo,
   checked,
   entered,
   canEnter,
@@ -102,6 +104,7 @@ export const LoadRow = memo(function LoadRow({
     bolNo,
     assignmentStatus,
     historicalComplete,
+    wellNeedsRateInfo,
   });
   const statusMeta = LOAD_COUNT_STATUS[loadCountStatus];
 

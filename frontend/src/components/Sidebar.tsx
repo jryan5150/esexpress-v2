@@ -307,9 +307,15 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 Users
               </Link>
               <Link
-                to="/finance"
-                className={`${navClass("/finance")} !pl-9`}
+                to="/admin/missed-loads"
+                className={`${navClass("/admin/missed-loads")} !pl-9`}
               >
+                <span className={iconClass("/admin/missed-loads")}>
+                  fact_check
+                </span>
+                Missed Loads
+              </Link>
+              <Link to="/finance" className={`${navClass("/finance")} !pl-9`}>
                 <span className={iconClass("/finance")}>payments</span>
                 Finance
               </Link>

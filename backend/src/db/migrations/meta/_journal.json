@@ -64,6 +64,13 @@
       "when": 1776197440972,
       "tag": "0008_wide_captain_universe",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776199985026,
+      "tag": "0009_typical_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }

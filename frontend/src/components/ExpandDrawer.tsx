@@ -179,6 +179,10 @@ interface ExpandDrawerProps {
   notes?: string | null;
   onSaveNotes?: (notes: string) => Promise<void> | void;
   isSavingNotes?: boolean;
+  // Mark Entered (P-01, Stephanie R2: she opens drawer more than she row-clicks)
+  onMarkEntered?: () => void;
+  isMarkingEntered?: boolean;
+  hasEntered?: boolean;
   // BOL verification
   jotformBolNo?: string | null;
   jotformDriverName?: string | null;
@@ -352,6 +356,9 @@ export function ExpandDrawer({
   notes: notesProp,
   onSaveNotes,
   isSavingNotes,
+  onMarkEntered,
+  isMarkingEntered,
+  hasEntered,
   jotformBolNo,
   jotformDriverName,
   onValidate,
@@ -991,6 +998,25 @@ export function ExpandDrawer({
               </span>
               Copy All Fields
             </button>
+            {/* Mark Entered — mirrors the LoadRow button for dispatchers
+                who work primarily out of the drawer (P-01) */}
+            {onMarkEntered && (
+              <button
+                onClick={onMarkEntered}
+                disabled={isMarkingEntered || hasEntered}
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-on-surface hover:bg-surface-container-high border border-outline-variant/30 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                title={
+                  hasEntered
+                    ? "This load is already marked as entered in PCS"
+                    : "Record that this load was typed into PCS"
+                }
+              >
+                <span className="material-symbols-outlined text-sm">
+                  {hasEntered ? "check_circle" : "edit_note"}
+                </span>
+                {hasEntered ? "Already Entered" : "Mark Entered in PCS"}
+              </button>
+            )}
             {onValidate &&
               assignmentStatus !== "dispatched" &&
               assignmentStatus !== "delivered" && (

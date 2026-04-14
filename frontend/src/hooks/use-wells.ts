@@ -299,6 +299,7 @@ export function useUpdateWell() {
         longitude: string;
         propxJobId: string;
         propxDestinationId: string;
+        needsRateInfo: boolean;
       }>;
     }) => api.put<Well>(`/dispatch/wells/${params.id}`, params.patch),
     onSuccess: () => {

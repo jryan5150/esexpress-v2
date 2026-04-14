@@ -171,6 +171,7 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
             longitude: { type: "string" },
             propxJobId: { type: "string" },
             propxDestinationId: { type: "string" },
+            needsRateInfo: { type: "boolean" },
           },
         },
       },

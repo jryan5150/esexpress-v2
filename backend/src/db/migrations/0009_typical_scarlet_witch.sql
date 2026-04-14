@@ -1,0 +1,1 @@
+ALTER TABLE "wells" ADD COLUMN "needs_rate_info" boolean DEFAULT false NOT NULL;

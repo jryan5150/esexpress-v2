@@ -189,6 +189,12 @@ export function WellsAdmin() {
               <div className="w-24 text-center">Status</div>
               <div className="w-36">PropX Job ID</div>
               <div className="w-28 text-center">Daily Target</div>
+              <div
+                className="w-24 text-center"
+                title="Flag wells whose loading-facility rate isn't dialed in yet — loads going to flagged wells show as 'Need Well Rate Info' on the dispatch desk"
+              >
+                Needs Rate?
+              </div>
               <div className="w-16 text-center">Actions</div>
             </div>
 
@@ -255,6 +261,50 @@ export function WellsAdmin() {
                       </span>
                     </>
                   )}
+                </div>
+
+                {/* Needs Rate Info toggle (O-23) */}
+                <div className="w-24 text-center">
+                  <label
+                    className="inline-flex items-center justify-center cursor-pointer"
+                    title={
+                      well.needsRateInfo
+                        ? "Loads to this well show as 'Need Well Rate Info' on the dispatch desk. Uncheck once the rate is confirmed."
+                        : "Flag this well as needing rate info — its loads will surface in burnt-orange on the dispatch desk."
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!well.needsRateInfo}
+                      disabled={updateWell.isPending}
+                      onChange={(e) => {
+                        updateWell.mutate(
+                          {
+                            id: well.id,
+                            patch: { needsRateInfo: e.target.checked },
+                          },
+                          {
+                            onSuccess: () =>
+                              toast(
+                                `${well.name} ${
+                                  e.target.checked
+                                    ? "flagged as needing rate"
+                                    : "rate-flag cleared"
+                                }`,
+                                "success",
+                              ),
+                            onError: (err) =>
+                              toast(
+                                `Update failed: ${(err as Error).message}`,
+                                "error",
+                              ),
+                          },
+                        );
+                      }}
+                      className="w-4 h-4 rounded accent-primary-container cursor-pointer disabled:opacity-40"
+                      aria-label={`Toggle needs-rate-info for ${well.name}`}
+                    />
+                  </label>
                 </div>
 
                 {/* Actions */}

@@ -79,6 +79,7 @@ export async function transitionStatus(
       driverName: load?.driverName ?? null,
       loadNo: load?.loadNo ?? null,
       wellId: assignment.wellId,
+      photoStatus: assignment.photoStatus,
     });
     if (!result.valid) {
       throw new ValidationError(

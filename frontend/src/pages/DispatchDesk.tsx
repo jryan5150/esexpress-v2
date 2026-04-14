@@ -1134,6 +1134,9 @@ export function DispatchDesk() {
                         deliveredOn={load.wellName ?? null}
                         validationStatus={getValidationStatus(load)}
                         assignmentStatus={load.assignmentStatus ?? null}
+                        wellNeedsRateInfo={
+                          (load as any).wellNeedsRateInfo ?? false
+                        }
                         checked={selectedIds.has(load.assignmentId)}
                         entered={enteredIds.has(load.assignmentId)}
                         canEnter={load.canEnter}
@@ -1245,6 +1248,11 @@ export function DispatchDesk() {
                           assignmentId={load.assignmentId}
                           notes={load.notes}
                           isSavingNotes={updateNotes.isPending}
+                          onMarkEntered={() =>
+                            handleMarkSingle(load.assignmentId)
+                          }
+                          isMarkingEntered={markEntered.isPending}
+                          hasEntered={enteredIds.has(load.assignmentId)}
                           onSaveNotes={async (next) => {
                             try {
                               await updateNotes.mutateAsync({
@@ -1381,6 +1389,7 @@ export function DispatchDesk() {
                   deliveredOn={load.deliveredOn}
                   validationStatus={getValidationStatus(load)}
                   assignmentStatus={load.assignmentStatus ?? null}
+                  wellNeedsRateInfo={(load as any).wellNeedsRateInfo ?? false}
                   checked={selectedIds.has(load.assignmentId)}
                   entered={enteredIds.has(load.assignmentId)}
                   canEnter={load.canEnter}
@@ -1486,6 +1495,9 @@ export function DispatchDesk() {
                         throw err;
                       }
                     }}
+                    onMarkEntered={() => handleMarkSingle(load.assignmentId)}
+                    isMarkingEntered={markEntered.isPending}
+                    hasEntered={enteredIds.has(load.assignmentId)}
                     onValidate={() => handleValidateSingle(load.assignmentId)}
                     onClose={() => setExpandedLoadId(null)}
                   />

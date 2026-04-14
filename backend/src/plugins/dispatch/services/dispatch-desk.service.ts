@@ -196,6 +196,7 @@ export async function getDispatchDeskLoads(
       assignedToColor: users.color,
       wellId: wells.id,
       wellName: wells.name,
+      wellNeedsRateInfo: wells.needsRateInfo,
       // JotForm photo data (left join — may be null)
       jotformSubmissionId: jotformImports.jotformSubmissionId,
       jotformPhotoUrl: jotformImports.photoUrl,

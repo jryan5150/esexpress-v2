@@ -336,6 +336,129 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       },
     };
   });
+
+  // GET /missed-loads — pull-style report Jessica runs when she suspects
+  // something was missed in sync. Surfaces:
+  //   • duplicate BOLs (same BOL appearing in 2+ source rows)
+  //   • recent sync errors (last 7 days)
+  //   • loads missing all critical identifiers (no driver, BOL, or ticket)
+  //   • stale-sync loads (delivered_on > 2 days before created_at)
+  // Pull, not push — no notifications/webhooks. Jessica navigates here
+  // when she wants to check.
+  fastify.get(
+    "/missed-loads",
+    { preHandler: [fastify.authenticate] },
+    async (_request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+
+      const { sql, desc, gte } = await import("drizzle-orm");
+      const { loads, syncRuns } = await import("../../../db/schema.js");
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      const [duplicateBolRows, syncErrorRows, missingFieldRows, staleSyncRows] =
+        await Promise.all([
+          // Duplicate BOLs across sources (or within the same source if it
+          // somehow re-inserted)
+          db
+            .select({
+              bolNo: loads.bolNo,
+              count: sql<number>`cast(count(*) as int)`,
+              sources: sql<string>`string_agg(distinct ${loads.source}, ', ')`,
+              loadIds: sql<string>`string_agg(${loads.id}::text, ', ' order by ${loads.id})`,
+              latestDelivery: sql<
+                string | null
+              >`max(${loads.deliveredOn})::text`,
+            })
+            .from(loads)
+            .where(
+              sql`${loads.bolNo} is not null and trim(${loads.bolNo}) <> ''`,
+            )
+            .groupBy(loads.bolNo)
+            .having(sql`count(*) > 1`)
+            .orderBy(sql`count(*) desc`)
+            .limit(50),
+
+          // Recent sync runs that recorded errors
+          db
+            .select({
+              id: syncRuns.id,
+              source: syncRuns.source,
+              status: syncRuns.status,
+              startedAt: syncRuns.startedAt,
+              durationMs: syncRuns.durationMs,
+              recordsProcessed: syncRuns.recordsProcessed,
+              error: syncRuns.error,
+              metadata: syncRuns.metadata,
+            })
+            .from(syncRuns)
+            .where(gte(syncRuns.startedAt, sevenDaysAgo))
+            .orderBy(desc(syncRuns.startedAt))
+            .limit(25),
+
+          // Loads with no driver, no BOL, and no ticket — likely incomplete
+          db
+            .select({
+              id: loads.id,
+              source: loads.source,
+              loadNo: loads.loadNo,
+              destinationName: loads.destinationName,
+              deliveredOn: loads.deliveredOn,
+              createdAt: loads.createdAt,
+            })
+            .from(loads)
+            .where(
+              sql`(${loads.driverName} is null or trim(${loads.driverName}) = '') and (${loads.bolNo} is null or trim(${loads.bolNo}) = '') and (${loads.ticketNo} is null or trim(${loads.ticketNo}) = '')`,
+            )
+            .orderBy(desc(loads.createdAt))
+            .limit(50),
+
+          // Stale sync — load arrived more than 2 days after delivery
+          db
+            .select({
+              id: loads.id,
+              source: loads.source,
+              loadNo: loads.loadNo,
+              driverName: loads.driverName,
+              deliveredOn: loads.deliveredOn,
+              createdAt: loads.createdAt,
+              lagDays: sql<number>`cast(extract(day from (${loads.createdAt} - ${loads.deliveredOn})) as int)`,
+            })
+            .from(loads)
+            .where(
+              sql`${loads.deliveredOn} is not null and ${loads.createdAt} > ${loads.deliveredOn} + interval '2 days'`,
+            )
+            .orderBy(desc(sql`${loads.createdAt} - ${loads.deliveredOn}`))
+            .limit(50),
+        ]);
+
+      return {
+        success: true,
+        data: {
+          generatedAt: new Date().toISOString(),
+          summary: {
+            duplicateBolGroups: duplicateBolRows.length,
+            syncErrorRuns: syncErrorRows.filter(
+              (r) => r.status === "failed" || !!r.error,
+            ).length,
+            missingCriticalFields: missingFieldRows.length,
+            staleSyncLoads: staleSyncRows.length,
+          },
+          duplicateBols: duplicateBolRows,
+          syncErrors: syncErrorRows,
+          missingCriticalFields: missingFieldRows,
+          staleSyncLoads: staleSyncRows,
+        },
+      };
+    },
+  );
 };
 
 export default diagRoutes;

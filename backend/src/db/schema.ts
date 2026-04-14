@@ -76,6 +76,11 @@ export const wells = pgTable(
     longitude: numeric("longitude", { precision: 10, scale: 7 }),
     propxJobId: text("propx_job_id"),
     propxDestinationId: text("propx_destination_id"),
+    // O-23 (Apr 9): admin-set flag indicating the loading-facility rate
+    // for this well isn't dialed in yet. Loads going to this well surface
+    // as "Need Well Rate Info" (burnt orange) on the dispatch desk so
+    // Jessica can chase the rate before invoicing.
+    needsRateInfo: boolean("needs_rate_info").notNull().default(false),
     matchFeedback: jsonb("match_feedback")
       .$type<
         Array<{

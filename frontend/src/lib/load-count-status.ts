@@ -38,7 +38,7 @@ export const LOAD_COUNT_STATUS: Record<LoadCountStatus, LoadCountStatusMeta> = {
   need_rate: {
     label: "Need Well Rate Info",
     hex: "#B45F06",
-    available: false,
+    available: true,
   },
   being_built: {
     label: "Loads being built",
@@ -78,18 +78,23 @@ export interface DerivableLoad {
   bolNo: string | null;
   assignmentStatus?: string | null;
   historicalComplete?: boolean;
+  /** Whether the well this load is going to has been flagged as needing
+   *  rate info by an admin (O-23). */
+  wellNeedsRateInfo?: boolean;
 }
 
 /**
  * Priority order (first match wins):
  *   1. missing_driver     — can't dispatch without a driver
  *   2. missing_ticket     — no BOL and no ticket number
- *   3. completed          — terminal v2 state or flagged historical
- *   4. being_built        — default for an in-flight load
+ *   3. need_rate          — well flagged as needing rate info
+ *   4. completed          — terminal v2 state or flagged historical
+ *   5. being_built        — default for an in-flight load
  */
 export function deriveLoadCountStatus(load: DerivableLoad): LoadCountStatus {
   if (!load.driverName?.trim()) return "missing_driver";
   if (!load.ticketNo?.trim() && !load.bolNo?.trim()) return "missing_ticket";
+  if (load.wellNeedsRateInfo) return "need_rate";
 
   if (load.historicalComplete) return "completed";
   if (

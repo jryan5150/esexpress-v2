@@ -10,6 +10,7 @@ export interface Well {
   dailyTargetLoads: number;
   dailyTargetTons: number | null;
   status: "active" | "standby" | "completed" | "closed";
+  needsRateInfo?: boolean;
   createdAt: string;
   updatedAt: string;
 }

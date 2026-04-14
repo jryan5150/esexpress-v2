@@ -42,6 +42,11 @@ const UsersAdmin = lazy(() =>
     default: m.UsersAdmin,
   })),
 );
+const MissedLoadsReport = lazy(() =>
+  import("./pages/admin/MissedLoadsReport").then((m) => ({
+    default: m.MissedLoadsReport,
+  })),
+);
 const Settings = lazy(() =>
   import("./pages/Settings").then((m) => ({ default: m.Settings })),
 );
@@ -84,6 +89,10 @@ export function App() {
                   <Route path="admin/wells" element={<WellsAdmin />} />
                   <Route path="admin/companies" element={<CompaniesAdmin />} />
                   <Route path="admin/users" element={<UsersAdmin />} />
+                  <Route
+                    path="admin/missed-loads"
+                    element={<MissedLoadsReport />}
+                  />
                   <Route path="settings" element={<Settings />} />
                   <Route
                     path="archive"

@@ -28,11 +28,16 @@ export function validateDispatchReady(fields: {
   driverName: string | null;
   loadNo: string | null;
   wellId: number | null;
+  // P-03 (Jessica Apr 6, ~54:20): "no 100% without photo". A load may not
+  // advance to dispatch_ready unless the BOL photo is attached. Photo
+  // status enum is "attached" | "pending" | "missing".
+  photoStatus?: string | null;
 }): { valid: boolean; missing: string[] } {
   const missing: string[] = [];
   if (!fields.driverName) missing.push("driverName");
   if (!fields.loadNo) missing.push("loadNo");
   if (!fields.wellId) missing.push("wellId");
+  if (fields.photoStatus !== "attached") missing.push("photo");
   return { valid: missing.length === 0, missing };
 }
 
