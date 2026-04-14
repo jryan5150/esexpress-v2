@@ -73,6 +73,15 @@ export function startScheduler(database: Database) {
     { timezone: TZ },
   );
 
+  // ─── JotForm photo sync (every 30 min) — pulls driver-submitted weight
+  // tickets + photos, attaches them to matching loads. Was previously
+  // manual-only; sync stalled for 12 days as a result. (2026-04-14)
+  cron.schedule(
+    "*/30 * * * *",
+    () => runWithLog("JotForm Sync (30m)", runJotformSync(200), "jotform"),
+    { timezone: TZ },
+  );
+
   console.log("[scheduler] Cron jobs registered (TZ: America/Chicago)");
   console.log("[scheduler]   04:00 — PropX sync (7d)");
   console.log("[scheduler]   04:15 — Logistiq sync (7d)");
@@ -80,6 +89,7 @@ export function startScheduler(database: Database) {
   console.log(
     "[scheduler]   08:00, 12:00, 16:00, 20:00 — PropX + Logistiq (2d) + Auto-map",
   );
+  console.log("[scheduler]   every 30m — JotForm photo sync");
 }
 
 async function runWithLog(
@@ -173,6 +183,26 @@ async function syncLogistiq(daysBack: number) {
   // Fetch via carrier export API, pass pre-fetched records to sync pipeline
   const records = await client.getCarrierExport(from, to);
   return syncLogistiqLoads(db, client, { from, to }, records);
+}
+
+async function runJotformSync(limit: number) {
+  if (!db) throw new Error("Database not initialized");
+  const apiKey = process.env.JOTFORM_API_KEY;
+  if (!apiKey) {
+    console.warn("[scheduler] JOTFORM_API_KEY not set, skipping JotForm sync");
+    return { skipped: true, reason: "no API key" };
+  }
+  const { syncWeightTickets } =
+    await import("./plugins/verification/services/jotform.service.js");
+  return syncWeightTickets(
+    db,
+    {
+      apiKey,
+      formId: process.env.JOTFORM_FORM_ID,
+      baseUrl: process.env.JOTFORM_BASE_URL,
+    },
+    { limit, offset: 0 },
+  );
 }
 
 async function runAutoMap() {

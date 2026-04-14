@@ -18,7 +18,7 @@
  */
 
 import { eq, or, and, between, ilike } from "drizzle-orm";
-import { loads, jotformImports } from "../../../db/schema.js";
+import { loads, jotformImports, assignments } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 
 // ---------------------------------------------------------------------------
@@ -518,6 +518,20 @@ export async function syncWeightTickets(
         matchedAt: match.matched ? new Date() : null,
         status: match.matched ? "matched" : "pending",
       });
+
+      // 2026-04-14: Bridge JotForm match → assignment.photo_status. Without
+      // this, a matched submission would still leave the assignment showing
+      // "missing photo" and block the dispatch_ready transition (P-03).
+      if (
+        match.matched &&
+        match.loadId &&
+        (fields.photoUrl || (fields.imageUrls?.length ?? 0) > 0)
+      ) {
+        await db
+          .update(assignments)
+          .set({ photoStatus: "attached", updatedAt: new Date() })
+          .where(eq(assignments.loadId, match.loadId));
+      }
 
       result.stored++;
       if (match.matched) result.matched++;
