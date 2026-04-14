@@ -126,6 +126,8 @@ export const loads = pgTable(
     ticketNo: text("ticket_no"),
     status: text("status").default("active"),
     deliveredOn: timestamp("delivered_on", { withTimezone: true }),
+    historicalComplete: boolean("historical_complete").default(false).notNull(),
+    historicalCompleteReason: text("historical_complete_reason"),
     rawData: jsonb("raw_data"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -141,6 +143,7 @@ export const loads = pgTable(
     index("idx_loads_delivered_on").on(table.deliveredOn),
     index("idx_loads_driver_id").on(table.driverId),
     index("idx_loads_status_delivered").on(table.status, table.deliveredOn),
+    index("idx_loads_historical_complete").on(table.historicalComplete),
   ],
 );
 

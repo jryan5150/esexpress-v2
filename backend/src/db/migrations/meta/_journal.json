@@ -43,6 +43,13 @@
       "when": 1775918322664,
       "tag": "0005_brave_human_robot",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776125890680,
+      "tag": "0006_curvy_prowler",
+      "breakpoints": true
     }
   ]
 }

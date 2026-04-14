@@ -184,14 +184,23 @@ async function runAutoMap() {
   const { isNull, gte, sql, and } = await import("drizzle-orm");
   const { eq } = await import("drizzle-orm");
 
-  // Find unmapped loads from last 30 days
+  // Find unmapped loads from last 30 days.
+  // Exclude historical_complete — those are pre-cutoff already-dispatched
+  // loads that belong in the archive, NOT in the validation queue. Creating
+  // assignments for them would flood the team with work that's already done.
   const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const unmapped = await db
     .select({ id: loads.id })
     .from(loads)
     .leftJoin(assignments, eq(loads.id, assignments.loadId))
-    .where(and(isNull(assignments.id), gte(loads.createdAt, fromDate)))
+    .where(
+      and(
+        isNull(assignments.id),
+        gte(loads.createdAt, fromDate),
+        eq(loads.historicalComplete, false),
+      ),
+    )
     .limit(5000);
 
   if (unmapped.length === 0) {
