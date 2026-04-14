@@ -38,31 +38,37 @@ export async function listWells(
     ? sql`AND ${loads.deliveredOn} >= ${`${filters.date}T00:00:00-05:00`}::timestamptz AND ${loads.deliveredOn} <= ${`${filters.date}T23:59:59.999-05:00`}::timestamptz`
     : sql``;
 
+  // Always exclude historical_complete loads from per-well count tiles —
+  // they're archive records that were dispatched during v2's build, not
+  // actionable work. Fixed 2026-04-14 after Jessica's home-page screenshot
+  // showed inflated Review numbers driven by pre-April loads.
+  const guard = sql`${dateGuard} AND coalesce(${loads.historicalComplete}, false) = false`;
+
   const baseQuery = db
     .select({
       ...wellColumns,
       totalLoads:
-        sql<number>`cast(count(case when ${assignments.id} is not null ${dateGuard} then 1 end) as int)`.as(
+        sql<number>`cast(count(case when ${assignments.id} is not null ${guard} then 1 end) as int)`.as(
           "total_loads",
         ),
       ready:
-        sql<number>`cast(count(case when ${assignments.status} in ('reconciled', 'dispatch_ready', 'dispatching', 'dispatched', 'delivered', 'completed') ${dateGuard} then 1 end) as int)`.as(
+        sql<number>`cast(count(case when ${assignments.status} in ('reconciled', 'dispatch_ready', 'dispatching', 'dispatched', 'delivered', 'completed') ${guard} then 1 end) as int)`.as(
           "ready",
         ),
       validated:
-        sql<number>`cast(count(case when ${assignments.status} in ('dispatched', 'delivered', 'completed') ${dateGuard} then 1 end) as int)`.as(
+        sql<number>`cast(count(case when ${assignments.status} in ('dispatched', 'delivered', 'completed') ${guard} then 1 end) as int)`.as(
           "validated",
         ),
       review:
-        sql<number>`cast(count(case when ${assignments.status} = 'pending' ${dateGuard} then 1 end) as int)`.as(
+        sql<number>`cast(count(case when ${assignments.status} = 'pending' ${guard} then 1 end) as int)`.as(
           "review",
         ),
       assigned:
-        sql<number>`cast(count(case when ${assignments.status} = 'assigned' ${dateGuard} then 1 end) as int)`.as(
+        sql<number>`cast(count(case when ${assignments.status} = 'assigned' ${guard} then 1 end) as int)`.as(
           "assigned",
         ),
       missing:
-        sql<number>`cast(count(case when ${assignments.photoStatus} = 'missing' ${dateGuard} then 1 end) as int)`.as(
+        sql<number>`cast(count(case when ${assignments.photoStatus} = 'missing' ${guard} then 1 end) as int)`.as(
           "missing",
         ),
     })
