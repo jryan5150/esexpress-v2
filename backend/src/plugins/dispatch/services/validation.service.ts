@@ -144,6 +144,11 @@ export async function getAssignmentsByTier(
       weightTons: loads.weightTons,
       ticketNo: loads.ticketNo,
       bolNo: loads.bolNo,
+      // O-09: expose truck, trailer, delivered date so dispatchers can
+      // fix typical sync errors inline without jumping to Dispatch Desk.
+      truckNo: loads.truckNo,
+      trailerNo: loads.trailerNo,
+      deliveredOn: loads.deliveredOn,
       wellName: wells.name,
     })
     .from(assignments)

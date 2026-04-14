@@ -12,17 +12,24 @@ import { useToast } from "../components/Toast";
 import { WellPicker } from "../components/WellPicker";
 import { Pagination } from "../components/Pagination";
 
-/** Inline editable field for Validation page */
+/**
+ * Inline editable field for the Validation page (O-09 / P2-4).
+ * 2026-04-14: promoted to show an explicit pencil affordance, accept
+ * date/number input types for the fields that need them, and preserve
+ * empty-string semantics so a dispatcher can clear a value deliberately.
+ */
 function InlineEdit({
   label,
   value,
   fieldKey,
   loadId,
+  inputType = "text",
 }: {
   label: string;
   value: string | null;
   fieldKey: string;
   loadId: number;
+  inputType?: "text" | "number" | "date";
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || "");
@@ -36,11 +43,17 @@ function InlineEdit({
 
   const commit = () => {
     if (draft !== (value || "")) {
+      // Send empty string as null so the dispatcher can deliberately clear.
+      const payloadValue = draft.trim() === "" ? null : draft;
       updateLoad.mutate(
-        { loadId, updates: { [fieldKey]: draft } },
+        { loadId, updates: { [fieldKey]: payloadValue } },
         {
           onSuccess: () => toast(`${label} updated`, "success"),
-          onError: () => toast(`Failed to update ${label}`, "error"),
+          onError: (err) =>
+            toast(
+              `Failed to update ${label}: ${(err as Error).message}`,
+              "error",
+            ),
         },
       );
     }
@@ -55,6 +68,7 @@ function InlineEdit({
       {editing ? (
         <input
           ref={ref}
+          type={inputType}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -73,10 +87,14 @@ function InlineEdit({
             setDraft(value || "");
             setEditing(true);
           }}
-          className="block text-sm text-on-surface font-label hover:text-primary cursor-pointer transition-colors"
-          title="Click to edit"
+          className="group inline-flex items-center gap-1 text-sm text-on-surface font-label hover:text-primary cursor-pointer transition-colors"
+          title={`Click to edit ${label.toLowerCase()}`}
+          aria-label={`Edit ${label}`}
         >
-          {value || <span className="text-on-surface/20">--</span>}
+          <span>{value || <span className="text-on-surface/20">--</span>}</span>
+          <span className="material-symbols-outlined text-[12px] text-on-surface/20 group-hover:text-primary transition-colors">
+            edit
+          </span>
         </button>
       )}
     </div>
@@ -100,6 +118,9 @@ interface TierAssignment {
   weightTons: string | null;
   ticketNo: string | null;
   bolNo: string | null;
+  truckNo: string | null;
+  trailerNo: string | null;
+  deliveredOn: string | null;
   wellName: string;
 }
 
@@ -677,6 +698,29 @@ export function Validation() {
                               value={a.ticketNo}
                               fieldKey="ticketNo"
                               loadId={a.loadId}
+                            />
+                            <InlineEdit
+                              label="Truck #"
+                              value={a.truckNo}
+                              fieldKey="truckNo"
+                              loadId={a.loadId}
+                            />
+                            <InlineEdit
+                              label="Trailer #"
+                              value={a.trailerNo}
+                              fieldKey="trailerNo"
+                              loadId={a.loadId}
+                            />
+                            <InlineEdit
+                              label="Delivered"
+                              value={
+                                a.deliveredOn
+                                  ? a.deliveredOn.slice(0, 10)
+                                  : null
+                              }
+                              fieldKey="deliveredOn"
+                              loadId={a.loadId}
+                              inputType="date"
                             />
                             <div className="space-y-1">
                               <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
