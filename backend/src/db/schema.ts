@@ -185,6 +185,7 @@ export const assignments = pgTable(
     assignedBy: integer("assigned_by").references(() => users.id),
     autoMapTier: integer("auto_map_tier"),
     autoMapScore: numeric("auto_map_score", { precision: 4, scale: 3 }),
+    matchAudit: jsonb("match_audit"),
     pcsSequence: integer("pcs_sequence"),
     pcsDispatch: jsonb("pcs_dispatch")
       .$type<Record<string, unknown>>()

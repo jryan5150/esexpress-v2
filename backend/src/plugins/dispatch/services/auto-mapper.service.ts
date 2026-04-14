@@ -8,6 +8,16 @@ import { createAssignment } from "./assignments.service.js";
 import { createLocationMapping } from "./mappings.service.js";
 import { getLocationMappingByName } from "./mappings.service.js";
 import type { Database } from "../../../db/client.js";
+import {
+  applyFuzzyNeverAlone,
+  applyTwoIdentifierRule,
+  applyConfidenceFloor,
+  computeCrossSourceBoost,
+  buildEvidence,
+  explainTier,
+  type MatchAudit,
+  type RuleName,
+} from "../lib/match-rules.js";
 
 export interface AutoMapResult {
   loadId: number;
@@ -93,6 +103,28 @@ export async function processLoadBatch(
         if (existing?.confirmed && existing.wellId) {
           const matchedWell = candidates.find((w) => w.id === existing.wellId);
           if (matchedWell) {
+            const confirmedAudit: MatchAudit = {
+              suggestion: {
+                wellId: existing.wellId,
+                wellName: matchedWell.name,
+                matchType: "confirmed_mapping",
+                score: 1.0,
+              },
+              alternatives: [],
+              evidence: {
+                exactNameMatch: false,
+                exactAliasMatch: false,
+                propxJobIdMatch: false,
+                fuzzyMatch: false,
+                confirmedMapping: true,
+                crossSourceBoost: false,
+                aboveConfidenceFloor: true,
+              },
+              tierBeforeRules: 1,
+              tierAfterRules: 1,
+              rulesApplied: [],
+              reason: "Tier 1 (auto-confirmed): confirmed mapping",
+            };
             try {
               const assignment = await createAssignment(db, {
                 wellId: existing.wellId,
@@ -101,6 +133,7 @@ export async function processLoadBatch(
                 assignedByName: "Auto-Mapper",
                 autoMapTier: 1,
                 autoMapScore: "1.000",
+                matchAudit: confirmedAudit,
               });
               results.push({
                 loadId,
@@ -165,7 +198,63 @@ export async function processLoadBatch(
       }
 
       const topSuggestion = suggestions[0];
-      const tier = classifyTier(topSuggestion);
+      const alternatives = suggestions.slice(1, 4).map((s) => ({
+        wellId: s.wellId,
+        wellName: s.wellName,
+        matchType: s.matchType,
+        score: s.score,
+      }));
+
+      // Cross-source BOL corroboration — free signal, counts as an independent identifier
+      const crossSourceBoost = await computeCrossSourceBoost(db, {
+        id: load.id,
+        source: load.source,
+        bolNo: load.bolNo,
+      });
+
+      // Build evidence from the suggestion + context
+      const evidence = buildEvidence(
+        topSuggestion,
+        crossSourceBoost,
+        false, // confirmed mapping path is handled above — if we got here, not confirmed
+      );
+
+      // Initial tier from match type + score
+      const tierBeforeRules = classifyTier(topSuggestion);
+
+      // Apply anti-hallucination rules in order. Each rule can demote (never promote).
+      const rulesApplied: RuleName[] = [];
+      let tier: 1 | 2 | 3 = tierBeforeRules;
+
+      const fuzzyRule = applyFuzzyNeverAlone(tier, topSuggestion.matchType);
+      tier = fuzzyRule.tier;
+      if (fuzzyRule.demoted) rulesApplied.push("fuzzy_never_alone");
+
+      const twoIdRule = applyTwoIdentifierRule(tier, evidence);
+      tier = twoIdRule.tier;
+      if (twoIdRule.demoted) rulesApplied.push("two_independent_identifiers");
+
+      const floorRule = applyConfidenceFloor(tier, topSuggestion.score);
+      tier = floorRule.tier;
+      if (floorRule.demoted) rulesApplied.push("confidence_floor");
+
+      if (crossSourceBoost) rulesApplied.push("cross_source_boost");
+
+      const audit: MatchAudit = {
+        suggestion: {
+          wellId: topSuggestion.wellId,
+          wellName: topSuggestion.wellName,
+          matchType: topSuggestion.matchType,
+          score: topSuggestion.score,
+        },
+        alternatives,
+        evidence,
+        tierBeforeRules,
+        tierAfterRules: tier,
+        rulesApplied,
+        reason: "", // filled in below
+      };
+      audit.reason = explainTier(audit);
 
       if (tier <= 2) {
         try {
@@ -176,6 +265,7 @@ export async function processLoadBatch(
             assignedByName: "Auto-Mapper",
             autoMapTier: tier,
             autoMapScore: topSuggestion.score.toString(),
+            matchAudit: audit,
           });
 
           if (load.destinationName) {

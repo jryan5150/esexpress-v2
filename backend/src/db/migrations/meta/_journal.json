@@ -50,6 +50,13 @@
       "when": 1776125890680,
       "tag": "0006_curvy_prowler",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776127247034,
+      "tag": "0007_rare_sauron",
+      "breakpoints": true
     }
   ]
 }
