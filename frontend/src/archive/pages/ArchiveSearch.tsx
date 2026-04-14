@@ -1,14 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useArchiveLoads } from "../hooks/use-archive";
 import { Pagination } from "../../components/Pagination";
+import { api } from "../../lib/api";
 
 const PAGE_SIZE = 25;
+
+interface HistoricalStats {
+  totals: {
+    total: number;
+    historicalComplete: number;
+    pendingValidation: number;
+    historicalCompletePct: number;
+  };
+  bySource: Record<string, { total: number; complete: number }>;
+  completeness: {
+    hasBOL: number;
+    hasTicket: number;
+    hasDriver: number;
+    hasWeight: number;
+    hasDeliveredOn: number;
+  };
+  dateRange: { earliest: string | null; latest: string | null };
+}
 
 export function ArchiveSearch() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [date, setDate] = useState("");
+  const [stats, setStats] = useState<HistoricalStats | null>(null);
+
+  // Fetch stats once on mount — auditable proof of what's captured
+  useEffect(() => {
+    api
+      .get<{ success: boolean; data: HistoricalStats }>(
+        "/api/v1/diag/historical-stats",
+      )
+      .then((res) => {
+        if (res.success) setStats(res.data);
+      })
+      .catch(() => {
+        /* silent — stats are nice-to-have, not critical */
+      });
+  }, []);
 
   const query = useArchiveLoads({
     page,
@@ -30,6 +64,84 @@ export function ArchiveSearch() {
           Loads before January 2026
         </p>
       </div>
+
+      {/* Stats banner — auditable proof of capture */}
+      {stats && (
+        <div className="px-6 py-4 border-b border-outline-variant/30 bg-surface-container-low">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-on-surface-variant/70">
+                Total Loads
+              </div>
+              <div className="font-headline text-lg font-bold text-on-surface tabular-nums">
+                {stats.totals.total.toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-on-surface-variant/70">
+                Historical Complete
+              </div>
+              <div className="font-headline text-lg font-bold text-primary tabular-nums">
+                {stats.totals.historicalComplete.toLocaleString()}
+                <span className="text-xs text-on-surface-variant/70 ml-1">
+                  ({stats.totals.historicalCompletePct}%)
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-on-surface-variant/70">
+                Has BOL
+              </div>
+              <div className="font-headline text-lg font-bold text-on-surface tabular-nums">
+                {stats.completeness.hasBOL.toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-on-surface-variant/70">
+                Has Driver
+              </div>
+              <div className="font-headline text-lg font-bold text-on-surface tabular-nums">
+                {stats.completeness.hasDriver.toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-on-surface-variant/70">
+                Date Range
+              </div>
+              <div className="font-headline text-xs font-semibold text-on-surface tabular-nums leading-tight mt-1">
+                {stats.dateRange.earliest
+                  ? new Date(stats.dateRange.earliest).toLocaleDateString(
+                      "en-US",
+                      { month: "short", day: "numeric", year: "numeric" },
+                    )
+                  : "—"}
+                <br />
+                <span className="text-on-surface-variant/70">to</span>{" "}
+                {stats.dateRange.latest
+                  ? new Date(stats.dateRange.latest).toLocaleDateString(
+                      "en-US",
+                      { month: "short", day: "numeric", year: "numeric" },
+                    )
+                  : "—"}
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-outline-variant/20 flex items-center gap-4 text-xs text-on-surface-variant/80">
+            <span className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm text-primary">
+                search
+              </span>
+              Searchable by BOL, driver, ticket #, well
+            </span>
+            {Object.entries(stats.bySource).map(([src, counts]) => (
+              <span key={src} className="tabular-nums">
+                <span className="font-semibold uppercase">{src}</span>:{" "}
+                {counts.total.toLocaleString()}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="px-6 py-3 border-b border-outline-variant/30 flex items-center gap-3">

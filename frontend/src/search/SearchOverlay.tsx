@@ -36,6 +36,13 @@ export function SearchOverlay() {
     return () => document.removeEventListener("keydown", handler);
   }, [open]);
 
+  // Programmatic open via custom event (used by visible search buttons)
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    document.addEventListener("open-search", handler);
+    return () => document.removeEventListener("open-search", handler);
+  }, []);
+
   // Focus input on open
   useEffect(() => {
     if (open) {

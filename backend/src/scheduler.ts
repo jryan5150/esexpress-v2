@@ -152,21 +152,27 @@ async function syncLogistiq(daysBack: number) {
   const { syncLogistiqLoads } =
     await import("./plugins/ingestion/services/logistiq-sync.service.js");
 
-  const email = process.env.LOGISTIQ_EMAIL;
-  const password = process.env.LOGISTIQ_PASSWORD;
-  if (!email || !password) {
+  const apiKey = process.env.LOGISTIQ_API_KEY;
+  const carrierId = process.env.LOGISTIQ_CARRIER_ID;
+  if (!apiKey) {
     console.warn(
-      "[scheduler] LOGISTIQ_EMAIL/PASSWORD not set, skipping Logistiq sync",
+      "[scheduler] LOGISTIQ_API_KEY not set, skipping Logistiq sync",
     );
-    return { skipped: true, reason: "no credentials" };
+    return { skipped: true, reason: "no API key" };
   }
 
-  const client = new LogistiqClient({ email, password });
+  // Carrier export: API-key auth only, no session credentials needed
+  const client = new LogistiqClient({
+    apiKey,
+    carrierId: carrierId ? parseInt(carrierId, 10) : undefined,
+  });
 
   const to = new Date();
   const from = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
 
-  return syncLogistiqLoads(db, client, { from, to });
+  // Fetch via carrier export API, pass pre-fetched records to sync pipeline
+  const records = await client.getCarrierExport(from, to);
+  return syncLogistiqLoads(db, client, { from, to }, records);
 }
 
 async function runAutoMap() {
@@ -178,14 +184,23 @@ async function runAutoMap() {
   const { isNull, gte, sql, and } = await import("drizzle-orm");
   const { eq } = await import("drizzle-orm");
 
-  // Find unmapped loads from last 30 days
+  // Find unmapped loads from last 30 days.
+  // Exclude historical_complete — those are pre-cutoff already-dispatched
+  // loads that belong in the archive, NOT in the validation queue. Creating
+  // assignments for them would flood the team with work that's already done.
   const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const unmapped = await db
     .select({ id: loads.id })
     .from(loads)
     .leftJoin(assignments, eq(loads.id, assignments.loadId))
-    .where(and(isNull(assignments.id), gte(loads.createdAt, fromDate)))
+    .where(
+      and(
+        isNull(assignments.id),
+        gte(loads.createdAt, fromDate),
+        eq(loads.historicalComplete, false),
+      ),
+    )
     .limit(5000);
 
   if (unmapped.length === 0) {

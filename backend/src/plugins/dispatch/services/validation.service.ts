@@ -37,11 +37,13 @@ export async function getValidationSummary(
   }
 
   // Count unresolved loads (no assignment at all) as Tier 3
+  // Exclude historical_complete loads — they're pre-cutoff already-dispatched
+  // records that live in the archive, not in the validation queue.
   const [unmapped] = await db
     .select({ count: sql<number>`cast(count(*) as int)` })
     .from(loads)
     .leftJoin(assignments, eq(loads.id, assignments.loadId))
-    .where(isNull(assignments.id));
+    .where(and(isNull(assignments.id), eq(loads.historicalComplete, false)));
 
   tier3 += unmapped?.count ?? 0;
 
@@ -60,12 +62,13 @@ export async function getAssignmentsByTier(
   const offset = (page - 1) * limit;
 
   // Tier 3: return unmapped loads (no assignment) for manual resolution
+  // Exclude historical_complete — those go to archive, not validation queue
   if (tier === 3) {
     const [countResult] = await db
       .select({ count: sql<number>`cast(count(*) as int)` })
       .from(loads)
       .leftJoin(assignments, eq(loads.id, assignments.loadId))
-      .where(isNull(assignments.id));
+      .where(and(isNull(assignments.id), eq(loads.historicalComplete, false)));
 
     const total = countResult?.count ?? 0;
 
@@ -90,7 +93,7 @@ export async function getAssignmentsByTier(
       })
       .from(loads)
       .leftJoin(assignments, eq(loads.id, assignments.loadId))
-      .where(isNull(assignments.id))
+      .where(and(isNull(assignments.id), eq(loads.historicalComplete, false)))
       .orderBy(desc(loads.createdAt))
       .limit(limit)
       .offset(offset);

@@ -424,8 +424,23 @@ export function DispatchDesk() {
               </p>
             </div>
           </div>
-          {/* Date filter — parent level, applies to well cards + loads */}
+          {/* Search + Date filter */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => document.dispatchEvent(new Event("open-search"))}
+              className="flex items-center gap-[7px] bg-background border border-outline-variant/40 rounded-md px-[11px] py-[7px] hover:border-primary hover:text-on-surface transition-colors cursor-pointer text-outline"
+              aria-label="Search loads by BOL"
+            >
+              <span className="material-symbols-outlined text-primary text-base">
+                search
+              </span>
+              <span className="text-xs tracking-wide whitespace-nowrap">
+                Search BOL
+              </span>
+              <kbd className="text-[10px] text-outline/50 border border-outline-variant/30 rounded px-1 py-0.5 ml-1 font-mono">
+                /
+              </kbd>
+            </button>
             <div className="flex items-center gap-[7px] bg-background border border-outline-variant/40 rounded-md px-[11px] py-[7px] cursor-pointer hover:border-primary transition-colors">
               <span className="material-symbols-outlined text-primary text-base">
                 calendar_month

@@ -2,6 +2,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { loads } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 import type { PropxClient } from "./propx.service.js";
+import { classifyHistoricalLoad } from "../../dispatch/lib/historical-classifier.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -615,6 +616,10 @@ export async function syncPropxLoads(
       continue;
     }
 
+    // Classify as historical-complete if pre-cutoff + has core fields.
+    // This keeps already-dispatched loads OUT of the validation queue.
+    const classification = classifyHistoricalLoad(load);
+
     try {
       const [row] = await db
         .insert(loads)
@@ -642,6 +647,8 @@ export async function syncPropxLoads(
           ticketNo: load.ticketNo,
           status: load.status,
           deliveredOn: load.deliveredOn,
+          historicalComplete: classification.isComplete,
+          historicalCompleteReason: classification.reason,
           rawData: load.rawData,
           updatedAt: new Date(),
         })
@@ -669,6 +676,8 @@ export async function syncPropxLoads(
             ticketNo: load.ticketNo,
             status: load.status,
             deliveredOn: load.deliveredOn,
+            historicalComplete: classification.isComplete,
+            historicalCompleteReason: classification.reason,
             rawData: load.rawData,
             updatedAt: new Date(),
           },

@@ -3,6 +3,7 @@ import { eq, and, inArray, sql } from "drizzle-orm";
 import { loads, ingestionConflicts } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 import type { LogistiqClient } from "./logistiq.service.js";
+import { classifyHistoricalLoad } from "../../dispatch/lib/historical-classifier.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -154,6 +155,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   "trailer no": "trailer_no",
   trailer_no: "trailer_no",
   trailerno: "trailer_no",
+  trailer_number: "trailer_no", // carrier export API field
 
   // Product
   product: "product_name",
@@ -163,6 +165,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   "product description": "product_name",
   product_description: "product_name",
   material: "product_name",
+  sand_type_name: "product_name", // carrier export API field
 
   // Dates
   delivered: "delivered_on",
@@ -191,6 +194,7 @@ const COLUMN_ALIASES: Record<string, string> = {
 
   // Weight (tons) — direct ton values from source
   tons: "weight_tons_direct",
+  ton: "weight_tons_direct", // carrier export API field (singular)
   "net tons": "net_weight_tons_direct",
   net_tons: "net_weight_tons_direct",
   "gross tons": "gross_weight_tons_direct",
@@ -628,6 +632,7 @@ export async function syncLogistiqLoads(
   db: Database,
   client: LogistiqClient,
   dateRange: { from: Date; to: Date },
+  prefetchedRecords?: unknown[],
 ): Promise<SyncResult> {
   const result: SyncResult = {
     fetched: 0,
@@ -637,8 +642,10 @@ export async function syncLogistiqLoads(
     errors: [],
   };
 
-  // 1. Fetch raw orders from Logistiq
-  const rawOrders = await client.searchOrders(dateRange.from, dateRange.to);
+  // 1. Fetch raw orders — use prefetched (carrier export) or session-based searchOrders
+  const rawOrders =
+    prefetchedRecords ??
+    (await client.searchOrders(dateRange.from, dateRange.to));
   result.fetched = rawOrders.length;
 
   if (rawOrders.length === 0) return result;
@@ -676,6 +683,10 @@ export async function syncLogistiqLoads(
       continue;
     }
 
+    // Classify as historical-complete if pre-cutoff + has core fields.
+    // This keeps already-dispatched loads OUT of the validation queue.
+    const classification = classifyHistoricalLoad(load);
+
     try {
       await db
         .insert(loads)
@@ -703,6 +714,8 @@ export async function syncLogistiqLoads(
           ticketNo: load.ticketNo,
           status: load.status,
           deliveredOn: load.deliveredOn,
+          historicalComplete: classification.isComplete,
+          historicalCompleteReason: classification.reason,
           rawData: load.rawData,
           updatedAt: new Date(),
         })
@@ -730,6 +743,8 @@ export async function syncLogistiqLoads(
             ticketNo: load.ticketNo,
             status: load.status,
             deliveredOn: load.deliveredOn,
+            historicalComplete: classification.isComplete,
+            historicalCompleteReason: classification.reason,
             rawData: load.rawData,
             updatedAt: new Date(),
           },
