@@ -69,6 +69,37 @@ export function useValidationSummary() {
   });
 }
 
+/**
+ * Returns the last successful + most recent sync run per source (propx,
+ * logistiq, automap, jotform). Used on the Home page so Jessica can see
+ * at a glance whether data is flowing.
+ */
+interface PipelineRun {
+  id: number;
+  source: string;
+  startedAt: string;
+  completedAt: string | null;
+  status: "success" | "failed" | "skipped";
+  recordsProcessed: number | null;
+  durationMs: number | null;
+  error: string | null;
+  metadata: Record<string, unknown> | null;
+}
+interface PipelineEntry {
+  lastRun: PipelineRun | null;
+  recentRuns: Array<{ status: string; at: string }>;
+}
+type PipelineData = Record<string, PipelineEntry>;
+
+export function usePipelineStatus() {
+  return useQuery({
+    queryKey: ["diag", "pipeline"],
+    queryFn: () => api.get<PipelineData>("/diag/pipeline"),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+}
+
 export function useDispatchReadiness() {
   return useQuery({
     queryKey: qk.readiness.all,

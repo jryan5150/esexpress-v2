@@ -414,6 +414,9 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
           loadDriverName: loads.driverName,
           destinationName: loads.destinationName,
           loadTicketNo: loads.ticketNo,
+          loadBolNo: loads.bolNo,
+          loadWeightTons: loads.weightTons,
+          loadWeightLbs: loads.weightLbs,
         })
         .from(jotformImports)
         .leftJoin(loads, eq(jotformImports.matchedLoadId, loads.id))
@@ -453,7 +456,18 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
               ticketNo: r.loadTicketNo,
             }
           : null,
-        discrepancies: [],
+        discrepancies: r.matchedLoadId
+          ? deriveJotformDiscrepancies({
+              jotformBol: r.bolNo,
+              jotformDriver: r.driverName,
+              jotformWeight: r.weight,
+              loadBol: r.loadBolNo,
+              loadTicket: r.loadTicketNo,
+              loadDriver: r.loadDriverName,
+              loadWeightTons: r.loadWeightTons,
+              loadWeightLbs: r.loadWeightLbs,
+            })
+          : [],
       }));
 
       return {
@@ -466,3 +480,96 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
 };
 
 export default jotformRoutes;
+
+/**
+ * Surface field-level conflicts between a JotForm submission and the load
+ * it auto-matched to. Returned in the BOL Reconciliation queue so a
+ * dispatcher can confirm the match is right or relink it.
+ *
+ * Severity ladder:
+ *   - critical: BOL/ticket numbers don't agree on last-4 digits
+ *   - warning:  driver name doesn't substring-match either direction
+ *   - info:     weight delta > 10% (after normalizing tons↔lbs)
+ */
+function deriveJotformDiscrepancies(input: {
+  jotformBol: string | null;
+  jotformDriver: string | null;
+  jotformWeight: string | null;
+  loadBol: string | null;
+  loadTicket: string | null;
+  loadDriver: string | null;
+  loadWeightTons: string | null;
+  loadWeightLbs: string | null;
+}): Array<{
+  field: string;
+  severity: "critical" | "warning" | "info";
+  jotformValue: string | null;
+  loadValue: string | null;
+  message: string;
+}> {
+  const out: Array<{
+    field: string;
+    severity: "critical" | "warning" | "info";
+    jotformValue: string | null;
+    loadValue: string | null;
+    message: string;
+  }> = [];
+
+  // BOL / ticket — compare last-4 digits since OCR often gets the prefix wrong
+  const jBol = input.jotformBol?.replace(/\D/g, "").slice(-4) ?? "";
+  const candidates = [input.loadBol, input.loadTicket]
+    .map((v) => v?.replace(/\D/g, "").slice(-4) ?? "")
+    .filter((v) => v.length >= 4);
+  if (jBol.length >= 4 && candidates.length > 0 && !candidates.includes(jBol)) {
+    out.push({
+      field: "BOL / Ticket",
+      severity: "critical",
+      jotformValue: input.jotformBol,
+      loadValue: input.loadBol ?? input.loadTicket,
+      message: `Photo BOL last-4 ${jBol} does not match load (${candidates.join(" or ")})`,
+    });
+  }
+
+  // Driver name — case-insensitive substring either direction
+  const jDriver = input.jotformDriver?.trim().toLowerCase() ?? "";
+  const lDriver = input.loadDriver?.trim().toLowerCase() ?? "";
+  if (
+    jDriver.length > 2 &&
+    lDriver.length > 2 &&
+    !jDriver.includes(lDriver) &&
+    !lDriver.includes(jDriver)
+  ) {
+    out.push({
+      field: "Driver",
+      severity: "warning",
+      jotformValue: input.jotformDriver,
+      loadValue: input.loadDriver,
+      message: `Photo driver "${input.jotformDriver}" does not match load driver "${input.loadDriver}"`,
+    });
+  }
+
+  // Weight — compare with rough lbs↔tons normalization (1 ton = 2000 lbs)
+  const jWeightRaw = input.jotformWeight
+    ? parseFloat(input.jotformWeight.replace(/[^\d.]/g, ""))
+    : NaN;
+  const loadLbs = input.loadWeightLbs
+    ? parseFloat(input.loadWeightLbs)
+    : input.loadWeightTons
+      ? parseFloat(input.loadWeightTons) * 2000
+      : NaN;
+  if (!Number.isNaN(jWeightRaw) && !Number.isNaN(loadLbs) && loadLbs > 0) {
+    // JotForm weight likely in lbs (drivers eyeball the scale ticket)
+    const delta = Math.abs(jWeightRaw - loadLbs) / loadLbs;
+    if (delta > 0.1) {
+      out.push({
+        field: "Weight",
+        severity: "info",
+        jotformValue: `${Math.round(jWeightRaw)} lbs`,
+        loadValue: `${Math.round(loadLbs)} lbs`,
+        message: `Weight differs by ${Math.round(delta * 100)}% — verify scale ticket vs load record`,
+      });
+    }
+  }
+
+  return out;
+}

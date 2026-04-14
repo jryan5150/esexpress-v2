@@ -4,6 +4,7 @@ import {
   useWells,
   useDispatchReadiness,
   useValidationSummary,
+  usePipelineStatus,
 } from "../hooks/use-wells";
 import { useHeartbeat } from "../hooks/use-presence";
 
@@ -13,6 +14,7 @@ export function ExceptionFeed() {
   const wellsQuery = useWells();
   const readinessQuery = useDispatchReadiness();
   const validationQuery = useValidationSummary();
+  const pipelineQuery = usePipelineStatus();
 
   const isLoading = wellsQuery.isLoading || readinessQuery.isLoading;
 
@@ -162,6 +164,9 @@ export function ExceptionFeed() {
           </div>
         </div>
 
+        {/* Sync Pipeline Health — visible proof data is still flowing */}
+        <SyncPipelineStrip pipeline={pipelineQuery.data as any} />
+
         {/* Wells Table */}
         <div>
           <h3 className="font-headline text-[13px] font-bold text-outline uppercase tracking-[0.08em] mb-2.5">
@@ -242,6 +247,110 @@ export function ExceptionFeed() {
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Compact one-line strip showing last-sync-time for PropX, Logistiq, and
+ * JotForm. Gives Jessica confidence that the ingest pipeline is alive
+ * without digging into admin/diagnostics pages.
+ */
+function SyncPipelineStrip({
+  pipeline,
+}: {
+  pipeline:
+    | Record<
+        string,
+        {
+          lastRun?: {
+            startedAt?: string;
+            status?: string;
+            metadata?: Record<string, unknown> | null;
+          } | null;
+        }
+      >
+    | undefined;
+}) {
+  const sources: Array<{
+    key: string;
+    label: string;
+    icon: string;
+  }> = [
+    { key: "propx", label: "PropX", icon: "cloud_sync" },
+    { key: "logistiq", label: "Logistiq", icon: "cloud_sync" },
+    { key: "jotform", label: "JotForm photos", icon: "photo_camera" },
+    { key: "automap", label: "Auto-mapper", icon: "auto_fix_high" },
+  ];
+
+  const fmtRelative = (iso: string | undefined): string => {
+    if (!iso) return "never";
+    const delta = Date.now() - new Date(iso).getTime();
+    const min = Math.floor(delta / 60_000);
+    if (min < 1) return "just now";
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    const d = Math.floor(hr / 24);
+    return `${d}d ago`;
+  };
+
+  const freshnessColor = (iso: string | undefined, source: string): string => {
+    if (!iso) return "bg-outline/40";
+    const age = Date.now() - new Date(iso).getTime();
+    // JotForm ticks every 30 min, others every 4 hours. Generous windows.
+    const staleMs = source === "jotform" ? 90 * 60_000 : 6 * 60 * 60_000;
+    return age > staleMs ? "bg-error" : "bg-tertiary";
+  };
+
+  return (
+    <div className="mb-6 bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-headline text-[11px] font-bold text-outline uppercase tracking-[0.08em]">
+          Data Pipeline
+        </span>
+        <span className="text-[10px] text-outline">Refreshes every minute</span>
+      </div>
+      <div className="grid grid-cols-4 gap-3">
+        {sources.map((s) => {
+          const entry = pipeline?.[s.key];
+          const last = entry?.lastRun;
+          const started = last?.startedAt;
+          const status = last?.status;
+          return (
+            <div
+              key={s.key}
+              className="flex items-center gap-2.5 bg-background rounded-md px-3 py-2"
+              title={
+                status === "failed"
+                  ? `Last run failed — check Missed Loads report`
+                  : undefined
+              }
+            >
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 ${freshnessColor(
+                  started,
+                  s.key,
+                )}`}
+              />
+              <span className="material-symbols-outlined text-[16px] text-on-surface-variant shrink-0">
+                {s.icon}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-bold text-on-surface truncate">
+                  {s.label}
+                </div>
+                <div className="text-[10px] text-outline tabular-nums">
+                  {fmtRelative(started)}
+                  {status === "failed" && (
+                    <span className="ml-1 text-error font-bold">• failed</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

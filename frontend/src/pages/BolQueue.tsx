@@ -13,6 +13,14 @@ const API_BASE = import.meta.env.VITE_API_URL || "";
 const resolveUrl = (url: string) =>
   url.startsWith("/") ? `${API_BASE}${url}` : url;
 
+interface JotFormDiscrepancy {
+  field: string;
+  severity: "critical" | "warning" | "info";
+  jotformValue: string | null;
+  loadValue: string | null;
+  message: string;
+}
+
 interface JotFormItem {
   submission: {
     id: number;
@@ -32,7 +40,7 @@ interface JotFormItem {
     destinationName: string | null;
     ticketNo: string | null;
   } | null;
-  discrepancies: unknown[];
+  discrepancies: JotFormDiscrepancy[];
 }
 
 function formatDate(d: string | null): string {
@@ -306,6 +314,32 @@ export function BolQueue() {
                           </div>
                         </div>
 
+                        {/* Discrepancy badge */}
+                        {item.discrepancies.length > 0 && (
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                              item.discrepancies.some(
+                                (d) => d.severity === "critical",
+                              )
+                                ? "bg-error/15 text-error"
+                                : item.discrepancies.some(
+                                      (d) => d.severity === "warning",
+                                    )
+                                  ? "bg-[#fef3c7] text-[#92400e]"
+                                  : "bg-surface-container-high text-outline"
+                            }`}
+                            title={item.discrepancies
+                              .map((d) => `${d.field}: ${d.message}`)
+                              .join("\n")}
+                          >
+                            <span className="material-symbols-outlined text-[12px]">
+                              warning
+                            </span>
+                            {item.discrepancies.length} mismatch
+                            {item.discrepancies.length > 1 ? "es" : ""}
+                          </span>
+                        )}
+
                         {/* Matched load */}
                         {load && (
                           <div className="text-right">
@@ -387,6 +421,12 @@ export function BolQueue() {
                             ))}
                           </div>
                           {!load && <ManualMatchPanel importId={sub.id} />}
+                          {load && item.discrepancies.length > 0 && (
+                            <DiscrepancyPanel
+                              discrepancies={item.discrepancies}
+                              importId={sub.id}
+                            />
+                          )}
                         </div>
                       )}
                     </div>
@@ -843,6 +883,96 @@ function ManualMatchPanel({ importId }: { importId: number }) {
             ? `Link to Load #${pickedLoadId}`
             : "Pick a load above"}
       </button>
+    </div>
+  );
+}
+
+/**
+ * Renders the field-level conflicts between a JotForm submission and the
+ * load it auto-matched to. Critical = BOL/ticket disagreement (likely wrong
+ * match). Warning = driver name disagreement. Info = >10% weight delta.
+ */
+function DiscrepancyPanel({
+  discrepancies,
+  importId,
+}: {
+  discrepancies: JotFormDiscrepancy[];
+  importId: number;
+}) {
+  const [showRelink, setShowRelink] = useState(false);
+  const SEVERITY_STYLES: Record<
+    JotFormDiscrepancy["severity"],
+    { dot: string; text: string; bg: string; label: string }
+  > = {
+    critical: {
+      dot: "bg-error",
+      text: "text-error",
+      bg: "bg-error/8",
+      label: "Critical",
+    },
+    warning: {
+      dot: "bg-[#d97706]",
+      text: "text-[#92400e]",
+      bg: "bg-[#fef3c7]/40",
+      label: "Warning",
+    },
+    info: {
+      dot: "bg-outline",
+      text: "text-on-surface-variant",
+      bg: "bg-surface-container-high/40",
+      label: "Info",
+    },
+  };
+
+  return (
+    <div className="bg-surface-container-lowest border border-warning/20 rounded-md p-3 mt-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-[14px] text-error">
+            warning
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface">
+            {discrepancies.length} field
+            {discrepancies.length > 1 ? "s" : ""} mismatch the matched load
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowRelink((s) => !s)}
+          className="text-[10px] font-bold uppercase tracking-wide text-primary hover:underline cursor-pointer"
+        >
+          {showRelink ? "Cancel" : "Relink to a different load"}
+        </button>
+      </div>
+      <div className="space-y-1">
+        {discrepancies.map((d, i) => {
+          const s = SEVERITY_STYLES[d.severity];
+          return (
+            <div
+              key={i}
+              className={`grid items-center gap-2 px-2 py-1.5 rounded ${s.bg}`}
+              style={{ gridTemplateColumns: "8px 90px 1fr" }}
+            >
+              <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+              <span className={`text-[11px] font-bold uppercase ${s.text}`}>
+                {d.field}
+              </span>
+              <span className="text-[12px] text-on-surface">
+                <span className="text-outline">photo:</span>{" "}
+                <span className="font-label">{d.jotformValue ?? "--"}</span>
+                <span className="text-outline mx-2">·</span>
+                <span className="text-outline">load:</span>{" "}
+                <span className="font-label">{d.loadValue ?? "--"}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="text-[10px] text-outline">
+        Use "Relink" if the auto-match guessed the wrong load. Otherwise the
+        photo stays attached and the discrepancy is just a flag for your eyes.
+      </div>
+      {showRelink && <ManualMatchPanel importId={importId} />}
     </div>
   );
 }
