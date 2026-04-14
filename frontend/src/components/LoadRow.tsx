@@ -1,4 +1,9 @@
 import { memo } from "react";
+import {
+  LOAD_COUNT_STATUS,
+  deriveLoadCountStatus,
+  type LoadCountStatus,
+} from "../lib/load-count-status";
 
 type ValidationStatus = "validated" | "pending" | "missing";
 
@@ -13,6 +18,8 @@ interface LoadRowProps {
   ticketNo: string | null;
   deliveredOn: string | null;
   validationStatus: ValidationStatus;
+  assignmentStatus?: string | null;
+  historicalComplete?: boolean;
   checked: boolean;
   entered: boolean;
   canEnter: boolean;
@@ -29,30 +36,6 @@ interface LoadRowProps {
   onMissingTicket?: () => void;
   isPending?: boolean;
 }
-
-const STATUS_CONFIG: Record<
-  ValidationStatus,
-  { label: string; dotBg: string; badgeBg: string; badgeText: string }
-> = {
-  validated: {
-    label: "Validated",
-    dotBg: "bg-tertiary",
-    badgeBg: "bg-[#d1fae5]",
-    badgeText: "text-[#065f46]",
-  },
-  pending: {
-    label: "Pending",
-    dotBg: "bg-primary-container",
-    badgeBg: "bg-[#ede9f8]",
-    badgeText: "text-primary-container",
-  },
-  missing: {
-    label: "Missing Ticket",
-    dotBg: "bg-error",
-    badgeBg: "bg-[#fee2e2]",
-    badgeText: "text-[#991b1b]",
-  },
-};
 
 function formatDate(d: string | null): string {
   if (!d) return "--";
@@ -78,6 +61,8 @@ export const LoadRow = memo(function LoadRow({
   ticketNo,
   deliveredOn,
   validationStatus,
+  assignmentStatus,
+  historicalComplete,
   checked,
   entered,
   canEnter,
@@ -94,10 +79,20 @@ export const LoadRow = memo(function LoadRow({
   onMissingTicket,
   isPending,
 }: LoadRowProps) {
-  const status = STATUS_CONFIG[validationStatus];
   const isValidated = validationStatus === "validated";
   const isMissing = validationStatus === "missing";
   const dimmed = !isValidated && !entered;
+
+  // Load Count Sheet status — drives the left-edge stripe + pill color.
+  // Mirrors the vocabulary + palette the team uses on their daily sheet.
+  const loadCountStatus: LoadCountStatus = deriveLoadCountStatus({
+    driverName,
+    ticketNo,
+    bolNo,
+    assignmentStatus,
+    historicalComplete,
+  });
+  const statusMeta = LOAD_COUNT_STATUS[loadCountStatus];
 
   return (
     <div
@@ -111,8 +106,8 @@ export const LoadRow = memo(function LoadRow({
       } ${entered ? "opacity-40" : ""}`}
       style={{
         gridTemplateColumns: "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
-        borderLeftWidth: assignedToColor ? "3px" : undefined,
-        borderLeftColor: assignedToColor ?? undefined,
+        borderLeftWidth: "4px",
+        borderLeftColor: statusMeta.hex,
       }}
     >
       {/* Checkbox */}
@@ -132,13 +127,14 @@ export const LoadRow = memo(function LoadRow({
         />
       </div>
 
-      {/* Status badge */}
+      {/* Status pill — Load Count Sheet palette */}
       <div>
         <span
-          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${status.badgeBg} ${status.badgeText}`}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide text-white"
+          style={{ backgroundColor: statusMeta.hex }}
+          title={statusMeta.label}
         >
-          <span className={`w-[5px] h-[5px] rounded-full ${status.dotBg}`} />
-          {status.label}
+          {statusMeta.label}
         </span>
       </div>
 

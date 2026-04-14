@@ -20,6 +20,7 @@ import { Button } from "../components/Button";
 import { WellTabBar } from "../components/WellTabBar";
 import { BatchActions } from "../components/BatchActions";
 import { FilterTabs } from "../components/FilterTabs";
+import { LoadCountLegend } from "../components/LoadCountLegend";
 import { useToast } from "../components/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { qk } from "../lib/query-client";
@@ -424,8 +425,9 @@ export function DispatchDesk() {
               </p>
             </div>
           </div>
-          {/* Search + Date filter */}
+          {/* Search + Color key + Date filter */}
           <div className="flex items-center gap-2">
+            <LoadCountLegend />
             <button
               onClick={() => document.dispatchEvent(new Event("open-search"))}
               className="flex items-center gap-[7px] bg-background border border-outline-variant/40 rounded-md px-[11px] py-[7px] hover:border-primary hover:text-on-surface transition-colors cursor-pointer text-outline"
@@ -969,6 +971,7 @@ export function DispatchDesk() {
                         ticketNo={load.ticketNo}
                         deliveredOn={load.wellName ?? null}
                         validationStatus={getValidationStatus(load)}
+                        assignmentStatus={load.assignmentStatus ?? null}
                         checked={selectedIds.has(load.assignmentId)}
                         entered={enteredIds.has(load.assignmentId)}
                         canEnter={load.canEnter}
@@ -1121,6 +1124,7 @@ export function DispatchDesk() {
                   }
                   deliveredOn={load.deliveredOn}
                   validationStatus={getValidationStatus(load)}
+                  assignmentStatus={load.assignmentStatus ?? null}
                   checked={selectedIds.has(load.assignmentId)}
                   entered={enteredIds.has(load.assignmentId)}
                   canEnter={load.canEnter}

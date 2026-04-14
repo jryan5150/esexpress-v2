@@ -203,7 +203,7 @@ export function BolQueue() {
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold capitalize transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                     filter === f
                       ? "bg-primary-container/12 text-primary-container shadow-sm"
                       : "text-outline hover:bg-surface-container-high/60 hover:text-on-surface"
