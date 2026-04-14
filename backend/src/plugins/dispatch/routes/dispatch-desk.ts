@@ -23,6 +23,8 @@ const dispatchDeskRoutes: FastifyPluginAsync = async (fastify) => {
               enum: ["attached", "pending", "missing"],
             },
             date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+            dateFrom: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+            dateTo: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
             era: { type: "string", enum: ["live", "archive"] },
             page: { type: "integer", minimum: 1, default: 1 },
             limit: { type: "integer", minimum: 1, maximum: 500, default: 100 },
@@ -40,6 +42,8 @@ const dispatchDeskRoutes: FastifyPluginAsync = async (fastify) => {
         wellId?: number;
         photoStatus?: PhotoStatus;
         date?: string;
+        dateFrom?: string;
+        dateTo?: string;
         era?: string;
         page?: number;
         limit?: number;
@@ -49,6 +53,8 @@ const dispatchDeskRoutes: FastifyPluginAsync = async (fastify) => {
         wellId: query.wellId,
         photoStatus: query.photoStatus,
         date: query.date,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
         era: query.era,
         page: query.page,
         limit: query.limit,

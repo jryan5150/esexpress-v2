@@ -49,7 +49,12 @@ export function canMarkEntered(photoStatus: PhotoStatus): boolean {
 export interface DispatchDeskFilters {
   wellId?: number;
   photoStatus?: PhotoStatus;
+  /** Single-day filter. Ignored if dateFrom or dateTo is provided. */
   date?: string;
+  /** Inclusive start of a delivered_on range (YYYY-MM-DD, America/Chicago). */
+  dateFrom?: string;
+  /** Inclusive end of a delivered_on range (YYYY-MM-DD, America/Chicago). */
+  dateTo?: string;
   era?: string;
   page?: number;
   limit?: number;
@@ -108,7 +113,16 @@ export async function getDispatchDeskLoads(
   data: DispatchDeskRow[];
   meta: { page: number; limit: number; count: number };
 }> {
-  const { wellId, photoStatus, date, era, page = 1, limit = 100 } = filters;
+  const {
+    wellId,
+    photoStatus,
+    date,
+    dateFrom,
+    dateTo,
+    era,
+    page = 1,
+    limit = 100,
+  } = filters;
   const offset = (page - 1) * limit;
 
   // Build where conditions — show pending + assigned + dispatch_ready
@@ -128,10 +142,20 @@ export async function getDispatchDeskLoads(
     conditions.push(eq(assignments.photoStatus, photoStatus));
   }
 
-  if (date) {
-    // Filter on loads.deliveredOn (the actual delivery date), not assignments.createdAt.
-    // Use America/Chicago (CDT) since dispatchers are in Texas.
-    // Explicit ::timestamptz cast ensures PostgreSQL uses the deliveredOn index.
+  // Date filter. Range takes precedence; single `date` falls back when no range.
+  // All cutoffs expressed in America/Chicago (CDT, UTC-5) since dispatchers are in Texas.
+  if (dateFrom || dateTo) {
+    if (dateFrom) {
+      const startOfRange = `${dateFrom}T00:00:00-05:00`;
+      conditions.push(
+        sql`${loads.deliveredOn} >= ${startOfRange}::timestamptz`,
+      );
+    }
+    if (dateTo) {
+      const endOfRange = `${dateTo}T23:59:59.999-05:00`;
+      conditions.push(sql`${loads.deliveredOn} <= ${endOfRange}::timestamptz`);
+    }
+  } else if (date) {
     const startOfDay = `${date}T00:00:00-05:00`;
     const endOfDay = `${date}T23:59:59.999-05:00`;
     conditions.push(sql`${loads.deliveredOn} >= ${startOfDay}::timestamptz`);

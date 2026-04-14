@@ -81,6 +81,8 @@ export function useDispatchDeskLoads(filters?: {
   wellId?: number;
   photoStatus?: string;
   date?: string;
+  dateFrom?: string;
+  dateTo?: string;
   page?: number;
   limit?: number;
 }) {
@@ -88,7 +90,10 @@ export function useDispatchDeskLoads(filters?: {
   params.set("era", "live");
   if (filters?.wellId) params.set("wellId", String(filters.wellId));
   if (filters?.photoStatus) params.set("photoStatus", filters.photoStatus);
-  if (filters?.date) params.set("date", filters.date);
+  if (filters?.dateFrom) params.set("dateFrom", filters.dateFrom);
+  if (filters?.dateTo) params.set("dateTo", filters.dateTo);
+  if (filters?.date && !filters.dateFrom && !filters.dateTo)
+    params.set("date", filters.date);
   if (filters?.page) params.set("page", String(filters.page));
   if (filters?.limit) params.set("limit", String(filters.limit));
   const qs = params.toString() ? `?${params}` : "";

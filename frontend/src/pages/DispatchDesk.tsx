@@ -42,6 +42,7 @@ export function DispatchDesk() {
   const [photoModalLoad, setPhotoModalLoad] = useState<any | null>(null);
   const [expandedLoadId, setExpandedLoadId] = useState<number | null>(null);
   const [dateFilter, setDateFilter] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [pinnedWellIds, setPinnedWellIds] = useState<string[]>([]);
   const [pickerView, setPickerView] = useState<"wells" | "loads">("wells");
 
@@ -49,19 +50,22 @@ export function DispatchDesk() {
   const confirmMutation = useValidationConfirm();
 
   const wellsQuery = useWells(dateFilter || undefined);
+  const hasAnyDate = Boolean(dateFilter || dateTo);
   const deskQuery = useDispatchDeskLoads(
     selectedWellId
       ? {
           wellId: Number(selectedWellId),
           page,
           limit: pageSize,
-          date: dateFilter || undefined,
+          dateFrom: dateFilter || undefined,
+          dateTo: dateTo || undefined,
         }
-      : dateFilter
+      : hasAnyDate
         ? {
             page,
             limit: pageSize,
-            date: dateFilter,
+            dateFrom: dateFilter || undefined,
+            dateTo: dateTo || undefined,
           }
         : undefined,
   );
@@ -443,28 +447,47 @@ export function DispatchDesk() {
                 /
               </kbd>
             </button>
-            <div className="flex items-center gap-[7px] bg-background border border-outline-variant/40 rounded-md px-[11px] py-[7px] cursor-pointer hover:border-primary transition-colors">
+            <div className="flex items-center gap-1.5 bg-background border border-outline-variant/40 rounded-md px-[11px] py-[7px] hover:border-primary transition-colors">
               <span className="material-symbols-outlined text-primary text-base">
                 calendar_month
               </span>
               <input
                 type="date"
+                aria-label="From date"
                 value={dateFilter}
+                max={dateTo || undefined}
                 onChange={(e) => {
                   setDateFilter(e.target.value);
                   setPage(1);
                   track("filter_changed", {
-                    filterType: "date",
+                    filterType: "dateFrom",
+                    value: e.target.value,
+                  });
+                }}
+                className="bg-transparent text-[13px] font-medium text-on-surface focus:outline-none cursor-pointer"
+              />
+              <span className="text-[11px] font-semibold text-outline">to</span>
+              <input
+                type="date"
+                aria-label="To date"
+                value={dateTo}
+                min={dateFilter || undefined}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setPage(1);
+                  track("filter_changed", {
+                    filterType: "dateTo",
                     value: e.target.value,
                   });
                 }}
                 className="bg-transparent text-[13px] font-medium text-on-surface focus:outline-none cursor-pointer"
               />
             </div>
-            {dateFilter && (
+            {(dateFilter || dateTo) && (
               <button
                 onClick={() => {
                   setDateFilter("");
+                  setDateTo("");
                   setPage(1);
                 }}
                 className="text-[10px] font-bold text-outline hover:text-error transition-colors cursor-pointer uppercase tracking-wide"

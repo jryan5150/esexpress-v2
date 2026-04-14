@@ -104,7 +104,17 @@ export function deriveLoadCountStatus(load: DerivableLoad): LoadCountStatus {
   return "being_built";
 }
 
-/** Hex → readable text color for pills. Saturated backgrounds → white text. */
-export function pillTextColor(_hex: string): string {
-  return "#ffffff";
+/**
+ * Choose a readable text color given a background hex, using a
+ * perceptual-luminance approximation (Rec. 601). Light backgrounds get near-
+ * black text, dark backgrounds get white. Threshold 0.5 picks black for:
+ * yellow, cyan, green, dusty rose, slate blue, hot pink. White for: magenta,
+ * purple, burnt orange.
+ */
+export function pillTextColor(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  return luminance > 0.5 ? "#111827" : "#ffffff";
 }

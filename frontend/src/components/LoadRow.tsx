@@ -2,6 +2,7 @@ import { memo } from "react";
 import {
   LOAD_COUNT_STATUS,
   deriveLoadCountStatus,
+  pillTextColor,
   type LoadCountStatus,
 } from "../lib/load-count-status";
 
@@ -130,8 +131,11 @@ export const LoadRow = memo(function LoadRow({
       {/* Status pill — Load Count Sheet palette */}
       <div>
         <span
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide text-white"
-          style={{ backgroundColor: statusMeta.hex }}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide"
+          style={{
+            backgroundColor: statusMeta.hex,
+            color: pillTextColor(statusMeta.hex),
+          }}
           title={statusMeta.label}
         >
           {statusMeta.label}
