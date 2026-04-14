@@ -17,13 +17,23 @@ export interface ValidationSummary {
 export async function getValidationSummary(
   db: Database,
 ): Promise<ValidationSummary> {
+  // Count pending assignments tier-by-tier, but only where the load is NOT
+  // historical_complete. Pre-cutoff loads were already dispatched via PCS
+  // during v2 build — their stale pending assignments must not pollute the
+  // validation queue.
   const rows = await db
     .select({
       tier: assignments.autoMapTier,
       count: sql<number>`cast(count(*) as int)`,
     })
     .from(assignments)
-    .where(eq(assignments.status, "pending"))
+    .innerJoin(loads, eq(assignments.loadId, loads.id))
+    .where(
+      and(
+        eq(assignments.status, "pending"),
+        eq(loads.historicalComplete, false),
+      ),
+    )
     .groupBy(assignments.autoMapTier);
 
   let tier1 = 0;
@@ -101,15 +111,18 @@ export async function getAssignmentsByTier(
     return { data, total };
   }
 
-  // Tier 1/2: pending assignments with matching tier
+  // Tier 1/2: pending assignments where the load is NOT historical_complete.
+  // Historical loads live in the archive, not in the validation queue.
   const whereClause = and(
     eq(assignments.status, "pending"),
     eq(assignments.autoMapTier, tier),
+    eq(loads.historicalComplete, false),
   );
 
   const [countResult] = await db
     .select({ count: sql<number>`cast(count(*) as int)` })
     .from(assignments)
+    .innerJoin(loads, eq(assignments.loadId, loads.id))
     .where(whereClause);
 
   const total = countResult?.count ?? 0;
