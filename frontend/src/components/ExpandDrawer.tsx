@@ -2,6 +2,35 @@ import { useState, useRef, useEffect } from "react";
 import { useUpdateLoad, useDuplicateLoad } from "../hooks/use-wells";
 import { useToast } from "./Toast";
 
+/** Shape of the match_audit jsonb written by the auto-mapper. */
+interface MatchAudit {
+  suggestion: {
+    wellId: number;
+    wellName: string;
+    matchType: string;
+    score: number;
+  };
+  alternatives: Array<{
+    wellId: number;
+    wellName: string;
+    matchType: string;
+    score: number;
+  }>;
+  evidence: {
+    exactNameMatch: boolean;
+    exactAliasMatch: boolean;
+    propxJobIdMatch: boolean;
+    fuzzyMatch: boolean;
+    confirmedMapping: boolean;
+    crossSourceBoost: boolean;
+    aboveConfidenceFloor: boolean;
+  };
+  tierBeforeRules: 1 | 2 | 3;
+  tierAfterRules: 1 | 2 | 3;
+  rulesApplied: string[];
+  reason: string;
+}
+
 interface ExpandDrawerProps {
   loadId: number;
   loadNo: string;
@@ -22,6 +51,7 @@ interface ExpandDrawerProps {
   autoMapScore: string | null;
   autoMapTier: number | null;
   assignmentStatus: string;
+  matchAudit?: MatchAudit | null;
   pickupTime?: string | null;
   arrivalTime?: string | null;
   transitTime?: string | null;
@@ -197,6 +227,7 @@ export function ExpandDrawer({
   autoMapScore,
   autoMapTier,
   assignmentStatus,
+  matchAudit,
   pickupTime,
   arrivalTime,
   transitTime,
@@ -350,11 +381,119 @@ export function ExpandDrawer({
             </span>
           )}
           {autoMapTier && (
-            <span className="text-[9px] font-semibold text-outline/60 uppercase tracking-wider">
+            <span
+              className="text-[9px] font-semibold text-outline/60 uppercase tracking-wider"
+              title={matchAudit?.reason ?? undefined}
+            >
               Tier {autoMapTier}
             </span>
           )}
         </div>
+
+        {/* Match Audit — shows why this tier/match was chosen */}
+        {matchAudit && (
+          <div className="px-4 pb-2">
+            <details className="text-xs">
+              <summary className="cursor-pointer text-outline hover:text-on-surface transition-colors flex items-center gap-1.5 select-none">
+                <span className="material-symbols-outlined text-sm">
+                  {matchAudit.tierAfterRules === 1
+                    ? "verified"
+                    : matchAudit.tierAfterRules === 2
+                      ? "help"
+                      : "priority_high"}
+                </span>
+                <span className="font-medium">Match Reasoning</span>
+                <span className="text-outline/60 font-normal">
+                  — {matchAudit.reason}
+                </span>
+              </summary>
+              <div className="mt-2 ml-5 space-y-2 text-on-surface-variant">
+                <div>
+                  <span className="text-outline/70 text-[11px] uppercase tracking-wide">
+                    Matched
+                  </span>
+                  <div className="font-medium">
+                    {matchAudit.suggestion.wellName}{" "}
+                    <span className="text-outline/60 font-normal">
+                      ({matchAudit.suggestion.matchType},{" "}
+                      {matchAudit.suggestion.score.toFixed(2)})
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-outline/70 text-[11px] uppercase tracking-wide">
+                    Evidence
+                  </span>
+                  <ul className="mt-0.5 space-y-0.5">
+                    {matchAudit.evidence.confirmedMapping && (
+                      <li className="text-primary">
+                        ✓ Confirmed mapping (human-approved)
+                      </li>
+                    )}
+                    {matchAudit.evidence.propxJobIdMatch && (
+                      <li className="text-primary">✓ PropX job ID match</li>
+                    )}
+                    {matchAudit.evidence.exactNameMatch && (
+                      <li className="text-primary">✓ Exact well name match</li>
+                    )}
+                    {matchAudit.evidence.exactAliasMatch && (
+                      <li className="text-primary">✓ Exact alias match</li>
+                    )}
+                    {matchAudit.evidence.crossSourceBoost && (
+                      <li className="text-primary">
+                        ✓ Cross-source BOL corroboration
+                      </li>
+                    )}
+                    {matchAudit.evidence.fuzzyMatch && (
+                      <li className="text-outline">
+                        ⚠ Fuzzy match (requires exact backing)
+                      </li>
+                    )}
+                    {!matchAudit.evidence.aboveConfidenceFloor && (
+                      <li className="text-outline">
+                        ⚠ Score below 0.85 confidence floor
+                      </li>
+                    )}
+                  </ul>
+                </div>
+
+                {matchAudit.rulesApplied.length > 0 && (
+                  <div>
+                    <span className="text-outline/70 text-[11px] uppercase tracking-wide">
+                      Rules Applied (demotions)
+                    </span>
+                    <ul className="mt-0.5 space-y-0.5 text-outline">
+                      {matchAudit.rulesApplied.map((r) => (
+                        <li key={r} className="font-mono text-[11px]">
+                          {r}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {matchAudit.alternatives.length > 0 && (
+                  <div>
+                    <span className="text-outline/70 text-[11px] uppercase tracking-wide">
+                      Alternatives Considered
+                    </span>
+                    <ul className="mt-0.5 space-y-0.5">
+                      {matchAudit.alternatives.slice(0, 3).map((alt) => (
+                        <li key={alt.wellId} className="text-outline">
+                          {alt.wellName}{" "}
+                          <span className="text-outline/60">
+                            ({alt.matchType}, {alt.score.toFixed(2)})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </details>
+          </div>
+        )}
 
         {/* Editable Fields */}
         <div className="p-4 grid grid-cols-3 gap-x-6 gap-y-3 content-start">
