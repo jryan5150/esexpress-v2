@@ -109,15 +109,21 @@ export function ExceptionFeed() {
             </div>
           </button>
 
-          {/* Confirmed & Ready */}
-          <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-5 border-l-4 border-l-tertiary shadow-sm card-rest stat-glow">
+          {/* Confirmed & Ready — clickable, drops into the dispatch desk */}
+          <button
+            onClick={() => navigate("/dispatch-desk")}
+            className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-5 border-l-4 border-l-tertiary shadow-sm text-left cursor-pointer hover:shadow-md transition-shadow group hover-lift press-scale stat-glow accent-glow accent-line"
+          >
             <div className="font-data text-5xl font-extrabold num-transition text-tertiary leading-none mb-1 tabular-nums">
               {readinessQuery.isLoading ? "..." : readyCount}
             </div>
-            <div className="text-[13px] font-medium text-on-surface-variant">
+            <div className="text-[13px] font-medium text-on-surface-variant mb-3.5">
               loads confirmed and ready to build
             </div>
-          </div>
+            <div className="text-[11px] font-bold text-tertiary tracking-[0.06em] uppercase group-hover:tracking-[0.1em] transition-all">
+              Build Now &rarr;
+            </div>
+          </button>
 
           {/* System Metrics */}
           <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-5 border-l-4 border-l-surface-container-highest shadow-sm card-rest stat-glow">

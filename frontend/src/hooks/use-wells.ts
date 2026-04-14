@@ -284,6 +284,30 @@ export function useCreateWell() {
   });
 }
 
+export function useUpdateWell() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      id: number;
+      patch: Partial<{
+        name: string;
+        aliases: string[];
+        status: "active" | "standby" | "completed" | "closed";
+        dailyTargetLoads: number;
+        dailyTargetTons: string;
+        latitude: string;
+        longitude: string;
+        propxJobId: string;
+        propxDestinationId: string;
+      }>;
+    }) => api.put<Well>(`/dispatch/wells/${params.id}`, params.patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.wells.all });
+      queryClient.invalidateQueries({ queryKey: qk.readiness.all });
+    },
+  });
+}
+
 export function useSheetValidation() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -34,7 +34,29 @@ export function DispatchDesk() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedWellId = searchParams.get("wellId") || "";
   const [pcsStart, setPcsStart] = useState("");
-  const [enteredIds, setEnteredIds] = useState<Set<number>>(new Set());
+  // Persist enteredIds across page refreshes. Dispatchers lose significant
+  // progress when a browser reload wipes the "entered" check marks
+  // (Stephanie R2, P1-5). localStorage survives refresh; cleared when the
+  // dispatcher switches wells, matching the existing handleSelectWell reset.
+  const [enteredIds, setEnteredIds] = useState<Set<number>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = window.localStorage.getItem("dispatchDesk:enteredIds");
+      return raw ? new Set<number>(JSON.parse(raw)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        "dispatchDesk:enteredIds",
+        JSON.stringify([...enteredIds]),
+      );
+    } catch {
+      // quota or privacy mode — non-fatal
+    }
+  }, [enteredIds]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [activeFilter, setActiveFilter] = useState<string>("all");
@@ -248,6 +270,11 @@ export function DispatchDesk() {
   const handleSelectWell = (wellId: string) => {
     setSearchParams(wellId ? { wellId } : {});
     setEnteredIds(new Set());
+    try {
+      window.localStorage.removeItem("dispatchDesk:enteredIds");
+    } catch {
+      // non-fatal
+    }
     setPage(1);
     // Auto-pin on selection
     if (wellId && !pinnedWellIds.includes(wellId)) {
@@ -267,14 +294,18 @@ export function DispatchDesk() {
   };
 
   const handleMarkSingle = (assignmentId: number) => {
+    // P1-7: previous logic was `startNum + readyLoads.findIndex(...)`. When a
+    // filter was active (e.g. BOL Issues tab), the assignmentId could be
+    // missing from readyLoads → findIndex = -1 → off-by-one PCS numbers.
+    // Sequential: each successful mark advances by one regardless of filter.
     const startNum = parseInt(pcsStart) || 0;
-    const idx = readyLoads.findIndex((l) => l.assignmentId === assignmentId);
+    const nextSeq = startNum + enteredIds.size;
     markEntered.mutate(
-      { assignmentIds: [assignmentId], pcsStartingNumber: startNum + idx },
+      { assignmentIds: [assignmentId], pcsStartingNumber: nextSeq },
       {
         onSuccess: () => {
           setEnteredIds((prev) => new Set([...prev, assignmentId]));
-          toast(`Load marked as entered`, "success");
+          toast(`Load marked as entered (PCS #${nextSeq})`, "success");
         },
         onError: (err) => toast(`Failed: ${(err as Error).message}`, "error"),
       },
@@ -604,6 +635,60 @@ export function DispatchDesk() {
                 photo_library
               </span>
               Download Photos
+            </button>
+            <button
+              onClick={() => {
+                // P2-2: Jessica's "ready-for-PCS" handoff. Build a
+                // tab-separated table the team can paste into Teams or PCS.
+                if (readyLoads.length === 0) return;
+                const header = [
+                  "Load #",
+                  "Driver",
+                  "Truck",
+                  "Carrier",
+                  "BOL",
+                  "Ticket",
+                  "Weight (t)",
+                  "Well",
+                  "Delivered",
+                ].join("\t");
+                const lines = readyLoads.map((l) =>
+                  [
+                    l.loadNo ?? "",
+                    l.driverName ?? "",
+                    l.truckNo ?? "",
+                    l.carrierName ?? "",
+                    l.bolNo ?? "",
+                    l.ticketNo ?? "",
+                    l.weightTons ?? "",
+                    l.wellName ?? "",
+                    l.deliveredOn ?? "",
+                  ]
+                    .map((v) => String(v).replace(/\t/g, " "))
+                    .join("\t"),
+                );
+                const text = [header, ...lines].join("\n");
+                navigator.clipboard
+                  .writeText(text)
+                  .then(() => {
+                    track("copy_ready_report", { count: readyLoads.length });
+                    toast(
+                      `${readyLoads.length} ready loads copied to clipboard`,
+                      "success",
+                    );
+                  })
+                  .catch((err) =>
+                    toast(`Copy failed: ${(err as Error).message}`, "error"),
+                  );
+              }}
+              disabled={readyLoads.length === 0}
+              className="inline-flex items-center gap-1.5 px-3.5 py-[7px] rounded-md border border-outline-variant/40 text-[13px] font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer disabled:opacity-40"
+              title="Copy ready loads as tab-separated text — paste into Teams or PCS"
+            >
+              <span className="material-symbols-outlined text-[15px]">
+                content_copy
+              </span>
+              Copy Report ({readyLoads.length})
             </button>
             <button
               onClick={handleMarkAll}
@@ -1021,7 +1106,18 @@ export function DispatchDesk() {
                           handleValidateSingle(load.assignmentId)
                         }
                         onViewPhotos={() => setPhotoModalLoad(load)}
-                        onRowClick={() => handleSelectWell(String(load.wellId))}
+                        onRowClick={() => {
+                          const nextId =
+                            expandedLoadId === load.assignmentId
+                              ? null
+                              : load.assignmentId;
+                          setExpandedLoadId(nextId);
+                          if (nextId !== null)
+                            track("load_expanded", {
+                              loadId: load.assignmentId,
+                              from: "cross-well",
+                            });
+                        }}
                         onClaim={
                           currentUserId && !load.assignedTo
                             ? () =>
@@ -1033,6 +1129,70 @@ export function DispatchDesk() {
                         }
                         isPending={markEntered.isPending}
                       />
+                      {expandedLoadId === load.assignmentId && (
+                        <ExpandDrawer
+                          loadId={load.loadId}
+                          loadNo={load.loadNo}
+                          wellName={load.wellName}
+                          driverName={load.driverName}
+                          truckNo={load.truckNo}
+                          trailerNo={load.trailerNo ?? null}
+                          carrierName={load.carrierName}
+                          productDescription={load.productDescription}
+                          weightTons={load.weightTons}
+                          netWeightTons={load.netWeightTons}
+                          bolNo={load.bolNo}
+                          ticketNo={load.ticketNo}
+                          rate={load.rate ?? null}
+                          mileage={load.mileage ?? null}
+                          deliveredOn={load.deliveredOn}
+                          photoUrls={load.photoUrls || []}
+                          autoMapScore={load.autoMapScore}
+                          autoMapTier={load.autoMapTier}
+                          assignmentStatus={load.assignmentStatus}
+                          pickupTime={load.pickupTime}
+                          arrivalTime={load.arrivalTime}
+                          transitTime={load.transitTime}
+                          assignedTime={load.assignedTime}
+                          acceptedTime={load.acceptedTime}
+                          grossWeightLbs={load.grossWeightLbs}
+                          netWeightLbs={load.netWeightLbs}
+                          tareWeightLbs={load.tareWeightLbs}
+                          terminalName={load.terminalName}
+                          lineHaul={load.lineHaul}
+                          fuelSurcharge={load.fuelSurcharge}
+                          totalCharge={load.totalCharge}
+                          customerRate={load.customerRate}
+                          orderNo={load.orderNo}
+                          invoiceNo={load.invoiceNo}
+                          poNo={load.poNo}
+                          referenceNo={load.referenceNo}
+                          loaderName={load.loaderName}
+                          jobName={load.jobName}
+                          loadStatus={load.loadStatus}
+                          demurrageAtLoader={load.demurrageAtLoader}
+                          demurrageAtLoaderHours={load.demurrageAtLoaderHours}
+                          demurrageAtLoaderMinutes={
+                            load.demurrageAtLoaderMinutes
+                          }
+                          demurrageAtDestination={load.demurrageAtDestination}
+                          demurrageAtDestHours={load.demurrageAtDestHours}
+                          demurrageAtDestMinutes={load.demurrageAtDestMinutes}
+                          loadOutTime={load.loadOutTime}
+                          loadTotalTime={load.loadTotalTime}
+                          unloadTotalTime={load.unloadTotalTime}
+                          appointmentTime={load.appointmentTime}
+                          settlementDate={load.settlementDate}
+                          shipperBol={load.shipperBol}
+                          dispatcherNotes={load.dispatcherNotes}
+                          jotformBolNo={load.jotformBolNo}
+                          jotformDriverName={load.jotformDriverName}
+                          onValidate={() =>
+                            handleValidateSingle(load.assignmentId)
+                          }
+                          onClose={() => setExpandedLoadId(null)}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1258,6 +1418,23 @@ export function DispatchDesk() {
             ticketNo={photoModalLoad.ticketNo}
             autoMapScore={photoModalLoad.autoMapScore || null}
             onClose={() => setPhotoModalLoad(null)}
+            onFlag={() => {
+              // Round 2 P1-6: this button used to render dead. MVP: emit a
+              // breadcrumb event Jessica can later filter on. Future: a
+              // dedicated `assignments.flagged_at` column + a Flagged tab on
+              // the Validation page so she actively works the queue.
+              track("photo_flagged_for_review", {
+                assignmentId: photoModalLoad.assignmentId,
+                loadNo: photoModalLoad.loadNo,
+                bolNo: photoModalLoad.bolNo,
+                wellName: photoModalLoad.wellName,
+              });
+              toast(
+                `Flagged load #${photoModalLoad.loadNo} for Jessica's review`,
+                "success",
+              );
+              setPhotoModalLoad(null);
+            }}
             onValidate={() => {
               handleValidateSingle(photoModalLoad.assignmentId);
               setPhotoModalLoad(null);

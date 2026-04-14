@@ -368,6 +368,13 @@ const KNOWN_PROPX_FIELDS = new Set([
   "transit_off_time",
   "destination_total_time",
   "destination_off_time",
+  // PropX added 2026-04 — staging review metadata. Not yet mapped to first-
+  // class columns; full payload stays in raw_data jsonb. Listed here so the
+  // schema-drift detector stops alerting until/unless we wire dedicated
+  // columns. See docs/2026-04-14-feedback-ledger.md (O-17).
+  "staging_comment",
+  "staging_by",
+  "staging_on",
 ]);
 
 // ---------------------------------------------------------------------------

@@ -111,12 +111,25 @@ export const LoadRow = memo(function LoadRow({
         borderLeftColor: statusMeta.hex,
       }}
     >
-      {/* Checkbox */}
+      {/* Checkbox — keyboard-accessible (Space/Enter toggle, focus ring) */}
       <div
-        className="flex items-center justify-center"
+        role="checkbox"
+        aria-checked={checked}
+        aria-disabled={isMissing}
+        aria-label={`Select load ${loadNo}`}
+        tabIndex={isMissing ? -1 : 0}
+        className="flex items-center justify-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         onClick={(e) => {
           e.stopPropagation();
           if (!isMissing) onToggleSelect();
+        }}
+        onKeyDown={(e) => {
+          if (isMissing) return;
+          if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            onToggleSelect();
+          }
         }}
       >
         <input
@@ -124,6 +137,8 @@ export const LoadRow = memo(function LoadRow({
           checked={checked}
           readOnly
           disabled={isMissing}
+          tabIndex={-1}
+          aria-hidden="true"
           className="w-4 h-4 rounded accent-primary-container cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed pointer-events-none"
         />
       </div>
