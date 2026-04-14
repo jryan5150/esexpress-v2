@@ -174,6 +174,168 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // ─── POST /jotform/manual-match — link an unmatched submission to a load ───
+  // Used in the BOL Reconciliation queue when auto-match couldn't find a load.
+  fastify.post(
+    "/jotform/manual-match",
+    {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
+      schema: {
+        body: {
+          type: "object",
+          required: ["importId", "loadId"],
+          properties: {
+            importId: { type: "integer" },
+            loadId: { type: "integer" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+
+      const { importId, loadId } = request.body as {
+        importId: number;
+        loadId: number;
+      };
+
+      const [imp] = await db
+        .select({
+          id: jotformImports.id,
+          photoUrl: jotformImports.photoUrl,
+          imageUrls: jotformImports.imageUrls,
+        })
+        .from(jotformImports)
+        .where(eq(jotformImports.id, importId))
+        .limit(1);
+      if (!imp)
+        return reply.status(404).send({
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: `JotForm import ${importId} not found`,
+          },
+        });
+
+      const [load] = await db
+        .select({ id: loads.id })
+        .from(loads)
+        .where(eq(loads.id, loadId))
+        .limit(1);
+      if (!load)
+        return reply.status(404).send({
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: `Load ${loadId} not found`,
+          },
+        });
+
+      await db
+        .update(jotformImports)
+        .set({
+          matchedLoadId: loadId,
+          matchMethod: "manual",
+          matchedAt: new Date(),
+          status: "matched",
+        })
+        .where(eq(jotformImports.id, importId));
+
+      const hasPhoto =
+        !!imp.photoUrl ||
+        (Array.isArray(imp.imageUrls) && imp.imageUrls.length > 0);
+      if (hasPhoto) {
+        await db
+          .update(assignments)
+          .set({ photoStatus: "attached", updatedAt: new Date() })
+          .where(eq(assignments.loadId, loadId));
+      }
+
+      return {
+        success: true,
+        data: {
+          importId,
+          loadId,
+          matchMethod: "manual",
+          photoAttached: hasPhoto,
+        },
+      };
+    },
+  );
+
+  // ─── GET /jotform/load-search — fast load lookup for the manual-match modal ─
+  fastify.get(
+    "/jotform/load-search",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            q: { type: "string", minLength: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 25, default: 10 },
+          },
+          required: ["q"],
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+
+      const { q, limit = 10 } = request.query as {
+        q: string;
+        limit?: number;
+      };
+      const { sql, or, ilike, desc } = await import("drizzle-orm");
+      const pattern = `%${q.replace(/[%_\\]/g, "\\$&")}%`;
+
+      const rows = await db
+        .select({
+          id: loads.id,
+          loadNo: loads.loadNo,
+          source: loads.source,
+          driverName: loads.driverName,
+          bolNo: loads.bolNo,
+          ticketNo: loads.ticketNo,
+          deliveredOn: loads.deliveredOn,
+          destinationName: loads.destinationName,
+          weightTons: loads.weightTons,
+        })
+        .from(loads)
+        .where(
+          or(
+            ilike(loads.loadNo, pattern),
+            ilike(loads.bolNo, pattern),
+            ilike(loads.ticketNo, pattern),
+            ilike(loads.driverName, pattern),
+          ),
+        )
+        .orderBy(desc(loads.deliveredOn))
+        .limit(limit);
+
+      return { success: true, data: rows };
+    },
+  );
+
   // NOTE: /jotform/sync and /jotform/stats are registered in photos.ts
 
   // GET /jotform/queue — JotForm imports as BOL queue items with photo URLs

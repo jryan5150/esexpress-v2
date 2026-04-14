@@ -101,3 +101,45 @@ export function useReconcile() {
     },
   });
 }
+
+/**
+ * Manually link a JotForm photo submission to a load when the auto-match
+ * couldn't find one (or was wrong). Invalidates the BOL queue + dispatch
+ * desk so the new attached-photo state is reflected immediately.
+ */
+export function useManualMatchJotform() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { importId: number; loadId: number }) =>
+      api.post("/verification/jotform/manual-match", params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.bol.all });
+      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
+    },
+  });
+}
+
+interface JotformLoadSearchHit {
+  id: number;
+  loadNo: string;
+  source: string;
+  driverName: string | null;
+  bolNo: string | null;
+  ticketNo: string | null;
+  deliveredOn: string | null;
+  destinationName: string | null;
+  weightTons: string | null;
+}
+
+export function useJotformLoadSearch(query: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["jotform-load-search", query],
+    queryFn: () =>
+      api.get<JotformLoadSearchHit[]>(
+        `/verification/jotform/load-search?q=${encodeURIComponent(query)}`,
+      ),
+    enabled: enabled && query.trim().length >= 2,
+    staleTime: 30_000,
+  });
+}
