@@ -3,8 +3,14 @@ import { loads } from "../../../db/schema.js";
 
 export type Era = "live" | "archive";
 
-/** 2026-01-01T00:00:00 CST (America/Chicago) as ISO string for postgres driver compatibility */
-export const ERA_CUTOFF = "2026-01-01T00:00:00-06:00";
+/**
+ * 2026-04-01T00:00:00 CDT (America/Chicago, DST) as ISO string.
+ * Pre-cutoff loads were actively dispatched via PCS while v2 was being built —
+ * they're archive data, not validation work. Raised from 2026-01-01 on
+ * 2026-04-14 after the team confirmed Jan-Mar PropX/Logistiq loads were
+ * already reconciled outside v2.
+ */
+export const ERA_CUTOFF = "2026-04-01T00:00:00-05:00";
 
 /** Reconstruct the raw SQL text from Drizzle queryChunks for introspection. */
 function sqlToString(s: SQL): string {
