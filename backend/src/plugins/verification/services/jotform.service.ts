@@ -19,6 +19,7 @@
 
 import { eq, or, and, between, ilike } from "drizzle-orm";
 import { loads, jotformImports, assignments } from "../../../db/schema.js";
+import { validateTicketNumber } from "../lib/field-validators.js";
 import type { Database } from "../../../db/client.js";
 
 // ---------------------------------------------------------------------------
@@ -354,7 +355,15 @@ export async function matchSubmissionToLoad(
   };
 
   // --- Tier 1: ticket_no / bol_no exact match ---
-  if (fields.bolNo) {
+  // Gate on deterministic validator (2026-04-14, ported from bol-ocr-pipeline).
+  // Trusting a malformed BOL — a date, an address fragment, fewer than 3
+  // digits — would cause a false-positive match and cascade into bad
+  // discrepancy flags. Skip Tier 1 when the value doesn't look like a real
+  // ticket number; fall through to Tier 2 (load_no) and Tier 3 (fuzzy).
+  const bolValidation = fields.bolNo
+    ? validateTicketNumber(fields.bolNo)
+    : null;
+  if (fields.bolNo && bolValidation?.valid) {
     const [hit] = await db
       .select({ id: loads.id })
       .from(loads)

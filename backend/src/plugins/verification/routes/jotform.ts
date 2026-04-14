@@ -11,6 +11,7 @@ import {
   photos,
 } from "../../../db/schema.js";
 import { matchSubmissionToLoad } from "../services/jotform.service.js";
+import { validateTicketNumber } from "../lib/field-validators.js";
 
 const jotformRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /jotform/bulk-import — import JotForm CSV export rows
@@ -561,6 +562,23 @@ function deriveJotformDiscrepancies(input: {
     loadValue: string | null;
     message: string;
   }> = [];
+
+  // Gate 0: JotForm BOL format sanity check (ported from bol-ocr-pipeline).
+  // Catches OCR noise like dates, addresses, or stray single digits before
+  // we compare to the matched load. When it fails, we warn the dispatcher
+  // that the photo's BOL is probably an OCR error, not a real mismatch.
+  if (input.jotformBol && input.jotformBol.trim()) {
+    const bolCheck = validateTicketNumber(input.jotformBol);
+    if (!bolCheck.valid) {
+      out.push({
+        field: "BOL OCR",
+        severity: "warning",
+        jotformValue: input.jotformBol,
+        loadValue: input.loadBol ?? input.loadTicket,
+        message: `Photo BOL "${input.jotformBol}" failed format check (${bolCheck.reason}) — likely an OCR misread`,
+      });
+    }
+  }
 
   // BOL / ticket — compare last-4 digits since OCR often gets the prefix wrong
   const jBol = input.jotformBol?.replace(/\D/g, "").slice(-4) ?? "";
