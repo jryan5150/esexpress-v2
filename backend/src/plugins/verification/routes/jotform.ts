@@ -262,6 +262,53 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
           .where(eq(assignments.loadId, loadId));
       }
 
+      // Feedback loop (2026-04-14): every manual match is training signal.
+      // Record driver-name ↔ well on wells.matchFeedback so the next JotForm
+      // auto-match can prefer that well when the same driver's next photo
+      // has multiple candidate loads (Tier 3 fuzzy tie-break).
+      const { importDriverName } = await db
+        .select({ importDriverName: jotformImports.driverName })
+        .from(jotformImports)
+        .where(eq(jotformImports.id, importId))
+        .limit(1)
+        .then((r) => ({
+          importDriverName: r[0]?.driverName ?? null,
+        }));
+      if (importDriverName?.trim()) {
+        const { wells } = await import("../../../db/schema.js");
+        const userId = (request.user as { id: number }).id;
+        const [assignedWell] = await db
+          .select({ wellId: assignments.wellId })
+          .from(assignments)
+          .where(eq(assignments.loadId, loadId))
+          .limit(1);
+        if (assignedWell?.wellId) {
+          const [well] = await db
+            .select({ matchFeedback: wells.matchFeedback })
+            .from(wells)
+            .where(eq(wells.id, assignedWell.wellId))
+            .limit(1);
+          const current = Array.isArray(well?.matchFeedback)
+            ? well!.matchFeedback
+            : [];
+          await db
+            .update(wells)
+            .set({
+              matchFeedback: [
+                ...current,
+                {
+                  sourceName: importDriverName.trim(),
+                  action: "manual_assign" as const,
+                  by: userId,
+                  at: new Date().toISOString(),
+                },
+              ],
+              updatedAt: new Date(),
+            })
+            .where(eq(wells.id, assignedWell.wellId));
+        }
+      }
+
       return {
         success: true,
         data: {

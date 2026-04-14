@@ -442,10 +442,88 @@ export async function matchSubmissionToLoad(
         };
       }
     }
-    // Multiple candidates with no weight disambiguation — leave unmatched (ambiguous)
+
+    // Feedback loop (2026-04-14): tie-break using prior manual matches.
+    // If this driver has been manually assigned to a specific well before,
+    // prefer candidates going to that well. Every manual match in the BOL
+    // Queue compounds — corrections tonight improve auto-match tomorrow.
+    if (candidates.length > 1) {
+      const historyMatch = await matchFromFeedbackHistory(
+        db,
+        fields.driverName,
+        candidates.map((c) => c.id),
+      );
+      if (historyMatch) {
+        return {
+          matched: true,
+          loadId: historyMatch,
+          matchMethod: "driver_date_weight",
+          confidence: 72,
+        };
+      }
+    }
+    // Multiple candidates with no weight or history disambiguation — ambiguous.
   }
 
   return noMatch;
+}
+
+/**
+ * Feedback loop tie-breaker. Looks up wells whose match_feedback history
+ * contains a manual_assign for this driver name, then picks whichever
+ * candidate load is assigned to that well.
+ *
+ * Returns the winning loadId, or null when no confirmed history applies.
+ */
+async function matchFromFeedbackHistory(
+  db: Database,
+  driverName: string,
+  candidateLoadIds: number[],
+): Promise<number | null> {
+  if (candidateLoadIds.length === 0) return null;
+  const { wells, assignments: a } = await import("../../../db/schema.js");
+  const { inArray } = await import("drizzle-orm");
+
+  // Fetch the wells each candidate load is currently assigned to
+  const candidateAssignments = await db
+    .select({ loadId: a.loadId, wellId: a.wellId })
+    .from(a)
+    .where(inArray(a.loadId, candidateLoadIds));
+  if (candidateAssignments.length === 0) return null;
+
+  const candidateWellIds = [
+    ...new Set(candidateAssignments.map((c) => c.wellId)),
+  ];
+
+  // Pull match_feedback for those wells and score by how many manual
+  // assignments match this driver name (case-insensitive exact after trim)
+  const wellRows = await db
+    .select({ id: wells.id, matchFeedback: wells.matchFeedback })
+    .from(wells)
+    .where(inArray(wells.id, candidateWellIds));
+
+  const target = driverName.trim().toLowerCase();
+  const scoreByWellId = new Map<number, number>();
+  for (const w of wellRows) {
+    const fb = Array.isArray(w.matchFeedback) ? w.matchFeedback : [];
+    const score = fb.filter(
+      (f) =>
+        f.action === "manual_assign" &&
+        typeof f.sourceName === "string" &&
+        f.sourceName.trim().toLowerCase() === target,
+    ).length;
+    if (score > 0) scoreByWellId.set(w.id, score);
+  }
+  if (scoreByWellId.size === 0) return null;
+
+  // Pick the well with the highest score; tie → the smaller well id (stable)
+  const bestWellId = [...scoreByWellId.entries()].sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return a[0] - b[0];
+  })[0][0];
+
+  const winner = candidateAssignments.find((c) => c.wellId === bestWellId);
+  return winner?.loadId ?? null;
 }
 
 // ---------------------------------------------------------------------------
