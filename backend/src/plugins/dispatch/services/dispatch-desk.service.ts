@@ -174,6 +174,8 @@ export async function getDispatchDeskLoads(
       pcsSequence: assignments.pcsSequence,
       autoMapTier: assignments.autoMapTier,
       autoMapScore: assignments.autoMapScore,
+      matchAudit: assignments.matchAudit,
+      notes: assignments.notes,
       loadId: loads.id,
       loadNo: loads.loadNo,
       driverName: loads.driverName,

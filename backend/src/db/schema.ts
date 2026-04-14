@@ -186,6 +186,11 @@ export const assignments = pgTable(
     autoMapTier: integer("auto_map_tier"),
     autoMapScore: numeric("auto_map_score", { precision: 4, scale: 3 }),
     matchAudit: jsonb("match_audit"),
+    // Free-form dispatcher commentary on a specific assignment
+    // (e.g. "held for rate", "Liberty asked us to recheck weight").
+    // Existing PUT /assignments/:id route already accepts `notes` but the
+    // column was missing — added 2026-04-14 (O-05, Jessica's repeated ask).
+    notes: text("notes"),
     pcsSequence: integer("pcs_sequence"),
     pcsDispatch: jsonb("pcs_dispatch")
       .$type<Record<string, unknown>>()

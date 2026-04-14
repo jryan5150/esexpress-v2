@@ -101,6 +101,8 @@ export interface DispatchDeskLoad {
   wellName: string;
   canEnter: boolean;
   photoUrls?: string[];
+  notes?: string | null;
+  matchAudit?: unknown;
 }
 
 // Validation tier summary

@@ -57,6 +57,13 @@
       "when": 1776127247034,
       "tag": "0007_rare_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776197440972,
+      "tag": "0008_wide_captain_universe",
+      "breakpoints": true
     }
   ]
 }

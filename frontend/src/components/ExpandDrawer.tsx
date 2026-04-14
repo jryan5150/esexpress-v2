@@ -2,6 +2,88 @@ import { useState, useRef, useEffect } from "react";
 import { useUpdateLoad, useDuplicateLoad } from "../hooks/use-wells";
 import { useToast } from "./Toast";
 
+/**
+ * Free-form notes editor for an assignment (O-05). Saves on blur / Cmd+Enter.
+ * Falls back to read-only display when no onSave handler is provided so older
+ * call sites (validation page, etc.) still render without changes.
+ */
+function DispatcherNotesField({
+  initial,
+  onSave,
+  isSaving,
+  readOnlyFallback,
+}: {
+  initial: string;
+  onSave?: (notes: string) => Promise<void> | void;
+  isSaving?: boolean;
+  readOnlyFallback?: boolean;
+}) {
+  const [value, setValue] = useState(initial);
+  const [dirty, setDirty] = useState(false);
+  // Reset when the row changes underneath us
+  useEffect(() => {
+    setValue(initial);
+    setDirty(false);
+  }, [initial]);
+
+  if (!onSave) {
+    if (!readOnlyFallback) return null;
+    return (
+      <div className="bg-surface-container-high/40 rounded-md p-2.5">
+        <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
+          Dispatcher Notes
+        </span>
+        <p className="text-xs text-on-surface-variant mt-1 whitespace-pre-wrap">
+          {initial}
+        </p>
+      </div>
+    );
+  }
+
+  const commit = async () => {
+    if (!dirty) return;
+    await onSave(value.trim());
+    setDirty(false);
+  };
+
+  return (
+    <div className="bg-surface-container-high/40 rounded-md p-2.5">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
+          Dispatcher Notes
+        </span>
+        {dirty && (
+          <span className="text-[9px] font-bold text-primary uppercase tracking-wide">
+            {isSaving ? "saving…" : "unsaved"}
+          </span>
+        )}
+      </div>
+      <textarea
+        value={value}
+        rows={2}
+        placeholder="e.g. held for rate, Liberty asked us to recheck weight…"
+        disabled={isSaving}
+        onChange={(e) => {
+          setValue(e.target.value);
+          setDirty(e.target.value !== initial);
+        }}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+            e.preventDefault();
+            void commit();
+          }
+        }}
+        className="w-full text-xs text-on-surface-variant bg-background/60 border border-outline-variant/40 rounded px-2 py-1.5 focus:outline-none focus:border-primary/60 resize-y disabled:opacity-60"
+        aria-label="Dispatcher notes"
+      />
+      <div className="text-[9px] text-outline mt-1">
+        Saves on blur or ⌘/Ctrl+Enter
+      </div>
+    </div>
+  );
+}
+
 /** Shape of the match_audit jsonb written by the auto-mapper. */
 interface MatchAudit {
   suggestion: {
@@ -91,6 +173,12 @@ interface ExpandDrawerProps {
   settlementDate?: string | null;
   shipperBol?: string | null;
   dispatcherNotes?: string | null;
+  // Editable assignment-level notes (added 2026-04-14, O-05).
+  // Falls back to dispatcherNotes for read-only display when not provided.
+  assignmentId?: number;
+  notes?: string | null;
+  onSaveNotes?: (notes: string) => Promise<void> | void;
+  isSavingNotes?: boolean;
   // BOL verification
   jotformBolNo?: string | null;
   jotformDriverName?: string | null;
@@ -261,6 +349,9 @@ export function ExpandDrawer({
   settlementDate,
   shipperBol,
   dispatcherNotes,
+  notes: notesProp,
+  onSaveNotes,
+  isSavingNotes,
   jotformBolNo,
   jotformDriverName,
   onValidate,
@@ -881,17 +972,13 @@ export function ExpandDrawer({
             </div>
           )}
 
-          {/* Dispatcher Notes */}
-          {dispatcherNotes && (
-            <div className="bg-surface-container-high/40 rounded-md p-2.5">
-              <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
-                Dispatcher Notes
-              </span>
-              <p className="text-xs text-on-surface-variant mt-1 whitespace-pre-wrap">
-                {dispatcherNotes}
-              </p>
-            </div>
-          )}
+          {/* Dispatcher Notes — editable when onSaveNotes is wired (O-05). */}
+          <DispatcherNotesField
+            initial={notesProp ?? dispatcherNotes ?? ""}
+            onSave={onSaveNotes}
+            isSaving={isSavingNotes}
+            readOnlyFallback={!onSaveNotes && !!dispatcherNotes}
+          />
 
           {/* Actions */}
           <div className="mt-auto flex flex-col gap-1.5">

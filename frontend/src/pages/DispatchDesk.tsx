@@ -9,7 +9,11 @@ import {
   useClaimAssignment,
   useBulkUpdateLoads,
 } from "../hooks/use-wells";
-import { useMarkEntered, useAdvanceToReady } from "../hooks/use-dispatch-desk";
+import {
+  useMarkEntered,
+  useAdvanceToReady,
+  useUpdateAssignmentNotes,
+} from "../hooks/use-dispatch-desk";
 import { useCurrentUser } from "../hooks/use-auth";
 import { usePresence, useHeartbeat } from "../hooks/use-presence";
 import { LoadRow } from "../components/LoadRow";
@@ -65,6 +69,8 @@ export function DispatchDesk() {
   const [expandedLoadId, setExpandedLoadId] = useState<number | null>(null);
   const [dateFilter, setDateFilter] = useState("");
   const [dateTo, setDateTo] = useState("");
+  // O-07 keyboard nav: which row currently has nav focus (j/k/arrows).
+  const [focusedRowId, setFocusedRowId] = useState<number | null>(null);
   const [pinnedWellIds, setPinnedWellIds] = useState<string[]>([]);
   const [pickerView, setPickerView] = useState<"wells" | "loads">("wells");
 
@@ -93,6 +99,7 @@ export function DispatchDesk() {
   );
   const markEntered = useMarkEntered();
   const advanceToReady = useAdvanceToReady();
+  const updateNotes = useUpdateAssignmentNotes();
   const bulkApprove = useBulkApprove();
   const claimAssignment = useClaimAssignment();
   const bulkUpdate = useBulkUpdateLoads();
@@ -427,9 +434,53 @@ export function DispatchDesk() {
         e.preventDefault();
         handleBulkValidate();
       }
-      // Escape: Clear selection
-      if (e.key === "Escape" && selectedIds.size > 0 && !photoModalLoad) {
-        setSelectedIds(new Set());
+      // Escape: Clear selection (or close drawer first if open)
+      if (e.key === "Escape" && !photoModalLoad) {
+        if (expandedLoadId !== null) {
+          e.preventDefault();
+          setExpandedLoadId(null);
+          return;
+        }
+        if (focusedRowId !== null) {
+          e.preventDefault();
+          setFocusedRowId(null);
+          return;
+        }
+        if (selectedIds.size > 0) {
+          setSelectedIds(new Set());
+        }
+      }
+
+      // O-07 Stephanie's #1 ask: row-by-row keyboard nav.
+      // j/↓ = next, k/↑ = prev, Enter = expand drawer, Space = toggle select.
+      // Only active on the dispatch desk (selectedWellId or cross-well loads view).
+      const navList = allLoads;
+      if (navList.length === 0) return;
+      const isJ = e.key === "j" || e.key === "ArrowDown";
+      const isK = e.key === "k" || e.key === "ArrowUp";
+      if (isJ || isK) {
+        if (e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+        e.preventDefault();
+        const currentIdx =
+          focusedRowId === null
+            ? -1
+            : navList.findIndex((l) => l.assignmentId === focusedRowId);
+        let nextIdx: number;
+        if (currentIdx === -1) {
+          nextIdx = isJ ? 0 : navList.length - 1;
+        } else {
+          nextIdx = isJ
+            ? Math.min(navList.length - 1, currentIdx + 1)
+            : Math.max(0, currentIdx - 1);
+        }
+        setFocusedRowId(navList[nextIdx]?.assignmentId ?? null);
+        return;
+      }
+      if (e.key === "Enter" && focusedRowId !== null) {
+        e.preventDefault();
+        setExpandedLoadId((cur) =>
+          cur === focusedRowId ? null : focusedRowId,
+        );
       }
     };
     document.addEventListener("keydown", handleKeyboard);
@@ -440,6 +491,9 @@ export function DispatchDesk() {
     readyLoads.length,
     selectedIds.size,
     photoModalLoad,
+    allLoads,
+    focusedRowId,
+    expandedLoadId,
   ]);
 
   const wellName = selectedWell?.name ?? "";
@@ -1128,6 +1182,7 @@ export function DispatchDesk() {
                             : undefined
                         }
                         isPending={markEntered.isPending}
+                        focused={focusedRowId === load.assignmentId}
                       />
                       {expandedLoadId === load.assignmentId && (
                         <ExpandDrawer
@@ -1187,6 +1242,24 @@ export function DispatchDesk() {
                           dispatcherNotes={load.dispatcherNotes}
                           jotformBolNo={load.jotformBolNo}
                           jotformDriverName={load.jotformDriverName}
+                          assignmentId={load.assignmentId}
+                          notes={load.notes}
+                          isSavingNotes={updateNotes.isPending}
+                          onSaveNotes={async (next) => {
+                            try {
+                              await updateNotes.mutateAsync({
+                                assignmentId: load.assignmentId,
+                                notes: next,
+                              });
+                              toast("Note saved", "success");
+                            } catch (err) {
+                              toast(
+                                `Save failed: ${(err as Error).message}`,
+                                "error",
+                              );
+                              throw err;
+                            }
+                          }}
                           onValidate={() =>
                             handleValidateSingle(load.assignmentId)
                           }
@@ -1337,6 +1410,7 @@ export function DispatchDesk() {
                       : undefined
                   }
                   isPending={markEntered.isPending}
+                  focused={focusedRowId === load.assignmentId}
                 />
                 {expandedLoadId === load.assignmentId && (
                   <ExpandDrawer
@@ -1394,6 +1468,24 @@ export function DispatchDesk() {
                     dispatcherNotes={load.dispatcherNotes}
                     jotformBolNo={load.jotformBolNo}
                     jotformDriverName={load.jotformDriverName}
+                    assignmentId={load.assignmentId}
+                    notes={load.notes}
+                    isSavingNotes={updateNotes.isPending}
+                    onSaveNotes={async (next) => {
+                      try {
+                        await updateNotes.mutateAsync({
+                          assignmentId: load.assignmentId,
+                          notes: next,
+                        });
+                        toast("Note saved", "success");
+                      } catch (err) {
+                        toast(
+                          `Save failed: ${(err as Error).message}`,
+                          "error",
+                        );
+                        throw err;
+                      }
+                    }}
                     onValidate={() => handleValidateSingle(load.assignmentId)}
                     onClose={() => setExpandedLoadId(null)}
                   />

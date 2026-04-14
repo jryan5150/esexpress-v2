@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import {
   LOAD_COUNT_STATUS,
   deriveLoadCountStatus,
@@ -28,6 +28,8 @@ interface LoadRowProps {
   assignedToName?: string | null;
   assignedToColor?: string | null;
   bolMatchStatus?: "match" | "mismatch" | null;
+  /** Highlights the row + scrolls it into view. Driven by keyboard nav (O-07). */
+  focused?: boolean;
   onToggleSelect: () => void;
   onMarkEntered: () => void;
   onValidate: () => void;
@@ -71,6 +73,7 @@ export const LoadRow = memo(function LoadRow({
   assignedToName,
   assignedToColor,
   bolMatchStatus,
+  focused,
   onToggleSelect,
   onMarkEntered,
   onValidate,
@@ -80,6 +83,13 @@ export const LoadRow = memo(function LoadRow({
   onMissingTicket,
   isPending,
 }: LoadRowProps) {
+  // Scroll into view when keyboard nav lands focus on this row.
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (focused && rowRef.current) {
+      rowRef.current.scrollIntoView({ block: "nearest" });
+    }
+  }, [focused]);
   const isValidated = validationStatus === "validated";
   const isMissing = validationStatus === "missing";
   const dimmed = !isValidated && !entered;
@@ -97,14 +107,20 @@ export const LoadRow = memo(function LoadRow({
 
   return (
     <div
+      ref={rowRef}
+      data-row-id={String(`${loadNo}`)}
       onClick={(e) => {
         // Don't trigger row click for interactive elements
         if ((e.target as HTMLElement).closest("button, input, a")) return;
         onRowClick?.();
       }}
-      className={`grid items-center gap-3 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] px-3.5 py-2.5 shadow-sm card-rest press-scale transition-all hover:border-primary-container/20 hover:shadow-md cursor-pointer ${
-        dimmed ? "opacity-95 hover:opacity-100" : ""
-      } ${entered ? "opacity-40" : ""}`}
+      className={`grid items-center gap-3 bg-surface-container-lowest border rounded-[10px] px-3.5 py-2.5 shadow-sm card-rest press-scale transition-all hover:border-primary-container/20 hover:shadow-md cursor-pointer ${
+        focused
+          ? "border-primary ring-2 ring-primary/40"
+          : "border-outline-variant/40"
+      } ${dimmed ? "opacity-95 hover:opacity-100" : ""} ${
+        entered ? "opacity-40" : ""
+      }`}
       style={{
         gridTemplateColumns: "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
         borderLeftWidth: "4px",
