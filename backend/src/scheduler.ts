@@ -209,8 +209,12 @@ async function runAutoMap() {
 
   const loadIds = unmapped.map((r) => r.id);
 
-  // System user ID = 0 for automated operations
-  const results = await processLoadBatch(db, loadIds, 0);
+  // System user ID = 1 (jryan@esexpress.com) for automated operations.
+  // No dedicated system user exists yet — user_id 0 has no matching row in
+  // users(id) so createAssignment's FK (assigned_by → users.id) rejects it
+  // and every scheduled auto-map silently skips every load. Post-MVP: create
+  // a dedicated `system@esexpressllc.com` admin user and switch to that id.
+  const results = await processLoadBatch(db, loadIds, 1);
   const mapped = results.filter((r) => r.assignmentId !== null).length;
 
   return { total: loadIds.length, mapped, skipped: loadIds.length - mapped };
