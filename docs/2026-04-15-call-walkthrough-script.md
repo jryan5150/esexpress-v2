@@ -99,7 +99,91 @@ is a good pick — has matched photos + a few pending.
    > "Tab-separated. Paste into Teams, into PCS, into a spreadsheet.
    > It's a bridge to kill the retype friction until PCS unblocks."
 
-**Time check:** you should be ~3:45 into the call at this point.
+---
+
+## Demo Section 2.5 — Historical week walk-through (90 sec)
+
+**This is the "show me how the system handled last week" moment.**
+Pick a recent week the team remembers — the week of 2026-04-06
+through 2026-04-10 is a good choice because that's when the
+validation walkthrough with Jessica happened, so it's fresh in her
+head.
+
+1. **Set the date range filter.** From `2026-04-06`, to `2026-04-10`.
+   Hit Apply. Screen repopulates.
+
+2. **Read the top line to her before she asks.**
+
+   > "693 live loads delivered across that week. 621 came from
+   > PropX, 72 from Logistiq. That's the automated ingest — no one
+   > typed those in."
+
+3. **Point at the status distribution in the filter tabs / tile row.**
+
+   > "Of those 693: about 440 got auto-assigned to a well by the
+   > matcher. Another 250-ish didn't — because the destination
+   > name on the PropX record didn't resolve to a well we know
+   > about, so it stays unassigned for a human to place. That's
+   > the 'Needs You' bucket you saw on the home page."
+
+4. **Point at the photo-status column in the row list.**
+
+   > "Of the assigned loads this week, 116 have a driver-submitted
+   > JotForm photo auto-matched to them. 323 don't — either the
+   > driver didn't submit, or the OCR on the BOL field was off
+   > enough that the matcher couldn't pair it. Those sit in the
+   > BOL Queue — which is where I'm going next."
+
+5. **Zoom in on the top well for the week.**
+
+   > "Renegade-Formentera-Pendleton had 333 of the 693 — almost
+   > half the week on one pad. Click into it and you can see the
+   > per-day drumbeat. That's the drumbeat Scout and Steph are
+   > building all day; we just wanted it visible in one place
+   > instead of across tabs."
+
+6. **The honest framing — this is the key sentence:**
+
+   > "What you're looking at is the system doing its job in the
+   > background — ingesting, matching, reconciling. What it can't
+   > yet do is push these to PCS when you're done. So today this
+   > view is 'here's what arrived, here's what matched, here's
+   > what your team would need to enter in PCS next.' Once OAuth
+   > lands, the same view adds a 'Push to PCS' button on each
+   > ready row and the batch push you saw in the mockup Frame 4."
+
+7. **Anticipate the next question (she will ask something like
+   this):** _"Why aren't these validated?"_
+
+   > "Because your team's been on the spreadsheet workflow up to
+   > today — they haven't needed to click through v2's validation
+   > path. That's intentional: we've been running v2 in parallel,
+   > letting the pipeline accumulate data, letting the matcher
+   > build up training signal, without asking the team to change
+   > their daily habits while PCS push isn't there yet. Once we
+   > have a reason for them to live in v2 — the push button being
+   > the big one — the validation happens in the natural flow."
+
+**Why this moment:** gives Jess a concrete, historical week to
+argue about. Real numbers she can cross-reference to her own
+records if she wants. It also demonstrates that the system has
+been running and capturing value for her team even when they
+haven't actively been using the new UI. Mike will hear "693
+loads processed automatically in one week" and that's the ROI
+sentence he needs.
+
+**Numbers to memorize before the call** (from live DB query at
+07:58 CDT this morning):
+
+- **693** total loads this week, **621 PropX + 72 Logistiq**
+- **254** unassigned (destination needs a well match)
+- **116** with photo attached, **323** assigned without photo
+- **184** total loads matched to a JotForm photo submission
+- Top well: **Renegade-Formentera-Pendleton (333)**, then Exco
+  Resources (40), Rockcliff Bandon Dunes (31), DPC Dallas (18),
+  CHK LA MIN (11)
+
+**Time check:** you should be ~5:15 into the call at this point.
 
 ---
 
