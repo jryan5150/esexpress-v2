@@ -1,7 +1,7 @@
 # Statement of Work — ES Express Dispatch Automation Platform
 
 **Effective Date:** `\hrulefill`{=latex}
-**Prepared by:** Lexcom Systems Group Inc.
+**Prepared by:** Lexcom Systems Group USA, LLC
 **Prepared for:** ES Express LLC
 **Version:** 2026-04-15 (supersedes 2026-04-13 draft)
 
@@ -10,7 +10,7 @@
 ## Preamble
 
 This Statement of Work formalizes the engagement between Lexcom
-Systems Group Inc. and ES Express LLC to replace ES Express's
+Systems Group USA, LLC and ES Express LLC to replace ES Express's
 manual spreadsheet-based dispatch workflow with an automated
 platform (the "Platform").
 
@@ -33,7 +33,7 @@ self-contained and independently verifiable.
 
 ## 1. Parties
 
-**Provider:** Lexcom Systems Group Inc. ("Lexcom")
+**Provider:** Lexcom Systems Group USA, LLC ("Lexcom")
 **Client:** ES Express LLC ("ES Express")
 
 ---
@@ -225,7 +225,7 @@ the services described in this SOW.
 
 The underlying platform technology, software architecture,
 codebase, AI/ML matching algorithms, and extraction pipelines are
-and remain the intellectual property of Lexcom Systems Group Inc.
+and remain the intellectual property of Lexcom Systems Group USA, LLC
 ES Express is granted a non-exclusive, non-transferable license
 to use the Platform for the duration of this agreement.
 
@@ -409,7 +409,7 @@ offer for your review:
 
 ```{=latex}
 \vspace{1em}
-\noindent\textbf{Lexcom Systems Group Inc.}
+\noindent\textbf{Lexcom Systems Group USA, LLC}
 \vspace{1.5em}
 
 \noindent Name: \hrulefill

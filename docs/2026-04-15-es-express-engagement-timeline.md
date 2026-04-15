@@ -1,7 +1,7 @@
 # ES Express Engagement Timeline
 
 **Prepared:** 2026-04-15
-**Prepared by:** Jace Ryan, Lexcom Systems Group Inc.
+**Prepared by:** Jace Ryan, Lexcom Systems Group USA, LLC
 **For:** Jessica Handlin (ES Express) and Mike (expense review)
 
 **Stated goal from ES Express:** _"Create an automated system to build

@@ -1,7 +1,7 @@
 ---
 title: "ES Express Engagement Package"
 subtitle: "Complete record of work, deliverables, and scope as of 2026-04-15"
-author: "Lexcom Systems Group Inc."
+author: "Lexcom Systems Group USA, LLC"
 date: "April 15, 2026"
 ---
 
