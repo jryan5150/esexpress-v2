@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useCurrentUser, useLogoutFn } from "../hooks/use-auth";
 import { usePresence } from "../hooks/use-presence";
+import { useBolStats } from "../hooks/use-bol";
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -18,6 +19,15 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   const onlineUsers = Array.isArray(presenceQuery.data)
     ? presenceQuery.data
     : [];
+  // BOL queue pending count — surfaces "X photos need matching" so users
+  // know to open the queue without burying it in the main app body.
+  const bolStatsQuery = useBolStats();
+  const bolPending = (() => {
+    const stats = bolStatsQuery.data as
+      | { byStatus?: Record<string, number> }
+      | undefined;
+    return Number(stats?.byStatus?.pending ?? 0);
+  })();
   const isActive = (path: string) => location.pathname === path;
   const isAdminRoute =
     location.pathname.startsWith("/admin") || location.pathname === "/finance";
@@ -174,9 +184,26 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               <span className={iconClass("/dispatch-desk")}>dashboard</span>
               {!collapsed && "Dispatch Desk"}
             </Link>
-            <Link to="/bol" className={navClass("/bol")} title="BOL Queue">
+            <Link
+              to="/bol"
+              className={navClass("/bol")}
+              title={
+                bolPending > 0
+                  ? `BOL Queue — ${bolPending} photo${bolPending === 1 ? "" : "s"} need matching`
+                  : "BOL Queue"
+              }
+            >
               <span className={iconClass("/bol")}>receipt_long</span>
-              {!collapsed && "BOL Queue"}
+              {!collapsed && (
+                <>
+                  <span className="flex-1">BOL Queue</span>
+                  {bolPending > 0 && (
+                    <span className="font-label text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-full bg-error/15 text-error">
+                      {bolPending.toLocaleString()}
+                    </span>
+                  )}
+                </>
+              )}
             </Link>
             <Link
               to="/validation"
