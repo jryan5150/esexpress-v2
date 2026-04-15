@@ -216,14 +216,23 @@ extraction decision.
 `docs/2026-03-26-validation-walkthrough-script.md` prepared for
 the upcoming Jessica conversation.
 
-### Late March — Logistiq API contract executed
+### 2026-03-10 → late-March — Logistiq (LogistixIQ) vendor process
 
-Logistiq API access formalized in late-March / early-April
-2026 upon contract execution. Prior to contract execution, the
-Logistiq client code was built against published API documentation
-so that on contract execution operational access was immediate.
-This was the proper path — we did not take operational data from
-Logistiq ahead of the contract.
+- **2026-03-10 19:47 UTC:** Rachel DeBusk (LinqX / LogistixIQ)
+  opened conversation on our API request
+- **2026-03-13 18:07 UTC:** Stephen Swienton (LinqX, technical)
+  sent sample payload + API reference materials
+- **2026-03-25 18:14 UTC:** Paperwork / formal agreement process
+  initiated
+- **2026-03-26 13:52 UTC:** Additional contract documents sent
+- **2026-03-30 20:24 UTC:** Operational access materials
+  delivered by LinqX technical team
+- **Late March / early April:** Contract executed; operational
+  Logistiq API access begins. Prior to contract execution, the
+  Logistiq client code was built against the published API
+  documentation so that on signing operational access was
+  immediate. The proper path was followed — no operational data
+  from Logistiq was taken ahead of the contract.
 
 ### 2026-03-30 → 2026-03-31 — v2 decision point
 
@@ -240,10 +249,10 @@ Logistiq ahead of the contract.
 
 **Why v2:** v1 had accumulated technical debt from the rapid
 multi-stream phase (MongoDB, legacy Express patterns, 425+ UI
-components). Rather than continue forward, extract the proven
-capabilities (matcher, adapters, reconciliation, PCS SOAP bridge)
-into a clean v2 architecture (PostgreSQL, Drizzle, Fastify,
-typed APIs, React Query). Choice made in service of long-term
+components). Rather than continue forward, extract the stable
+capabilities (matcher, adapters, reconciliation, SOAP client
+scaffolding) into a clean v2 architecture (PostgreSQL, Drizzle,
+Fastify, typed APIs, React Query). Choice made in service of long-term
 maintainability and your team's ability to use the product
 reliably and for the platform to not break in production.
 
@@ -439,14 +448,26 @@ formal questionnaire submission to today. This is their standard
 process, not a delay caused by us. Our engineering is built and
 waiting.
 
-### Logistiq API
+### Logistiq API (LogistixIQ, operated by LinqX)
 
-Logistiq API access was formalized via contract execution **late
-March / early April 2026**. Prior to contract execution we built
-the Logistiq client code against published API documentation so
-the pipeline would be operational immediately upon signing. The
-proper path was followed — operational access to Logistiq data
-was not taken ahead of the contract.
+| Date                         | Event                                                                                                                                                                      | Evidence     |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 2026-03-10 19:47 UTC         | Rachel DeBusk (LinqX / LogistixIQ) opened conversation with "LogistixIQ API" email                                                                                         | email thread |
+| 2026-03-10 → 2026-03-12      | Back-and-forth on use case, scope, data needs (Rachel)                                                                                                                     | email thread |
+| 2026-03-13 18:07 UTC         | Stephen Swienton (LinqX, technical) sent sample payload + API reference materials                                                                                          | email thread |
+| 2026-03-17 17:05 UTC         | Jace confirmed internally: "between both logistics and PCS I now have everything I need" — the published API documentation was sufficient to build the client code against | email thread |
+| 2026-03-25 18:14 UTC         | Rachel initiated paperwork / formal agreement process                                                                                                                      | email thread |
+| 2026-03-25 18:54 UTC         | Jace provided legal name (Charles Jace Ryan) for contract                                                                                                                  | email thread |
+| 2026-03-26 13:52 UTC         | Rachel sent additional contract documents                                                                                                                                  | email thread |
+| 2026-03-30 14:12 / 15:43 UTC | Rachel followed up on Monday with paperwork status                                                                                                                         | email thread |
+| 2026-03-30 20:24 UTC         | Stephen Swienton delivered operational access materials                                                                                                                    | email thread |
+| Late March / early April     | **Contract executed. Operational Logistiq API access begins here, not before.**                                                                                            | —            |
+
+Prior to contract execution we built the Logistiq client code
+against published API documentation so that the pipeline would be
+operational immediately upon signing. The proper path was followed
+— operational access to Logistiq data was not taken ahead of the
+contract.
 
 ---
 
@@ -493,19 +514,18 @@ alone.)
 > _"Create an automated system to build and push loads to PCS to
 > eliminate a time-consuming, manually bottlenecking process."_
 
-| Deliverable                                                                       | Status                        | Evidence                                                                              |
-| --------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------- |
-| Ingest loads from source of truth (PropX)                                         | ✅ Operational                | PropX API client + sync service, 30K+ loads in prod DB                                |
-| Ingest carrier-side data (Logistiq)                                               | ✅ Operational post-contract  | Logistiq carrier export + cross-source dedup, operational since contract execution    |
-| Ingest driver photos (JotForm)                                                    | ✅ Operational                | 4,223 submissions processed, 66.2% auto-match, feedback loop wired                    |
-| Match photos to loads                                                             | ✅ Operational                | 3-strategy tiered matcher, 98.5% via exact ticket, feedback-driven fuzzy tier growing |
-| Reconcile field-level discrepancies                                               | ✅ Operational                | Reconciliation service with severity classification                                   |
-| Build load packages                                                               | ✅ Operational                | DispatchLoad normalization, validated package assembly                                |
-| Human correction surface                                                          | ✅ Operational                | BOL Queue inline edit, Validation page, ExpandDrawer inline edits                     |
-| Training signal capture                                                           | ✅ Operational                | `wells.matchFeedback`, `original_ocr_bol_no`, `location_mappings`                     |
-| Push to PCS (built and tested against available SOAP surface)                     | ✅ Proven                     | `PostDispatch` tested live                                                            |
-| **Push to PCS (REST — batch, file upload, full state sync, OAuth-authenticated)** | ⏳ Pending PCS                | Ticket DO-2821 open since 2026-03-13                                                  |
-| Reporting parity with PCS Reporter (income + clearing spreadsheet)                | ⏳ Delivered upon SOW signoff | Covered on final dispatch-team call; SOW Section 2.2                                  |
+| Deliverable                                                        | Status                        | Evidence                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Ingest loads from source of truth (PropX)                          | ✅ Operational                | PropX API client + sync service, 30K+ loads in prod DB                                                                                                                                                                   |
+| Ingest carrier-side data (Logistiq)                                | ✅ Operational post-contract  | Logistiq carrier export + cross-source dedup, operational since contract execution                                                                                                                                       |
+| Ingest driver photos (JotForm)                                     | ✅ Operational                | 4,223 submissions processed, 66.2% auto-match, feedback loop wired                                                                                                                                                       |
+| Match photos to loads                                              | ✅ Operational                | 3-strategy tiered matcher, 98.5% via exact ticket, feedback-driven fuzzy tier growing                                                                                                                                    |
+| Reconcile field-level discrepancies                                | ✅ Operational                | Reconciliation service with severity classification                                                                                                                                                                      |
+| Build load packages                                                | ✅ Operational                | DispatchLoad normalization, validated package assembly                                                                                                                                                                   |
+| Human correction surface                                           | ✅ Operational                | BOL Queue inline edit, Validation page, ExpandDrawer inline edits                                                                                                                                                        |
+| Training signal capture                                            | ✅ Operational                | `wells.matchFeedback`, `original_ocr_bol_no`, `location_mappings`                                                                                                                                                        |
+| Push to PCS (any channel — REST or SOAP)                           | ⏳ Pending PCS                | Never operationally validated. SOAP client built as due-diligence engineering but authorized push has never been attempted. REST client pre-built; OAuth credentials pending (PCS ticket DO-2821 open since 2026-03-13). |
+| Reporting parity with PCS Reporter (income + clearing spreadsheet) | ⏳ Delivered upon SOW signoff | Covered on final dispatch-team call; SOW Section 2.2                                                                                                                                                                     |
 
 **What the engagement has delivered:** the entire capability to
 build loads, enrich them, reconcile them, correct them, and route
