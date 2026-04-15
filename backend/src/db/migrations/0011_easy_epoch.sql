@@ -18,7 +18,8 @@ CREATE INDEX "idx_assignments_entered_on" ON "assignments" USING btree ("entered
 UPDATE "assignments"
 SET "handler_stage" = 'cleared',
     "stage_changed_at" = COALESCE("updated_at", now())
-WHERE "status" IN ('completed','cancelled','failed');
+WHERE "handler_stage" = 'uncertain'
+  AND "status" IN ('completed','cancelled','failed');
 --> statement-breakpoint
 UPDATE "assignments"
 SET "handler_stage" = 'ready_to_build',
