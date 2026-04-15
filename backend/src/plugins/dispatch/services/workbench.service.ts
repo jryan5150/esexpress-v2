@@ -80,3 +80,62 @@ export function computeUncertainReasons(
 
   return reasons;
 }
+
+import type { HandlerStage } from "../../../db/schema.js";
+
+/**
+ * Stage transition rules. Forward edges only, plus flag-back-to-uncertain from any.
+ * Uncertain → ready_to_build requires uncertain_reasons be empty.
+ */
+export function allowedTransition(
+  from: HandlerStage,
+  to: HandlerStage,
+  uncertainReasons: readonly string[],
+): boolean {
+  // Flag-back is allowed from any non-uncertain stage
+  if (to === "uncertain" && from !== "uncertain") return true;
+
+  const forwardEdges: Record<HandlerStage, HandlerStage | null> = {
+    uncertain: "ready_to_build",
+    ready_to_build: "building",
+    building: "entered",
+    entered: "cleared",
+    cleared: null,
+  };
+
+  if (forwardEdges[from] !== to) return false;
+  if (from === "uncertain" && uncertainReasons.length > 0) return false;
+  return true;
+}
+
+/**
+ * Router: given a stage, return the user id who should own the load next.
+ *
+ * V5 uses name-substring matching since the existing users.role enum
+ * (admin/dispatcher/viewer) doesn't distinguish Jess/Steph/Katie functionally.
+ * Substring matches are case-insensitive. Post-v5, this can be replaced with
+ * a proper role field once the users.role enum is expanded.
+ *
+ * - uncertain  → user whose name contains 'jess'
+ * - entered    → user whose name contains 'kati' (matches Katie / Katy / Kathy)
+ * - ready_to_build / building → null (claim-based, caller decides)
+ * - cleared    → null (terminal)
+ */
+export function nextHandlerForStage(
+  stage: HandlerStage,
+  users: ReadonlyArray<{ id: number; name?: string | null; role?: string }>,
+): number | null {
+  if (stage === "uncertain") {
+    const jess = users.find((u) =>
+      (u.name ?? "").toLowerCase().includes("jess"),
+    );
+    return jess?.id ?? null;
+  }
+  if (stage === "entered") {
+    const katie = users.find((u) =>
+      (u.name ?? "").toLowerCase().includes("kati"),
+    );
+    return katie?.id ?? null;
+  }
+  return null;
+}

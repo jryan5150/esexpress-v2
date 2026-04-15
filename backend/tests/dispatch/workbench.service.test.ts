@@ -158,3 +158,65 @@ describe("computeUncertainReasons", () => {
     ).not.toContain("no_photo_48h");
   });
 });
+
+import {
+  allowedTransition,
+  nextHandlerForStage,
+} from "../../src/plugins/dispatch/services/workbench.service.js";
+
+describe("allowedTransition", () => {
+  it("allows uncertain → ready_to_build only when reasons is empty", () => {
+    expect(allowedTransition("uncertain", "ready_to_build", [])).toBe(true);
+    expect(
+      allowedTransition("uncertain", "ready_to_build", ["rate_missing"]),
+    ).toBe(false);
+  });
+  it("allows ready_to_build → building", () => {
+    expect(allowedTransition("ready_to_build", "building", [])).toBe(true);
+  });
+  it("allows building → entered", () => {
+    expect(allowedTransition("building", "entered", [])).toBe(true);
+  });
+  it("allows entered → cleared", () => {
+    expect(allowedTransition("entered", "cleared", [])).toBe(true);
+  });
+  it("allows flag-back: any stage → uncertain", () => {
+    expect(allowedTransition("entered", "uncertain", [])).toBe(true);
+    expect(allowedTransition("building", "uncertain", [])).toBe(true);
+  });
+  it("forbids skipping stages (e.g. uncertain → building)", () => {
+    expect(allowedTransition("uncertain", "building", [])).toBe(false);
+  });
+  it("forbids backward non-flag transitions (e.g. entered → building)", () => {
+    expect(allowedTransition("entered", "building", [])).toBe(false);
+  });
+  it("cleared is terminal except via flag-back", () => {
+    expect(allowedTransition("cleared", "uncertain", [])).toBe(true);
+    expect(allowedTransition("cleared", "entered", [])).toBe(false);
+  });
+});
+
+describe("nextHandlerForStage", () => {
+  const users = [
+    { id: 1, name: "Jessica", role: "admin" },
+    { id: 2, name: "Stephanie", role: "admin" },
+    { id: 3, name: "Katie", role: "admin" },
+  ];
+  it("routes uncertain → Jessica (by name substring)", () => {
+    expect(nextHandlerForStage("uncertain", users)).toBe(1);
+  });
+  it("keeps handler unchanged on ready_to_build", () => {
+    expect(nextHandlerForStage("ready_to_build", users)).toBeNull();
+  });
+  it("routes entered → Katie", () => {
+    expect(nextHandlerForStage("entered", users)).toBe(3);
+  });
+  it("cleared has no handler", () => {
+    expect(nextHandlerForStage("cleared", users)).toBeNull();
+  });
+  it("returns null if no matching user exists", () => {
+    expect(
+      nextHandlerForStage("uncertain", [{ id: 9, name: "Bob", role: "admin" }]),
+    ).toBeNull();
+  });
+});
