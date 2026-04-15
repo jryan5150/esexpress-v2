@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   useBolQueue,
   useBolStats,
@@ -148,6 +148,20 @@ export function BolQueue() {
   const [filter, setFilter] = useState<"all" | "matched" | "pending">("all");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [photoModal, setPhotoModal] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{
+    x: number;
+    y: number;
+    px: number;
+    py: number;
+  } | null>(null);
+  useEffect(() => {
+    if (photoModal) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+    }
+  }, [photoModal]);
 
   const statsQuery = useBolStats();
   const queueQuery = useBolQueue({ page, limit: pageSize });
@@ -822,25 +836,112 @@ export function BolQueue() {
           </>
         )}
 
-        {/* Photo Modal */}
+        {/* Photo Modal — zoomable */}
         {photoModal && (
           <div
             className="fixed inset-0 bg-on-surface/80 z-50 flex items-center justify-center p-8"
             onClick={() => setPhotoModal(null)}
           >
-            <div className="relative max-w-4xl max-h-[90vh]">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setPhotoModal(null);
+              }}
+              aria-label="Close"
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-surface-container-lowest/90 text-on-surface flex items-center justify-center hover:bg-surface-container-high transition-colors z-10"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+            <div
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-surface-container-lowest/95 rounded-full px-2 py-1 shadow-lg z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
-                onClick={() => setPhotoModal(null)}
-                className="absolute -top-10 right-0 text-on-primary/60 hover:text-on-primary cursor-pointer"
+                onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
+                aria-label="Zoom out"
+                disabled={zoom <= 0.5}
+                className="w-9 h-9 rounded-full hover:bg-surface-container-high text-on-surface flex items-center justify-center disabled:opacity-30"
               >
-                <span className="material-symbols-outlined text-2xl">
-                  close
-                </span>
+                <span className="material-symbols-outlined">zoom_out</span>
               </button>
+              <button
+                onClick={() => {
+                  setZoom(1);
+                  setPan({ x: 0, y: 0 });
+                }}
+                className="px-3 h-9 rounded-full hover:bg-surface-container-high text-on-surface text-xs font-bold tabular-nums min-w-[60px]"
+                title="Reset"
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+              <button
+                onClick={() => setZoom((z) => Math.min(5, z + 0.25))}
+                aria-label="Zoom in"
+                disabled={zoom >= 5}
+                className="w-9 h-9 rounded-full hover:bg-surface-container-high text-on-surface flex items-center justify-center disabled:opacity-30"
+              >
+                <span className="material-symbols-outlined">zoom_in</span>
+              </button>
+            </div>
+            <div
+              className="w-full h-full flex items-center justify-center overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              onWheel={(e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.15 : 0.15;
+                setZoom((z) => Math.min(5, Math.max(0.5, z + delta)));
+              }}
+              onMouseDown={(e) => {
+                if (zoom <= 1) return;
+                dragRef.current = {
+                  x: e.clientX,
+                  y: e.clientY,
+                  px: pan.x,
+                  py: pan.y,
+                };
+              }}
+              onMouseMove={(e) => {
+                if (!dragRef.current) return;
+                setPan({
+                  x: dragRef.current.px + (e.clientX - dragRef.current.x),
+                  y: dragRef.current.py + (e.clientY - dragRef.current.y),
+                });
+              }}
+              onMouseUp={() => {
+                dragRef.current = null;
+              }}
+              onMouseLeave={() => {
+                dragRef.current = null;
+              }}
+              style={{
+                cursor:
+                  zoom > 1
+                    ? dragRef.current
+                      ? "grabbing"
+                      : "grab"
+                    : "zoom-in",
+              }}
+            >
               <img
                 src={photoModal}
                 alt="Weight ticket"
-                className="max-w-full max-h-[85vh] object-contain rounded-lg"
+                draggable={false}
+                onDoubleClick={() => {
+                  if (zoom === 1) {
+                    setZoom(2);
+                  } else {
+                    setZoom(1);
+                    setPan({ x: 0, y: 0 });
+                  }
+                }}
+                className="max-w-full max-h-full object-contain rounded-lg select-none"
+                style={{
+                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                  transition: dragRef.current
+                    ? "none"
+                    : "transform 0.15s ease-out",
+                  transformOrigin: "center center",
+                }}
               />
             </div>
           </div>
