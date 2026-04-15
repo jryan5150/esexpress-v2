@@ -39,14 +39,14 @@ the deliverables.
 
 | Era                                        | Dates                   | Engineering hours | Headline                                                                                                                                                  |
 | ------------------------------------------ | ----------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v1 build — active from Jace's formal start | 2026-02-11 → 2026-03-31 | ~120h             | Platform architected and hardened; PCS REST API access requested and tracked (ticket DO-2821); Logistiq integration built against eventual production API |
-| v2 clean rebuild                           | 2026-03-31 → 2026-04-15 | ~100h             | Clean monorepo, reconciliation engine, BOL queue, feedback loop, live at app.esexpressllc.com                                                             |
+| v1 build — active from Jace's formal start | 2026-02-11 → 2026-03-31 | ~104h             | Platform architected and hardened; PCS REST API access requested and tracked (ticket DO-2821); Logistiq integration built against eventual production API |
+| v2 clean rebuild                           | 2026-03-31 → 2026-04-15 | ~90h              | Clean monorepo, reconciliation engine, BOL queue, feedback loop, live at app.esexpressllc.com                                                             |
+| Documentation, calls, vendor coordination  | ongoing                 | ~20h              | Includes Jessica walkthrough (1h 14m), team follow-up (1h 2m), SOW + timeline preparation, vendor email threads                                           |
 | External vendor processes                  | 2026-02-27 → open       | —                 | PCS REST API access in-flight since early March; Logistiq API contract executed late March / early April                                                  |
 
 **Total engineering effort through 2026-04-15:** approximately
-**220 engineer-hours** of build, plus documentation, client calls
-(~10h recorded), vendor coordination, and overnight hardening
-sprints that don't show cleanly in git.
+**215 engineer-hours**, reconciling to the detailed accounting in
+Section _Effort accounting_ below.
 
 A note on attribution: the repo was first scaffolded 2026-01-15 by
 another team member; Jace's active engagement with hands-on build
