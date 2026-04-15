@@ -34,51 +34,51 @@
 
 ## SHIPPED (verified against git + live code)
 
-| #    | Ask                                                                           | Source                  | Commit                                    | Verified           |
-| ---- | ----------------------------------------------------------------------------- | ----------------------- | ----------------------------------------- | ------------------ |
-| S-01 | ES Express LLC logo on login + sidebar                                        | Jared / Apr 9 40:31     | `829eda0` (merged today)                  | ✓ live             |
-| S-02 | Cobalt primary + cream backgrounds (swap from purple)                         | Jared                   | `3aa3243` via merge `829eda0`             | ✓ live             |
-| S-03 | Collapsible sidebar with admin grouping                                       | Jared                   | `c85ca1f` via merge `829eda0`             | ✓ live             |
-| S-04 | Load Count Sheet color coding on rows                                         | Apr 9 16:23             | `ad8b1d2`, `a72324d`                      | ✓ today            |
-| S-05 | Color Key legend popover                                                      | Apr 9 16:34             | `ad8b1d2`                                 | ✓ today            |
-| S-06 | Date range filter (from→to)                                                   | Apr 9, R2               | `a72324d`                                 | ✓ today            |
-| S-07 | Match audit UI on load drawer                                                 | Jessica validation call | `b4aa9f0`, `94a07a2`                      | ✓                  |
-| S-08 | Auto-mapper anti-hallucination rules                                          | Validation findings     | `e15a6e8`                                 | ✓                  |
-| S-09 | Archive / historical complete banner                                          | Apr 6 validation call   | `79180a9`                                 | ✓                  |
-| S-10 | Historical-complete classifier on sync                                        | Apr 6 "archive vs live" | `f50e97b`                                 | ✓                  |
-| S-11 | Visible "Search BOL" button (M8)                                              | Validation call 23:15   | `de148d1`                                 | ✓                  |
-| S-12 | Logistiq carrier export (no session auth)                                     | Operational             | `43e6b2a`                                 | ✓                  |
-| S-13 | `weight_lbs` column + sync population                                         | Round 4                 | `3d9a5bf`, `5d91282`                      | ✓                  |
-| S-14 | P0-3 single-load Validate confirm                                             | Round 2                 | shipped (confirm pattern in DispatchDesk) | ✓                  |
-| S-15 | P0-4 Missing Ticket button — wired then disabled with tooltip                 | R2 → R3 → R4            | `6e506ab` → `6ea015a`                     | ✓ current state    |
-| S-16 | P2-6 Advance All confirmation                                                 | Round 2                 | `53a5eea`                                 | ✓                  |
-| S-17 | P2-8 Pagination reset on filter change                                        | Round 2                 | `e0439d8`                                 | ✓                  |
-| S-18 | P1-4 onClaim in Loads view                                                    | Round 2                 | `b8ff924`                                 | ✓                  |
-| S-19 | P1-12 "Entered" → "Mark Entered"                                              | Round 2                 | `22cfec4`                                 | ✓                  |
-| S-20 | P2-1 Demurrage panel recolor                                                  | Round 2                 | `5d37e56`                                 | ✓                  |
-| S-21 | P2-7 Jargon tooltips (BOL, FSC, Reconciled, Tiers)                            | Round 2 / Katie         | `9ac11aa`                                 | ✓                  |
-| S-22 | P1-11 prefers-reduced-motion animation cap                                    | Round 2                 | `d1ea180`                                 | ✓                  |
-| S-23 | P2-3 "Last updated" pill on home Objectives                                   | Round 2                 | `b39dee3`                                 | ✓                  |
-| S-24 | P1-8 Companies admin behind feature flag                                      | Round 2                 | `902b39e` + revert `ec4fb64`              | ✓ current: visible |
-| S-25 | Pill text readability per-hex luminance                                       | Apr 14 team note        | `a72324d`                                 | ✓ today            |
-| S-26 | enteredIds persists across page refresh (P1-5)                                | Stephanie R2            | `feae3c9`                                 | ✓ today            |
-| S-27 | LoadRow checkbox keyboard accessible (P1-3)                                   | R2                      | `feae3c9`                                 | ✓ today            |
-| S-28 | Loads view row click expands drawer in place (P0-6)                           | Stephanie R2            | `feae3c9`                                 | ✓ today            |
-| S-29 | PhotoModal "Flag for Jessica" wired (P1-6)                                    | R2                      | `feae3c9`                                 | ✓ today            |
-| S-30 | WellsAdmin pencil edits dailyTargetLoads (P0-1)                               | Admin R2                | `feae3c9`                                 | ✓ today            |
-| S-31 | WellsAdmin defaults to Active filter (P2-9)                                   | Admin R2                | `feae3c9`                                 | ✓ today            |
-| S-32 | WellsAdmin paginates 25/page (P2-10)                                          | Admin R2                | `feae3c9`                                 | ✓ today            |
-| S-33 | PCS numbering correct under filters (P1-7)                                    | Stephanie R2            | `feae3c9`                                 | ✓ today            |
-| S-34 | PropX `staging_*` schema-drift fields known                                   | Apr 14 sync log         | `feae3c9`                                 | ✓ today            |
-| S-35 | Copy ready-loads-as-TSV report (P2-2)                                         | Jessica R2              | `feae3c9`                                 | ✓ today            |
-| S-36 | Home "Confirmed & Ready" card clickable (P1-10)                               | Stephanie R2            | `feae3c9`                                 | ✓ today            |
-| S-37 | Inline editable assignment notes (O-05)                                       | Jessica Apr 6           | `ef40761` + migration `0008`              | ✓ today            |
-| S-38 | Keyboard navigation between rows (j/k/↑/↓/Enter/Esc)                          | Stephanie R1 + Apr 9    | `ef40761`                                 | ✓ today            |
-| S-39 | Validation page: more inline edits + pencil affordance (P2-4)                 | R2                      | `29996ae`                                 | ✓ today            |
-| S-40 | Photo gate on dispatch_ready transition (P-03)                                | Jessica Apr 6 ~54:20    | `d6d979c`                                 | ✓ today            |
-| S-41 | Need Well Rate Info status wired (O-23) — admin checkbox + 6th color now live | Apr 9 + admin           | `d6d979c` + migration `0009`              | ✓ today            |
-| S-42 | Missed Loads Report — pull-style page Jessica runs on demand (O-16)           | Jessica Apr 6           | `d6d979c`                                 | ✓ today            |
-| S-43 | Mark Entered button now in ExpandDrawer (P-01)                                | Stephanie R2 (P1-2)     | `d6d979c`                                 | ✓ today            |
+| #    | Ask                                                                           | Source                  | Verified           | Commit                                    |
+| ---- | ----------------------------------------------------------------------------- | ----------------------- | ------------------ | ----------------------------------------- |
+| S-01 | ES Express LLC logo on login + sidebar                                        | Jared / Apr 9 40:31     | ✓ live             | `829eda0` (merged today)                  |
+| S-02 | Cobalt primary + cream backgrounds (swap from purple)                         | Jared                   | ✓ live             | `3aa3243` via merge `829eda0`             |
+| S-03 | Collapsible sidebar with admin grouping                                       | Jared                   | ✓ live             | `c85ca1f` via merge `829eda0`             |
+| S-04 | Load Count Sheet color coding on rows                                         | Apr 9 16:23             | ✓ today            | `ad8b1d2`, `a72324d`                      |
+| S-05 | Color Key legend popover                                                      | Apr 9 16:34             | ✓ today            | `ad8b1d2`                                 |
+| S-06 | Date range filter (from→to)                                                   | Apr 9, R2               | ✓ today            | `a72324d`                                 |
+| S-07 | Match audit UI on load drawer                                                 | Jessica validation call | ✓                  | `b4aa9f0`, `94a07a2`                      |
+| S-08 | Auto-mapper anti-hallucination rules                                          | Validation findings     | ✓                  | `e15a6e8`                                 |
+| S-09 | Archive / historical complete banner                                          | Apr 6 validation call   | ✓                  | `79180a9`                                 |
+| S-10 | Historical-complete classifier on sync                                        | Apr 6 "archive vs live" | ✓                  | `f50e97b`                                 |
+| S-11 | Visible "Search BOL" button (M8)                                              | Validation call 23:15   | ✓                  | `de148d1`                                 |
+| S-12 | Logistiq carrier export (no session auth)                                     | Operational             | ✓                  | `43e6b2a`                                 |
+| S-13 | `weight_lbs` column + sync population                                         | Round 4                 | ✓                  | `3d9a5bf`, `5d91282`                      |
+| S-14 | P0-3 single-load Validate confirm                                             | Round 2                 | ✓                  | shipped (confirm pattern in DispatchDesk) |
+| S-15 | P0-4 Missing Ticket button — wired then disabled with tooltip                 | R2 → R3 → R4            | ✓ current state    | `6e506ab` → `6ea015a`                     |
+| S-16 | P2-6 Advance All confirmation                                                 | Round 2                 | ✓                  | `53a5eea`                                 |
+| S-17 | P2-8 Pagination reset on filter change                                        | Round 2                 | ✓                  | `e0439d8`                                 |
+| S-18 | P1-4 onClaim in Loads view                                                    | Round 2                 | ✓                  | `b8ff924`                                 |
+| S-19 | P1-12 "Entered" → "Mark Entered"                                              | Round 2                 | ✓                  | `22cfec4`                                 |
+| S-20 | P2-1 Demurrage panel recolor                                                  | Round 2                 | ✓                  | `5d37e56`                                 |
+| S-21 | P2-7 Jargon tooltips (BOL, FSC, Reconciled, Tiers)                            | Round 2 / Katie         | ✓                  | `9ac11aa`                                 |
+| S-22 | P1-11 prefers-reduced-motion animation cap                                    | Round 2                 | ✓                  | `d1ea180`                                 |
+| S-23 | P2-3 "Last updated" pill on home Objectives                                   | Round 2                 | ✓                  | `b39dee3`                                 |
+| S-24 | P1-8 Companies admin behind feature flag                                      | Round 2                 | ✓ current: visible | `902b39e` + revert `ec4fb64`              |
+| S-25 | Pill text readability per-hex luminance                                       | Apr 14 team note        | ✓ today            | `a72324d`                                 |
+| S-26 | enteredIds persists across page refresh (P1-5)                                | Stephanie R2            | ✓ today            | `feae3c9`                                 |
+| S-27 | LoadRow checkbox keyboard accessible (P1-3)                                   | R2                      | ✓ today            | `feae3c9`                                 |
+| S-28 | Loads view row click expands drawer in place (P0-6)                           | Stephanie R2            | ✓ today            | `feae3c9`                                 |
+| S-29 | PhotoModal "Flag for Jessica" wired (P1-6)                                    | R2                      | ✓ today            | `feae3c9`                                 |
+| S-30 | WellsAdmin pencil edits dailyTargetLoads (P0-1)                               | Admin R2                | ✓ today            | `feae3c9`                                 |
+| S-31 | WellsAdmin defaults to Active filter (P2-9)                                   | Admin R2                | ✓ today            | `feae3c9`                                 |
+| S-32 | WellsAdmin paginates 25/page (P2-10)                                          | Admin R2                | ✓ today            | `feae3c9`                                 |
+| S-33 | PCS numbering correct under filters (P1-7)                                    | Stephanie R2            | ✓ today            | `feae3c9`                                 |
+| S-34 | PropX `staging_*` schema-drift fields known                                   | Apr 14 sync log         | ✓ today            | `feae3c9`                                 |
+| S-35 | Copy ready-loads-as-TSV report (P2-2)                                         | Jessica R2              | ✓ today            | `feae3c9`                                 |
+| S-36 | Home "Confirmed & Ready" card clickable (P1-10)                               | Stephanie R2            | ✓ today            | `feae3c9`                                 |
+| S-37 | Inline editable assignment notes (O-05)                                       | Jessica Apr 6           | ✓ today            | `ef40761` + migration `0008`              |
+| S-38 | Keyboard navigation between rows (j/k/↑/↓/Enter/Esc)                          | Stephanie R1 + Apr 9    | ✓ today            | `ef40761`                                 |
+| S-39 | Validation page: more inline edits + pencil affordance (P2-4)                 | R2                      | ✓ today            | `29996ae`                                 |
+| S-40 | Photo gate on dispatch_ready transition (P-03)                                | Jessica Apr 6 ~54:20    | ✓ today            | `d6d979c`                                 |
+| S-41 | Need Well Rate Info status wired (O-23) — admin checkbox + 6th color now live | Apr 9 + admin           | ✓ today            | `d6d979c` + migration `0009`              |
+| S-42 | Missed Loads Report — pull-style page Jessica runs on demand (O-16)           | Jessica Apr 6           | ✓ today            | `d6d979c`                                 |
+| S-43 | Mark Entered button now in ExpandDrawer (P-01)                                | Stephanie R2 (P1-2)     | ✓ today            | `d6d979c`                                 |
 
 ## PARTIAL (in-progress / partly-addressed)
 

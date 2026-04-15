@@ -1,0 +1,21 @@
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{booktabs}
+
+% Give table cells breathing room so nothing gets squished
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.25}
+
+% Tables render slightly smaller so wide content fits without crushing
+\let\origtabular\tabular
+\renewcommand{\tabular}{\small\origtabular}
+\let\origlongtable\longtable
+\renewcommand{\longtable}{\small\origlongtable}
+
+% Better line spacing in body + paragraph separation
+\linespread{1.15}
+\setlength{\parskip}{4pt}
+
+% Avoid stranded single lines at top/bottom of pages
+\clubpenalty=10000
+\widowpenalty=10000

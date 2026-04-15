@@ -206,10 +206,10 @@ PCS API docs`. Research captured in-repo for reference.
 `1d64e48 — fix: production hardening — 6-area systematic review +
 203 new tests`. v1 reaches production-quality posture.
 
-### 2026-03-23 — Tech debt scrub
+### 2026-03-23 — Debugging + cleanup pass
 
-ESLint cleanup, 268 problems resolved. Preparation for the v2
-extraction decision.
+ESLint pass resolved 268 outstanding issues. General debugging and
+cleanup ahead of the v2 extraction decision.
 
 ### 2026-03-26 — Validation walkthrough script
 
@@ -270,21 +270,21 @@ Drizzle + PostgreSQL) + frontend (React 19 + Vite + Tailwind).
 ~20 commits. One-day rebuild of ingestion + matching + reconciliation
 against the clean architecture:
 
-| Module                     | Commit               | Description                                                                         |
-| -------------------------- | -------------------- | ----------------------------------------------------------------------------------- |
-| JWT auth + guards          | `e163cef`, `916fd96` | Sign/verify, authenticate + requireRole                                             |
-| PropX API client           | `20a7877`            | Rate limiting, circuit breaker, caching                                             |
-| PropX sync                 | `dba23db`, `a844d0a` | Field alias resolution, lbs↔tons, schema drift detection, 8 endpoints               |
-| PCS SOAP service           | `e2ecb10`, `ffd0472` | Session mgmt, dispatch builder, status mapping, circuit breaker, 9 endpoints        |
-| JotForm service            | `a6e9c4e`            | Field extraction, 3-tier matching, photo URL filtering                              |
-| Photo proxy + verification | `8c29f42`            | SSRF-safe proxy, ZIP bundler, 5 routes                                              |
-| Sheets                     | `afa2fd6`, `bf100e3` | Google Sheets export/import with formula-injection protection                       |
-| Logistiq client + sync     | `fa9ffff`, `54cd98d` | 2-step JWT auth, order search, carrier export (31-day chunking), cross-source dedup |
-| BOL extraction             | `a5e6885`            | Claude Vision API for weight ticket data                                            |
-| Reconciliation service     | `254e308`            | 3-strategy auto-match with discrepancy detection                                    |
-| BOL routes                 | `92083f2`            | 12 endpoints for submissions + operations reconciliation                            |
-| Finance service + routes   | `364ce9d`, `fc52a6d` | Payment batch + status machine                                                      |
-| Frontend (Stitch → React)  | `6f3e27b`, `6eabe76` | 4 core screens + admin/finance/settings/login                                       |
+| Module                     | Description                                                                         | Commit               |
+| -------------------------- | ----------------------------------------------------------------------------------- | -------------------- |
+| JWT auth + guards          | Sign/verify, authenticate + requireRole                                             | `e163cef`, `916fd96` |
+| PropX API client           | Rate limiting, circuit breaker, caching                                             | `20a7877`            |
+| PropX sync                 | Field alias resolution, lbs↔tons, schema drift detection, 8 endpoints               | `dba23db`, `a844d0a` |
+| PCS SOAP service           | Session mgmt, dispatch builder, status mapping, circuit breaker, 9 endpoints        | `e2ecb10`, `ffd0472` |
+| JotForm service            | Field extraction, 3-tier matching, photo URL filtering                              | `a6e9c4e`            |
+| Photo proxy + verification | SSRF-safe proxy, ZIP bundler, 5 routes                                              | `8c29f42`            |
+| Sheets                     | Google Sheets export/import with formula-injection protection                       | `afa2fd6`, `bf100e3` |
+| Logistiq client + sync     | 2-step JWT auth, order search, carrier export (31-day chunking), cross-source dedup | `fa9ffff`, `54cd98d` |
+| BOL extraction             | Claude Vision API for weight ticket data                                            | `a5e6885`            |
+| Reconciliation service     | 3-strategy auto-match with discrepancy detection                                    | `254e308`            |
+| BOL routes                 | 12 endpoints for submissions + operations reconciliation                            | `92083f2`            |
+| Finance service + routes   | Payment batch + status machine                                                      | `364ce9d`, `fc52a6d` |
+| Frontend (Stitch → React)  | 4 core screens + admin/finance/settings/login                                       | `6f3e27b`, `6eabe76` |
 
 ### 2026-04-01 evening → 2026-04-02 — v2 goes live for Jess
 
@@ -476,16 +476,16 @@ contract.
 **v1 engagement hours** from Feb 11 (Jace's active start) through
 March 31:
 
-| Period                        | Commits (Jace) | Est. hours | Headline                                                                                                        |
-| ----------------------------- | -------------- | ---------- | --------------------------------------------------------------------------------------------------------------- |
-| Feb 11-13                     | ~25            | 24         | Multi-stream kickoff (Wells workflow, ingestion, app shell, sheets) + PCS SOAP due-diligence                    |
-| Feb 16                        | 7              | 4          | EsExpress rebrand + production env config                                                                       |
-| Feb 27-28                     | 12             | 8          | PCS outreach drafted, Push-to-PCS UI shipped, PCS Bridge expansion                                              |
-| Mar 1-9                       | 90+            | 40         | Buyer demo delivered 3/4, Logistiq dashboard, first PCS data drop exploration, PCS REST questionnaire submitted |
-| Mar 13-16                     | 21+            | 10         | DuckDB flywheel, WellSite model, dispatch load adapter, normalizers                                             |
-| Mar 20-23                     | 2              | 3          | Production hardening (203 tests), ESLint cleanup                                                                |
-| Mar 26-31                     | 30+            | 15         | Validation walkthrough prep, v2 design + phase 1 plan, ActivityWatch                                            |
-| **v1 Feb 11-Mar 31 subtotal** | **~190**       | **~104h**  | —                                                                                                               |
+| Period                        | Est. hours | Headline                                                                                                        | Commits (Jace) |
+| ----------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------- | -------------- |
+| Feb 11-13                     | 24         | Multi-stream kickoff (Wells workflow, ingestion, app shell, sheets) + PCS SOAP due-diligence                    | ~25            |
+| Feb 16                        | 4          | EsExpress rebrand + production env config                                                                       | 7              |
+| Feb 27-28                     | 8          | PCS outreach drafted, Push-to-PCS UI shipped, PCS Bridge expansion                                              | 12             |
+| Mar 1-9                       | 40         | Buyer demo delivered 3/4, Logistiq dashboard, first PCS data drop exploration, PCS REST questionnaire submitted | 90+            |
+| Mar 13-16                     | 10         | DuckDB flywheel, WellSite model, dispatch load adapter, normalizers                                             | 21+            |
+| Mar 20-23                     | 3          | Production hardening (203 tests), debugging pass                                                                | 2              |
+| Mar 26-31                     | 15         | Validation walkthrough prep, v2 design + phase 1 plan, ActivityWatch                                            | 30+            |
+| **v1 Feb 11-Mar 31 subtotal** | **~104h**  | —                                                                                                               | **~190**       |
 
 (Sources: `git log --author=jryan --since=2026-02-11 --until=2026-03-31`;
 the `march-2026-git-history-export.md` report corroborates ~36h
