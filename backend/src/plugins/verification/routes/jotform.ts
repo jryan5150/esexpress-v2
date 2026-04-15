@@ -12,6 +12,7 @@ import {
 } from "../../../db/schema.js";
 import { matchSubmissionToLoad } from "../services/jotform.service.js";
 import { validateTicketNumber } from "../lib/field-validators.js";
+import { resolveJotformPhotoUrls } from "../lib/photo-urls.js";
 
 const jotformRoutes: FastifyPluginAsync = async (fastify) => {
   // POST /jotform/bulk-import — import JotForm CSV export rows
@@ -488,9 +489,7 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
           driverName: r.driverName,
           truckNo: r.truckNo,
           weight: r.weight,
-          photoUrls: r.jotformSubmissionId
-            ? [`/api/v1/verification/photos/gcs/${r.jotformSubmissionId}`]
-            : [],
+          photoUrls: resolveJotformPhotoUrls(r.photoUrl, r.imageUrls),
           status: r.status,
           submittedAt: r.submittedAt,
           createdAt: r.createdAt,

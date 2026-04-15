@@ -182,10 +182,15 @@ const photosRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // ─── GET /photos/proxy -- SSRF-safe photo proxy ───────────────────
+  // NOTE: no auth preHandler. Browser <img> tags cannot send Authorization
+  // headers, and we have no cookie-based auth plumbing. The SSRF allowlist
+  // (photo.service.ts ALLOWED_PHOTO_HOSTS) is the guard — only JotForm,
+  // PropX, and GCS hosts are ever fetched, and the URL itself is a public
+  // JotForm capability URL. Reverting M-6 from commit 7adf33c for the same
+  // reason documented in commit 0aee4f4: header-based JWT breaks <img>.
   fastify.get(
     "/photos/proxy",
     {
-      preHandler: [fastify.authenticate],
       schema: {
         querystring: {
           type: "object",

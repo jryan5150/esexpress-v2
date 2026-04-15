@@ -16,6 +16,7 @@ import { transitionStatus } from "./assignments.service.js";
 import type { Database } from "../../../db/client.js";
 import type { PhotoStatus } from "../../../db/schema.js";
 import { eraFilter } from "../lib/era-filter.js";
+import { resolveJotformPhotoUrls } from "../../verification/lib/photo-urls.js";
 
 // ─── PURE FUNCTIONS ───────────────────────────────────────────────
 
@@ -290,11 +291,12 @@ export async function getDispatchDeskLoads(
       // JotForm cross-reference (for BOL verification)
       jotformBolNo: row.jotformBolNo ?? null,
       jotformDriverName: row.jotformDriverName ?? null,
-      // Photo: use GCS proxy URL if submission ID available, else raw JotForm URL
+      // Photo: resolve JotForm URLs through SSRF-safe proxy (see photo-urls.ts)
       jotformSubmissionId: row.jotformSubmissionId ?? null,
-      photoUrls: row.jotformSubmissionId
-        ? [`/api/v1/verification/photos/gcs/${row.jotformSubmissionId}`]
-        : [],
+      photoUrls: resolveJotformPhotoUrls(
+        row.jotformPhotoUrl,
+        row.jotformImageUrls,
+      ),
     };
   });
 
