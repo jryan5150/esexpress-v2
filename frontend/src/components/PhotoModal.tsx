@@ -104,6 +104,14 @@ export function PhotoModal({
   showValidateButton = true,
 }: PhotoModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{
+    x: number;
+    y: number;
+    px: number;
+    py: number;
+  } | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const currentIndexRef = useRef(currentIndex);
   currentIndexRef.current = currentIndex;
@@ -112,6 +120,12 @@ export function PhotoModal({
 
   const updateLoad = useUpdateLoad();
   const { toast } = useToast();
+
+  // Reset zoom/pan whenever the photo index changes
+  useEffect(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [currentIndex]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -222,18 +236,103 @@ export function PhotoModal({
           className="grid min-h-[340px]"
           style={{ gridTemplateColumns: "1fr 300px" }}
         >
-          {/* Photo area */}
-          <div className="bg-background border-r border-outline-variant/30 flex items-center justify-center flex-col gap-3 p-8">
+          {/* Photo area — zoomable + pannable */}
+          <div className="bg-background border-r border-outline-variant/30 flex items-center justify-center flex-col gap-3 p-8 relative">
             {photoUrls.length > 0 ? (
               <>
-                <img
-                  src={fullUrl(photoUrls[currentIndex])}
-                  alt={`Photo ${currentIndex + 1}`}
-                  className="max-w-full max-h-[50vh] object-contain rounded-lg"
-                />
-                <span className="font-label text-[11px] font-medium text-outline bg-surface-container-high px-2.5 py-0.5 rounded-full">
-                  Photo {currentIndex + 1} of {photoUrls.length}
-                </span>
+                <div
+                  className="w-full h-[50vh] flex items-center justify-center overflow-hidden rounded-lg"
+                  onWheel={(e) => {
+                    e.preventDefault();
+                    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+                    setZoom((z) => Math.min(5, Math.max(0.5, z + delta)));
+                  }}
+                  onMouseDown={(e) => {
+                    if (zoom <= 1) return;
+                    dragRef.current = {
+                      x: e.clientX,
+                      y: e.clientY,
+                      px: pan.x,
+                      py: pan.y,
+                    };
+                  }}
+                  onMouseMove={(e) => {
+                    if (!dragRef.current) return;
+                    setPan({
+                      x: dragRef.current.px + (e.clientX - dragRef.current.x),
+                      y: dragRef.current.py + (e.clientY - dragRef.current.y),
+                    });
+                  }}
+                  onMouseUp={() => {
+                    dragRef.current = null;
+                  }}
+                  onMouseLeave={() => {
+                    dragRef.current = null;
+                  }}
+                  style={{
+                    cursor:
+                      zoom > 1
+                        ? dragRef.current
+                          ? "grabbing"
+                          : "grab"
+                        : "zoom-in",
+                  }}
+                >
+                  <img
+                    src={fullUrl(photoUrls[currentIndex])}
+                    alt={`Photo ${currentIndex + 1}`}
+                    draggable={false}
+                    onDoubleClick={() => {
+                      if (zoom === 1) {
+                        setZoom(2);
+                      } else {
+                        setZoom(1);
+                        setPan({ x: 0, y: 0 });
+                      }
+                    }}
+                    className="max-w-full max-h-full object-contain rounded-lg select-none"
+                    style={{
+                      transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                      transition: dragRef.current
+                        ? "none"
+                        : "transform 0.15s ease-out",
+                      transformOrigin: "center center",
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
+                    aria-label="Zoom out"
+                    disabled={zoom <= 0.5}
+                    className="w-7 h-7 rounded-full hover:bg-surface-container-high text-on-surface flex items-center justify-center disabled:opacity-30"
+                  >
+                    <span className="material-symbols-outlined text-base">
+                      zoom_out
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setZoom(1);
+                      setPan({ x: 0, y: 0 });
+                    }}
+                    title="Reset"
+                    className="font-label text-[11px] font-bold text-outline bg-surface-container-high px-2.5 py-0.5 rounded-full hover:bg-surface-container-highest min-w-[100px] tabular-nums"
+                  >
+                    {Math.round(zoom * 100)}% · {currentIndex + 1}/
+                    {photoUrls.length}
+                  </button>
+                  <button
+                    onClick={() => setZoom((z) => Math.min(5, z + 0.25))}
+                    aria-label="Zoom in"
+                    disabled={zoom >= 5}
+                    className="w-7 h-7 rounded-full hover:bg-surface-container-high text-on-surface flex items-center justify-center disabled:opacity-30"
+                  >
+                    <span className="material-symbols-outlined text-base">
+                      zoom_in
+                    </span>
+                  </button>
+                </div>
               </>
             ) : (
               <>
