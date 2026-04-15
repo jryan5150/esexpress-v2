@@ -49,7 +49,7 @@
       }
       body {
         font-family: "Inter", system-ui, sans-serif;
-        background: #2c2826;
+        background: #ffffff;
         color: var(--text-1);
         padding: 48px 24px 96px;
       }
@@ -58,21 +58,21 @@
         margin: 0 auto;
       }
       .page-intro {
-        color: #c5bdb5;
+        color: var(--text-2);
         margin-bottom: 40px;
         font-family: "Plus Jakarta Sans", sans-serif;
       }
       .page-intro h1 {
         font-size: 28px;
         font-weight: 800;
-        color: #fff;
+        color: var(--text-1);
         letter-spacing: -0.02em;
         margin-bottom: 8px;
       }
       .page-intro p {
-        font-size: 14px;
-        line-height: 1.55;
-        color: #9a9188;
+        font-size: 15px;
+        line-height: 1.6;
+        color: var(--text-2);
         max-width: 760px;
       }
 
@@ -80,28 +80,30 @@
         background: var(--bg);
         border-radius: var(--radius-lg);
         margin-bottom: 56px;
+        border: 1px solid var(--border);
         box-shadow:
-          0 24px 64px rgba(0, 0, 0, 0.45),
-          0 0 0 1px rgba(255, 255, 255, 0.04);
+          0 4px 16px rgba(30, 27, 24, 0.06),
+          0 1px 3px rgba(30, 27, 24, 0.04);
         overflow: hidden;
       }
       .frame-header {
         padding: 18px 28px;
-        background: #1e1b18;
-        border-bottom: 1px solid #3a3530;
+        background: var(--bg-lowest);
+        border-bottom: 2px solid var(--primary);
       }
       .frame-title {
         font-family: "Plus Jakarta Sans", sans-serif;
-        font-size: 13px;
-        font-weight: 700;
-        color: #fff;
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--primary);
         letter-spacing: 0.02em;
       }
       .frame-caption {
-        font-size: 12px;
-        color: #8a8279;
-        margin-top: 4px;
+        font-size: 13px;
+        color: var(--text-1);
+        margin-top: 6px;
         font-weight: 500;
+        line-height: 1.55;
       }
       .frame-body {
         padding: 0;
@@ -553,14 +555,15 @@
 
       /* ─── Batch push bar ─────────────────────────────── */
       .batch-bar {
-        background: #1e1b18;
-        color: #fff;
+        background: var(--primary);
+        color: #ffffff;
         display: flex;
         align-items: center;
         gap: 14px;
         padding: 12px 20px;
         border-radius: var(--radius-md);
         margin: 12px 24px;
+        box-shadow: 0 2px 8px rgba(109, 40, 217, 0.25);
       }
       .batch-bar-label {
         font-family: "Plus Jakarta Sans", sans-serif;
@@ -1129,7 +1132,12 @@
                 <div class="progress-fill"></div>
               </div>
             </div>
-            <span style="font-size: 12px; color: #c5bdb5"
+            <span
+              style="
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.85);
+                font-weight: 500;
+              "
               >~4 sec remaining</span
             >
           </div>
@@ -2371,15 +2379,18 @@
 
           <div
             style="
-              background: #1e1b18;
-              color: #c5bdb5;
-              padding: 14px 18px;
+              background: var(--primary-ct);
+              color: var(--text-1);
+              padding: 16px 20px;
               border-radius: var(--radius-md);
-              font-size: 12px;
-              line-height: 1.55;
+              border-left: 4px solid var(--primary);
+              font-size: 13px;
+              line-height: 1.6;
             "
           >
-            <strong style="color: #fff">What this means operationally:</strong>
+            <strong style="color: var(--primary)"
+              >What this means operationally:</strong
+            >
             at 82% match rate, your team goes from ~50 corrections a day to ~20.
             At 91%, under 10. Validation page shrinks in proportion. The work
             doesn't disappear — it transforms into "catch the edge cases"
@@ -2595,15 +2606,22 @@
 
           <div
             style="
-              background: #1e1b18;
-              color: #c5bdb5;
+              background: var(--primary-ct);
+              color: var(--text-1);
               padding: 18px 22px;
               border-radius: var(--radius-md);
-              font-size: 13px;
-              line-height: 1.6;
+              border-left: 4px solid var(--primary);
+              font-size: 14px;
+              line-height: 1.65;
             "
           >
-            <strong style="color: #fff; display: block; margin-bottom: 8px"
+            <strong
+              style="
+                color: var(--primary);
+                display: block;
+                margin-bottom: 8px;
+                font-size: 15px;
+              "
               >The frame:</strong
             >
             We've been creatively engineering a system we hope gives your team
@@ -2622,15 +2640,17 @@
       <!-- ─── Summary nav ─────────────────────────────── -->
       <div
         style="
-          color: #9a9188;
-          font-size: 12px;
+          color: var(--text-3);
+          font-size: 13px;
           text-align: center;
-          margin-top: 32px;
+          margin-top: 40px;
+          padding-top: 24px;
+          border-top: 1px solid var(--border);
         "
       >
         <p style="margin-bottom: 8px">
           Live URL ·
-          <strong style="color: #fff"
+          <strong style="color: var(--primary)"
             >app.esexpressllc.com/mockups-call.html</strong
           >
         </p>
