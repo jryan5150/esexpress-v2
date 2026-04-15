@@ -1,6 +1,6 @@
 # Statement of Work — ES Express Dispatch Automation Platform
 
-**Effective Date:** \***\*\_\_\_\*\***
+**Effective Date:** `\hrulefill`{=latex}
 **Prepared by:** Lexcom Systems Group Inc.
 **Prepared for:** ES Express LLC
 **Version:** 2026-04-15 (supersedes 2026-04-13 draft)
@@ -161,6 +161,17 @@ each is listed with the dependency that controls its delivery.
 - **Matcher accuracy climb** — Continuous compounding improvement
   of auto-matching accuracy through the team's correction volume.
   Mechanical, ongoing; no additional deliverable required.
+
+- **Near-term enhancements under collaborative scoping** — Additional
+  capabilities we anticipate developing as the engagement matures,
+  each sized and prioritized in ongoing conversation with ES Express.
+  Current candidates include user-management enhancements (invite
+  flow, password reset, optional SSO evaluation), a notification and
+  teammate-assignment surface, and the staged evolution of the
+  Validation workflow into the Dispatch Desk as matcher accuracy
+  supports it. These are included within the scope of the monthly
+  fee and delivered iteratively; exact timing tracks team priorities
+  and cannot be firm-dated in advance.
 
 ### 2.3 Out of Scope (explicit)
 
@@ -352,9 +363,24 @@ notice**. Upon termination:
   during the term of this agreement.
 - The Platform is provided for dispatch operations support and
   does not replace human judgment for safety-critical decisions.
-- Platform availability targets 99% uptime exclusive of
-  third-party API outages (PropX, Logistiq, PCS, JotForm).
-  Scheduled maintenance windows are exempt.
+- The Platform is hosted on commercially available third-party
+  infrastructure (Railway, Vercel, cloud database providers).
+  Lexcom will use commercially reasonable efforts to maintain
+  Platform availability during business hours; however, specific
+  uptime percentages are not warranted given dependencies on
+  third-party API availability (PropX, Logistiq, PCS, JotForm,
+  hosting providers), scheduled maintenance, and factors outside
+  Lexcom's direct control.
+- Lexcom's aggregate liability under this agreement is limited
+  to the fees paid by ES Express in the three (3) months preceding
+  any claim. This limitation does not apply to breaches of
+  confidentiality or willful misconduct.
+- Neither party shall be liable for any failure or delay in
+  performance due to circumstances beyond reasonable control,
+  including but not limited to third-party service outages,
+  vendor approval delays, regulatory changes, or network
+  connectivity issues affecting the Platform's infrastructure
+  providers.
 
 ---
 
@@ -381,19 +407,37 @@ offer for your review:
 
 ## 10. Signatures
 
-**Lexcom Systems Group Inc.**
+```{=latex}
+\vspace{1em}
+\noindent\textbf{Lexcom Systems Group Inc.}
+\vspace{1.5em}
 
-Name: \***\*\_\_\_\*\***
-Title: \***\*\_\_\_\*\***
-Date: \***\*\_\_\_\*\***
-Signature: \***\*\_\_\_\*\***
+\noindent Name: \hrulefill
+\vspace{1.5em}
 
-**ES Express LLC**
+\noindent Title: \hrulefill
+\vspace{1.5em}
 
-Name: \***\*\_\_\_\*\***
-Title: \***\*\_\_\_\*\***
-Date: \***\*\_\_\_\*\***
-Signature: \***\*\_\_\_\*\***
+\noindent Date: \hrulefill
+\vspace{1.5em}
+
+\noindent Signature: \hrulefill
+\vspace{2em}
+
+\noindent\textbf{ES Express LLC}
+\vspace{1.5em}
+
+\noindent Name: \hrulefill
+\vspace{1.5em}
+
+\noindent Title: \hrulefill
+\vspace{1.5em}
+
+\noindent Date: \hrulefill
+\vspace{1.5em}
+
+\noindent Signature: \hrulefill
+```
 
 ---
 
