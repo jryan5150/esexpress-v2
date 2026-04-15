@@ -226,8 +226,19 @@ export async function proxyPhoto(
       );
     }
 
-    const contentType =
+    // JotForm's CDN serves images with Content-Type: application/octet-stream
+    // despite the bytes being JPEG/PNG. Combined with our global nosniff header,
+    // <img> tags refuse to render that. Override to a real image/* type based
+    // on the URL's extension whenever upstream gave us octet-stream or nothing.
+    let contentType =
       response.headers.get("content-type") ?? "application/octet-stream";
+    if (
+      contentType === "application/octet-stream" ||
+      !contentType.startsWith("image/")
+    ) {
+      const inferred = contentTypeFromUrlExtension(parsed.pathname);
+      if (inferred) contentType = inferred;
+    }
 
     // Guard against absurdly large responses
     const contentLength = response.headers.get("content-length");
@@ -301,6 +312,28 @@ export async function createPhotoZip(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function contentTypeFromUrlExtension(pathname: string): string | null {
+  const ext = pathname.toLowerCase().match(/\.([a-z0-9]+)(?:$|\?)/)?.[1];
+  switch (ext) {
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+    case "gif":
+      return "image/gif";
+    case "tiff":
+    case "tif":
+      return "image/tiff";
+    case "pdf":
+      return "application/pdf";
+    default:
+      return null;
+  }
+}
 
 function extensionFromContentType(ct: string): string {
   const lower = ct.toLowerCase();
