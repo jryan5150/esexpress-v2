@@ -196,9 +196,9 @@ Scroll to Frame 2.
 
 Scroll to Frame 3.
 
-> "The day Kyle's team hands over OAuth credentials, this is what
-> the Dispatch Desk becomes. 'Push to PCS' button per load.
-> Pushed loads show a green timestamp badge."
+> "Once PCS OAuth access comes through, this is what the Dispatch
+> Desk becomes. 'Push to PCS' button per load. Pushed loads show a
+> green timestamp badge."
 
 Scroll to Frame 4.
 
@@ -255,11 +255,14 @@ Scroll to Frame 8.
 
 This is the line to land if nothing else does:
 
-> **"We've been creatively engineering around a missing piece for
-> three weeks. The rail is built. The reconciliation catches errors
-> your spreadsheet couldn't. The feedback loop makes tomorrow better
-> than today. What we haven't closed yet is the PCS push side —
-> and that's waiting on Kyle's credentials, not on us."**
+> **"We've been creatively engineering a system we hope gives your
+> team what you asked for, and juggling how to make that giving feel
+> natural while the biggest obstacle to a frictionless flow — PCS and
+> their OAuth block — is still open. The rail is built. The
+> reconciliation catches errors your spreadsheet couldn't. The
+> feedback loop makes tomorrow better than today. The last unlock is
+> the PCS push side, and that's the piece we're waiting on with
+> them."**
 
 ---
 
@@ -309,8 +312,9 @@ One-liner from the prep doc:
 > "We've gotten v2 to the point where the system is more than your
 > spreadsheet — it catches reconciliation errors, surfaces photos
 > automatically, and learns from every correction your team makes.
-> What we haven't closed yet is the PCS push side, and that's waiting
-> on Kyle's credentials. Let me show you what that looks like."
+> We've been creatively engineering around the one obstacle to making
+> the whole flow feel natural, which is the PCS OAuth piece. Let me
+> show you what that looks like."
 
 Say it, share your screen, start the demo.
 

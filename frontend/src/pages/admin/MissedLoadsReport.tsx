@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useHeartbeat } from "../../hooks/use-presence";
@@ -296,6 +297,8 @@ function Section({
   );
 }
 
+const DEFAULT_PAGE_SIZE = 25;
+
 function Table({
   cols,
   rows,
@@ -303,39 +306,93 @@ function Table({
   cols: string[];
   rows: Array<Array<string | number | null>>;
 }) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const start = (currentPage - 1) * pageSize;
+  const visible = rows.slice(start, start + pageSize);
+
   return (
-    <div className="overflow-x-auto bg-surface-container-lowest border border-outline-variant/40 rounded-md">
-      <table className="w-full text-xs">
-        <thead className="bg-surface-container-low">
-          <tr>
-            {cols.map((c) => (
-              <th
-                key={c}
-                className="px-3 py-2 text-left font-bold uppercase tracking-wide text-[10px] text-on-surface/40"
-              >
-                {c}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr
-              key={i}
-              className="border-t border-outline-variant/30 hover:bg-surface-container-low/40"
-            >
-              {row.map((cell, j) => (
-                <td
-                  key={j}
-                  className="px-3 py-2 text-on-surface tabular-nums whitespace-pre-wrap break-all"
+    <div>
+      <div className="overflow-x-auto bg-surface-container-lowest border border-outline-variant/40 rounded-md">
+        <table className="w-full text-xs">
+          <thead className="bg-surface-container-low">
+            <tr>
+              {cols.map((c) => (
+                <th
+                  key={c}
+                  className="px-3 py-2 text-left font-bold uppercase tracking-wide text-[10px] text-on-surface/40"
                 >
-                  {cell ?? "--"}
-                </td>
+                  {c}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {visible.map((row, i) => (
+              <tr
+                key={i}
+                className="border-t border-outline-variant/30 hover:bg-surface-container-low/40"
+              >
+                {row.map((cell, j) => (
+                  <td
+                    key={j}
+                    className="px-3 py-2 text-on-surface tabular-nums whitespace-pre-wrap break-all"
+                  >
+                    {cell ?? "--"}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {total > DEFAULT_PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-3 mt-2 px-1 text-[11px] text-outline">
+          <div>
+            Showing {start + 1}–{Math.min(start + pageSize, total)} of{" "}
+            {total.toLocaleString()}
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1">
+              Rows
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPage(1);
+                  setPageSize(Number(e.target.value));
+                }}
+                className="bg-surface-container-lowest border border-outline-variant/40 rounded px-1 py-0.5"
+              >
+                {[25, 50, 100, 250].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-2 py-0.5 border border-outline-variant/40 rounded disabled:opacity-30 hover:bg-surface-container-high"
+            >
+              Prev
+            </button>
+            <span className="tabular-nums">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="px-2 py-0.5 border border-outline-variant/40 rounded disabled:opacity-30 hover:bg-surface-container-high"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
