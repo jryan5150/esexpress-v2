@@ -31,6 +31,29 @@ import { qk } from "../lib/query-client";
 import { api } from "../lib/api";
 import type { Well } from "../types/api";
 
+/**
+ * Compare the JotForm-extracted BOL against the load's identifiers. Returns
+ * "match" if last-4 digits match EITHER ticket_no or bol_no — the team's
+ * "BOL" can land in either field depending on whether PropX populated bol_no
+ * with its long internal number or with the same B-prefixed ticket. Single
+ * source of truth so the BOL Issues filter and the per-row badge agree.
+ */
+function compareBolToJotform(load: {
+  jotformBolNo?: string | null;
+  ticketNo?: string | null;
+  bolNo?: string | null;
+}): "match" | "mismatch" | null {
+  if (!load.jotformBolNo) return null;
+  const jot = load.jotformBolNo.replace(/\D/g, "").slice(-4);
+  if (jot.length < 4) return null;
+  const candidates = [load.ticketNo, load.bolNo]
+    .filter((v): v is string => !!v)
+    .map((v) => v.replace(/\D/g, "").slice(-4))
+    .filter((v) => v.length >= 4);
+  if (candidates.length === 0) return null;
+  return candidates.some((c) => c === jot) ? "match" : "mismatch";
+}
+
 export function DispatchDesk() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -171,12 +194,9 @@ export function DispatchDesk() {
       reconciled: reconciled.length,
       ready: ready.length,
       validated: validated.length,
-      bol_mismatch: allLoads.filter((l) => {
-        if (!l.jotformBolNo || !l.bolNo) return false;
-        const loadLast4 = l.bolNo.replace(/\D/g, "").slice(-4);
-        const jotLast4 = l.jotformBolNo.replace(/\D/g, "").slice(-4);
-        return loadLast4.length >= 4 && loadLast4 !== jotLast4;
-      }).length,
+      bol_mismatch: allLoads.filter(
+        (l) => compareBolToJotform(l) === "mismatch",
+      ).length,
     };
 
     const filtered =
@@ -191,14 +211,9 @@ export function DispatchDesk() {
               : activeFilter === "validated"
                 ? validated
                 : activeFilter === "bol_mismatch"
-                  ? allLoads.filter((l) => {
-                      if (!l.jotformBolNo || !l.bolNo) return false;
-                      const loadLast4 = l.bolNo.replace(/\D/g, "").slice(-4);
-                      const jotLast4 = l.jotformBolNo
-                        .replace(/\D/g, "")
-                        .slice(-4);
-                      return loadLast4.length >= 4 && loadLast4 !== jotLast4;
-                    })
+                  ? allLoads.filter(
+                      (l) => compareBolToJotform(l) === "mismatch",
+                    )
                   : allLoads;
 
     return {
@@ -1073,7 +1088,7 @@ export function DispatchDesk() {
                   className="grid items-center gap-3 px-3.5 py-1"
                   style={{
                     gridTemplateColumns:
-                      "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
+                      "28px 90px 120px 1fr 64px 110px 86px 120px",
                   }}
                 >
                   <div className="flex items-center justify-center">
@@ -1140,18 +1155,7 @@ export function DispatchDesk() {
                         hasPhotos={!!load.photoUrls?.length}
                         assignedToName={load.assignedToName ?? null}
                         assignedToColor={load.assignedToColor ?? null}
-                        bolMatchStatus={
-                          load.jotformBolNo && load.bolNo
-                            ? load.bolNo.replace(/\D/g, "").slice(-4) ===
-                                load.jotformBolNo
-                                  .replace(/\D/g, "")
-                                  .slice(-4) &&
-                              load.bolNo.replace(/\D/g, "").slice(-4).length >=
-                                4
-                              ? "match"
-                              : "mismatch"
-                            : null
-                        }
+                        bolMatchStatus={compareBolToJotform(load)}
                         onToggleSelect={() => toggleSelect(load.assignmentId)}
                         onMarkEntered={() =>
                           handleMarkSingle(load.assignmentId)
@@ -1311,8 +1315,7 @@ export function DispatchDesk() {
           <div
             className="grid items-center gap-3 px-3.5 pb-1.5"
             style={{
-              gridTemplateColumns:
-                "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
+              gridTemplateColumns: "28px 90px 120px 1fr 64px 110px 86px 120px",
             }}
           >
             <div className="flex items-center justify-center">
@@ -1371,15 +1374,7 @@ export function DispatchDesk() {
                   bolNo={load.bolNo}
                   truckNo={load.truckNo}
                   ticketNo={load.ticketNo}
-                  bolMatchStatus={
-                    load.jotformBolNo && load.bolNo
-                      ? load.bolNo.replace(/\D/g, "").slice(-4) ===
-                          load.jotformBolNo.replace(/\D/g, "").slice(-4) &&
-                        load.bolNo.replace(/\D/g, "").slice(-4).length >= 4
-                        ? "match"
-                        : "mismatch"
-                      : null
-                  }
+                  bolMatchStatus={compareBolToJotform(load)}
                   deliveredOn={load.deliveredOn}
                   validationStatus={getValidationStatus(load)}
                   assignmentStatus={load.assignmentStatus ?? null}
