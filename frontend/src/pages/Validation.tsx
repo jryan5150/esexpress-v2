@@ -122,7 +122,17 @@ interface TierAssignment {
   trailerNo: string | null;
   deliveredOn: string | null;
   wellName: string;
+  // Merged Desk additions (2026-04-15):
+  photoUrls?: string[];
+  jotformBolNo?: string | null;
+  jotformDriverName?: string | null;
+  jotformTruckNo?: string | null;
+  jotformWeight?: string | null;
 }
+
+const API_BASE = import.meta.env.VITE_API_URL || "";
+const resolveUrl = (url: string) =>
+  url.startsWith("/") ? `${API_BASE}${url}` : url;
 
 const TIER_META: Record<
   number,
@@ -188,6 +198,7 @@ export function Validation() {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Pagination state per tier
   const [tierPages, setTierPages] = useState<Record<number, number>>({
@@ -318,17 +329,39 @@ export function Validation() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Page Header */}
+      {/* Page Header — merged Validation + BOL view (2026-04-15) */}
       <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest header-gradient shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
-          <div>
+          <div className="flex-1">
             <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
-              Validation
+              Validation Desk
             </h1>
             <p className="text-[11px] font-medium text-outline tracking-[0.08em] uppercase mt-0.5">
-              Tier-Based Review // Human Confirms
+              Tier-Based Review // Photo + Match Side-By-Side
             </p>
+          </div>
+          {/* Inline BOL search — Jessica ask on 2026-04-15 call */}
+          <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant/40 rounded-md px-3 py-2 w-80">
+            <span className="material-symbols-outlined text-sm text-outline">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Find by BOL, ticket, load #, driver"
+              className="flex-1 bg-transparent text-sm text-on-surface focus:outline-none"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="text-outline hover:text-on-surface"
+                aria-label="Clear"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -430,12 +463,30 @@ export function Validation() {
           // Handle both response shapes: raw array or { data, meta } envelope
           const rawData = query.data as unknown;
           const tierResponse = rawData as any;
-          const assignments: TierAssignment[] = Array.isArray(tierResponse)
+          const allAssignments: TierAssignment[] = Array.isArray(tierResponse)
             ? tierResponse
             : (tierResponse?.data ?? []);
+          // Client-side filter: search matches any of load#, BOL, ticket, driver
+          const q = searchTerm.trim().toLowerCase();
+          const assignments: TierAssignment[] = q
+            ? allAssignments.filter((a) => {
+                const hay = [
+                  a.loadNo,
+                  a.bolNo,
+                  a.ticketNo,
+                  a.driverName,
+                  a.jotformBolNo,
+                  a.truckNo,
+                ]
+                  .filter(Boolean)
+                  .join(" ")
+                  .toLowerCase();
+                return hay.includes(q);
+              })
+            : allAssignments;
           const tierTotal = Array.isArray(tierResponse)
             ? tierResponse.length
-            : (tierResponse?.meta?.total ?? assignments.length);
+            : (tierResponse?.meta?.total ?? allAssignments.length);
 
           return (
             <section key={tier} className="space-y-3">
@@ -520,6 +571,39 @@ export function Validation() {
                         >
                           chevron_right
                         </span>
+
+                        {/* Photo thumbnail — post-2026-04-15 merged Desk:
+                            shows the JotForm ticket photo matched to this
+                            load so dispatchers can see image without
+                            bouncing to BOL Queue. */}
+                        <div className="w-12 h-12 rounded-md overflow-hidden bg-surface-container-highest shrink-0 border border-outline-variant/30">
+                          {a.photoUrls && a.photoUrls.length > 0 ? (
+                            <img
+                              src={resolveUrl(a.photoUrls[0])}
+                              alt="Ticket"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display =
+                                  "none";
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="w-full h-full flex items-center justify-center"
+                              title={
+                                a.photoStatus === "missing"
+                                  ? "No photo submitted for this load"
+                                  : "Awaiting photo — JotForm sync runs every 30 min"
+                              }
+                            >
+                              <span className="material-symbols-outlined text-sm text-outline/40">
+                                {a.photoStatus === "missing"
+                                  ? "no_photography"
+                                  : "schedule"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
 
                         {/* Load Number */}
                         <div className="w-24">

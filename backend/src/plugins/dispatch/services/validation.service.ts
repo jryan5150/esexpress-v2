@@ -127,7 +127,10 @@ export async function getAssignmentsByTier(
 
   const total = countResult?.count ?? 0;
 
-  const data = await db
+  const { jotformImports } = await import("../../../db/schema.js");
+  const { resolveJotformPhotoUrls } =
+    await import("../../verification/lib/photo-urls.js");
+  const rows = await db
     .select({
       id: assignments.id,
       wellId: assignments.wellId,
@@ -144,20 +147,33 @@ export async function getAssignmentsByTier(
       weightTons: loads.weightTons,
       ticketNo: loads.ticketNo,
       bolNo: loads.bolNo,
-      // O-09: expose truck, trailer, delivered date so dispatchers can
-      // fix typical sync errors inline without jumping to Dispatch Desk.
       truckNo: loads.truckNo,
       trailerNo: loads.trailerNo,
       deliveredOn: loads.deliveredOn,
       wellName: wells.name,
+      // Post-2026-04-15: expose JotForm photo URLs + the photo's extracted
+      // BOL so the merged Validation Desk can render thumbnails and show
+      // photo-vs-load discrepancies inline without a second fetch.
+      jotformPhotoUrl: jotformImports.photoUrl,
+      jotformImageUrls: jotformImports.imageUrls,
+      jotformBolNo: jotformImports.bolNo,
+      jotformDriverName: jotformImports.driverName,
+      jotformTruckNo: jotformImports.truckNo,
+      jotformWeight: jotformImports.weight,
     })
     .from(assignments)
     .innerJoin(loads, eq(assignments.loadId, loads.id))
     .innerJoin(wells, eq(assignments.wellId, wells.id))
+    .leftJoin(jotformImports, eq(jotformImports.matchedLoadId, loads.id))
     .where(whereClause)
     .orderBy(desc(assignments.createdAt))
     .limit(limit)
     .offset(offset);
+
+  const data = rows.map((r) => ({
+    ...r,
+    photoUrls: resolveJotformPhotoUrls(r.jotformPhotoUrl, r.jotformImageUrls),
+  }));
 
   return { data, total };
 }
