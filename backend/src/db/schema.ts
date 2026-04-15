@@ -142,12 +142,12 @@ export const loads = pgTable(
     historicalComplete: boolean("historical_complete").default(false).notNull(),
     historicalCompleteReason: text("historical_complete_reason"),
     rawData: jsonb("raw_data"),
-    pickupState: text("pickup_state", { enum: [...LOAD_PHASE_STATES] }).default(
-      "pending",
-    ),
-    deliveryState: text("delivery_state", {
-      enum: [...LOAD_PHASE_STATES],
-    }).default("pending"),
+    pickupState: text("pickup_state", { enum: [...LOAD_PHASE_STATES] })
+      .notNull()
+      .default("pending"),
+    deliveryState: text("delivery_state", { enum: [...LOAD_PHASE_STATES] })
+      .notNull()
+      .default("pending"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
@@ -255,6 +255,8 @@ export const assignments = pgTable(
       .$type<UncertainReason[]>()
       .notNull()
       .default([]),
+    // Updated by advanceStage() on every handler_stage transition;
+    // defaultNow() seeds the value at row insert time.
     stageChangedAt: timestamp("stage_changed_at", {
       withTimezone: true,
     }).defaultNow(),
