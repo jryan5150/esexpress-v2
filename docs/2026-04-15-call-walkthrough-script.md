@@ -22,13 +22,15 @@ bold sentences are the ones to land cleanly.
 > "I also wanted to let you know right up front — after we talk, I'll
 > send over a package of documents. There's an updated SOW reflecting
 > where we are now, a full engagement timeline from February 11 forward
-> with commit-level evidence and the email trail with PCS, a decision
-> log of the judgment calls made during the build, and a feedback
-> ledger showing every ask your team has raised and what's been
-> shipped against it. It's meant to be a clean record for you and for
-> Mike — so you have everything in one place to share, review, or
-> push back on. That's all coming after the call; I didn't want to
-> front-load it before we've had the conversation."
+> with commit-level evidence and the email trails with PCS and
+> Logistiq, and a feedback ledger showing every ask your team has
+> raised and what's been shipped against it. It's meant to be a
+> clean record for you and for Mike — so you have everything in one
+> place to share, review, or push back on. That's all coming after
+> the call; I didn't want to front-load it before we've had the
+> conversation. Additional engineering artifacts like decision
+> logs and commit histories are available if you or Mike ever want
+> deeper backing on any specific point."
 
 **Why this sentence:** lets Jess relax (she's not walking into a
 demand). Signals organization. Gives Mike something to reference
