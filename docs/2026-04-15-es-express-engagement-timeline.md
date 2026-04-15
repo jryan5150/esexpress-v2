@@ -389,8 +389,8 @@ with field-level discrepancy detection goes operational.
   — 2,336 existing matched submissions backfilled
 - **BOL manual match wired** with real feedback loop
   (`wells.matchFeedback` jsonb, `ce7ac16`)
-- **Deterministic validators ported** from the companion OCR
-  pipeline (`89724a3`)
+- **Deterministic validators ported** from prior OCR research
+  into v2's TypeScript codebase (`89724a3`)
 - Discrepancy detection in reconciliation + sync strip on home
   (`ea7b47b`)
 - Round 2 feedback ledger compiled
