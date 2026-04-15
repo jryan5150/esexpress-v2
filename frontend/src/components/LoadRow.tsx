@@ -125,7 +125,7 @@ export const LoadRow = memo(function LoadRow({
         entered ? "opacity-40" : ""
       }`}
       style={{
-        gridTemplateColumns: "28px 90px 120px 1fr 64px 110px 110px 86px 120px",
+        gridTemplateColumns: "28px 90px 120px 1fr 64px 110px 86px 120px",
         borderLeftWidth: "4px",
         borderLeftColor: statusMeta.hex,
       }}
@@ -229,10 +229,19 @@ export const LoadRow = memo(function LoadRow({
         </span>
       </div>
 
-      {/* BOL / Truck */}
+      {/* BOL / Truck — display the human-recognized number (ticket_no, B-prefixed)
+          and fall back to bol_no only when ticket_no is absent. PropX writes
+          its internal long number into bol_no (sometimes a PO number entirely),
+          so showing that as "BOL" confused the team. The "Ticket" column was
+          dropped because ticket_no IS the BOL by the team's vocabulary
+          (see project_post_call_corrections.md, 2026-04-06 call findings). */}
       <div className="flex flex-col gap-0.5">
         <span className="font-label text-[13px] font-bold text-on-surface truncate inline-flex items-center gap-1 tabular-nums">
-          {bolNo || "--"}
+          {isMissing ? (
+            <span className="text-error uppercase">MISSING</span>
+          ) : (
+            ticketNo || bolNo || "--"
+          )}
           {bolMatchStatus === "match" && (
             <span
               className="material-symbols-outlined text-[11px] text-tertiary"
@@ -253,19 +262,6 @@ export const LoadRow = memo(function LoadRow({
         <span className="text-[12px] font-medium text-on-surface-variant tabular-nums">
           {truckNo || ""}
         </span>
-      </div>
-
-      {/* Ticket */}
-      <div>
-        {isMissing ? (
-          <span className="font-label text-[11px] font-bold text-error uppercase">
-            MISSING
-          </span>
-        ) : (
-          <span className="font-label text-[13px] font-bold text-on-surface tabular-nums">
-            {ticketNo || "--"}
-          </span>
-        )}
       </div>
 
       {/* Date */}

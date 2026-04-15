@@ -5,6 +5,7 @@ import {
   useMissingTickets,
   useManualMatchJotform,
   useJotformLoadSearch,
+  useCorrectJotformBol,
 } from "../hooks/use-bol";
 import { Pagination } from "../components/Pagination";
 import { useToast } from "../components/Toast";
@@ -58,6 +59,87 @@ function formatDate(d: string | null): string {
 }
 
 type Tab = "reconciliation" | "submissions" | "missing";
+
+/**
+ * Inline-editable BOL number for the reconciliation queue. Click to edit,
+ * Enter or blur to save, Escape to cancel. Server preserves the original
+ * OCR value and re-runs the matcher, so a corrected BOL can promote a
+ * pending row to matched without leaving the queue.
+ */
+function EditableBol({
+  importId,
+  value,
+}: {
+  importId: number;
+  value: string | null;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  const correct = useCorrectJotformBol();
+  const { toast } = useToast();
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === (value ?? "")) {
+      setEditing(false);
+      return;
+    }
+    correct.mutate(
+      { importId, bolNo: trimmed },
+      {
+        onSuccess: (res) => {
+          const data = (res as any)?.data;
+          const note = data?.matched
+            ? ` — matched to load ${data.matchedLoadId}`
+            : "";
+          toast(`BOL updated to ${trimmed}${note}`, "success");
+          setEditing(false);
+        },
+        onError: (err) =>
+          toast(`Update failed: ${(err as Error).message}`, "error"),
+      },
+    );
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        disabled={correct.isPending}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") {
+            setDraft(value ?? "");
+            setEditing(false);
+          }
+        }}
+        className="font-label text-sm font-bold text-on-surface bg-background border border-primary/40 rounded px-2 py-0.5 w-32 focus:outline-none focus:ring-1 focus:ring-primary/30"
+      />
+    );
+  }
+
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setDraft(value ?? "");
+        setEditing(true);
+      }}
+      title="Click to fix the BOL — original OCR value is preserved"
+      className="font-label text-sm font-bold text-on-surface inline-flex items-center gap-1 hover:text-primary transition-colors"
+    >
+      BOL {value || "--"}
+      <span className="material-symbols-outlined text-[12px] text-outline/60">
+        edit
+      </span>
+    </button>
+  );
+}
 
 export function BolQueue() {
   const [activeTab, setActiveTab] = useState<Tab>("reconciliation");
@@ -294,9 +376,10 @@ export function BolQueue() {
                         {/* Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-label text-sm font-bold text-on-surface">
-                              BOL {sub.bolNumber || "--"}
-                            </span>
+                            <EditableBol
+                              importId={sub.id}
+                              value={sub.bolNumber}
+                            />
                             <span
                               className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
                                 sub.status === "matched"

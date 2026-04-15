@@ -132,6 +132,27 @@ interface JotformLoadSearchHit {
   weightTons: string | null;
 }
 
+/**
+ * Override the OCR-extracted BOL on a JotForm submission. Server preserves
+ * the original OCR value and re-runs the matcher with the corrected BOL.
+ * Invalidates BOL queue + dispatch desk so the row's new matched state is
+ * reflected immediately.
+ */
+export function useCorrectJotformBol() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { importId: number; bolNo: string }) =>
+      api.post(`/verification/jotform/${params.importId}/correct-bol`, {
+        bolNo: params.bolNo,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: qk.bol.all });
+      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
+    },
+  });
+}
+
 export function useJotformLoadSearch(query: string, enabled: boolean) {
   return useQuery({
     queryKey: ["jotform-load-search", query],

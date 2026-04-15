@@ -1111,9 +1111,6 @@ export function DispatchDesk() {
                   <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
                     BOL / Truck
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
-                    Ticket
-                  </span>
                   <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant text-right">
                     Well
                   </span>
@@ -1352,9 +1349,6 @@ export function DispatchDesk() {
             </span>
             <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
               BOL / Truck
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant">
-              Ticket
             </span>
             <span className="text-[10px] font-bold uppercase tracking-[0.06em] text-on-surface-variant text-right">
               Date
