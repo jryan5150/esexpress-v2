@@ -26,6 +26,14 @@ interface LoadRowProps {
   entered: boolean;
   canEnter: boolean;
   hasPhotos: boolean;
+  /** Raw photo pipeline state. Separate from hasPhotos so we can show
+   *  "attached" vs "awaiting sync" vs "no photo submitted" distinctly.
+   *  Introduced 2026-04-15 post-call to fix the "100% match but no photo"
+   *  confusion Jessica surfaced. */
+  photoStatus?: "attached" | "pending" | "missing" | null;
+  /** Delivery timestamp is used to determine if a missing photo is
+   *  "still expected" (<48h) vs "likely never coming" (48h+). */
+  deliveryAgeHours?: number | null;
   assignedToName?: string | null;
   assignedToColor?: string | null;
   bolMatchStatus?: "match" | "mismatch" | null;
@@ -72,6 +80,8 @@ export const LoadRow = memo(function LoadRow({
   entered,
   canEnter,
   hasPhotos,
+  photoStatus,
+  deliveryAgeHours,
   assignedToName,
   assignedToColor,
   bolMatchStatus,
@@ -273,15 +283,41 @@ export const LoadRow = memo(function LoadRow({
 
       {/* Actions */}
       <div className="flex items-center gap-1.5 justify-end">
-        {hasPhotos && (
+        {/* Photo state indicator — three distinct states:
+            1. attached: photo icon button that opens the viewer
+            2. pending: clock icon with tooltip "awaiting photo from driver/sync"
+            3. missing: grey icon with tooltip "no photo submitted" */}
+        {hasPhotos ? (
           <button
             onClick={onViewPhotos}
             className="w-7 h-7 flex items-center justify-center rounded-md border border-outline-variant/40 text-outline hover:bg-surface-container-high hover:text-on-surface transition-all cursor-pointer icon-hover"
             aria-label="View BOL photos"
+            title="Photo attached — click to view"
           >
             <span className="material-symbols-outlined text-sm">image</span>
           </button>
-        )}
+        ) : photoStatus === "pending" ||
+          (photoStatus === "missing" &&
+            deliveryAgeHours != null &&
+            deliveryAgeHours < 48) ? (
+          <div
+            className="w-7 h-7 flex items-center justify-center rounded-md border border-amber-300/60 bg-amber-50/50 text-amber-700"
+            aria-label="Awaiting photo"
+            title="Awaiting photo — JotForm sync runs every 30 minutes and will attach the driver's submission when it arrives"
+          >
+            <span className="material-symbols-outlined text-sm">schedule</span>
+          </div>
+        ) : photoStatus === "missing" ? (
+          <div
+            className="w-7 h-7 flex items-center justify-center rounded-md border border-outline-variant/30 bg-surface-container-high/40 text-outline/50"
+            aria-label="No photo submitted"
+            title="No photo submitted — 48+ hours since delivery, likely needs manual lookup"
+          >
+            <span className="material-symbols-outlined text-sm">
+              no_photography
+            </span>
+          </div>
+        ) : null}
         {isValidated ? (
           canEnter && !entered ? (
             <button
