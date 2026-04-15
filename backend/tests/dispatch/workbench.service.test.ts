@@ -106,4 +106,55 @@ describe("computeUncertainReasons", () => {
       expect.arrayContaining(["unassigned_well", "rate_missing"]),
     );
   });
+
+  it("does NOT flag bol_mismatch when either BOL is shorter than 4 chars", () => {
+    expect(
+      computeUncertainReasons({ ...base, bolNo: "12", ocrBolNo: "9999" }),
+    ).not.toContain("bol_mismatch");
+    expect(
+      computeUncertainReasons({ ...base, bolNo: "1234", ocrBolNo: "99" }),
+    ).not.toContain("bol_mismatch");
+  });
+
+  it("does NOT flag fuzzy_match when autoMapTier is null", () => {
+    expect(
+      computeUncertainReasons({ ...base, autoMapTier: null }),
+    ).not.toContain("fuzzy_match");
+  });
+
+  it("flags rate_missing on non-numeric rate strings", () => {
+    expect(computeUncertainReasons({ ...base, rate: "125.50/ton" })).toContain(
+      "rate_missing",
+    );
+    expect(computeUncertainReasons({ ...base, rate: "$125" })).toContain(
+      "rate_missing",
+    );
+    expect(computeUncertainReasons({ ...base, rate: "abc" })).toContain(
+      "rate_missing",
+    );
+  });
+
+  it("trims whitespace on rate before parsing", () => {
+    expect(
+      computeUncertainReasons({ ...base, rate: "  125.50  " }),
+    ).not.toContain("rate_missing");
+  });
+
+  it("no_photo_48h uses injected nowMs deterministically", () => {
+    const fixedNow = new Date("2026-04-15T12:00:00Z").getTime();
+    const delivered50hAgo = new Date(fixedNow - 50 * 60 * 60 * 1000);
+    const delivered10hAgo = new Date(fixedNow - 10 * 60 * 60 * 1000);
+    expect(
+      computeUncertainReasons(
+        { ...base, photoStatus: "missing", deliveredOn: delivered50hAgo },
+        fixedNow,
+      ),
+    ).toContain("no_photo_48h");
+    expect(
+      computeUncertainReasons(
+        { ...base, photoStatus: "missing", deliveredOn: delivered10hAgo },
+        fixedNow,
+      ),
+    ).not.toContain("no_photo_48h");
+  });
 });

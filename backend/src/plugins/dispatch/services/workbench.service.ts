@@ -25,6 +25,7 @@ const PHOTO_GRACE_HOURS = 48;
  */
 export function computeUncertainReasons(
   input: UncertainReasonInput,
+  nowMs: number = Date.now(),
 ): UncertainReason[] {
   const reasons: UncertainReason[] = [];
 
@@ -36,7 +37,12 @@ export function computeUncertainReasons(
     reasons.push("fuzzy_match");
   }
 
-  if (input.bolNo && input.ocrBolNo) {
+  if (
+    input.bolNo &&
+    input.ocrBolNo &&
+    input.bolNo.length >= 4 &&
+    input.ocrBolNo.length >= 4
+  ) {
     const loadLast4 = input.bolNo.slice(-4);
     const ocrLast4 = input.ocrBolNo.slice(-4);
     if (loadLast4 !== ocrLast4) {
@@ -57,14 +63,17 @@ export function computeUncertainReasons(
   }
 
   if (input.photoStatus === "missing" && input.deliveredOn) {
-    const ageHours =
-      (Date.now() - input.deliveredOn.getTime()) / (1000 * 60 * 60);
+    const ageHours = (nowMs - input.deliveredOn.getTime()) / (1000 * 60 * 60);
     if (ageHours > PHOTO_GRACE_HOURS) {
       reasons.push("no_photo_48h");
     }
   }
 
-  const rateNum = input.rate == null ? 0 : parseFloat(input.rate);
+  // Policy: rate of 0 or non-numeric is treated as missing for build purposes.
+  // Strict regex rejects values like "125.50/ton" or "$125" that would slip
+  // past parseFloat's permissive parsing.
+  const rateStr = input.rate?.trim() ?? "";
+  const rateNum = /^-?\d+(\.\d+)?$/.test(rateStr) ? parseFloat(rateStr) : 0;
   if (!rateNum || rateNum <= 0) {
     reasons.push("rate_missing");
   }
