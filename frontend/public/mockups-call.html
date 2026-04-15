@@ -1640,6 +1640,985 @@
         </div>
       </div>
 
+      <!-- ─── FRAME 6: Where we are today (the starting line) ── -->
+      <div class="frame" id="frame-6">
+        <div class="frame-header">
+          <div class="frame-title">
+            FRAME 6 · Today's match rate — where the feedback loop starts
+          </div>
+          <div class="frame-caption">
+            66.2% auto-match on 4,223 JotForm submissions to date. 98.5% of
+            those matches come from exact ticket numbers. The fuzzy
+            (feedback-driven) matcher only got wired yesterday — its
+            contribution is ~0.5% today but is where all future lift comes from.
+          </div>
+        </div>
+        <div class="frame-body" style="padding: 0 24px 24px">
+          <div class="inner-header" style="margin: 0 -24px 20px">
+            <div class="inner-header-accent"></div>
+            <div>
+              <h2>Matcher accuracy · starting snapshot</h2>
+              <div class="inner-header-sub">
+                As of 2026-04-15 · 4,223 photo submissions analyzed
+              </div>
+            </div>
+            <div class="proposed-pill" style="background: var(--success)">
+              Live today
+            </div>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 16px;
+              margin-bottom: 20px;
+            "
+          >
+            <div
+              style="
+                background: var(--bg-lowest);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-md);
+                padding: 18px;
+              "
+            >
+              <div
+                style="
+                  font-family: &quot;Space Grotesk&quot;, sans-serif;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--text-3);
+                  letter-spacing: 0.1em;
+                  text-transform: uppercase;
+                "
+              >
+                Total submissions
+              </div>
+              <div
+                style="
+                  font-family: &quot;Plus Jakarta Sans&quot;, sans-serif;
+                  font-size: 36px;
+                  font-weight: 800;
+                  color: var(--text-1);
+                  margin-top: 4px;
+                "
+              >
+                4,223
+              </div>
+              <div
+                style="font-size: 12px; color: var(--text-3); margin-top: 2px"
+              >
+                Weight tickets submitted via JotForm
+              </div>
+            </div>
+            <div
+              style="
+                background: var(--success-ct);
+                border: 1px solid rgba(13, 150, 104, 0.3);
+                border-radius: var(--radius-md);
+                padding: 18px;
+              "
+            >
+              <div
+                style="
+                  font-family: &quot;Space Grotesk&quot;, sans-serif;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--success-text);
+                  letter-spacing: 0.1em;
+                  text-transform: uppercase;
+                "
+              >
+                Auto-matched today
+              </div>
+              <div
+                style="
+                  font-family: &quot;Plus Jakarta Sans&quot;, sans-serif;
+                  font-size: 36px;
+                  font-weight: 800;
+                  color: var(--success);
+                  margin-top: 4px;
+                "
+              >
+                66.2%
+              </div>
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--success-text);
+                  margin-top: 2px;
+                "
+              >
+                2,797 of 4,223 linked without human review
+              </div>
+            </div>
+            <div
+              style="
+                background: var(--error-ct);
+                border: 1px solid rgba(220, 38, 38, 0.3);
+                border-radius: var(--radius-md);
+                padding: 18px;
+              "
+            >
+              <div
+                style="
+                  font-family: &quot;Space Grotesk&quot;, sans-serif;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--error-text);
+                  letter-spacing: 0.1em;
+                  text-transform: uppercase;
+                "
+              >
+                Pending human correction
+              </div>
+              <div
+                style="
+                  font-family: &quot;Plus Jakarta Sans&quot;, sans-serif;
+                  font-size: 36px;
+                  font-weight: 800;
+                  color: var(--error);
+                  margin-top: 4px;
+                "
+              >
+                1,426
+              </div>
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--error-text);
+                  margin-top: 2px;
+                "
+              >
+                Every inline-edit here trains tomorrow's matcher
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              background: var(--bg-lowest);
+              border: 1px solid var(--border);
+              border-radius: var(--radius-md);
+              padding: 18px;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;Space Grotesk&quot;, sans-serif;
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--text-3);
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                margin-bottom: 12px;
+              "
+            >
+              Where the matches come from today
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 40px 1fr 80px;
+                gap: 12px;
+                align-items: center;
+                margin-bottom: 8px;
+              "
+            >
+              <div
+                style="
+                  width: 100%;
+                  background: var(--success);
+                  height: 12px;
+                  border-radius: 999px;
+                  position: relative;
+                "
+              >
+                <div
+                  style="
+                    position: absolute;
+                    right: 4px;
+                    top: -20px;
+                    font-size: 11px;
+                    color: var(--success-text);
+                    font-weight: 700;
+                  "
+                >
+                  2,756
+                </div>
+              </div>
+              <div style="font-size: 12px; font-weight: 600">
+                Tier 1 · exact ticket/BOL match
+              </div>
+              <div
+                style="
+                  text-align: right;
+                  font-family: &quot;Space Grotesk&quot;;
+                  font-weight: 700;
+                  font-size: 13px;
+                "
+              >
+                98.5%
+              </div>
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 40px 1fr 80px;
+                gap: 12px;
+                align-items: center;
+                margin-bottom: 8px;
+              "
+            >
+              <div
+                style="
+                  width: 3%;
+                  background: var(--warn);
+                  height: 12px;
+                  border-radius: 999px;
+                "
+              ></div>
+              <div style="font-size: 12px; font-weight: 600">
+                Tier 2 · exact load-number match
+              </div>
+              <div
+                style="
+                  text-align: right;
+                  font-family: &quot;Space Grotesk&quot;;
+                  font-weight: 700;
+                  font-size: 13px;
+                "
+              >
+                0.8% · 22
+              </div>
+            </div>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 40px 1fr 80px;
+                gap: 12px;
+                align-items: center;
+              "
+            >
+              <div
+                style="
+                  width: 3%;
+                  background: var(--error);
+                  height: 12px;
+                  border-radius: 999px;
+                "
+              ></div>
+              <div style="font-size: 12px; font-weight: 600">
+                Tier 3 · driver+date+weight fuzzy (feedback-driven)
+              </div>
+              <div
+                style="
+                  text-align: right;
+                  font-family: &quot;Space Grotesk&quot;;
+                  font-weight: 700;
+                  font-size: 13px;
+                "
+              >
+                0.7% · 19
+              </div>
+            </div>
+            <div
+              style="
+                font-size: 11px;
+                color: var(--text-3);
+                margin-top: 16px;
+                line-height: 1.5;
+              "
+            >
+              <strong style="color: var(--text-2)">Takeaway:</strong>
+              the exact-match tier carries the work. The feedback-driven fuzzy
+              tier is where compounding lives — but it's only 19 matches today
+              because the loop was wired 24 hours ago. Those 19 become hundreds,
+              then thousands, as human corrections accumulate.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── FRAME 7: How the loop compounds ─────────────── -->
+      <div class="frame" id="frame-7">
+        <div class="frame-header">
+          <div class="frame-title">
+            FRAME 7 · How the feedback loop compounds — driver by driver
+          </div>
+          <div class="frame-caption">
+            Every manual correction writes a
+            <code>driver → well</code> signal. Next time that driver's photo
+            comes in with a garbage BOL, the matcher preferences the well
+            they've historically run to. Driver repeat rate is the multiplier.
+          </div>
+        </div>
+        <div class="frame-body" style="padding: 0 24px 24px">
+          <div class="inner-header" style="margin: 0 -24px 20px">
+            <div class="inner-header-accent"></div>
+            <div>
+              <h2>Your driver pool · who benefits from each correction</h2>
+              <div class="inner-header-sub">
+                174 distinct drivers · 84 are repeat-runners (6+ submissions)
+              </div>
+            </div>
+            <div class="proposed-pill">Mechanical</div>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 20px;
+              margin-bottom: 20px;
+            "
+          >
+            <div>
+              <div
+                style="
+                  font-family: &quot;Space Grotesk&quot;, sans-serif;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--text-3);
+                  letter-spacing: 0.08em;
+                  text-transform: uppercase;
+                  margin-bottom: 10px;
+                "
+              >
+                Driver submission depth (current)
+              </div>
+              <div
+                style="
+                  background: var(--bg-lowest);
+                  border: 1px solid var(--border);
+                  border-radius: var(--radius-md);
+                  padding: 14px;
+                "
+              >
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 150px 1fr 50px;
+                    gap: 10px;
+                    align-items: center;
+                    font-size: 12px;
+                    margin-bottom: 8px;
+                  "
+                >
+                  <div>50+ submissions</div>
+                  <div
+                    style="
+                      height: 12px;
+                      background: var(--success);
+                      border-radius: 999px;
+                      width: 100%;
+                    "
+                  ></div>
+                  <div
+                    style="
+                      text-align: right;
+                      font-weight: 700;
+                      font-family: &quot;Space Grotesk&quot;;
+                    "
+                  >
+                    34
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 150px 1fr 50px;
+                    gap: 10px;
+                    align-items: center;
+                    font-size: 12px;
+                    margin-bottom: 8px;
+                  "
+                >
+                  <div>21–50</div>
+                  <div
+                    style="
+                      height: 12px;
+                      background: var(--success);
+                      border-radius: 999px;
+                      width: 97%;
+                    "
+                  ></div>
+                  <div
+                    style="
+                      text-align: right;
+                      font-weight: 700;
+                      font-family: &quot;Space Grotesk&quot;;
+                    "
+                  >
+                    33
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 150px 1fr 50px;
+                    gap: 10px;
+                    align-items: center;
+                    font-size: 12px;
+                    margin-bottom: 8px;
+                  "
+                >
+                  <div>6–20</div>
+                  <div
+                    style="
+                      height: 12px;
+                      background: var(--warn);
+                      border-radius: 999px;
+                      width: 50%;
+                    "
+                  ></div>
+                  <div
+                    style="
+                      text-align: right;
+                      font-weight: 700;
+                      font-family: &quot;Space Grotesk&quot;;
+                    "
+                  >
+                    17
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 150px 1fr 50px;
+                    gap: 10px;
+                    align-items: center;
+                    font-size: 12px;
+                    margin-bottom: 8px;
+                  "
+                >
+                  <div>2–5</div>
+                  <div
+                    style="
+                      height: 12px;
+                      background: var(--text-3);
+                      border-radius: 999px;
+                      width: 91%;
+                    "
+                  ></div>
+                  <div
+                    style="
+                      text-align: right;
+                      font-weight: 700;
+                      font-family: &quot;Space Grotesk&quot;;
+                    "
+                  >
+                    31
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 150px 1fr 50px;
+                    gap: 10px;
+                    align-items: center;
+                    font-size: 12px;
+                  "
+                >
+                  <div>1 (new / rare)</div>
+                  <div
+                    style="
+                      height: 12px;
+                      background: var(--bg-high);
+                      border-radius: 999px;
+                      width: 100%;
+                    "
+                  ></div>
+                  <div
+                    style="
+                      text-align: right;
+                      font-weight: 700;
+                      font-family: &quot;Space Grotesk&quot;;
+                    "
+                  >
+                    59
+                  </div>
+                </div>
+                <div
+                  style="
+                    font-size: 11px;
+                    color: var(--text-3);
+                    margin-top: 14px;
+                    line-height: 1.5;
+                  "
+                >
+                  Each correction on a repeat driver (6+ submissions) trains the
+                  matcher for that driver's every future photo. Corrections on
+                  1-submission drivers only help the matcher learn the
+                  <em>well</em>, not the <em>driver → well</em> preference.
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div
+                style="
+                  font-family: &quot;Space Grotesk&quot;, sans-serif;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--text-3);
+                  letter-spacing: 0.08em;
+                  text-transform: uppercase;
+                  margin-bottom: 10px;
+                "
+              >
+                The compounding math (projection, not promise)
+              </div>
+              <div
+                style="
+                  background: var(--bg-lowest);
+                  border: 1px solid var(--border);
+                  border-radius: var(--radius-md);
+                  padding: 14px;
+                "
+              >
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 60px 1fr 80px;
+                    gap: 8px;
+                    align-items: center;
+                    margin-bottom: 12px;
+                  "
+                >
+                  <div
+                    style="
+                      font-family: &quot;Space Grotesk&quot;;
+                      font-size: 10px;
+                      font-weight: 700;
+                      color: var(--text-3);
+                      letter-spacing: 0.08em;
+                      text-transform: uppercase;
+                    "
+                  >
+                    Today
+                  </div>
+                  <div
+                    style="
+                      height: 14px;
+                      background: linear-gradient(
+                        to right,
+                        var(--success) 66%,
+                        var(--bg-high) 66%
+                      );
+                      border-radius: 999px;
+                    "
+                  ></div>
+                  <div
+                    style="
+                      text-align: right;
+                      font-weight: 700;
+                      font-family: &quot;Space Grotesk&quot;;
+                      color: var(--success);
+                    "
+                  >
+                    66.2%
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 60px 1fr 80px;
+                    gap: 8px;
+                    align-items: center;
+                    margin-bottom: 12px;
+                  "
+                >
+                  <div
+                    style="
+                      font-family: &quot;Space Grotesk&quot;;
+                      font-size: 10px;
+                      font-weight: 700;
+                      color: var(--text-3);
+                      letter-spacing: 0.08em;
+                      text-transform: uppercase;
+                    "
+                  >
+                    +1 wk
+                  </div>
+                  <div
+                    style="
+                      height: 14px;
+                      background: linear-gradient(
+                        to right,
+                        var(--success) 73%,
+                        var(--bg-high) 73%
+                      );
+                      border-radius: 999px;
+                    "
+                  ></div>
+                  <div
+                    style="
+                      text-align: right;
+                      font-weight: 700;
+                      font-family: &quot;Space Grotesk&quot;;
+                    "
+                  >
+                    ~73%
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 60px 1fr 80px;
+                    gap: 8px;
+                    align-items: center;
+                    margin-bottom: 12px;
+                  "
+                >
+                  <div
+                    style="
+                      font-family: &quot;Space Grotesk&quot;;
+                      font-size: 10px;
+                      font-weight: 700;
+                      color: var(--text-3);
+                      letter-spacing: 0.08em;
+                      text-transform: uppercase;
+                    "
+                  >
+                    +3 wk
+                  </div>
+                  <div
+                    style="
+                      height: 14px;
+                      background: linear-gradient(
+                        to right,
+                        var(--success) 82%,
+                        var(--bg-high) 82%
+                      );
+                      border-radius: 999px;
+                    "
+                  ></div>
+                  <div
+                    style="
+                      text-align: right;
+                      font-weight: 700;
+                      font-family: &quot;Space Grotesk&quot;;
+                    "
+                  >
+                    ~82%
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 60px 1fr 80px;
+                    gap: 8px;
+                    align-items: center;
+                    margin-bottom: 12px;
+                  "
+                >
+                  <div
+                    style="
+                      font-family: &quot;Space Grotesk&quot;;
+                      font-size: 10px;
+                      font-weight: 700;
+                      color: var(--text-3);
+                      letter-spacing: 0.08em;
+                      text-transform: uppercase;
+                    "
+                  >
+                    +2 mo
+                  </div>
+                  <div
+                    style="
+                      height: 14px;
+                      background: linear-gradient(
+                        to right,
+                        var(--success) 91%,
+                        var(--bg-high) 91%
+                      );
+                      border-radius: 999px;
+                    "
+                  ></div>
+                  <div
+                    style="
+                      text-align: right;
+                      font-weight: 700;
+                      font-family: &quot;Space Grotesk&quot;;
+                    "
+                  >
+                    ~91%
+                  </div>
+                </div>
+
+                <div
+                  style="
+                    font-size: 11px;
+                    color: var(--text-3);
+                    margin-top: 14px;
+                    line-height: 1.55;
+                  "
+                >
+                  Assumes 50 inline corrections/day at current driver mix (58%
+                  of corrections hit repeat drivers). Jetson pipeline (Bryan)
+                  ships deterministic validators that lift Tier-1 accuracy ~5–8
+                  additional points on top.
+                  <strong style="color: var(--text-2)"
+                    >Nothing speculative — just the math of a feedback loop with
+                    84 repeat drivers.</strong
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              background: #1e1b18;
+              color: #c5bdb5;
+              padding: 14px 18px;
+              border-radius: var(--radius-md);
+              font-size: 12px;
+              line-height: 1.55;
+            "
+          >
+            <strong style="color: #fff">What this means operationally:</strong>
+            at 82% match rate, your team goes from ~50 corrections a day to ~20.
+            At 91%, under 10. Validation page shrinks in proportion. The work
+            doesn't disappear — it transforms into "catch the edge cases"
+            instead of "chase the routine."
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── FRAME 8: The moment we're in ─────────────── -->
+      <div class="frame" id="frame-8">
+        <div class="frame-header">
+          <div class="frame-title">
+            FRAME 8 · The moment we're in — transitional by design
+          </div>
+          <div class="frame-caption">
+            Three surfaces exist today because we're between "matcher is new"
+            and "PCS is connected." All three shrink or retire as those
+            conditions change. Labelling the transition explicitly so the team
+            knows what's scaffolding vs. what's permanent.
+          </div>
+        </div>
+        <div class="frame-body" style="padding: 0 24px 24px">
+          <div class="inner-header" style="margin: 0 -24px 20px">
+            <div class="inner-header-accent"></div>
+            <div>
+              <h2>Why it looks busy right now — and why that's fine</h2>
+              <div class="inner-header-sub">
+                Scaffolding is temporary by definition
+              </div>
+            </div>
+            <div class="proposed-pill">Context</div>
+          </div>
+
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr 1fr;
+              gap: 14px;
+              margin-bottom: 20px;
+            "
+          >
+            <div
+              style="
+                background: var(--bg-lowest);
+                border: 1px solid var(--border);
+                border-left: 4px solid var(--warn);
+                border-radius: var(--radius-md);
+                padding: 16px;
+              "
+            >
+              <div
+                style="
+                  font-family: &quot;Space Grotesk&quot;;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--warn-text);
+                  letter-spacing: 0.08em;
+                  text-transform: uppercase;
+                "
+              >
+                Validation page
+              </div>
+              <div
+                style="
+                  font-family: &quot;Plus Jakarta Sans&quot;;
+                  font-size: 16px;
+                  font-weight: 700;
+                  margin-top: 6px;
+                  color: var(--text-1);
+                "
+              >
+                Training-wheels surface
+              </div>
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--text-2);
+                  margin-top: 10px;
+                  line-height: 1.5;
+                "
+              >
+                Exists to capture your team's corrections as training signal for
+                the matcher.
+              </div>
+              <div
+                style="
+                  font-size: 11px;
+                  color: var(--text-3);
+                  margin-top: 12px;
+                  padding-top: 10px;
+                  border-top: 1px solid var(--border);
+                "
+              >
+                <strong style="color: var(--warn-text)">Retires:</strong>
+                when match rate climbs past ~90% and Tier 2/3 queue runs empty
+                for a week straight.
+              </div>
+            </div>
+            <div
+              style="
+                background: var(--bg-lowest);
+                border: 1px solid var(--border);
+                border-left: 4px solid var(--primary);
+                border-radius: var(--radius-md);
+                padding: 16px;
+              "
+            >
+              <div
+                style="
+                  font-family: &quot;Space Grotesk&quot;;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--primary);
+                  letter-spacing: 0.08em;
+                  text-transform: uppercase;
+                "
+              >
+                BOL Queue
+              </div>
+              <div
+                style="
+                  font-family: &quot;Plus Jakarta Sans&quot;;
+                  font-size: 16px;
+                  font-weight: 700;
+                  margin-top: 6px;
+                  color: var(--text-1);
+                "
+              >
+                Correction surface
+              </div>
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--text-2);
+                  margin-top: 10px;
+                  line-height: 1.5;
+                "
+              >
+                Where OCR mistakes get fixed and the feedback loop gets its
+                signal.
+              </div>
+              <div
+                style="
+                  font-size: 11px;
+                  color: var(--text-3);
+                  margin-top: 12px;
+                  padding-top: 10px;
+                  border-top: 1px solid var(--border);
+                "
+              >
+                <strong style="color: var(--primary)">Shrinks:</strong>
+                proportionally as match rate climbs. Never fully retires — edge
+                cases always exist.
+              </div>
+            </div>
+            <div
+              style="
+                background: var(--bg-lowest);
+                border: 1px solid var(--border);
+                border-left: 4px solid var(--success);
+                border-radius: var(--radius-md);
+                padding: 16px;
+              "
+            >
+              <div
+                style="
+                  font-family: &quot;Space Grotesk&quot;;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--success-text);
+                  letter-spacing: 0.08em;
+                  text-transform: uppercase;
+                "
+              >
+                Dispatch Desk
+              </div>
+              <div
+                style="
+                  font-family: &quot;Plus Jakarta Sans&quot;;
+                  font-size: 16px;
+                  font-weight: 700;
+                  margin-top: 6px;
+                  color: var(--text-1);
+                "
+              >
+                Where the work lives
+              </div>
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--text-2);
+                  margin-top: 10px;
+                  line-height: 1.5;
+                "
+              >
+                The permanent surface. Today it's "build loads + copy to PCS."
+                After OAuth, it's "build loads + push to PCS."
+              </div>
+              <div
+                style="
+                  font-size: 11px;
+                  color: var(--text-3);
+                  margin-top: 12px;
+                  padding-top: 10px;
+                  border-top: 1px solid var(--border);
+                "
+              >
+                <strong style="color: var(--success-text)">Permanent.</strong>
+                Grows in capability; doesn't go away.
+              </div>
+            </div>
+          </div>
+
+          <div
+            style="
+              background: #1e1b18;
+              color: #c5bdb5;
+              padding: 18px 22px;
+              border-radius: var(--radius-md);
+              font-size: 13px;
+              line-height: 1.6;
+            "
+          >
+            <strong style="color: #fff; display: block; margin-bottom: 8px"
+              >The frame:</strong
+            >
+            We've been creatively engineering around a missing piece for weeks.
+            Every feature you see exists because the natural one (push loads
+            into PCS, let it reconcile clearing) isn't available yet — we're
+            waiting on OAuth credentials from Kyle's team.
+            <br /><br />
+            The rail is built. The reconciliation catches errors your
+            spreadsheet couldn't. The feedback loop makes tomorrow better than
+            today. The one thing we haven't closed is the PCS push side, and
+            that's on Kyle — not us.
+          </div>
+        </div>
+      </div>
+
       <!-- ─── Summary nav ─────────────────────────────── -->
       <div
         style="
