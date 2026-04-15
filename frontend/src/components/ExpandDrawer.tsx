@@ -368,6 +368,7 @@ export function ExpandDrawer({
   const dupLoad = useDuplicateLoad();
   const { toast } = useToast();
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const [dupCount, setDupCount] = useState(1);
   const [showDup, setShowDup] = useState(false);
 
@@ -419,9 +420,7 @@ export function ExpandDrawer({
                 src={resolveUrl(photoUrls[photoIdx])}
                 alt={`Ticket ${photoIdx + 1}`}
                 className="w-full h-48 object-cover rounded-lg border border-outline-variant/30 cursor-zoom-in hover:opacity-90 transition-opacity"
-                onClick={() =>
-                  window.open(resolveUrl(photoUrls[photoIdx]), "_blank")
-                }
+                onClick={() => setLightbox(resolveUrl(photoUrls[photoIdx]))}
                 title="Click to view full size"
               />
               <div className="flex items-center gap-2">
@@ -1100,6 +1099,32 @@ export function ExpandDrawer({
           </div>
         </div>
       </div>
+      {/* Photo lightbox — click a ticket thumbnail to see it full-size */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/70 backdrop-blur-sm p-6"
+          onClick={() => setLightbox(null)}
+          role="dialog"
+          aria-label="Ticket photo preview"
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightbox(null);
+            }}
+            aria-label="Close"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-surface-container-lowest/90 text-on-surface flex items-center justify-center hover:bg-surface-container-high transition-colors"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+          <img
+            src={lightbox}
+            alt="Ticket photo full size"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

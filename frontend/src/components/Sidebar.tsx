@@ -227,6 +227,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
             )}
             <div className={`space-y-px ${collapsed ? "pt-1" : ""}`}>
               <Link
+                to="/admin/missed-loads"
+                className={navClass("/admin/missed-loads")}
+                title="Missed Loads"
+              >
+                <span className={iconClass("/admin/missed-loads")}>
+                  fact_check
+                </span>
+                {!collapsed && "Missed Loads"}
+              </Link>
+              <Link
                 to="/archive"
                 className={navClass("/archive")}
                 title="Archive"
@@ -320,27 +330,11 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 Wells
               </Link>
               <Link
-                to="/admin/companies"
-                className={`${navClass("/admin/companies")} !pl-9`}
-              >
-                <span className={iconClass("/admin/companies")}>business</span>
-                Companies
-              </Link>
-              <Link
                 to="/admin/users"
                 className={`${navClass("/admin/users")} !pl-9`}
               >
                 <span className={iconClass("/admin/users")}>group</span>
                 Users
-              </Link>
-              <Link
-                to="/admin/missed-loads"
-                className={`${navClass("/admin/missed-loads")} !pl-9`}
-              >
-                <span className={iconClass("/admin/missed-loads")}>
-                  fact_check
-                </span>
-                Missed Loads
               </Link>
               <Link to="/finance" className={`${navClass("/finance")} !pl-9`}>
                 <span className={iconClass("/finance")}>payments</span>
