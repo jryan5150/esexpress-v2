@@ -1,0 +1,1665 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ES Express v2 — Roadmap Mockups (Jessica Call, 2026-04-15)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #f5f0e8;
+        --bg-low: #f0ebe2;
+        --bg-high: #e0d9cc;
+        --bg-lowest: #faf7f2;
+        --primary: #6d28d9;
+        --primary-lt: #7c3aed;
+        --primary-ct: #ede9f8;
+        --success: #0d9668;
+        --success-ct: #d1fae5;
+        --success-text: #065f46;
+        --warn: #d97706;
+        --warn-ct: #fef3c7;
+        --warn-text: #92400e;
+        --error: #dc2626;
+        --error-ct: #fee2e2;
+        --error-text: #991b1b;
+        --text-1: #1e1b18;
+        --text-2: #4a4540;
+        --text-3: #8a8279;
+        --border: rgba(110, 98, 85, 0.18);
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+      }
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+        background: #2c2826;
+        color: var(--text-1);
+        padding: 48px 24px 96px;
+      }
+      .page {
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+      .page-intro {
+        color: #c5bdb5;
+        margin-bottom: 40px;
+        font-family: "Plus Jakarta Sans", sans-serif;
+      }
+      .page-intro h1 {
+        font-size: 28px;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
+      }
+      .page-intro p {
+        font-size: 14px;
+        line-height: 1.55;
+        color: #9a9188;
+        max-width: 760px;
+      }
+
+      .frame {
+        background: var(--bg);
+        border-radius: var(--radius-lg);
+        margin-bottom: 56px;
+        box-shadow:
+          0 24px 64px rgba(0, 0, 0, 0.45),
+          0 0 0 1px rgba(255, 255, 255, 0.04);
+        overflow: hidden;
+      }
+      .frame-header {
+        padding: 18px 28px;
+        background: #1e1b18;
+        border-bottom: 1px solid #3a3530;
+      }
+      .frame-title {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: 0.02em;
+      }
+      .frame-caption {
+        font-size: 12px;
+        color: #8a8279;
+        margin-top: 4px;
+        font-weight: 500;
+      }
+      .frame-body {
+        padding: 0;
+      }
+
+      /* ─── Inner page header ───────────────────────────── */
+      .inner-header {
+        padding: 18px 24px 14px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-lowest);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .inner-header-accent {
+        width: 4px;
+        height: 32px;
+        background: var(--primary);
+        border-radius: 2px;
+      }
+      .inner-header h2 {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--text-1);
+        letter-spacing: -0.02em;
+      }
+      .inner-header-sub {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 10px;
+        font-weight: 500;
+        color: var(--text-3);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-top: 2px;
+      }
+      .proposed-pill {
+        margin-left: auto;
+        background: var(--primary);
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 999px;
+      }
+
+      /* ─── Tier counter tiles ──────────────────────────── */
+      .tier-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        padding: 16px 24px 0;
+      }
+      .tier-tile {
+        background: var(--bg-lowest);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 14px 16px;
+        position: relative;
+      }
+      .tier-tile.tier3 {
+        border-color: rgba(220, 38, 38, 0.35);
+        background: #fff7f5;
+      }
+      .tier-tile.tier2 {
+        border-color: rgba(217, 119, 6, 0.3);
+      }
+      .tier-tile.tier1 {
+        border-color: rgba(13, 150, 104, 0.25);
+      }
+      .tier-label {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--text-3);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .tier-count {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--text-1);
+        letter-spacing: -0.02em;
+        margin-top: 2px;
+      }
+      .tier-sub {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 2px;
+      }
+      .tier-tile.tier3 .tier-count {
+        color: var(--error);
+      }
+      .tier-tile.tier2 .tier-count {
+        color: var(--warn);
+      }
+      .tier-tile.tier1 .tier-count {
+        color: var(--success);
+      }
+
+      /* ─── Inline search bar ──────────────────────────── */
+      .search-row {
+        padding: 16px 24px 0;
+        display: flex;
+        gap: 10px;
+      }
+      .search-field {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--bg-lowest);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 10px 14px;
+      }
+      .search-field input {
+        border: none;
+        background: transparent;
+        flex: 1;
+        font-size: 13px;
+        color: var(--text-1);
+        outline: none;
+      }
+      .search-field input::placeholder {
+        color: var(--text-3);
+      }
+      .search-field .material-symbols-outlined {
+        color: var(--text-3);
+        font-size: 18px;
+      }
+      .btn {
+        padding: 10px 16px;
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: var(--bg-lowest);
+        color: var(--text-2);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+      }
+      .btn-success {
+        background: var(--success);
+        color: #fff;
+        border-color: var(--success);
+      }
+
+      /* ─── Validation row (tier-bucketed) ─────────────── */
+      .section-divider {
+        padding: 20px 24px 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .section-divider-label {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-2);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .section-divider-line {
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+      .tier-pill {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 999px;
+      }
+      .tier-pill.t1 {
+        background: var(--success-ct);
+        color: var(--success-text);
+      }
+      .tier-pill.t2 {
+        background: var(--warn-ct);
+        color: var(--warn-text);
+      }
+      .tier-pill.t3 {
+        background: var(--error-ct);
+        color: var(--error-text);
+      }
+
+      .rows {
+        padding: 0 24px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 52px 1fr 200px 160px 120px;
+        gap: 14px;
+        align-items: center;
+        background: var(--bg-lowest);
+        border: 1px solid var(--border);
+        border-left-width: 4px;
+        border-radius: var(--radius-md);
+        padding: 10px 14px;
+        margin-bottom: 6px;
+      }
+      .row.t1 {
+        border-left-color: var(--success);
+      }
+      .row.t2 {
+        border-left-color: var(--warn);
+      }
+      .row.t3 {
+        border-left-color: var(--error);
+      }
+      .row-thumb {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-sm);
+        background: #d6cfc2
+          url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect width='40' height='40' fill='%23ebe5db'/><rect x='6' y='8' width='28' height='24' fill='%23c5bdb5'/><text x='20' y='24' font-family='monospace' font-size='7' fill='%238a8279' text-anchor='middle'>TICKET</text></svg>")
+          center/cover no-repeat;
+        border: 1px solid var(--border);
+      }
+      .row-primary {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--text-1);
+      }
+      .row-secondary {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 2px;
+        font-family: "Space Grotesk", sans-serif;
+      }
+      .row-bol {
+        font-family: "Space Grotesk", sans-serif;
+        font-weight: 600;
+        color: var(--text-2);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+      }
+      .row-bol .mini {
+        font-size: 10px;
+        color: var(--text-3);
+        font-weight: 500;
+        margin-top: 2px;
+      }
+      .row-match {
+        font-size: 11px;
+        color: var(--text-2);
+      }
+      .row-match strong {
+        display: block;
+        color: var(--text-1);
+        font-weight: 700;
+      }
+      .row-action {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .ghost-btn {
+        background: var(--primary-ct);
+        color: var(--primary);
+        border: none;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 7px 12px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .ghost-btn.success {
+        background: var(--success-ct);
+        color: var(--success-text);
+      }
+      .ghost-btn .material-symbols-outlined {
+        font-size: 14px;
+      }
+
+      /* ─── Expanded match decision ────────────────────── */
+      .decision-panel {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--error);
+        border-radius: var(--radius-md);
+        padding: 0;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+      .decision-header {
+        padding: 12px 16px;
+        background: #fff7f5;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .decision-body {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 20px;
+        padding: 16px;
+      }
+      .photo-big {
+        width: 100%;
+        height: 240px;
+        border-radius: var(--radius-md);
+        background: #1e1b18
+          url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 160'><rect width='200' height='160' fill='%232c2826'/><rect x='16' y='20' width='168' height='120' fill='%23f5f0e8' stroke='%23c5bdb5'/><text x='100' y='50' font-family='monospace' font-size='9' fill='%231e1b18' text-anchor='middle' font-weight='bold'>WEIGHT TICKET</text><text x='100' y='78' font-family='monospace' font-size='14' fill='%231e1b18' text-anchor='middle' font-weight='bold'>BOL B584311</text><text x='100' y='98' font-family='monospace' font-size='9' fill='%238a8279' text-anchor='middle'>Driver: David Saucedo</text><text x='100' y='114' font-family='monospace' font-size='9' fill='%238a8279' text-anchor='middle'>Weight: 24.3 tons</text></svg>")
+          center/cover no-repeat;
+        border: 1px solid var(--border);
+      }
+      .candidate {
+        background: var(--bg-lowest);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 12px 14px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        margin-bottom: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .candidate:hover {
+        border-color: var(--primary);
+        background: var(--primary-ct);
+      }
+      .candidate.best {
+        border-color: var(--success);
+        background: #ecfdf5;
+      }
+      .cand-name {
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .cand-meta {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 2px;
+      }
+      .cand-score {
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: var(--bg-high);
+        color: var(--text-2);
+        align-self: center;
+      }
+      .candidate.best .cand-score {
+        background: var(--success);
+        color: #fff;
+      }
+
+      /* ─── PCS push UI ────────────────────────────────── */
+      .desk-headers {
+        display: grid;
+        grid-template-columns: 40px 64px 180px 1fr 80px 120px 100px 140px;
+        gap: 14px;
+        padding: 10px 16px;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text-3);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-lowest);
+      }
+      .desk-row {
+        display: grid;
+        grid-template-columns: 40px 64px 180px 1fr 80px 120px 100px 140px;
+        gap: 14px;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg-lowest);
+      }
+      .desk-row:nth-child(even) {
+        background: #fbf7f0;
+      }
+      .status-chip {
+        font-size: 9px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        text-align: center;
+      }
+      .status-chip.ready {
+        background: var(--success);
+        color: #fff;
+      }
+      .status-chip.pending {
+        background: #fde68a;
+        color: #78350f;
+      }
+      .status-chip.pushed {
+        background: var(--success-ct);
+        color: var(--success-text);
+      }
+      .push-btn {
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 6px 10px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        justify-content: center;
+      }
+      .push-btn .material-symbols-outlined {
+        font-size: 14px;
+      }
+      .pushed-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--success-text);
+        background: var(--success-ct);
+        padding: 4px 8px;
+        border-radius: 999px;
+      }
+      .pushed-badge .material-symbols-outlined {
+        font-size: 13px;
+      }
+
+      /* ─── Batch push bar ─────────────────────────────── */
+      .batch-bar {
+        background: #1e1b18;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 20px;
+        border-radius: var(--radius-md);
+        margin: 12px 24px;
+      }
+      .batch-bar-label {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-weight: 700;
+      }
+      .batch-bar-count {
+        background: var(--primary);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 10px;
+        border-radius: 999px;
+      }
+      .batch-bar-spacer {
+        flex: 1;
+      }
+
+      /* ─── Toast ──────────────────────────────────────── */
+      .toast {
+        position: absolute;
+        bottom: 24px;
+        right: 24px;
+        background: #fff;
+        border-left: 4px solid var(--success);
+        padding: 12px 16px 12px 14px;
+        border-radius: var(--radius-md);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        max-width: 340px;
+      }
+      .toast .material-symbols-outlined {
+        color: var(--success);
+      }
+      .toast-title {
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .toast-sub {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 2px;
+      }
+
+      /* ─── Progress ───────────────────────────────────── */
+      .progress-track {
+        width: 100%;
+        height: 6px;
+        background: var(--bg-high);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .progress-fill {
+        height: 100%;
+        background: var(--primary);
+        width: 67%;
+        border-radius: 999px;
+      }
+
+      .footnote {
+        padding: 14px 24px 22px;
+        font-size: 11px;
+        color: var(--text-3);
+        line-height: 1.5;
+      }
+      .footnote strong {
+        color: var(--text-2);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="page-intro">
+        <h1>Proposed next-step mockups</h1>
+        <p>
+          Two directions in flight for the next engagement cycle. The validation
+          redesign collapses the separate Validation page into a tier-bucketed
+          work-queue with inline search and match decisions — what you asked for
+          last night. The PCS push mockups show what the Dispatch Desk becomes
+          the day Kyle hands over OAuth credentials.
+        </p>
+      </div>
+
+      <!-- ─── FRAME 1: Validation redesigned ─────────────────── -->
+      <div class="frame" id="frame-1">
+        <div class="frame-header">
+          <div class="frame-title">
+            FRAME 1 · Validation, redesigned — tier-bucketed work queue
+          </div>
+          <div class="frame-caption">
+            Replaces the current Validation page. Tier 1 (green) auto-validates
+            as photos arrive; Tier 2 (amber) needs a glance; Tier 3 (red) needs
+            a human decision. Inline BOL / driver search at top so ops can pull
+            a specific ticket without scrolling.
+          </div>
+        </div>
+        <div class="frame-body">
+          <div class="inner-header">
+            <div class="inner-header-accent"></div>
+            <div>
+              <h2>Today's Validation</h2>
+              <div class="inner-header-sub">
+                2026-04-15 · Wed · 1,415 photos pending
+              </div>
+            </div>
+            <div class="proposed-pill">Proposed</div>
+          </div>
+
+          <div class="tier-row">
+            <div class="tier-tile tier3">
+              <div class="tier-label">Tier 3 · Needs you</div>
+              <div class="tier-count">87</div>
+              <div class="tier-sub">Fuzzy match, multiple candidates</div>
+            </div>
+            <div class="tier-tile tier2">
+              <div class="tier-label">Tier 2 · Probable</div>
+              <div class="tier-count">342</div>
+              <div class="tier-sub">Single candidate, quick confirm</div>
+            </div>
+            <div class="tier-tile tier1">
+              <div class="tier-label">Tier 1 · Ready</div>
+              <div class="tier-count">1,192</div>
+              <div class="tier-sub">
+                Exact BOL or ticket match — auto-validated
+              </div>
+            </div>
+          </div>
+
+          <div class="search-row">
+            <div class="search-field">
+              <span class="material-symbols-outlined">search</span>
+              <input
+                placeholder="Find a ticket — BOL number, driver name, truck #, load #"
+              />
+            </div>
+            <button class="btn">
+              <span class="material-symbols-outlined">filter_list</span>
+              Filters
+            </button>
+          </div>
+
+          <div class="section-divider">
+            <span class="tier-pill t3">Tier 3</span>
+            <span class="section-divider-label"
+              >Needs a decision — 87 photos</span
+            >
+            <div class="section-divider-line"></div>
+          </div>
+          <div class="rows">
+            <div class="row t3">
+              <div class="row-thumb"></div>
+              <div>
+                <div class="row-primary">David Saucedo</div>
+                <div class="row-secondary">Truck 1395 · 24.3t · 11:46 PM</div>
+              </div>
+              <div class="row-bol">
+                B584311
+                <div class="mini">OCR read · 3 possible loads</div>
+              </div>
+              <div class="row-match">
+                <strong>3 candidates</strong>
+                last-4: 4164 · 4309 · 4315
+              </div>
+              <div class="row-action">
+                <button class="ghost-btn">
+                  <span class="material-symbols-outlined">compare_arrows</span>
+                  Decide
+                </button>
+              </div>
+            </div>
+            <div class="row t3">
+              <div class="row-thumb"></div>
+              <div>
+                <div class="row-primary">Juan Garcia</div>
+                <div class="row-secondary">Truck 1470 · 22.1t · 1:43 AM</div>
+              </div>
+              <div class="row-bol">
+                Stas26860938
+                <div class="mini" style="color: var(--error)">
+                  OCR garbage — edit to fix
+                </div>
+              </div>
+              <div class="row-match">
+                <strong>0 matches</strong>
+                BOL not found on any load
+              </div>
+              <div class="row-action">
+                <button class="ghost-btn">
+                  <span class="material-symbols-outlined">edit</span>
+                  Fix BOL
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-divider">
+            <span class="tier-pill t2">Tier 2</span>
+            <span class="section-divider-label"
+              >Single candidate — quick confirm (showing 3 of 342)</span
+            >
+            <div class="section-divider-line"></div>
+          </div>
+          <div class="rows">
+            <div class="row t2">
+              <div class="row-thumb"></div>
+              <div>
+                <div class="row-primary">Roy Arambula</div>
+                <div class="row-secondary">Truck 1204 · 23.8t · 10:12 PM</div>
+              </div>
+              <div class="row-bol">
+                B584207
+                <div class="mini">Matches Apache-Gulftex load #742</div>
+              </div>
+              <div class="row-match">
+                <strong>Apache-Gulftex</strong>Well · Steph
+              </div>
+              <div class="row-action">
+                <button class="ghost-btn success">
+                  <span class="material-symbols-outlined">check</span>
+                  Confirm
+                </button>
+              </div>
+            </div>
+            <div class="row t2">
+              <div class="row-thumb"></div>
+              <div>
+                <div class="row-primary">Miguel Reyes</div>
+                <div class="row-secondary">Truck 1508 · 24.0t · 9:40 PM</div>
+              </div>
+              <div class="row-bol">
+                B584198
+                <div class="mini">Matches Apache-Formentera load #738</div>
+              </div>
+              <div class="row-match">
+                <strong>Apache-Formentera</strong>Well · Steph
+              </div>
+              <div class="row-action">
+                <button class="ghost-btn success">
+                  <span class="material-symbols-outlined">check</span>
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-divider">
+            <span class="tier-pill t1">Tier 1</span>
+            <span class="section-divider-label"
+              >Auto-validated today — 1,192 (collapsed)</span
+            >
+            <div class="section-divider-line"></div>
+          </div>
+          <div class="footnote">
+            <strong>Why this layout:</strong> Your team opens Validation to
+            answer one question — "what needs me right now?" Tier 3 surfaces
+            that first. Tier 2 is one-click work. Tier 1 is confirmation that
+            the matcher did its job overnight. BOL search replaces the pattern
+            of "scroll until I find what I'm looking for."
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── FRAME 2: Tier 3 decision ──────────────────────── -->
+      <div class="frame" id="frame-2">
+        <div class="frame-header">
+          <div class="frame-title">
+            FRAME 2 · Tier 3 decision — photo + candidate loads side-by-side
+          </div>
+          <div class="frame-caption">
+            Click "Decide" on a Tier 3 row and it expands in place. Photo on the
+            left, candidate loads on the right with similarity scores. One click
+            to pick, or "none of these" → manual BOL search.
+          </div>
+        </div>
+        <div class="frame-body">
+          <div class="inner-header">
+            <div class="inner-header-accent"></div>
+            <div>
+              <h2>David Saucedo · BOL B584311</h2>
+              <div class="inner-header-sub">
+                Tier 3 · 3 candidates · photo taken 11:46 PM
+              </div>
+            </div>
+            <div class="proposed-pill">Proposed</div>
+          </div>
+
+          <div style="padding: 16px 24px">
+            <div class="decision-panel">
+              <div class="decision-header">
+                <span
+                  class="material-symbols-outlined"
+                  style="color: var(--error)"
+                  >compare_arrows</span
+                >
+                <div>
+                  <div style="font-weight: 700">
+                    Which load is this photo for?
+                  </div>
+                  <div style="font-size: 11px; color: var(--text-3)">
+                    Arrow keys to select, Enter to confirm
+                  </div>
+                </div>
+              </div>
+              <div class="decision-body">
+                <div class="photo-big"></div>
+                <div>
+                  <div class="candidate best">
+                    <div>
+                      <div class="cand-name">
+                        Load #778 · Apache-Formentera-Wrangler
+                      </div>
+                      <div class="cand-meta">
+                        Ticket B584164 · Driver David Saucedo · 24.3t ·
+                        Delivered 11:52 PM
+                      </div>
+                    </div>
+                    <div class="cand-score">92% match</div>
+                  </div>
+                  <div class="candidate">
+                    <div>
+                      <div class="cand-name">Load #782 · Apache-Gulftex</div>
+                      <div class="cand-meta">
+                        Ticket B584309 · Driver David Saucedo · 24.1t ·
+                        Delivered 11:20 PM
+                      </div>
+                    </div>
+                    <div class="cand-score">64% match</div>
+                  </div>
+                  <div class="candidate">
+                    <div>
+                      <div class="cand-name">
+                        Load #791 · Apache-Formentera-Wrangler
+                      </div>
+                      <div class="cand-meta">
+                        Ticket B584315 · Driver Roy Arambula · 23.9t · Delivered
+                        10:35 PM
+                      </div>
+                    </div>
+                    <div class="cand-score">38% match</div>
+                  </div>
+                  <button
+                    class="btn"
+                    style="
+                      margin-top: 8px;
+                      width: 100%;
+                      justify-content: center;
+                    "
+                  >
+                    <span class="material-symbols-outlined">search</span>
+                    None of these — search all loads
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footnote">
+            <strong>Training signal:</strong> Every pick here writes to
+            <code>wells.match_feedback</code> — next time David Saucedo's photo
+            comes in for Apache-Formentera, the matcher tier-breaks toward that
+            well automatically. The validation work shrinks as the matcher
+            learns.
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── FRAME 3: PCS unblock — per-load push ──────────── -->
+      <div class="frame" id="frame-3">
+        <div class="frame-header">
+          <div class="frame-title">
+            FRAME 3 · PCS unblocked — "Push to PCS" replaces copy-paste
+          </div>
+          <div class="frame-caption">
+            The day Kyle's team hands over OAuth credentials, the "Copy Report"
+            button on each load becomes a "Push to PCS" button. Pushed loads
+            show a green badge with the timestamp. No more tab-switching.
+          </div>
+        </div>
+        <div class="frame-body">
+          <div class="inner-header">
+            <div class="inner-header-accent"></div>
+            <div>
+              <h2>Dispatch Desk · Apache-Gulftex-Fred Gooth</h2>
+              <div class="inner-header-sub">
+                14 loads · 9 ready for PCS · 3 pushed today
+              </div>
+            </div>
+            <div class="proposed-pill">After PCS OAuth</div>
+          </div>
+
+          <div class="desk-headers">
+            <div></div>
+            <div>Status</div>
+            <div>Driver / Carrier</div>
+            <div></div>
+            <div>Weight</div>
+            <div>BOL / Truck</div>
+            <div>Well</div>
+            <div>PCS</div>
+          </div>
+          <div class="desk-row">
+            <input type="checkbox" checked />
+            <div><span class="status-chip ready">Ready</span></div>
+            <div>
+              <div style="font-weight: 700">Dale Draeger</div>
+              <div style="font-size: 11px; color: var(--text-3)">
+                ES Express
+              </div>
+            </div>
+            <div></div>
+            <div style="text-align: right; font-weight: 600">24.9t</div>
+            <div>
+              <strong>B505050</strong>
+              <div style="font-size: 10px; color: var(--text-3)">
+                Truck 1024
+              </div>
+            </div>
+            <div style="font-size: 12px">Gulftex-Fred</div>
+            <div>
+              <button class="push-btn">
+                <span class="material-symbols-outlined">cloud_upload</span>Push
+                to PCS
+              </button>
+            </div>
+          </div>
+          <div class="desk-row">
+            <input type="checkbox" />
+            <div><span class="status-chip pushed">Pushed</span></div>
+            <div>
+              <div style="font-weight: 700">Rosa Rivera</div>
+              <div style="font-size: 11px; color: var(--text-3)">
+                ES Express
+              </div>
+            </div>
+            <div></div>
+            <div style="text-align: right; font-weight: 600">21.3t</div>
+            <div>
+              <strong>B584207</strong>
+              <div style="font-size: 10px; color: var(--text-3)">
+                Truck 1204
+              </div>
+            </div>
+            <div style="font-size: 12px">Gulftex-Fred</div>
+            <div>
+              <span class="pushed-badge"
+                ><span class="material-symbols-outlined">check_circle</span>2:34
+                PM</span
+              >
+            </div>
+          </div>
+          <div class="desk-row">
+            <input type="checkbox" checked />
+            <div><span class="status-chip ready">Ready</span></div>
+            <div>
+              <div style="font-weight: 700">Omar Rubio</div>
+              <div style="font-size: 11px; color: var(--text-3)">
+                ES Express
+              </div>
+            </div>
+            <div></div>
+            <div style="text-align: right; font-weight: 600">23.5t</div>
+            <div>
+              <strong>B584311</strong>
+              <div style="font-size: 10px; color: var(--text-3)">
+                Truck 1395
+              </div>
+            </div>
+            <div style="font-size: 12px">Gulftex-Fred</div>
+            <div>
+              <button class="push-btn">
+                <span class="material-symbols-outlined">cloud_upload</span>Push
+                to PCS
+              </button>
+            </div>
+          </div>
+          <div class="desk-row">
+            <input type="checkbox" />
+            <div><span class="status-chip pushed">Pushed</span></div>
+            <div>
+              <div style="font-weight: 700">Miguel Reyes</div>
+              <div style="font-size: 11px; color: var(--text-3)">
+                ES Express
+              </div>
+            </div>
+            <div></div>
+            <div style="text-align: right; font-weight: 600">24.0t</div>
+            <div>
+              <strong>B584198</strong>
+              <div style="font-size: 10px; color: var(--text-3)">
+                Truck 1508
+              </div>
+            </div>
+            <div style="font-size: 12px">Gulftex-Fred</div>
+            <div>
+              <span class="pushed-badge"
+                ><span class="material-symbols-outlined">check_circle</span>1:12
+                PM</span
+              >
+            </div>
+          </div>
+          <div class="desk-row">
+            <input type="checkbox" checked />
+            <div><span class="status-chip ready">Ready</span></div>
+            <div>
+              <div style="font-weight: 700">Roy Arambula</div>
+              <div style="font-size: 11px; color: var(--text-3)">
+                ES Express
+              </div>
+            </div>
+            <div></div>
+            <div style="text-align: right; font-weight: 600">23.8t</div>
+            <div>
+              <strong>B584207</strong>
+              <div style="font-size: 10px; color: var(--text-3)">
+                Truck 1204
+              </div>
+            </div>
+            <div style="font-size: 12px">Gulftex-Fred</div>
+            <div>
+              <button class="push-btn">
+                <span class="material-symbols-outlined">cloud_upload</span>Push
+                to PCS
+              </button>
+            </div>
+          </div>
+
+          <div class="footnote">
+            <strong>What changes:</strong> "Copy Report" (today's workaround)
+            becomes "Push to PCS." Mark Entered becomes a PCS webhook
+            confirmation. The "Ready" chip means "the load has its photo, its
+            BOL, its driver, its weight — ready to be pushed." The team stops
+            typing into PCS at all.
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── FRAME 4: PCS unblock — batch push ─────────────── -->
+      <div class="frame" id="frame-4">
+        <div class="frame-header">
+          <div class="frame-title">
+            FRAME 4 · PCS unblocked — batch push 12 loads at once
+          </div>
+          <div class="frame-caption">
+            Select multiple ready loads → one-click batch push. Progress bar
+            shows upload status; success toast when done; pushed rows fade out.
+            What takes 20 min of tab-switching today → 15 sec.
+          </div>
+        </div>
+        <div class="frame-body" style="position: relative">
+          <div class="inner-header">
+            <div class="inner-header-accent"></div>
+            <div>
+              <h2>Dispatch Desk · Apache-Gulftex-Fred Gooth</h2>
+              <div class="inner-header-sub">12 selected · pushing to PCS…</div>
+            </div>
+            <div class="proposed-pill">After PCS OAuth</div>
+          </div>
+
+          <div class="batch-bar">
+            <span class="material-symbols-outlined">cloud_upload</span>
+            <span class="batch-bar-label">Pushing to PCS</span>
+            <span class="batch-bar-count">8 of 12</span>
+            <div style="flex: 1; max-width: 300px">
+              <div class="progress-track">
+                <div class="progress-fill"></div>
+              </div>
+            </div>
+            <span style="font-size: 12px; color: #c5bdb5"
+              >~4 sec remaining</span
+            >
+          </div>
+
+          <div class="desk-headers">
+            <div></div>
+            <div>Status</div>
+            <div>Driver / Carrier</div>
+            <div></div>
+            <div>Weight</div>
+            <div>BOL / Truck</div>
+            <div>Well</div>
+            <div>PCS</div>
+          </div>
+          <div class="desk-row" style="opacity: 0.4">
+            <input type="checkbox" checked />
+            <div><span class="status-chip pushed">Pushed</span></div>
+            <div>
+              <div style="font-weight: 700">Dale Draeger</div>
+              <div style="font-size: 11px; color: var(--text-3)">
+                ES Express
+              </div>
+            </div>
+            <div></div>
+            <div style="text-align: right; font-weight: 600">24.9t</div>
+            <div>
+              <strong>B505050</strong>
+              <div style="font-size: 10px; color: var(--text-3)">
+                Truck 1024
+              </div>
+            </div>
+            <div style="font-size: 12px">Gulftex-Fred</div>
+            <div>
+              <span class="pushed-badge"
+                ><span class="material-symbols-outlined">check_circle</span>just
+                now</span
+              >
+            </div>
+          </div>
+          <div class="desk-row" style="opacity: 0.4">
+            <input type="checkbox" checked />
+            <div><span class="status-chip pushed">Pushed</span></div>
+            <div>
+              <div style="font-weight: 700">Omar Rubio</div>
+              <div style="font-size: 11px; color: var(--text-3)">
+                ES Express
+              </div>
+            </div>
+            <div></div>
+            <div style="text-align: right; font-weight: 600">23.5t</div>
+            <div>
+              <strong>B584311</strong>
+              <div style="font-size: 10px; color: var(--text-3)">
+                Truck 1395
+              </div>
+            </div>
+            <div style="font-size: 12px">Gulftex-Fred</div>
+            <div>
+              <span class="pushed-badge"
+                ><span class="material-symbols-outlined">check_circle</span>just
+                now</span
+              >
+            </div>
+          </div>
+          <div class="desk-row">
+            <input type="checkbox" checked />
+            <div>
+              <span
+                class="status-chip"
+                style="background: var(--primary); color: #fff"
+                >Pushing</span
+              >
+            </div>
+            <div>
+              <div style="font-weight: 700">Roy Arambula</div>
+              <div style="font-size: 11px; color: var(--text-3)">
+                ES Express
+              </div>
+            </div>
+            <div></div>
+            <div style="text-align: right; font-weight: 600">23.8t</div>
+            <div>
+              <strong>B584207</strong>
+              <div style="font-size: 10px; color: var(--text-3)">
+                Truck 1204
+              </div>
+            </div>
+            <div style="font-size: 12px">Gulftex-Fred</div>
+            <div>
+              <span
+                style="font-size: 12px; color: var(--primary); font-weight: 600"
+                >Uploading…</span
+              >
+            </div>
+          </div>
+          <div class="desk-row">
+            <input type="checkbox" checked />
+            <div><span class="status-chip ready">Ready</span></div>
+            <div>
+              <div style="font-weight: 700">Miguel Reyes</div>
+              <div style="font-size: 11px; color: var(--text-3)">
+                ES Express
+              </div>
+            </div>
+            <div></div>
+            <div style="text-align: right; font-weight: 600">24.0t</div>
+            <div>
+              <strong>B584198</strong>
+              <div style="font-size: 10px; color: var(--text-3)">
+                Truck 1508
+              </div>
+            </div>
+            <div style="font-size: 12px">Gulftex-Fred</div>
+            <div>
+              <span style="font-size: 11px; color: var(--text-3)">Queued</span>
+            </div>
+          </div>
+
+          <div class="toast">
+            <span class="material-symbols-outlined">check_circle</span>
+            <div>
+              <div class="toast-title">8 loads pushed to PCS</div>
+              <div class="toast-sub">
+                4 more queued · Katie will see these in PCS shortly
+              </div>
+            </div>
+          </div>
+
+          <div class="footnote" style="padding-top: 40px">
+            <strong>What this unblocks for Katie:</strong> PCS loads appear
+            server-side as if she'd typed them, with photo attached, BOL set,
+            driver+weight in place. Her clearing workflow stays identical in PCS
+            — just without the manual entry step.
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── FRAME 5: Notifications & assign ───────────────── -->
+      <div class="frame" id="frame-5">
+        <div class="frame-header">
+          <div class="frame-title">
+            FRAME 5 · @Mention + assign + driver-contact (proposed)
+          </div>
+          <div class="frame-caption">
+            Expand-drawer notes become a comms surface. @mention a teammate and
+            they get a bell notification. Assign a load to Scout with one click.
+            Driver contact is greyed until PCS exposes the roster — we have
+            driver IDs today, not emails.
+          </div>
+        </div>
+        <div class="frame-body">
+          <div class="inner-header">
+            <div class="inner-header-accent"></div>
+            <div>
+              <h2>Load #778 · David Saucedo · Apache-Formentera</h2>
+              <div class="inner-header-sub">
+                BOL B584164 · 24.3t · Truck 1395
+              </div>
+            </div>
+            <div class="proposed-pill">Proposed</div>
+          </div>
+
+          <div
+            style="
+              padding: 16px 24px;
+              display: grid;
+              grid-template-columns: 1fr 320px;
+              gap: 20px;
+            "
+          >
+            <!-- Notes panel with @mention -->
+            <div>
+              <div
+                style="
+                  font-family: &quot;Space Grotesk&quot;, sans-serif;
+                  font-size: 10px;
+                  font-weight: 700;
+                  color: var(--text-3);
+                  letter-spacing: 0.1em;
+                  text-transform: uppercase;
+                  margin-bottom: 8px;
+                "
+              >
+                Load Notes · 2 unread
+              </div>
+              <div
+                style="
+                  background: #fff;
+                  border: 1px solid var(--border);
+                  border-radius: var(--radius-md);
+                  padding: 14px;
+                  margin-bottom: 10px;
+                "
+              >
+                <div style="display: flex; gap: 10px; align-items: flex-start">
+                  <div
+                    style="
+                      width: 28px;
+                      height: 28px;
+                      border-radius: 50%;
+                      background: #8b5cf6;
+                      color: #fff;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      font-size: 11px;
+                      font-weight: 700;
+                    "
+                  >
+                    J
+                  </div>
+                  <div style="flex: 1">
+                    <div style="font-size: 12px">
+                      <strong>Jessica</strong> ·
+                      <span style="color: var(--text-3)">2 min ago</span>
+                    </div>
+                    <div style="font-size: 13px; margin-top: 4px">
+                      <span
+                        style="
+                          background: var(--primary-ct);
+                          color: var(--primary);
+                          padding: 1px 4px;
+                          border-radius: 3px;
+                          font-weight: 600;
+                        "
+                        >@Scout</span
+                      >
+                      can you confirm the weight on this one? Driver wrote 24.3
+                      but BOL says 23.9.
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  background: var(--warn-ct);
+                  border: 1px solid rgba(217, 119, 6, 0.3);
+                  border-radius: var(--radius-md);
+                  padding: 14px;
+                  margin-bottom: 10px;
+                "
+              >
+                <div style="display: flex; gap: 10px; align-items: flex-start">
+                  <div
+                    style="
+                      width: 28px;
+                      height: 28px;
+                      border-radius: 50%;
+                      background: #0d9668;
+                      color: #fff;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      font-size: 11px;
+                      font-weight: 700;
+                    "
+                  >
+                    S
+                  </div>
+                  <div style="flex: 1">
+                    <div style="font-size: 12px">
+                      <strong>Scout</strong> ·
+                      <span style="color: var(--text-3)">just now</span>
+                    </div>
+                    <div style="font-size: 13px; margin-top: 4px">
+                      @Jessica checked photo — it's 24.3. BOL OCR was off by one
+                      digit. Fixed.
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  background: var(--bg-lowest);
+                  border: 1px solid var(--border);
+                  border-radius: var(--radius-md);
+                  padding: 10px 12px;
+                "
+              >
+                <input
+                  placeholder="Add a note — type @ to mention a teammate"
+                  style="
+                    width: 100%;
+                    border: none;
+                    background: transparent;
+                    font-size: 13px;
+                    outline: none;
+                  "
+                />
+                <div style="display: flex; gap: 6px; margin-top: 8px">
+                  <button
+                    class="btn"
+                    style="padding: 5px 10px; font-size: 11px"
+                  >
+                    <span
+                      class="material-symbols-outlined"
+                      style="font-size: 14px"
+                      >alternate_email</span
+                    >
+                    Mention
+                  </button>
+                  <button
+                    class="btn"
+                    style="padding: 5px 10px; font-size: 11px"
+                  >
+                    <span
+                      class="material-symbols-outlined"
+                      style="font-size: 14px"
+                      >attach_file</span
+                    >
+                    Attach
+                  </button>
+                  <div style="flex: 1"></div>
+                  <button
+                    class="btn btn-primary"
+                    style="padding: 5px 12px; font-size: 11px"
+                  >
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right side: assign + driver contact -->
+            <div style="display: flex; flex-direction: column; gap: 14px">
+              <div
+                style="
+                  background: #fff;
+                  border: 1px solid var(--border);
+                  border-radius: var(--radius-md);
+                  padding: 14px;
+                "
+              >
+                <div
+                  style="
+                    font-family: &quot;Space Grotesk&quot;, sans-serif;
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: var(--text-3);
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                    margin-bottom: 10px;
+                  "
+                >
+                  Assigned to
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 8px 10px;
+                    background: var(--primary-ct);
+                    border-radius: var(--radius-sm);
+                    margin-bottom: 8px;
+                  "
+                >
+                  <div
+                    style="
+                      width: 28px;
+                      height: 28px;
+                      border-radius: 50%;
+                      background: #0d9668;
+                      color: #fff;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      font-size: 11px;
+                      font-weight: 700;
+                    "
+                  >
+                    S
+                  </div>
+                  <div style="flex: 1">
+                    <div style="font-size: 13px; font-weight: 600">Scout</div>
+                    <div style="font-size: 10px; color: var(--text-3)">
+                      Assigned 3:42 PM by Jessica
+                    </div>
+                  </div>
+                </div>
+                <button
+                  class="btn"
+                  style="width: 100%; justify-content: center; font-size: 12px"
+                >
+                  <span
+                    class="material-symbols-outlined"
+                    style="font-size: 16px"
+                    >swap_horiz</span
+                  >
+                  Reassign
+                </button>
+              </div>
+              <div
+                style="
+                  background: #fff;
+                  border: 1px solid var(--border);
+                  border-radius: var(--radius-md);
+                  padding: 14px;
+                  position: relative;
+                "
+              >
+                <div
+                  style="
+                    font-family: &quot;Space Grotesk&quot;, sans-serif;
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: var(--text-3);
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                    margin-bottom: 10px;
+                  "
+                >
+                  Driver Contact
+                </div>
+                <div
+                  style="
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--text-1);
+                  "
+                >
+                  David Saucedo
+                </div>
+                <div
+                  style="
+                    font-size: 11px;
+                    color: var(--text-3);
+                    margin-top: 2px;
+                    font-family: &quot;Space Grotesk&quot;, sans-serif;
+                  "
+                >
+                  PropX Driver ID · d-8841
+                </div>
+                <button
+                  class="btn"
+                  style="
+                    width: 100%;
+                    justify-content: center;
+                    font-size: 12px;
+                    margin-top: 10px;
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                  "
+                  disabled
+                >
+                  <span
+                    class="material-symbols-outlined"
+                    style="font-size: 16px"
+                    >email</span
+                  >
+                  Ping driver
+                </button>
+                <div
+                  style="
+                    font-size: 10px;
+                    color: var(--warn);
+                    margin-top: 6px;
+                    text-align: center;
+                  "
+                >
+                  Driver email not in PropX export — needs PCS roster
+                </div>
+              </div>
+              <div
+                style="
+                  background: #fff;
+                  border: 1px solid var(--border);
+                  border-radius: var(--radius-md);
+                  padding: 14px;
+                "
+              >
+                <div
+                  style="
+                    font-family: &quot;Space Grotesk&quot;, sans-serif;
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: var(--text-3);
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                    margin-bottom: 10px;
+                  "
+                >
+                  Activity signal
+                </div>
+                <div
+                  style="
+                    font-size: 11px;
+                    color: var(--text-2);
+                    line-height: 1.55;
+                  "
+                >
+                  Breadcrumb capture on this load: 3 views, 2 edits, 1 reassign,
+                  2 note exchanges. Surfaced so Jessica can spot where her team
+                  is getting stuck.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footnote">
+            <strong>What this needs to ship real:</strong> (1) a
+            <code>notifications</code> table + bell icon in the header with
+            unread badge (existing <code>assignment_notes</code> can carry the
+            message). (2) An email transactional service set up on our side —
+            Resend is the lightest. (3) PCS or a manual roster import for driver
+            emails — that's the external dependency.
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── Summary nav ─────────────────────────────── -->
+      <div
+        style="
+          color: #9a9188;
+          font-size: 12px;
+          text-align: center;
+          margin-top: 32px;
+        "
+      >
+        <p style="margin-bottom: 8px">
+          Live URL ·
+          <strong style="color: #fff"
+            >app.esexpressllc.com/mockups-call.html</strong
+          >
+        </p>
+        <p>
+          These are mockups — not yet shipped. Shown to frame the next
+          engagement conversation.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

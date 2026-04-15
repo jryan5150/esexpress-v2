@@ -60,7 +60,9 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
-      <FeedbackWidget />
+      {/* FeedbackWidget hidden for Jessica demo 2026-04-15 — re-enable after call.
+          Breadcrumb collector still runs in the background (breadcrumb-client.ts). */}
+      {false && <FeedbackWidget />}
       <SearchOverlay />
     </div>
   );
