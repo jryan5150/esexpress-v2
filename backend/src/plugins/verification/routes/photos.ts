@@ -218,8 +218,22 @@ const photosRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const { buffer, contentType } = await proxyPhoto(url);
 
+        // Force inline display with a filename based on the upstream URL, so
+        // window.open()/new-tab navigation renders the image instead of
+        // saving a file named "proxy" (which is what Chrome derives from
+        // the URL path when no Content-Disposition is set).
+        const ext =
+          contentType === "image/png"
+            ? "png"
+            : contentType === "image/webp"
+              ? "webp"
+              : contentType === "application/pdf"
+                ? "pdf"
+                : "jpg";
+
         return reply
           .header("Content-Type", contentType)
+          .header("Content-Disposition", `inline; filename="ticket.${ext}"`)
           .header("Cache-Control", "public, max-age=3600")
           .header("X-Proxy-Source", "esexpress-photo-proxy")
           .send(buffer);

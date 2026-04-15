@@ -368,6 +368,15 @@ export const jotformImports = pgTable(
     manuallyMatchedBy: integer("manually_matched_by").references(
       () => users.id,
     ),
+    // Preserves the OCR-extracted BOL value when an operator manually corrects
+    // it via the reconciliation queue. Populated only on first correction —
+    // subsequent edits don't overwrite (so we keep the OG OCR ground truth).
+    // Powers the OCR retraining queue: SELECT WHERE original_ocr_bol_no IS NOT NULL
+    // gives photo→correct-BOL pairs for fine-tuning Jetson or whichever
+    // extractor we're using.
+    originalOcrBolNo: text("original_ocr_bol_no"),
+    bolCorrectedBy: integer("bol_corrected_by").references(() => users.id),
+    bolCorrectedAt: timestamp("bol_corrected_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   },
   (table) => [

@@ -385,6 +385,140 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // ─── POST /jotform/:id/correct-bol — operator overrides OCR'd BOL ──
+  // Used in the BOL Reconciliation queue when the OCR pulled the wrong text
+  // from the photo (or grabbed the date, address, etc). Saves the original
+  // OCR value to original_ocr_bol_no on first edit only (preserves OG ground
+  // truth for OCR retraining), updates bol_no to the corrected value, then
+  // re-runs the matcher with the new BOL — auto-promoting the row to "matched"
+  // when the corrected value resolves a load.
+  fastify.post(
+    "/jotform/:id/correct-bol",
+    {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" } },
+        },
+        body: {
+          type: "object",
+          required: ["bolNo"],
+          properties: {
+            bolNo: { type: "string", minLength: 1, maxLength: 64 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+
+      const { id } = request.params as { id: number };
+      const { bolNo } = request.body as { bolNo: string };
+      const userId = (request.user as { id: number }).id;
+      const trimmed = bolNo.trim();
+
+      const [imp] = await db
+        .select({
+          id: jotformImports.id,
+          bolNo: jotformImports.bolNo,
+          driverName: jotformImports.driverName,
+          truckNo: jotformImports.truckNo,
+          weight: jotformImports.weight,
+          submittedAt: jotformImports.submittedAt,
+          photoUrl: jotformImports.photoUrl,
+          imageUrls: jotformImports.imageUrls,
+          originalOcrBolNo: jotformImports.originalOcrBolNo,
+        })
+        .from(jotformImports)
+        .where(eq(jotformImports.id, id))
+        .limit(1);
+
+      if (!imp)
+        return reply.status(404).send({
+          success: false,
+          error: {
+            code: "NOT_FOUND",
+            message: `JotForm import ${id} not found`,
+          },
+        });
+
+      // Re-run matcher with corrected BOL. Reuse the matcher rather than
+      // duplicating the cascade — same Tier 1/2/3 logic, photo gate, etc.
+      const match = await matchSubmissionToLoad(db, {
+        driverName: imp.driverName,
+        truckNo: imp.truckNo,
+        bolNo: trimmed,
+        weight: imp.weight ? Number(imp.weight) : null,
+        loadNo: null,
+        photoUrl: imp.photoUrl,
+        imageUrls: (imp.imageUrls as string[]) ?? [],
+        submittedAt: imp.submittedAt,
+      });
+
+      const updates: Record<string, unknown> = {
+        bolNo: trimmed,
+        bolCorrectedBy: userId,
+        bolCorrectedAt: new Date(),
+      };
+      // First correction wins for original_ocr_bol_no — keep the OG OCR value
+      // so OCR retraining sees photo→correct-BOL pairs, not photo→latest-edit.
+      if (!imp.originalOcrBolNo) {
+        updates.originalOcrBolNo = imp.bolNo;
+      }
+      if (match.matched && match.loadId) {
+        updates.matchedLoadId = match.loadId;
+        updates.matchMethod = match.matchMethod ?? "manual_bol_correction";
+        updates.matchedAt = new Date();
+        updates.status = "matched";
+        updates.manuallyMatched = true;
+        updates.manuallyMatchedBy = userId;
+      }
+
+      await db
+        .update(jotformImports)
+        .set(updates)
+        .where(eq(jotformImports.id, id));
+
+      // Bridge to assignment.photo_status the same way auto-match does, so
+      // the matched load shows up as photo-attached on Dispatch Desk.
+      const hasPhoto =
+        !!imp.photoUrl ||
+        (Array.isArray(imp.imageUrls) && imp.imageUrls.length > 0);
+      if (match.matched && match.loadId && hasPhoto) {
+        await db
+          .update(assignments)
+          .set({ photoStatus: "attached", updatedAt: new Date() })
+          .where(eq(assignments.loadId, match.loadId));
+      }
+
+      return {
+        success: true,
+        data: {
+          id,
+          bolNo: trimmed,
+          originalOcrBolNo: imp.originalOcrBolNo ?? imp.bolNo,
+          matched: match.matched,
+          matchedLoadId: match.loadId,
+          matchMethod: match.matchMethod,
+          photoAttached: match.matched && hasPhoto,
+        },
+      };
+    },
+  );
+
   // NOTE: /jotform/sync and /jotform/stats are registered in photos.ts
 
   // GET /jotform/queue — JotForm imports as BOL queue items with photo URLs
