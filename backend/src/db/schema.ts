@@ -7,6 +7,7 @@ import {
   numeric,
   boolean,
   timestamp,
+  date,
   jsonb,
   uniqueIndex,
   index,
@@ -104,6 +105,13 @@ export const wells = pgTable(
 export const LOAD_SOURCES = ["propx", "logistiq", "manual"] as const;
 export type LoadSource = (typeof LOAD_SOURCES)[number];
 
+export const LOAD_PHASE_STATES = [
+  "pending",
+  "in_progress",
+  "complete",
+] as const;
+export type LoadPhaseState = (typeof LOAD_PHASE_STATES)[number];
+
 export const loads = pgTable(
   "loads",
   {
@@ -134,6 +142,12 @@ export const loads = pgTable(
     historicalComplete: boolean("historical_complete").default(false).notNull(),
     historicalCompleteReason: text("historical_complete_reason"),
     rawData: jsonb("raw_data"),
+    pickupState: text("pickup_state", { enum: [...LOAD_PHASE_STATES] }).default(
+      "pending",
+    ),
+    deliveryState: text("delivery_state", {
+      enum: [...LOAD_PHASE_STATES],
+    }).default("pending"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
@@ -172,6 +186,25 @@ export type AssignmentStatus = (typeof ASSIGNMENT_STATUSES)[number];
 
 export const PHOTO_STATUSES = ["attached", "pending", "missing"] as const;
 export type PhotoStatus = (typeof PHOTO_STATUSES)[number];
+
+export const HANDLER_STAGES = [
+  "uncertain",
+  "ready_to_build",
+  "building",
+  "entered",
+  "cleared",
+] as const;
+export type HandlerStage = (typeof HANDLER_STAGES)[number];
+
+export const UNCERTAIN_REASONS = [
+  "unassigned_well",
+  "fuzzy_match",
+  "bol_mismatch",
+  "weight_mismatch",
+  "no_photo_48h",
+  "rate_missing",
+] as const;
+export type UncertainReason = (typeof UNCERTAIN_REASONS)[number];
 
 export const assignments = pgTable(
   "assignments",
@@ -214,6 +247,18 @@ export const assignments = pgTable(
         }>
       >()
       .default([]),
+    handlerStage: text("handler_stage", { enum: [...HANDLER_STAGES] })
+      .notNull()
+      .default("uncertain"),
+    currentHandlerId: integer("current_handler_id").references(() => users.id),
+    uncertainReasons: jsonb("uncertain_reasons")
+      .$type<UncertainReason[]>()
+      .notNull()
+      .default([]),
+    stageChangedAt: timestamp("stage_changed_at", {
+      withTimezone: true,
+    }).defaultNow(),
+    enteredOn: date("entered_on"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
@@ -225,6 +270,9 @@ export const assignments = pgTable(
     index("idx_assignments_photo_status").on(table.photoStatus),
     index("idx_assignments_load").on(table.loadId),
     index("idx_assignments_status_well").on(table.status, table.wellId),
+    index("idx_assignments_handler_stage").on(table.handlerStage),
+    index("idx_assignments_current_handler").on(table.currentHandlerId),
+    index("idx_assignments_entered_on").on(table.enteredOn),
   ],
 );
 
