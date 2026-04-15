@@ -4,11 +4,11 @@
 **Last updated:** 2026-04-14 (post-ship batch — 13 additional items landed)
 **Sources:**
 
-- `docs/transcripts/2026-04-06-validation-walkthrough.md` (Jessica, 1h 14m)
-- `docs/transcripts/2026-04-09-team-follow-up.md` (full team, 1h 2m)
-- `docs/2026-04-06-round-2-consolidation.md` (38 issues)
-- `docs/2026-04-06-*-round2-report.md` (per-persona reports)
-- `docs/2026-04-06-validation-call-findings.md`
+- _2026-04-06 validation-walkthrough transcript_ (Jessica, 1h 14m)
+- _2026-04-09 team-follow-up transcript_ (full team, 1h 2m)
+- _2026-04-06 round-2-consolidation_ (38 issues)
+- Round 2 per-persona reports (Jessica / Stephanie / Katie / Admin)
+- _2026-04-06 validation-call-findings_
 - `git log main --oneline` (ship verification)
 
 ## Executive Summary

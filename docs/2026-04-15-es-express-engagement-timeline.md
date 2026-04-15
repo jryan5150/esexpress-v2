@@ -62,7 +62,7 @@ starts there and is comprehensive from that date forward.
 Day-long sprint distributing work across five parallel streams so
 the broadest possible surface area could be stood up quickly.
 10 commits that day. Session handoff:
-`docs/session-handoff-2026-02-11.md`.
+_session-handoff-2026-02-11_.
 
 | Stream | Deliverable                                                                                                  | Commit    |
 | ------ | ------------------------------------------------------------------------------------------------------------ | --------- |
@@ -103,7 +103,7 @@ The REST path remained the intended architecture all along.
 
 ### 2026-02-12 — Executive status update
 
-`docs/executive-status-update-2026-02-12.md` prepared. Platform
+_executive-status-update-2026-02-12_ prepared. Platform
 estimated at ~60% to MVP at that time. Remaining work described
 as "2-3 weeks of focused development to reach upload CSV →
 one-click dispatch to PCS."
@@ -169,8 +169,8 @@ PCS API docs`. Research captured in-repo for reference.
 - Jace sent filled PCS API request questionnaire to Kyle (email
   2026-03-09 20:56 UTC) — with attachments and additional notes.
   This is the day the formal request entered PCS's intake system.
-- Progress update email to Jeri (`docs/` — Jace's account sent
-  2026-03-09 22:50 UTC). Shared: 65 wells mapped, Logistiq
+- Progress update email sent to Jeri from Jace's account
+  (2026-03-09 22:50 UTC). Shared: 65 wells mapped, Logistiq
   dashboard built, BOL reconciliation improving.
 - Logistiq dashboard backend aggregation routes (`198d065`)
 - Logistiq Dashboard UI — 6 tabs, weight toggle (`7360257`)
@@ -213,7 +213,7 @@ cleanup ahead of the v2 extraction decision.
 
 ### 2026-03-26 — Validation walkthrough script
 
-`docs/2026-03-26-validation-walkthrough-script.md` prepared for
+_2026-03-26 validation-walkthrough-script_ prepared for
 the upcoming Jessica conversation.
 
 ### 2026-03-10 → late-March — Logistiq (LogistixIQ) vendor process
@@ -304,7 +304,7 @@ confirmation that the environment was ready.
 
 ### 2026-04-03 — Dispatch workflow gap analysis
 
-`docs/2026-04-03-dispatch-workflow-gap-analysis.md` prepared.
+_2026-04-03 dispatch-workflow-gap-analysis_ prepared.
 Comprehensive comparison of manual dispatch workflow (PCS +
 Google Sheets + 7 apps) vs. v2's current capabilities.
 **10 specific gaps identified**, starting with per-load rate
@@ -312,18 +312,18 @@ entry. This doc became the spine for Round 4 priorities.
 
 ### 2026-04-05 — Team email + quickstart
 
-- Team email draft prepared (`docs/2026-04-05-team-email-draft.md`)
-- Team quickstart doc (`docs/2026-04-05-team-quickstart.md`)
+- Team email draft prepared (_2026-04-05 team-email-draft_)
+- Team quickstart doc (_2026-04-05 team-quickstart_)
 
 ### 2026-04-06 — Validation walkthrough with Jessica
 
 **1h 14m call.** Transcripts and outputs:
 
-- `docs/transcripts/2026-04-06-validation-walkthrough.md`
-- `docs/2026-04-06-validation-call-findings.md`
-- `docs/2026-04-06-workflow-architecture-validation-walkthrough.md`
-- `docs/2026-04-06-workflow-architecture.md` + v2
-- `docs/2026-04-06-workflow-conversation-prep-jessica.md` (+PDF)
+- _2026-04-06 validation-walkthrough transcript_
+- _2026-04-06 validation-call-findings_
+- _2026-04-06 workflow-architecture-validation-walkthrough_
+- _2026-04-06 workflow-architecture_ + v2
+- _2026-04-06 workflow-conversation-prep-jessica_ (+PDF)
 - **Round 2 persona reports:** Jessica, Stephanie, Katie, Admin
   (4 reports, 600+ lines combined)
 - **Round 2 consolidation** — 38 issues surfaced
@@ -331,7 +331,7 @@ entry. This doc became the spine for Round 4 priorities.
 ### 2026-04-09 — Team follow-up call
 
 **1h 2m call with full dispatch team.** Transcript:
-`docs/transcripts/2026-04-09-team-follow-up.md`. Outputs:
+_2026-04-09 team-follow-up transcript_. Outputs:
 
 - Load Count Sheet color scheme defined (the cyan/magenta/yellow
   palette that went into Load Count Sheet mirroring)
@@ -341,7 +341,7 @@ entry. This doc became the spine for Round 4 priorities.
 
 ### 2026-04-10 — Source reconciliation doc + PCS back-and-forth
 
-- `docs/2026-04-10-source-reconciliation.md` — cross-source dedup
+- _2026-04-10 source-reconciliation_ — cross-source dedup
   logic documented
 - **2026-04-10 15:10 / 19:23 UTC:** More back-and-forth with Kyle
   (PCSSoft) on API integration questions. PCS ticket DO-2821
@@ -350,7 +350,7 @@ entry. This doc became the spine for Round 4 priorities.
 
 ### 2026-04-11 — Round 4 MVD work plan
 
-`docs/2026-04-11-round-4-p0-workplan.md`. M1-M10 plan established
+_2026-04-11 round-4-p0-workplan_. M1-M10 plan established
 for the production-readiness push.
 
 ### 2026-04-12 — Reconciliation discrepancy types
@@ -360,7 +360,7 @@ with field-level discrepancy detection goes operational.
 
 ### 2026-04-13 — SOW first draft + ES Express program email
 
-- `docs/2026-04-13-esexpress-sow-draft.md` + PDF.
+- _2026-04-13 esexpress-sow-draft_ + PDF.
 - **2026-04-13 18:46 / 19:44 UTC:** "Es Express program" email sent
   and forwarded — framing what's built, what's in flight, and
   what the engagement looks like.
@@ -380,7 +380,7 @@ with field-level discrepancy detection goes operational.
 - Historical classification — `historical_complete` carved out
   (pre-2026-04-01 loads excluded from validation queue)
 - **Two Postgres services trap** identified and fixed (see
-  `docs/2026-04-14-decision-log.md` D-01)
+  _2026-04-14 decision-log_ D-01)
 - ERA_CUTOFF raised 2026-01-01 → 2026-04-01, 18,178 loads
   backfilled to historical_complete
 - Scheduler user_id fix (12+ days of silently-failing auto-map
@@ -394,9 +394,9 @@ with field-level discrepancy detection goes operational.
 - Discrepancy detection in reconciliation + sync strip on home
   (`ea7b47b`)
 - Round 2 feedback ledger compiled
-  (`docs/2026-04-14-feedback-ledger.md` — 43/52 asks shipped,
+  (_2026-04-14 feedback-ledger_ — 43/52 asks shipped,
   83% close rate)
-- Decision log prepared (`docs/2026-04-14-decision-log.md`
+- Decision log prepared (_2026-04-14 decision-log_
   — 11 recorded decisions, D-01 through D-11)
 
 ### 2026-04-15 (overnight 00:00 – 03:00) — Pre-call hardening sprint

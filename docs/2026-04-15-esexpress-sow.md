@@ -23,11 +23,11 @@ and every piece that depends on the PCS unlock is pre-built and
 waiting on their credentials.
 
 A complete timeline of deliverables through 2026-04-15 is attached
-at `docs/2026-04-15-es-express-engagement-timeline.md` and is
-incorporated by reference as Exhibit A. That document maps each
-feature's completion date to commit-level evidence. We're leaving
-it with you as part of this SOW so the engagement record is
-self-contained and independently verifiable.
+as **Exhibit A (Engagement Timeline)** and is incorporated into
+this SOW by reference. That document maps each feature's completion
+date to commit-level evidence. We're providing it alongside this
+SOW so the engagement record is self-contained and independently
+verifiable.
 
 ---
 
@@ -258,9 +258,8 @@ attachments) within 30 days of the request.
 ## 5. Timeline & Milestones
 
 A complete, evidence-backed timeline of engagement activity from
-2026-01-15 through 2026-04-15 is attached as Exhibit A
-(`docs/2026-04-15-es-express-engagement-timeline.md`). High-level
-phase summary below.
+2026-01-15 through 2026-04-15 is attached as **Exhibit A
+(Engagement Timeline)**. High-level phase summary below.
 
 ### Phase 1 — Platform Build (Complete)
 
@@ -443,8 +442,10 @@ offer for your review:
 
 ## Exhibits
 
-- **Exhibit A** — Engagement Timeline (`docs/2026-04-15-es-express-engagement-timeline.md`)
-- **Exhibit B** — Feedback Ledger (`docs/2026-04-14-feedback-ledger.md`)
+- **Exhibit A** — Engagement Timeline (attached as
+  _ES_Express_Engagement_Timeline_2026-04-15_)
+- **Exhibit B** — Feedback Ledger (attached as
+  _ES_Express_Feedback_Ledger_2026-04-14_)
 
 Additional internal engineering artifacts (decision logs, commit
 histories, pull request records) are available on request should
