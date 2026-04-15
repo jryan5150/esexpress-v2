@@ -448,14 +448,6 @@ the pipeline would be operational immediately upon signing. The
 proper path was followed — operational access to Logistiq data
 was not taken ahead of the contract.
 
-### Jetson / companion OCR pipeline (Bryan)
-
-- **2026-04-14** — Deterministic validators ported from Python to
-  TypeScript with identical function surface (commit `89724a3`),
-  so when Bryan's sample JSONL record arrives the extraction will
-  drop into v2's matcher without rework.
-- Status: **awaiting sample record from Bryan.**
-
 ---
 
 ## Effort accounting
@@ -513,7 +505,6 @@ alone.)
 | Training signal capture                                                           | ✅ Operational                | `wells.matchFeedback`, `original_ocr_bol_no`, `location_mappings`                     |
 | Push to PCS (built and tested against available SOAP surface)                     | ✅ Proven                     | `PostDispatch` tested live                                                            |
 | **Push to PCS (REST — batch, file upload, full state sync, OAuth-authenticated)** | ⏳ Pending PCS                | Ticket DO-2821 open since 2026-03-13                                                  |
-| Observe PCS clearing status                                                       | ⏳ Pending PCS REST           | Depends on OAuth access                                                               |
 | Reporting parity with PCS Reporter (income + clearing spreadsheet)                | ⏳ Delivered upon SOW signoff | Covered on final dispatch-team call; SOW Section 2.2                                  |
 
 **What the engagement has delivered:** the entire capability to
@@ -538,8 +529,6 @@ Pending SOW alignment with you and Mike:
 3. **Matcher accuracy compounding.** Mechanical result of team
    corrections; see mockup Frames 6-8 at
    `app.esexpressllc.com/mockups-call.html`.
-4. **Jetson pipeline drop-in.** Awaiting sample output from Bryan
-   so the endpoint wiring can happen.
 
 ---
 

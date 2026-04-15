@@ -158,17 +158,9 @@ each is listed with the dependency that controls its delivery.
   this SOW upon signoff/agreement.** Scope, columns, and refresh
   cadence to be finalized in the kickoff of this line item.
 
-- **Clearing status observation** — Read-only view of PropX
-  clearing status for dispatch visibility. Depends on PropX export
-  API specification finalization.
-
 - **Matcher accuracy climb** — Continuous compounding improvement
   of auto-matching accuracy through the team's correction volume.
   Mechanical, ongoing; no additional deliverable required.
-
-- **Jetson pipeline integration** — Drop-in ingestion endpoint for
-  Bryan's Jetson OCR output. Endpoint and validator layer pre-built;
-  awaiting sample JSONL record from Bryan to wire the POST route.
 
 ### 2.3 Out of Scope (explicit)
 
