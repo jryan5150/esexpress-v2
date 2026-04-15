@@ -9,7 +9,7 @@ bold sentences are the ones to land cleanly.
 
 ---
 
-## Opening (45 sec)
+## Opening (60 sec)
 
 > "Before we get into screens, let me frame the last 72 hours and where
 > we are. We pushed a big reconciliation + correction layer this week,
@@ -17,9 +17,27 @@ bold sentences are the ones to land cleanly.
 > mockups of what's coming in the next two weeks. I'd like to drive for
 > ~10 minutes, then open it up."
 
-**Why this sentence:** claims the first 10 minutes without asking
-permission. Sets the narrative (what we shipped) before she sets hers
-(what she noticed).
+**Then land this sentence next — critical to seed early:**
+
+> "I also wanted to let you know right up front — after we talk, I'll
+> send over a package of documents. There's an updated SOW reflecting
+> where we are now, a full engagement timeline from February 11 forward
+> with commit-level evidence and the email trail with PCS, a decision
+> log of the judgment calls made during the build, and a feedback
+> ledger showing every ask your team has raised and what's been
+> shipped against it. It's meant to be a clean record for you and for
+> Mike — so you have everything in one place to share, review, or
+> push back on. That's all coming after the call; I didn't want to
+> front-load it before we've had the conversation."
+
+**Why this sentence:** lets Jess relax (she's not walking into a
+demand). Signals organization. Gives Mike something to reference
+later without needing you in the room. Removes any "where's the
+paperwork?" pressure.
+
+**Why we DON'T send it before:** she'd read it without your verbal
+framing and arrive with conclusions. The call comes first; the docs
+document it.
 
 ---
 
