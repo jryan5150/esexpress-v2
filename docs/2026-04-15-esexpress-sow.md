@@ -444,8 +444,11 @@ offer for your review:
 ## Exhibits
 
 - **Exhibit A** — Engagement Timeline (`docs/2026-04-15-es-express-engagement-timeline.md`)
-- **Exhibit B** — Decision Log (`docs/2026-04-14-decision-log.md`)
-- **Exhibit C** — Feedback Ledger (`docs/2026-04-14-feedback-ledger.md`)
+- **Exhibit B** — Feedback Ledger (`docs/2026-04-14-feedback-ledger.md`)
+
+Additional internal engineering artifacts (decision logs, commit
+histories, pull request records) are available on request should
+further backing be useful at any point.
 
 ---
 

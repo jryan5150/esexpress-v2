@@ -24,14 +24,14 @@ LLC's dispatch automation platform as of 2026-04-15.
    through today, with commit SHAs, external email references,
    and vendor process timing.
 
-3. **Exhibit B — Decision Log** — the judgment calls made during
-   the engagement and the reasoning behind them. Written so future
-   reviewers can understand why the system looks the way it does.
-
-4. **Exhibit C — Feedback Ledger** — every ask captured from the
+3. **Exhibit B — Feedback Ledger** — every ask captured from the
    dispatch team across two rounds of UX testing and the
-   validation walkthroughs, with shipped/in-progress/blocked
+   validation walkthroughs, with shipped / in-progress / blocked
    status and commit evidence.
+
+Additional engineering artifacts (decision logs, commit histories,
+pull request records) are available on request if further backing
+is ever useful.
 
 # About this package
 
