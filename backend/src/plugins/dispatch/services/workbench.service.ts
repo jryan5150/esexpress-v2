@@ -1,4 +1,8 @@
-import type { PhotoStatus, UncertainReason } from "../../../db/schema.js";
+import type {
+  PhotoStatus,
+  UncertainReason,
+  HandlerStage,
+} from "../../../db/schema.js";
 
 export interface UncertainReasonInput {
   wellId: number | null;
@@ -80,8 +84,6 @@ export function computeUncertainReasons(
 
   return reasons;
 }
-
-import type { HandlerStage } from "../../../db/schema.js";
 
 /**
  * Stage transition rules. Forward edges only, plus flag-back-to-uncertain from any.
