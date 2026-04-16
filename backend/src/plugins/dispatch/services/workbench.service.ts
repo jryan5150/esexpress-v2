@@ -206,6 +206,9 @@ export async function listWorkbenchRows(
       case "ready_to_clear":
         return eq(assignments.handlerStage, "entered");
       case "entered_today":
+        // CURRENT_DATE is UTC (Railway default). Loads entered after midnight
+        // Chicago but before midnight UTC will be included incorrectly.
+        // Post-v5: swap for (now() AT TIME ZONE 'America/Chicago')::date.
         return and(
           inArray(assignments.handlerStage, ["entered", "cleared"]),
           sql`${assignments.enteredOn} = CURRENT_DATE`,
@@ -269,6 +272,10 @@ export async function listWorkbenchRows(
     .limit(limit)
     .offset(offset);
 
+  // Count query omits wells/users joins — safe because filterCondition
+  // only touches assignments columns and searchCondition only touches
+  // loads columns. If a future filter references wells or users, this
+  // join chain must be expanded to match the data query.
   const totalQuery = db
     .select({ count: sql<number>`count(*)::int` })
     .from(assignments)
