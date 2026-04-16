@@ -1,8 +1,11 @@
+import { eq, and, sql, inArray, ilike, or } from "drizzle-orm";
+import { assignments, loads, wells, users } from "../../../db/schema.js";
 import type {
   PhotoStatus,
   UncertainReason,
   HandlerStage,
 } from "../../../db/schema.js";
+import type { Database } from "../../../db/client.js";
 
 export interface UncertainReasonInput {
   wellId: number | null;
@@ -140,4 +143,166 @@ export function nextHandlerForStage(
     return katie?.id ?? null;
   }
   return null;
+}
+
+export type WorkbenchFilter =
+  | "uncertain"
+  | "ready_to_build"
+  | "mine"
+  | "ready_to_clear"
+  | "entered_today"
+  | "all";
+
+export interface WorkbenchListParams {
+  filter: WorkbenchFilter;
+  userId: number;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface WorkbenchRow {
+  assignmentId: number;
+  handlerStage: string;
+  currentHandlerId: number | null;
+  currentHandlerName: string | null;
+  currentHandlerColor: string | null;
+  uncertainReasons: string[];
+  stageChangedAt: string | null;
+  enteredOn: string | null;
+  loadId: number;
+  loadNo: string;
+  driverName: string | null;
+  carrierName: string | null;
+  bolNo: string | null;
+  ticketNo: string | null;
+  weightTons: string | null;
+  truckNo: string | null;
+  deliveredOn: string | null;
+  pickupState: string | null;
+  deliveryState: string | null;
+  wellId: number | null;
+  wellName: string | null;
+  photoStatus: string | null;
+  photoThumbUrl: string | null;
+  rate: string | null;
+}
+
+export async function listWorkbenchRows(
+  db: Database,
+  params: WorkbenchListParams,
+): Promise<{ rows: WorkbenchRow[]; total: number }> {
+  const limit = Math.min(params.limit ?? 100, 500);
+  const offset = params.offset ?? 0;
+
+  const filterCondition = (() => {
+    switch (params.filter) {
+      case "uncertain":
+        return eq(assignments.handlerStage, "uncertain");
+      case "ready_to_build":
+        return eq(assignments.handlerStage, "ready_to_build");
+      case "mine":
+        return eq(assignments.currentHandlerId, params.userId);
+      case "ready_to_clear":
+        return eq(assignments.handlerStage, "entered");
+      case "entered_today":
+        return and(
+          inArray(assignments.handlerStage, ["entered", "cleared"]),
+          sql`${assignments.enteredOn} = CURRENT_DATE`,
+        );
+      case "all":
+      default:
+        return undefined;
+    }
+  })();
+
+  const searchCondition = params.search
+    ? or(
+        ilike(loads.bolNo, `%${params.search}%`),
+        ilike(loads.loadNo, `%${params.search}%`),
+        ilike(loads.ticketNo, `%${params.search}%`),
+        ilike(loads.driverName, `%${params.search}%`),
+        ilike(loads.truckNo, `%${params.search}%`),
+      )
+    : undefined;
+
+  const whereClause =
+    filterCondition && searchCondition
+      ? and(filterCondition, searchCondition)
+      : (filterCondition ?? searchCondition);
+
+  const baseQuery = db
+    .select({
+      assignmentId: assignments.id,
+      handlerStage: assignments.handlerStage,
+      currentHandlerId: assignments.currentHandlerId,
+      currentHandlerName: users.name,
+      currentHandlerColor: users.color,
+      uncertainReasons: assignments.uncertainReasons,
+      stageChangedAt: assignments.stageChangedAt,
+      enteredOn: assignments.enteredOn,
+      loadId: loads.id,
+      loadNo: loads.loadNo,
+      driverName: loads.driverName,
+      carrierName: loads.carrierName,
+      bolNo: loads.bolNo,
+      ticketNo: loads.ticketNo,
+      weightTons: loads.weightTons,
+      truckNo: loads.truckNo,
+      deliveredOn: loads.deliveredOn,
+      pickupState: loads.pickupState,
+      deliveryState: loads.deliveryState,
+      wellId: wells.id,
+      wellName: wells.name,
+      photoStatus: assignments.photoStatus,
+      rate: loads.rate,
+    })
+    .from(assignments)
+    .leftJoin(loads, eq(loads.id, assignments.loadId))
+    .leftJoin(wells, eq(wells.id, assignments.wellId))
+    .leftJoin(users, eq(users.id, assignments.currentHandlerId));
+
+  const query = whereClause ? baseQuery.where(whereClause) : baseQuery;
+
+  const rawRows = await query
+    .orderBy(sql`${assignments.stageChangedAt} DESC NULLS LAST`)
+    .limit(limit)
+    .offset(offset);
+
+  const totalQuery = db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(assignments)
+    .leftJoin(loads, eq(loads.id, assignments.loadId));
+  const [{ count }] = await (whereClause
+    ? totalQuery.where(whereClause)
+    : totalQuery);
+
+  const rows: WorkbenchRow[] = rawRows.map((r) => ({
+    assignmentId: r.assignmentId,
+    handlerStage: r.handlerStage,
+    currentHandlerId: r.currentHandlerId,
+    currentHandlerName: r.currentHandlerName,
+    currentHandlerColor: r.currentHandlerColor,
+    uncertainReasons: (r.uncertainReasons ?? []) as string[],
+    stageChangedAt: r.stageChangedAt ? r.stageChangedAt.toISOString() : null,
+    enteredOn: r.enteredOn ? String(r.enteredOn) : null,
+    loadId: r.loadId!,
+    loadNo: r.loadNo!,
+    driverName: r.driverName,
+    carrierName: r.carrierName,
+    bolNo: r.bolNo,
+    ticketNo: r.ticketNo,
+    weightTons: r.weightTons,
+    truckNo: r.truckNo,
+    deliveredOn: r.deliveredOn ? r.deliveredOn.toISOString() : null,
+    pickupState: r.pickupState,
+    deliveryState: r.deliveryState,
+    wellId: r.wellId,
+    wellName: r.wellName,
+    photoStatus: r.photoStatus,
+    photoThumbUrl: null,
+    rate: r.rate,
+  }));
+
+  return { rows, total: count };
 }
