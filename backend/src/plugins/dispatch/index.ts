@@ -4,6 +4,7 @@ import { loadRoutes } from "./routes/loads.js";
 import { assignmentRoutes } from "./routes/assignments.js";
 import { validationRoutes } from "./routes/validation.js";
 import { dispatchDeskRoutes } from "./routes/dispatch-desk.js";
+import { workbenchRoutes } from "./routes/workbench.js";
 import { autoMapRoutes } from "./routes/auto-map.js";
 import { presenceRoutes } from "./routes/presence.js";
 import breadcrumbRoutes from "./routes/breadcrumbs.js";
@@ -15,6 +16,7 @@ const dispatchPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(assignmentRoutes, { prefix: "/assignments" });
   fastify.register(validationRoutes, { prefix: "/validation" });
   fastify.register(dispatchDeskRoutes, { prefix: "/dispatch-desk" });
+  fastify.register(workbenchRoutes, { prefix: "/workbench" });
   fastify.register(autoMapRoutes, { prefix: "/auto-map" });
   fastify.register(presenceRoutes, { prefix: "/presence" });
   fastify.register(breadcrumbRoutes, { prefix: "/breadcrumbs" });
