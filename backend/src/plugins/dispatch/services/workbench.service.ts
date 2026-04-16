@@ -332,7 +332,8 @@ export async function advanceStage(
       .select()
       .from(assignments)
       .where(eq(assignments.id, assignmentId))
-      .limit(1);
+      .limit(1)
+      .for("update");
     if (!row) throw new NotFoundError(`Assignment ${assignmentId} not found`);
 
     const currentStage = row.handlerStage as HandlerStage;
@@ -374,7 +375,11 @@ export async function advanceStage(
         currentHandlerId: nextHandlerId,
         stageChangedAt: now,
         enteredOn:
-          targetStage === "entered" ? sql`CURRENT_DATE` : row.enteredOn,
+          targetStage === "entered"
+            ? sql`CURRENT_DATE`
+            : targetStage === "uncertain"
+              ? null
+              : row.enteredOn,
         statusHistory: sql`coalesce(${assignments.statusHistory}, '[]'::jsonb) || ${JSON.stringify([historyEntry])}::jsonb`,
         updatedAt: now,
       })
@@ -387,17 +392,19 @@ export async function claimAssignment(
   assignmentId: number,
   userId: number,
 ): Promise<void> {
-  const [row] = await db
-    .select({ id: assignments.id })
-    .from(assignments)
-    .where(eq(assignments.id, assignmentId))
-    .limit(1);
-  if (!row) throw new NotFoundError(`Assignment ${assignmentId} not found`);
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ id: assignments.id })
+      .from(assignments)
+      .where(eq(assignments.id, assignmentId))
+      .limit(1);
+    if (!row) throw new NotFoundError(`Assignment ${assignmentId} not found`);
 
-  await db
-    .update(assignments)
-    .set({ currentHandlerId: userId, updatedAt: new Date() })
-    .where(eq(assignments.id, assignmentId));
+    await tx
+      .update(assignments)
+      .set({ currentHandlerId: userId, updatedAt: new Date() })
+      .where(eq(assignments.id, assignmentId));
+  });
 }
 
 export async function flagToUncertain(
