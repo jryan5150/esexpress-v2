@@ -59,15 +59,22 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
         offset?: number;
       };
 
-      const result = await listWorkbenchRows(db, {
-        filter: query.filter ?? "all",
-        userId: user.id,
-        search: query.search,
-        limit: query.limit,
-        offset: query.offset,
-      });
-
-      return { success: true, data: result };
+      try {
+        const result = await listWorkbenchRows(db, {
+          filter: query.filter ?? "all",
+          userId: user.id,
+          search: query.search,
+          limit: query.limit,
+          offset: query.offset,
+        });
+        return { success: true, data: result };
+      } catch (err) {
+        request.log.error({ err }, "workbench list failed");
+        return reply.status(500).send({
+          success: false,
+          error: { code: "INTERNAL", message: "Workbench query failed" },
+        });
+      }
     },
   );
 
@@ -258,20 +265,25 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
       };
       const user = request.user as { id: number; name: string };
 
-      const ctx = { userId: user.id, userName: user.name, notes };
+      const ctx = {
+        userId: user.id,
+        userName: user.name,
+        notes: notes ?? "build+duplicate batch",
+      };
 
-      const results = await Promise.all(
-        assignmentIds.map(async (id) => {
-          try {
-            await advanceStage(db, id, "building", ctx);
-            return { id, ok: true };
-          } catch (err) {
-            const error =
-              err instanceof AppError ? err.message : "Operation failed";
-            return { id, ok: false, error };
-          }
-        }),
-      );
+      // Sequential execution: each advanceStage opens a transaction with
+      // FOR UPDATE. Running 200 in parallel would risk pg pool exhaustion.
+      const results: { id: number; ok: boolean; error?: string }[] = [];
+      for (const id of assignmentIds) {
+        try {
+          await advanceStage(db, id, "building", ctx);
+          results.push({ id, ok: true });
+        } catch (err) {
+          const error =
+            err instanceof AppError ? err.message : "Operation failed";
+          results.push({ id, ok: false, error });
+        }
+      }
 
       return { success: true, data: { results } };
     },
