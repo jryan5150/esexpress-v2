@@ -6,6 +6,7 @@ import type {
   HandlerStage,
 } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
+import { ValidationError, NotFoundError } from "../../../lib/errors.js";
 
 export interface UncertainReasonInput {
   wellId: number | null;
@@ -312,4 +313,100 @@ export async function listWorkbenchRows(
   }));
 
   return { rows, total: count };
+}
+
+export interface TransitionContext {
+  userId: number;
+  userName: string;
+  notes?: string;
+}
+
+export async function advanceStage(
+  db: Database,
+  assignmentId: number,
+  targetStage: HandlerStage,
+  ctx: TransitionContext,
+): Promise<void> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(assignments)
+      .where(eq(assignments.id, assignmentId))
+      .limit(1);
+    if (!row) throw new NotFoundError(`Assignment ${assignmentId} not found`);
+
+    const currentStage = row.handlerStage as HandlerStage;
+    const reasons = (row.uncertainReasons ?? []) as string[];
+    if (!allowedTransition(currentStage, targetStage, reasons)) {
+      throw new ValidationError(
+        `Cannot transition ${currentStage} → ${targetStage}` +
+          (reasons.length > 0
+            ? ` (uncertain reasons: ${reasons.join(", ")})`
+            : ""),
+      );
+    }
+
+    const allUsers = await tx
+      .select({ id: users.id, name: users.name, role: users.role })
+      .from(users);
+    const routedHandler = nextHandlerForStage(
+      targetStage,
+      allUsers as Array<{ id: number; name: string; role: string }>,
+    );
+    const nextHandlerId =
+      targetStage === "ready_to_build" || targetStage === "building"
+        ? ctx.userId
+        : routedHandler;
+
+    const now = new Date();
+    const historyEntry = {
+      status: `stage:${targetStage}`,
+      changedAt: now.toISOString(),
+      changedBy: ctx.userId,
+      changedByName: ctx.userName,
+      notes: ctx.notes,
+    };
+
+    await tx
+      .update(assignments)
+      .set({
+        handlerStage: targetStage,
+        currentHandlerId: nextHandlerId,
+        stageChangedAt: now,
+        enteredOn:
+          targetStage === "entered" ? sql`CURRENT_DATE` : row.enteredOn,
+        statusHistory: sql`coalesce(${assignments.statusHistory}, '[]'::jsonb) || ${JSON.stringify([historyEntry])}::jsonb`,
+        updatedAt: now,
+      })
+      .where(eq(assignments.id, assignmentId));
+  });
+}
+
+export async function claimAssignment(
+  db: Database,
+  assignmentId: number,
+  userId: number,
+): Promise<void> {
+  const [row] = await db
+    .select({ id: assignments.id })
+    .from(assignments)
+    .where(eq(assignments.id, assignmentId))
+    .limit(1);
+  if (!row) throw new NotFoundError(`Assignment ${assignmentId} not found`);
+
+  await db
+    .update(assignments)
+    .set({ currentHandlerId: userId, updatedAt: new Date() })
+    .where(eq(assignments.id, assignmentId));
+}
+
+export async function flagToUncertain(
+  db: Database,
+  assignmentId: number,
+  ctx: TransitionContext & { reason: string },
+): Promise<void> {
+  return advanceStage(db, assignmentId, "uncertain", {
+    ...ctx,
+    notes: `flag-back: ${ctx.reason}${ctx.notes ? ` — ${ctx.notes}` : ""}`,
+  });
 }
