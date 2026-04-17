@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/signoff.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/sign/:slug", "destination": "/index.html" },
+    { "source": "/", "destination": "/index.html" }
+  ]
+}
