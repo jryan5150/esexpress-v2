@@ -203,6 +203,8 @@ export const UNCERTAIN_REASONS = [
   "weight_mismatch",
   "no_photo_48h",
   "rate_missing",
+  "missing_driver",
+  "missing_tickets",
 ] as const;
 export type UncertainReason = (typeof UNCERTAIN_REASONS)[number];
 

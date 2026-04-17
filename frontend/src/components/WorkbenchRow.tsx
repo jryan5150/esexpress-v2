@@ -1,6 +1,10 @@
 import { memo } from "react";
 import { StagePill } from "./StagePill";
-import type { WorkbenchRow as Row, HandlerStage } from "../types/api";
+import type {
+  WorkbenchRow as Row,
+  HandlerStage,
+  LoadSource,
+} from "../types/api";
 
 interface WorkbenchRowProps {
   row: Row;
@@ -9,6 +13,33 @@ interface WorkbenchRowProps {
   onRowClick: () => void;
   onPrimaryAction: () => void;
   isPending?: boolean;
+}
+
+const SOURCE_LABEL: Record<LoadSource, string> = {
+  propx: "PropX",
+  logistiq: "Logistiq",
+  jotform: "JotForm",
+  manual: "Manual",
+};
+
+// Traffic-light palette — matches Jessica's Load Count sheet + sign-off portal
+const SOURCE_CLASS: Record<LoadSource, string> = {
+  propx: "bg-blue-500/15 text-blue-300 border-blue-500/40",
+  logistiq: "bg-amber-500/15 text-amber-300 border-amber-500/40",
+  jotform: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40",
+  manual: "bg-purple-500/15 text-purple-300 border-purple-500/40",
+};
+
+function SourceBadge({ source }: { source: LoadSource }) {
+  const cls = SOURCE_CLASS[source] ?? SOURCE_CLASS.manual;
+  return (
+    <span
+      className={`inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded border ${cls}`}
+      title={`Ingested via ${SOURCE_LABEL[source] ?? source}`}
+    >
+      {SOURCE_LABEL[source] ?? source}
+    </span>
+  );
 }
 
 // Returns the CTA label for the current stage. Keep text short — the
@@ -108,7 +139,10 @@ export const WorkbenchRow = memo(function WorkbenchRow({
         </div>
 
         <div className="col-span-2 truncate">
-          <div className="font-medium">{row.loadNo}</div>
+          <div className="flex items-center gap-1.5">
+            <SourceBadge source={row.loadSource} />
+            <span className="font-medium truncate">{row.loadNo}</span>
+          </div>
           <div className="text-xs text-on-surface-variant truncate">
             {row.wellName ?? "— no well"}
           </div>
@@ -122,10 +156,23 @@ export const WorkbenchRow = memo(function WorkbenchRow({
         </div>
 
         <div className="col-span-2 truncate">
-          <div className="font-mono text-xs">
-            {row.bolNo ?? row.ticketNo ?? "--"}
+          <div className="flex items-baseline gap-2">
+            <span className="text-[9px] uppercase tracking-wider text-on-surface-variant w-10 shrink-0">
+              BOL
+            </span>
+            <span className="font-mono text-xs">
+              {row.bolNo ?? "--"}
+            </span>
           </div>
-          <div className="text-xs text-on-surface-variant">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[9px] uppercase tracking-wider text-on-surface-variant w-10 shrink-0">
+              Ticket
+            </span>
+            <span className="font-mono text-[11px] text-on-surface-variant">
+              {row.ticketNo ?? "--"}
+            </span>
+          </div>
+          <div className="text-[11px] text-on-surface-variant mt-0.5">
             {row.weightTons ? `${row.weightTons} t` : "--"}
           </div>
         </div>

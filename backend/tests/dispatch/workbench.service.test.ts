@@ -12,6 +12,8 @@ describe("computeUncertainReasons", () => {
     ocrWeightLbs: 48200,
     rate: "125.50",
     deliveredOn: new Date(),
+    driverName: "Mike Johnson",
+    ticketNo: "TKT-81316",
   };
 
   it("returns empty array when everything is clean", () => {
@@ -94,6 +96,32 @@ describe("computeUncertainReasons", () => {
     expect(computeUncertainReasons({ ...base, rate: "0" })).toContain(
       "rate_missing",
     );
+  });
+
+  it("flags missing_driver when driver name is null or blank", () => {
+    expect(computeUncertainReasons({ ...base, driverName: null })).toContain(
+      "missing_driver",
+    );
+    expect(computeUncertainReasons({ ...base, driverName: "" })).toContain(
+      "missing_driver",
+    );
+    expect(computeUncertainReasons({ ...base, driverName: "   " })).toContain(
+      "missing_driver",
+    );
+    expect(computeUncertainReasons(base)).not.toContain("missing_driver");
+  });
+
+  it("flags missing_tickets when ticket number is null or blank", () => {
+    expect(computeUncertainReasons({ ...base, ticketNo: null })).toContain(
+      "missing_tickets",
+    );
+    expect(computeUncertainReasons({ ...base, ticketNo: "" })).toContain(
+      "missing_tickets",
+    );
+    expect(computeUncertainReasons({ ...base, ticketNo: "  " })).toContain(
+      "missing_tickets",
+    );
+    expect(computeUncertainReasons(base)).not.toContain("missing_tickets");
   });
 
   it("returns multiple reasons when multiple triggers fire", () => {

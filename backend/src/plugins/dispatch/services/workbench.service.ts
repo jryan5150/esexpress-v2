@@ -18,6 +18,8 @@ export interface UncertainReasonInput {
   ocrWeightLbs: number | null;
   rate: string | null;
   deliveredOn: Date | null;
+  driverName: string | null;
+  ticketNo: string | null;
 }
 
 const WEIGHT_TOLERANCE = 0.05; // 5%
@@ -84,6 +86,17 @@ export function computeUncertainReasons(
   const rateNum = /^-?\d+(\.\d+)?$/.test(rateStr) ? parseFloat(rateStr) : 0;
   if (!rateNum || rateNum <= 0) {
     reasons.push("rate_missing");
+  }
+
+  // Driver is required for PCS dispatch (Jessica's color key cyan-state).
+  if (!input.driverName || input.driverName.trim() === "") {
+    reasons.push("missing_driver");
+  }
+
+  // Ticket-not-arrived state (purple on Jessica's sheet): load exists but
+  // no ticket reference has been recorded yet.
+  if (!input.ticketNo || input.ticketNo.trim() === "") {
+    reasons.push("missing_tickets");
   }
 
   return reasons;
@@ -173,6 +186,7 @@ export interface WorkbenchRow {
   enteredOn: string | null;
   loadId: number;
   loadNo: string;
+  loadSource: string;
   driverName: string | null;
   carrierName: string | null;
   bolNo: string | null;
@@ -247,6 +261,7 @@ export async function listWorkbenchRows(
       enteredOn: assignments.enteredOn,
       loadId: loads.id,
       loadNo: loads.loadNo,
+      loadSource: loads.source,
       driverName: loads.driverName,
       carrierName: loads.carrierName,
       bolNo: loads.bolNo,
@@ -301,6 +316,7 @@ export async function listWorkbenchRows(
     enteredOn: r.enteredOn ? String(r.enteredOn) : null,
     loadId: r.loadId!,
     loadNo: r.loadNo!,
+    loadSource: r.loadSource ?? "manual",
     driverName: r.driverName,
     carrierName: r.carrierName,
     bolNo: r.bolNo,

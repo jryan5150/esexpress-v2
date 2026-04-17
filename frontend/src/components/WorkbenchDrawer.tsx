@@ -116,6 +116,8 @@ const REASON_LABEL: Record<UncertainReason, string> = {
   weight_mismatch: "Weight mismatch",
   no_photo_48h: "Photo missing >48h",
   rate_missing: "Rate missing",
+  missing_driver: "Driver missing",
+  missing_tickets: "Ticket missing / not arrived",
 };
 
 export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {

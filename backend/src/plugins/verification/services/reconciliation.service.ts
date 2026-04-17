@@ -526,6 +526,8 @@ async function refreshAssignmentUncertainReasons(
         loadWeightTons: loads.weightTons,
         loadRate: loads.rate,
         loadDeliveredOn: loads.deliveredOn,
+        loadDriverName: loads.driverName,
+        loadTicketNo: loads.ticketNo,
       })
       .from(assignments)
       .leftJoin(loads, eq(loads.id, assignments.loadId))
@@ -549,6 +551,8 @@ async function refreshAssignmentUncertainReasons(
         ocrWeightLbs: extracted.weight ?? null,
         rate: r.loadRate as string | null,
         deliveredOn: r.loadDeliveredOn,
+        driverName: r.loadDriverName,
+        ticketNo: r.loadTicketNo,
       });
 
       await db

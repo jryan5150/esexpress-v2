@@ -267,7 +267,9 @@ export type UncertainReason =
   | "bol_mismatch"
   | "weight_mismatch"
   | "no_photo_48h"
-  | "rate_missing";
+  | "rate_missing"
+  | "missing_driver"
+  | "missing_tickets";
 
 export type WorkbenchFilter =
   | "uncertain"
@@ -276,6 +278,8 @@ export type WorkbenchFilter =
   | "ready_to_clear"
   | "entered_today"
   | "all";
+
+export type LoadSource = "propx" | "logistiq" | "jotform" | "manual";
 
 export interface WorkbenchRow {
   assignmentId: number;
@@ -288,6 +292,7 @@ export interface WorkbenchRow {
   enteredOn: string | null;
   loadId: number;
   loadNo: string;
+  loadSource: LoadSource;
   driverName: string | null;
   carrierName: string | null;
   bolNo: string | null;

@@ -16,6 +16,8 @@ const REASON_LABEL: Record<UncertainReason, string> = {
   weight_mismatch: "Resolve weight mismatch",
   no_photo_48h: "Photo missing after 48h",
   rate_missing: "Enter rate",
+  missing_driver: "Add the driver",
+  missing_tickets: "Ticket missing / not arrived",
 };
 
 const REASON_HINT: Record<UncertainReason, string> = {
@@ -31,6 +33,10 @@ const REASON_HINT: Record<UncertainReason, string> = {
     "No photo submitted. Either attach one manually or flag this load missed.",
   rate_missing:
     "Open finance drawer and set the rate. Required for settlement.",
+  missing_driver:
+    "Driver field is blank. Enter the driver name so dispatch + payroll can match.",
+  missing_tickets:
+    "Ticket number is blank or the load hasn't shown as arrived. Enter ticket when known, or flag for follow-up.",
 };
 
 export function ResolveModal({
