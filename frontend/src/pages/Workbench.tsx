@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useWorkbench, useAdvanceStage } from "../hooks/use-workbench";
 import { useCurrentUser } from "../hooks/use-auth";
 import { WorkbenchRow } from "../components/WorkbenchRow";
+import { WorkbenchDrawer } from "../components/WorkbenchDrawer";
 import { BuildDuplicateModal } from "../components/BuildDuplicateModal";
 import { ResolveModal } from "../components/ResolveModal";
 import { WorkbenchOnboarding } from "../components/WorkbenchOnboarding";
@@ -29,6 +30,7 @@ export function Workbench() {
   const advance = useAdvanceStage();
 
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [buildModalOpen, setBuildModalOpen] = useState(false);
   const [resolveRow, setResolveRow] = useState<Row | null>(null);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
@@ -172,12 +174,20 @@ export function Workbench() {
                 row={row}
                 selected={selected.has(row.assignmentId)}
                 onToggleSelect={() => toggleSelect(row.assignmentId)}
-                onRowClick={() => {
-                  toggleSelect(row.assignmentId);
-                }}
+                onRowClick={() =>
+                  setExpandedId((prev) =>
+                    prev === row.assignmentId ? null : row.assignmentId,
+                  )
+                }
                 onPrimaryAction={() => primaryActionFor(row)}
                 isPending={advance.isPending}
               />
+              {expandedId === row.assignmentId && (
+                <WorkbenchDrawer
+                  row={row}
+                  onClose={() => setExpandedId(null)}
+                />
+              )}
             </div>
           ))
         )}

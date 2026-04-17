@@ -60,3 +60,50 @@ export function useBuildDuplicate() {
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.workbench.all }),
   });
 }
+
+/**
+ * PATCH load fields (bolNo, driverName, rate, weight, etc.) from the
+ * workbench drawer. Invalidates workbench so the row reflects the edit.
+ */
+export function useUpdateLoadField() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (p: { loadId: number; updates: Record<string, unknown> }) =>
+      api.patch(`/dispatch/loads/${p.loadId}`, p.updates),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.workbench.all });
+      qc.invalidateQueries({ queryKey: qk.loads.all });
+    },
+  });
+}
+
+/**
+ * BOL reconciliation detail for a load — surfaces the OCR-extracted values
+ * and the discrepancies reconciliation caught. Used by the drawer to show
+ * "what matching found" next to editable load fields.
+ */
+export function useBolReconciliation(loadId: number | null) {
+  return useQuery({
+    queryKey: ["bol-reconciliation", loadId],
+    queryFn: () =>
+      api.get<{
+        bolSubmissionId: number;
+        matchedLoadId: number | null;
+        matchMethod: string | null;
+        matchScore: number | null;
+        status: string | null;
+        ocrBolNo: string | null;
+        ocrDriverName: string | null;
+        ocrWeightLbs: number | null;
+        ocrDeliveryDate: string | null;
+        discrepancies: Array<{
+          field: string;
+          expected: unknown;
+          actual: unknown;
+          severity: string;
+        }>;
+      } | null>(`/verification/bol/by-load/${loadId}`),
+    enabled: loadId != null,
+    staleTime: 30_000,
+  });
+}

@@ -1,5 +1,5 @@
 import { eq, and, sql, inArray, ilike, or } from "drizzle-orm";
-import { assignments, loads, wells, users } from "../../../db/schema.js";
+import { assignments, loads, wells, users, photos } from "../../../db/schema.js";
 import type {
   PhotoStatus,
   UncertainReason,
@@ -259,6 +259,11 @@ export async function listWorkbenchRows(
       wellId: wells.id,
       wellName: wells.name,
       photoStatus: assignments.photoStatus,
+      // Correlated subquery avoids row-multiplication when multiple photos
+      // exist per assignment. Orders by id ascending (first submitted wins).
+      photoThumbUrl: sql<
+        string | null
+      >`(SELECT ${photos.sourceUrl} FROM ${photos} WHERE ${photos.assignmentId} = ${assignments.id} ORDER BY ${photos.id} ASC LIMIT 1)`,
       rate: loads.rate,
     })
     .from(assignments)
@@ -308,7 +313,7 @@ export async function listWorkbenchRows(
     wellId: r.wellId,
     wellName: r.wellName,
     photoStatus: r.photoStatus,
-    photoThumbUrl: null,
+    photoThumbUrl: r.photoThumbUrl,
     rate: r.rate,
   }));
 
