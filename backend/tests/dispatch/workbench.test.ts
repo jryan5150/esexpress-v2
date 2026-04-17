@@ -64,6 +64,24 @@ describe("GET /api/v1/dispatch/workbench", () => {
       expect([200, 500, 503]).toContain(r.statusCode);
     }
   });
+
+  it("accepts dateFrom, dateTo, and truckNo filters", async () => {
+    const r = await app.inject({
+      method: "GET",
+      url: "/api/v1/dispatch/workbench?filter=all&dateFrom=2026-04-01&dateTo=2026-04-17&truckNo=1456",
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect([200, 500, 503]).toContain(r.statusCode);
+  });
+
+  it("rejects invalid date format on dateFrom", async () => {
+    const r = await app.inject({
+      method: "GET",
+      url: "/api/v1/dispatch/workbench?filter=all&dateFrom=not-a-date",
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(r.statusCode).toBe(400);
+  });
 });
 
 describe("POST /api/v1/dispatch/workbench/:id/advance", () => {

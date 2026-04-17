@@ -171,6 +171,12 @@ export interface WorkbenchListParams {
   filter: WorkbenchFilter;
   userId: number;
   search?: string;
+  /** Inclusive lower bound on loads.delivered_on. YYYY-MM-DD, Chicago-local. */
+  dateFrom?: string;
+  /** Inclusive upper bound on loads.delivered_on. YYYY-MM-DD, Chicago-local. */
+  dateTo?: string;
+  /** Substring match on loads.truck_no (ilike). */
+  truckNo?: string;
   limit?: number;
   offset?: number;
 }
@@ -244,10 +250,41 @@ export async function listWorkbenchRows(
       )
     : undefined;
 
+  // Date range on loads.delivered_on — Chicago-local interpretation so the
+  // team doesn't accidentally miss loads that landed in the evening before.
+  // Matches the pattern used by dispatch-desk.service.ts.
+  const dateConditions = [];
+  if (params.dateFrom) {
+    dateConditions.push(
+      sql`${loads.deliveredOn} >= ${`${params.dateFrom}T00:00:00-05:00`}::timestamptz`,
+    );
+  }
+  if (params.dateTo) {
+    dateConditions.push(
+      sql`${loads.deliveredOn} <= ${`${params.dateTo}T23:59:59.999-05:00`}::timestamptz`,
+    );
+  }
+  const dateCondition =
+    dateConditions.length > 0 ? and(...dateConditions) : undefined;
+
+  const truckCondition = params.truckNo
+    ? ilike(loads.truckNo, `%${params.truckNo}%`)
+    : undefined;
+
+  // Compose all conditions in one place — preserves the count-query
+  // invariant that only assignments/loads columns are touched.
+  const allConditions = [
+    filterCondition,
+    searchCondition,
+    dateCondition,
+    truckCondition,
+  ].filter(Boolean);
   const whereClause =
-    filterCondition && searchCondition
-      ? and(filterCondition, searchCondition)
-      : (filterCondition ?? searchCondition);
+    allConditions.length === 0
+      ? undefined
+      : allConditions.length === 1
+        ? allConditions[0]
+        : and(...(allConditions as NonNullable<typeof allConditions[number]>[]));
 
   const baseQuery = db
     .select({

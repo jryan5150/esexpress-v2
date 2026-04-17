@@ -7,14 +7,37 @@ import type {
   HandlerStage,
 } from "../types/api";
 
-export function useWorkbench(filter: WorkbenchFilter, search?: string) {
+export interface WorkbenchQueryOpts {
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  truckNo?: string;
+}
+
+export function useWorkbench(
+  filter: WorkbenchFilter,
+  opts: WorkbenchQueryOpts = {},
+) {
+  const { search, dateFrom, dateTo, truckNo } = opts;
+  const params = new URLSearchParams({ filter });
+  if (search) params.set("search", search);
+  if (dateFrom) params.set("dateFrom", dateFrom);
+  if (dateTo) params.set("dateTo", dateTo);
+  if (truckNo) params.set("truckNo", truckNo);
+  const key = [
+    "workbench",
+    "list",
+    filter,
+    search ?? "",
+    dateFrom ?? "",
+    dateTo ?? "",
+    truckNo ?? "",
+  ] as const;
   return useQuery({
-    queryKey: qk.workbench.list(filter, search),
+    queryKey: key,
     queryFn: () =>
       api.get<{ rows: WorkbenchRow[]; total: number }>(
-        `/dispatch/workbench?filter=${encodeURIComponent(filter)}${
-          search ? `&search=${encodeURIComponent(search)}` : ""
-        }`,
+        `/dispatch/workbench?${params.toString()}`,
       ),
     staleTime: 5_000,
   });

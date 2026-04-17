@@ -22,11 +22,19 @@ export function Workbench() {
   const [params, setParams] = useSearchParams();
   const filter = (params.get("filter") as WorkbenchFilter) || "uncertain";
   const search = params.get("search") ?? "";
+  const dateFrom = params.get("dateFrom") ?? "";
+  const dateTo = params.get("dateTo") ?? "";
+  const truckNo = params.get("truckNo") ?? "";
 
   const userQuery = useCurrentUser();
   const user = userQuery.data;
 
-  const workbenchQuery = useWorkbench(filter, search || undefined);
+  const workbenchQuery = useWorkbench(filter, {
+    search: search || undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+    truckNo: truckNo || undefined,
+  });
   const advance = useAdvanceStage();
 
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -51,6 +59,13 @@ export function Workbench() {
     const next = new URLSearchParams(params);
     if (s) next.set("search", s);
     else next.delete("search");
+    setParams(next);
+  };
+
+  const setParam = (key: string, value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value);
+    else next.delete(key);
     setParams(next);
   };
 
@@ -91,19 +106,70 @@ export function Workbench() {
 
   return (
     <div className="flex-1 flex flex-col p-4 gap-3">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-xl font-headline">Workbench</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input
             type="search"
-            className="bg-surface-variant rounded px-2 py-1 text-sm w-56"
-            placeholder="Search BOL, load#, driver, truck…"
+            className="bg-surface-variant rounded px-2 py-1 text-sm w-48"
+            placeholder="Search BOL, load#, driver…"
             defaultValue={search}
             onKeyDown={(e) => {
               if (e.key === "Enter")
                 setSearch((e.target as HTMLInputElement).value);
             }}
           />
+          <label className="flex items-center gap-1 text-xs text-on-surface-variant">
+            <span className="font-medium uppercase tracking-wider text-[10px]">
+              From
+            </span>
+            <input
+              type="date"
+              className="bg-surface-variant rounded px-2 py-1 text-sm"
+              value={dateFrom}
+              onChange={(e) => setParam("dateFrom", e.target.value)}
+            />
+          </label>
+          <label className="flex items-center gap-1 text-xs text-on-surface-variant">
+            <span className="font-medium uppercase tracking-wider text-[10px]">
+              To
+            </span>
+            <input
+              type="date"
+              className="bg-surface-variant rounded px-2 py-1 text-sm"
+              value={dateTo}
+              onChange={(e) => setParam("dateTo", e.target.value)}
+            />
+          </label>
+          <label className="flex items-center gap-1 text-xs text-on-surface-variant">
+            <span className="font-medium uppercase tracking-wider text-[10px]">
+              Truck
+            </span>
+            <input
+              type="text"
+              className="bg-surface-variant rounded px-2 py-1 text-sm w-24"
+              placeholder="e.g. 1456"
+              defaultValue={truckNo}
+              onKeyDown={(e) => {
+                if (e.key === "Enter")
+                  setParam("truckNo", (e.target as HTMLInputElement).value);
+              }}
+              onBlur={(e) => setParam("truckNo", e.target.value)}
+            />
+          </label>
+          {(dateFrom || dateTo || truckNo || search) && (
+            <button
+              type="button"
+              onClick={() => {
+                const next = new URLSearchParams();
+                next.set("filter", filter);
+                setParams(next);
+              }}
+              className="text-xs text-on-surface-variant hover:text-on-surface underline"
+            >
+              Clear
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setWalkthroughOpen(true)}

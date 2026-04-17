@@ -39,6 +39,12 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
               default: "all",
             },
             search: { type: "string" },
+            // Date range filter on loads.delivered_on — ISO YYYY-MM-DD.
+            // Both inclusive; Chicago-local interpretation on the service side.
+            dateFrom: { type: "string", format: "date" },
+            dateTo: { type: "string", format: "date" },
+            // Truck filter — substring match on loads.truck_no.
+            truckNo: { type: "string", maxLength: 40 },
             limit: { type: "integer", minimum: 1, maximum: 500, default: 100 },
             offset: { type: "integer", minimum: 0, default: 0 },
           },
@@ -55,6 +61,9 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
       const query = request.query as {
         filter?: (typeof WORKBENCH_FILTER_ENUM)[number];
         search?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        truckNo?: string;
         limit?: number;
         offset?: number;
       };
@@ -64,6 +73,9 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
           filter: query.filter ?? "all",
           userId: user.id,
           search: query.search,
+          dateFrom: query.dateFrom,
+          dateTo: query.dateTo,
+          truckNo: query.truckNo,
           limit: query.limit,
           offset: query.offset,
         });
