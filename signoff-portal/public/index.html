@@ -480,6 +480,43 @@
       .page-note .hint {
         font-size: 11px; color: var(--text-3); margin-top: 8px; font-style: italic;
       }
+
+      /* ─── Well filter + group-by pattern ─── */
+      .well-picker-chip {
+        display: inline-block; padding: 3px 8px; border-radius: 3px;
+        background: var(--primary-ct); color: var(--primary);
+        font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+        text-transform: uppercase; margin-left: 6px; cursor: pointer;
+        border: 1px solid var(--primary);
+      }
+      .toggle-chip {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 5px 10px; border-radius: 999px;
+        background: #fff; border: 1px solid var(--border);
+        font-size: 11px; font-weight: 600; color: var(--text-2);
+        cursor: pointer;
+      }
+      .toggle-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+      .toggle-chip input { margin: 0; }
+      .well-group-header {
+        background: var(--primary-ct); color: var(--text-1);
+        padding: 8px 14px; margin: 10px 0 6px;
+        border-radius: var(--radius-sm); border-left: 4px solid var(--primary);
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 12px; font-weight: 800; letter-spacing: 0.06em;
+        text-transform: uppercase;
+        display: flex; align-items: center; gap: 8px;
+      }
+      .well-group-header .well-count {
+        margin-left: auto; font-size: 10px; font-weight: 600;
+        color: var(--text-3); letter-spacing: 0.04em; text-transform: none;
+      }
+      .well-group-header .well-status {
+        font-size: 10px; font-weight: 600;
+        padding: 2px 6px; border-radius: 3px;
+        background: #fff; color: var(--text-2);
+        letter-spacing: 0;
+      }
     </style>
   </head>
   <body>
@@ -649,8 +686,13 @@
                   <button class="filter-pill">Built Today <span class="count">15</span></button>
                   <button class="filter-pill">All</button>
                   <div class="filter-divider"></div>
+                  <span class="filter-label">Well</span><input class="filter-input" style="min-width: 180px" placeholder="any well…" /><span class="well-picker-chip">18 · browse</span>
                   <span class="filter-label">Date</span><input class="filter-input" value="04/11 – 04/17" />
                   <span class="filter-label">Truck</span><input class="filter-input" placeholder="e.g. 1456" />
+                  <label class="toggle-chip" title="Group the list by well"><input type="checkbox" /> Group by well</label>
+                </div>
+                <div style="padding: 6px 0 0; font-size: 11px; color: var(--text-3); font-style: italic">
+                  Scan by well, scan by truck, scan by date — each pivot is one click. Group-by-well toggle renders per-well headers between rows (shown in Section 6).
                 </div>
               </div>
               <div style="padding: 14px 18px">
@@ -1278,18 +1320,56 @@
             <button class="filter-pill">All</button>
             <div class="filter-divider"></div>
             <span class="filter-label">Well</span>
-            <input class="filter-input" value="Apache Gulftex Fred Gawlik" />
+            <input class="filter-input" style="min-width: 240px" value="Apache Gulftex Fred Gawlik" />
+            <span class="well-picker-chip">18 wells · browse</span>
             <span class="filter-label">Date</span>
             <input class="filter-input" value="04/11 – 04/17" />
             <span class="filter-label">Truck</span>
             <input class="filter-input" placeholder="e.g. 1456" />
+            <div class="filter-divider"></div>
+            <label class="toggle-chip active" title="Group the list by well — sticky well-name headers between rows">
+              <input type="checkbox" checked /> Group by well
+            </label>
           </div>
+
+          <p style="font-size: 13px; color: var(--text-2); margin: 14px 0 8px; line-height: 1.55">
+            With <strong>Group by well</strong> on, rows collapse under
+            well-name headers so Jessica can work one well at a time
+            without losing the cross-well counts. Toggle off for a flat
+            list of all matching loads.
+          </p>
+
+          <!-- Grouped example -->
+          <div class="well-group-header">
+            Apache Gulftex Fred Gawlik
+            <span class="well-status">Liberty(FSC)</span>
+            <span class="well-count">4 loads · 2 ready · 1 completed · 1 needs review</span>
+          </div>
+          <div class="wb-row"><div class="wb-stripe stripe-green"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary">PX-5840890</span></div><div class="load-id-secondary">BOL 74316</div></div><div><div>Sarah Lopez</div><div class="wb-cell-sub">Liberty · TRK-1456</div></div><div><div class="wb-cell-mono">BOL-74316</div><div class="wb-cell-sub wb-cell-mono">TKT-81316</div></div><div>24.50 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-green" style="margin-bottom:0">100% · Pending</span></div><div><button class="wb-btn btn-confirm btn-sm">Confirm</button></div></div></div>
+          <div class="wb-row"><div class="wb-stripe stripe-yellow"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary">PX-5840893</span></div><div class="load-id-secondary">BOL 74339 · confirmed</div></div><div><div>Sarah Lopez</div><div class="wb-cell-sub">Liberty · TRK-1456</div></div><div><div class="wb-cell-mono">BOL-74339</div><div class="wb-cell-sub wb-cell-mono">TKT-81339</div></div><div>24.25 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-yellow" style="margin-bottom:0">Ready · Scout</span></div><div><button class="wb-btn btn-primary btn-sm">Build + Duplicate</button></div></div></div>
+
+          <div class="well-group-header">
+            Spectre Crescent Simul Diamond H
+            <span class="well-status">Liberty(FSC)</span>
+            <span class="well-count">3 loads · 1 needs rate · 2 ready</span>
+          </div>
+          <div class="wb-row"><div class="wb-stripe stripe-orange"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary">PX-5840891</span></div><div class="load-id-secondary">BOL 74329</div></div><div><div>Mike Johnson</div><div class="wb-cell-sub">Liberty · TRK-1511</div></div><div><div class="wb-cell-mono">BOL-74329</div><div class="wb-cell-sub wb-cell-mono">TKT-81329</div></div><div><div>24.00 t</div><div class="wb-cell-sub" style="color:var(--jess-orange-text)">! rate</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-orange" style="margin-bottom:0">Needs Rate · 82%</span></div><div><button class="wb-btn btn-primary btn-sm">Resolve</button></div></div></div>
+
+          <div class="well-group-header">
+            HV Nighthawk Rose City Bledsoe
+            <span class="well-status">Logistiq</span>
+            <span class="well-count">2 loads · 2 pending confirm</span>
+          </div>
+          <div class="wb-row"><div class="wb-stripe stripe-green"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-logistiq">Logistiq</span><span class="load-id-primary">LIQ-7822</span></div><div class="load-id-secondary">BOL 74342</div></div><div><div>Kevin Park</div><div class="wb-cell-sub">Logistix · TRK-1466</div></div><div><div class="wb-cell-mono">BOL-74342</div><div class="wb-cell-sub wb-cell-mono">TKT-81342</div></div><div>24.50 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-green" style="margin-bottom:0">100% · Pending</span></div><div><button class="wb-btn btn-confirm btn-sm">Confirm</button></div></div></div>
+
           <div class="delivers">
             <span class="label">What this delivers</span>
             <ul>
-              <li>Well + date range sort exactly as asked, top-of-page.</li>
-              <li>Truck filter included too — Jeri's been tracking by truck on the billing sheet, so it's a natural add.</li>
-              <li>Sub-tab filters persist in the URL so bookmarks and reloads keep your place.</li>
+              <li><strong>Well filter:</strong> exact-name or fuzzy-match input (wells have aliases; we search both). Click <em>browse</em> to see all 18 active wells with load counts.</li>
+              <li><strong>Group by well:</strong> sticky well-name header above grouped rows with per-well counts. Toggle off for a flat list.</li>
+              <li><strong>Date range + Truck:</strong> also at the top — Jeri's tracking-by-truck pattern from the Load Count sheet carries over.</li>
+              <li>All filters persist in the URL so bookmarks and reloads keep your place.</li>
+              <li><em>Not included (yet):</em> a full wells-picker sidebar like the old Dispatch Desk. We left that as an open question — see the <a href="#" onclick="switchTab('sign-off-tab');return false;" class="section-link">Sign &amp; Send tab, question C</a>.</li>
             </ul>
           </div>
         </div>
@@ -1653,6 +1733,7 @@
           <li data-key="override"><input type="checkbox" id="ck4" /><label for="ck4">Override path (Section 4) covers my needs<input class="tweak-input" placeholder="Anything to tweak?" /></label></li>
           <li data-key="sub100"><input type="checkbox" id="ck5" /><label for="ck5">Sub-100% validation (Section 5) looks right<input class="tweak-input" placeholder="Anything to tweak?" /></label></li>
           <li data-key="sort"><input type="checkbox" id="ck6" /><label for="ck6">Well + date range + truck filter (Section 6)<input class="tweak-input" placeholder="Anything to tweak?" /></label></li>
+          <li data-key="well-group"><input type="checkbox" id="ck6b" /><label for="ck6b">Group-by-well toggle (Section 6, BP-1) is the right scope — not a full Dispatch-Desk-style tabular view<input class="tweak-input" placeholder="Anything to tweak?" /></label></li>
           <li data-key="bolticket"><input type="checkbox" id="ck7" /><label for="ck7">BOL and Ticket clarity (Section 7)<input class="tweak-input" placeholder="Anything to tweak?" /></label></li>
           <li data-key="resolve"><input type="checkbox" id="ck8" /><label for="ck8">Six resolve options (Section 8) cover my cases<input class="tweak-input" placeholder="Anything to tweak?" /></label></li>
           <li data-key="bulk"><input type="checkbox" id="ck9" /><label for="ck9">Individual + bulk validate (Section 9)<input class="tweak-input" placeholder="Anything to tweak?" /></label></li>
@@ -1665,6 +1746,7 @@
         <h3 style="font-size:16px;margin-top:20px;margin-bottom:10px">Open questions — quick answers unblock specific pieces</h3>
         <div class="field-block" style="background:#fffbf0;border:1px dashed var(--jess-yellow)"><div class="q" style="color:var(--jess-yellow-text)">A · Load ID lifecycle — for pre-build rows, which primary number do you want to see (upstream ticket / BOL # / internal ref)? For post-build, is PCS # primary?</div><textarea data-q="id-primary" placeholder="Your answer…"></textarea></div>
         <div class="field-block" style="background:#fffbf0;border:1px dashed var(--jess-yellow)"><div class="q" style="color:var(--jess-yellow-text)">B · Source badges — anything missing from PropX / Logistiq / Manual / JotForm? Any you'd rename?</div><textarea data-q="source-badges" placeholder="Your answer…"></textarea></div>
+        <div class="field-block" style="background:#fffbf0;border:1px dashed var(--jess-yellow)"><div class="q" style="color:var(--jess-yellow-text)">C · Well-view depth — is the Well filter + Group-by-Well toggle (shown in Section 6 and BP-1) enough, or do you also want the Dispatch-Desk-style tabular toggle (wells picker on the left, loads on the right) as a Phase-2 addition? No wrong answer — we just don't want to build the tabular toggle if you'd never use it.</div><textarea data-q="well-view-depth" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">1 · Green → Yellow confirm — only you, or any dispatcher?</div><textarea data-q="confirm-who" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">2 · Pink = "built" vs "pushed" — visual difference, or same pink?</div><textarea data-q="pink-split" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">3 · Override of auto-validated — back to green or to needs-review?</div><textarea data-q="overrides" placeholder="Your answer…"></textarea></div>
