@@ -398,6 +398,88 @@
       }
       .drawer-flags strong { display: block; font-size: 10px; text-transform: uppercase;
         letter-spacing: 0.08em; margin-bottom: 4px; font-weight: 800; }
+
+      /* ─── Source badges (propx / logistiq / manual / jotform) ─── */
+      .src-badge {
+        display: inline-block; padding: 2px 6px; border-radius: 3px;
+        font-size: 9px; font-weight: 800; letter-spacing: 0.06em;
+        text-transform: uppercase; margin-right: 6px; vertical-align: 1px;
+      }
+      .src-propx    { background: #dbeafe; color: #1e40af; }   /* blue */
+      .src-logistiq { background: #fef3c7; color: #92400e; }   /* amber */
+      .src-manual   { background: #f3e8ff; color: #6b21a8; }   /* purple */
+      .src-jotform  { background: #dcfce7; color: #166534; }   /* green */
+
+      /* Load ID cell — consistent 3-identifier display */
+      .load-id-primary {
+        font-family: "Space Grotesk", monospace; font-weight: 700;
+        font-size: 13px; color: var(--text-1);
+      }
+      .load-id-primary.pcs { color: var(--jess-pink-text); font-weight: 800; }
+      .load-id-secondary {
+        font-family: "Space Grotesk", monospace;
+        font-size: 10px; color: var(--text-3); margin-top: 2px; line-height: 1.4;
+      }
+
+      /* Load lifecycle explainer */
+      .id-lifecycle {
+        background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md);
+        padding: 18px 22px; margin-bottom: 20px;
+      }
+      .id-lifecycle h4 {
+        font-size: 13px; font-weight: 800; color: var(--primary);
+        text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;
+      }
+      .id-lifecycle-row {
+        display: grid; grid-template-columns: 100px 1fr 28px 1fr 28px 1fr;
+        gap: 12px; align-items: center;
+        padding: 10px 0; border-top: 1px solid var(--border);
+        font-size: 12px;
+      }
+      .id-lifecycle-row:first-of-type { border-top: none; }
+      .id-lifecycle-stage {
+        font-size: 10px; font-weight: 800; color: var(--text-3);
+        text-transform: uppercase; letter-spacing: 0.08em;
+      }
+      .id-lifecycle-cell {
+        background: var(--bg-low); padding: 8px 12px; border-radius: 6px; font-size: 12px;
+      }
+      .id-lifecycle-cell.active { background: var(--primary-ct); border: 1px solid var(--primary); }
+      .id-lifecycle-cell.hidden-cell { background: transparent; color: var(--text-3); font-style: italic; }
+      .id-lifecycle-cell .ic-label {
+        font-size: 9px; font-weight: 800; color: var(--text-3);
+        text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;
+      }
+      .id-lifecycle-cell .ic-value {
+        font-family: "Space Grotesk", monospace; font-weight: 700; color: var(--text-1);
+      }
+      .id-lifecycle-arrow { color: var(--primary); font-weight: 700; text-align: center; }
+
+      /* ─── Free-form page note blocks ─── */
+      .page-note {
+        background: #fff9ed; border: 2px dashed var(--jess-yellow);
+        border-radius: var(--radius-md); padding: 20px 24px; margin: 30px 0;
+      }
+      .page-note h3 {
+        font-size: 14px; font-weight: 800; color: var(--jess-yellow-text);
+        text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;
+      }
+      .page-note p {
+        font-size: 13px; color: var(--text-1); line-height: 1.55; margin-bottom: 12px;
+      }
+      .page-note textarea {
+        width: 100%; min-height: 100px; padding: 12px 14px;
+        border: 1px solid var(--border); border-radius: 6px;
+        font-family: inherit; font-size: 13px; line-height: 1.5;
+        resize: vertical; background: #fff;
+      }
+      .page-note textarea:focus {
+        outline: 2px solid var(--jess-yellow); outline-offset: -2px;
+        border-color: var(--jess-yellow);
+      }
+      .page-note .hint {
+        font-size: 11px; color: var(--text-3); margin-top: 8px; font-style: italic;
+      }
     </style>
   </head>
   <body>
@@ -421,13 +503,13 @@
 
       <!-- ═══ TAB NAV ═══ -->
       <nav class="tab-nav">
-        <button class="tab-btn active" data-tab="big-picture">
-          Big Picture
-          <span class="tab-hint">Full system view · 5 pages</span>
-        </button>
-        <button class="tab-btn" data-tab="drill-down">
+        <button class="tab-btn active" data-tab="drill-down">
           Drill Down
           <span class="tab-hint">Your email, line by line · 13 sections</span>
+        </button>
+        <button class="tab-btn" data-tab="big-picture">
+          Big Picture
+          <span class="tab-hint">Full system synthesis · 5 pages</span>
         </button>
         <button class="tab-btn" data-tab="sign-off-tab">
           Sign &amp; Send
@@ -436,14 +518,107 @@
       </nav>
 
       <!-- ═══ BIG PICTURE TAB ═══ -->
-      <div id="big-picture" class="tab-panel active">
+      <div id="big-picture" class="tab-panel">
         <div class="bp-intro">
-          <strong>Start here.</strong> This tab shows the full workbench as
-          one picture — how the pieces fit together, what the drawer looks
-          like, what the BOL editor does, what the reporting output looks
-          like, and <strong>exactly which fields flow from our system into
-          PCS.</strong> The <em>Drill Down</em> tab then walks through each
-          line of your email paired with the specific screen that delivers it.
+          <strong>The synthesis.</strong> Now that you've walked through
+          each line of your email in <em>Drill Down</em>, this tab shows
+          the whole workbench as one picture — how the pieces fit together,
+          what the drawer looks like, what the BOL editor does, what the
+          reporting output looks like, and <strong>exactly which fields
+          flow from our system into PCS.</strong>
+        </div>
+
+        <!-- ─── LOAD ID LIFECYCLE — PROPOSAL FOR CONFIRMATION ─── -->
+        <div class="id-lifecycle" style="border: 2px solid var(--jess-yellow); background: #fffbf0">
+          <div style="display: inline-block; background: var(--jess-yellow); color: var(--jess-yellow-text); padding: 3px 10px; border-radius: 3px; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px">
+            Proposal · needs your confirmation before we build
+          </div>
+          <h4 style="color: var(--text-1); margin-bottom: 12px">Load ID lifecycle — here's what we're proposing</h4>
+          <p style="font-size: 13px; color: var(--text-2); margin-bottom: 14px; line-height: 1.55">
+            Based on your Load Count sheet, the invoice template you sent,
+            and the PCS screenshots (Load 225902 and BOL #73085), we're
+            proposing the identifier model below. <strong>Before we build
+            any of the workbench on top of this assumption</strong> —
+            please confirm this matches how you think about load numbers
+            day-to-day, or tell us what's different.
+          </p>
+          <p style="font-size: 13px; color: var(--text-2); margin-bottom: 14px; line-height: 1.55">
+            Our proposal: a load can carry up to <strong>three identifiers</strong>
+            at different points in its life, plus a <strong>source badge</strong>
+            telling you where the row came from. The <strong>primary number</strong>
+            on each row is whatever matters most for the current stage.
+          </p>
+          <div class="id-lifecycle-row">
+            <div class="id-lifecycle-stage">1 · Ingested</div>
+            <div class="id-lifecycle-cell active">
+              <div class="ic-label">Source badge + upstream ticket</div>
+              <div class="ic-value"><span class="src-badge src-propx">PropX</span>PX-5840890</div>
+            </div>
+            <div class="id-lifecycle-arrow">→</div>
+            <div class="id-lifecycle-cell hidden-cell">
+              <div class="ic-label">BOL #</div>
+              <div class="ic-value">— not yet submitted</div>
+            </div>
+            <div class="id-lifecycle-arrow">→</div>
+            <div class="id-lifecycle-cell hidden-cell">
+              <div class="ic-label">PCS #</div>
+              <div class="ic-value">— not built yet</div>
+            </div>
+          </div>
+          <div class="id-lifecycle-row">
+            <div class="id-lifecycle-stage">2 · Photo in</div>
+            <div class="id-lifecycle-cell">
+              <div class="ic-label">Source + upstream ticket</div>
+              <div class="ic-value"><span class="src-badge src-propx">PropX</span>PX-5840890</div>
+            </div>
+            <div class="id-lifecycle-arrow">+</div>
+            <div class="id-lifecycle-cell active">
+              <div class="ic-label">BOL # (OCR from Geaux Prop)</div>
+              <div class="ic-value">73085</div>
+            </div>
+            <div class="id-lifecycle-arrow">→</div>
+            <div class="id-lifecycle-cell hidden-cell">
+              <div class="ic-label">PCS #</div>
+              <div class="ic-value">— not built yet</div>
+            </div>
+          </div>
+          <div class="id-lifecycle-row">
+            <div class="id-lifecycle-stage">3 · Built in PCS</div>
+            <div class="id-lifecycle-cell">
+              <div class="ic-label">Source + upstream ticket</div>
+              <div class="ic-value"><span class="src-badge src-propx">PropX</span>PX-5840890</div>
+            </div>
+            <div class="id-lifecycle-arrow">+</div>
+            <div class="id-lifecycle-cell">
+              <div class="ic-label">BOL #</div>
+              <div class="ic-value">73085</div>
+            </div>
+            <div class="id-lifecycle-arrow">+</div>
+            <div class="id-lifecycle-cell active">
+              <div class="ic-label">PCS # (assigned on build)</div>
+              <div class="ic-value" style="color: var(--jess-pink-text); font-weight: 800">PCS #225902</div>
+            </div>
+          </div>
+          <div style="margin-top: 16px; padding: 12px 14px; background: var(--primary-ct); border-radius: 6px; font-size: 12px; line-height: 1.55; color: var(--text-1)">
+            <strong style="color: var(--primary)">What the team sees on each row:</strong>
+            Pre-build — the <em>upstream ticket</em> (the PropX / Logistiq / manual ID) is primary, with the BOL # as a sub-line once submitted.
+            Post-build — the <em>PCS #</em> is primary, with the upstream ticket dropping to a sub-line so Jenny can still cross-reference for payroll.
+          </div>
+          <div style="margin-top: 14px; padding: 12px 14px; background: #fff; border: 1px dashed var(--jess-yellow); border-radius: 6px">
+            <div style="font-size: 11px; font-weight: 800; color: var(--jess-yellow-text); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px">Questions for you — answer in the Sign &amp; Send tab</div>
+            <ol style="font-size: 12px; color: var(--text-1); line-height: 1.65; margin-left: 20px">
+              <li>Does the 3-ID lifecycle above match how your team thinks of a load (upstream ticket → BOL → PCS #)? Any ID missing, or one of these three you don't care about?</li>
+              <li>For pre-build rows, which primary number do <em>you</em> want to see first — the upstream ticket (PropX / Logistiq / manual), the BOL #, or something else?</li>
+              <li>For post-build rows, is "PCS # primary, upstream ticket demoted to sub-line" right? Or do you still scan by PropX ticket even after build?</li>
+              <li>Source badges — any sources missing from the four below? Any you'd want shown differently (colors, labels)?</li>
+            </ol>
+          </div>
+          <div style="margin-top: 12px; display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--text-2)">
+            <span><span class="src-badge src-propx">PropX</span>API feed from PropX (Liberty loads)</span>
+            <span><span class="src-badge src-logistiq">Logistiq</span>Logistiq carrier export (Logistix IQ loads)</span>
+            <span><span class="src-badge src-manual">Manual</span>Typed in by dispatch (JRT + one-offs)</span>
+            <span><span class="src-badge src-jotform">JotForm</span>Driver-submitted via JotForm photo upload</span>
+          </div>
         </div>
 
         <!-- ─── BP-1: FULL WORKBENCH GRID ─── -->
@@ -479,15 +654,15 @@
                 </div>
               </div>
               <div style="padding: 14px 18px">
-                <div class="wb-row"><div class="wb-stripe stripe-green"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1042</div><div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div></div><div><div>Sarah Lopez</div><div class="wb-cell-sub">Liberty · TRK-1456</div></div><div><div class="wb-cell-mono">BOL-74316</div><div class="wb-cell-sub wb-cell-mono">TKT-81316</div></div><div><div>24.50 t</div><div class="wb-cell-sub">OCR ✓</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-green" style="margin-bottom:0">100% · Pending</span></div><div><button class="wb-btn btn-confirm btn-sm">Confirm</button></div></div></div>
-                <div class="wb-row"><div class="wb-stripe stripe-orange"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1051</div><div class="wb-cell-sub">Spectre Crescent Simul Diamond H</div></div><div><div>Mike Johnson</div><div class="wb-cell-sub">Liberty · TRK-1511</div></div><div><div class="wb-cell-mono">BOL-74329</div><div class="wb-cell-sub wb-cell-mono">TKT-81329</div></div><div><div>24.00 t</div><div class="wb-cell-sub" style="color:var(--jess-orange-text)">! rate</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-orange" style="margin-bottom:0">Needs Rate · 82%</span></div><div><button class="wb-btn btn-primary btn-sm">Resolve</button></div></div></div>
-                <div class="wb-row"><div class="wb-stripe stripe-green"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1061</div><div class="wb-cell-sub">HV Nighthawk Rose City Bledsoe</div></div><div><div>Kevin Park</div><div class="wb-cell-sub">Logistix · TRK-1466</div></div><div><div class="wb-cell-mono">BOL-74342</div><div class="wb-cell-sub wb-cell-mono">TKT-81342</div></div><div><div>24.50 t</div><div class="wb-cell-sub">OCR ✓</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-green" style="margin-bottom:0">100% · Pending</span></div><div><button class="wb-btn btn-confirm btn-sm">Confirm</button></div></div></div>
-                <div class="wb-row"><div class="wb-stripe stripe-purple"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1034</div><div class="wb-cell-sub">Apache Formentera Wrangler</div></div><div><div>Dan Reyes</div><div class="wb-cell-sub">JRT · TRK-1453</div></div><div><div class="wb-cell-mono" style="color:var(--jess-purple-text)">BOL-74301</div><div class="wb-cell-sub wb-cell-mono" style="color:var(--jess-purple-text)">! ticket</div></div><div><div>24.25 t</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-purple" style="margin-bottom:0">Missing Ticket · 64%</span></div><div><button class="wb-btn btn-primary btn-sm">Resolve</button></div></div></div>
-                <div class="wb-row"><div class="wb-stripe stripe-yellow"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1058</div><div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div></div><div><div>Sarah Lopez</div><div class="wb-cell-sub">Liberty · TRK-1456</div></div><div><div class="wb-cell-mono">BOL-74339</div><div class="wb-cell-sub wb-cell-mono">TKT-81339</div></div><div>24.25 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-yellow" style="margin-bottom:0">Ready · Scout</span></div><div><button class="wb-btn btn-primary btn-sm">Build + Duplicate</button></div></div></div>
-                <div class="wb-row"><div class="wb-stripe stripe-cyan"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1056</div><div class="wb-cell-sub">HV Falcon Expand CHK LA MIN</div></div><div><div style="color:var(--jess-cyan-text)">! driver</div><div class="wb-cell-sub">Logistix · TRK-1462</div></div><div><div class="wb-cell-mono">BOL-74338</div><div class="wb-cell-sub wb-cell-mono">TKT-81338</div></div><div><div>23.80 t</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-cyan" style="margin-bottom:0">Missing Driver · 71%</span></div><div><button class="wb-btn btn-primary btn-sm">Resolve</button></div></div></div>
-                <div class="wb-row"><div class="wb-stripe stripe-yellow"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1039</div><div class="wb-cell-sub">Dynasty DPC Dallas 10</div></div><div><div>Amy Chen</div><div class="wb-cell-sub">Logistix · TRK-1504</div></div><div><div class="wb-cell-mono">BOL-74308</div><div class="wb-cell-sub wb-cell-mono">TKT-81308</div></div><div>24.50 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-yellow" style="margin-bottom:0">Ready · Steph</span></div><div><button class="wb-btn btn-primary btn-sm">Build + Duplicate</button></div></div></div>
-                <div class="wb-row"><div class="wb-stripe stripe-pink"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1019</div><div class="wb-cell-sub">Titan DNR Chili 117X</div></div><div><div>Tom Wilson</div><div class="wb-cell-sub">Liberty · TRK-1501</div></div><div><div class="wb-cell-mono">BOL-74294</div><div class="wb-cell-sub wb-cell-mono">TKT-81294</div></div><div>24.75 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-pink" style="margin-bottom:0">Completed</span><div class="wb-cell-sub" style="margin-top:4px">PCS 198-04211</div></div><div><button class="wb-btn btn-ghost btn-sm">View</button></div></div></div>
-                <div class="wb-row"><div class="wb-stripe stripe-pink"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1022</div><div class="wb-cell-sub">Comstock Nabors 5HU</div></div><div><div>Jose Ramirez</div><div class="wb-cell-sub">Logistix · TRK-1488</div></div><div><div class="wb-cell-mono">BOL-74297</div><div class="wb-cell-sub wb-cell-mono">TKT-81297</div></div><div>24.30 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-pink" style="margin-bottom:0">Completed</span><div class="wb-cell-sub" style="margin-top:4px">PCS 198-04214</div></div><div><button class="wb-btn btn-ghost btn-sm">View</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-green"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary">PX-5840890</span></div><div class="load-id-secondary">BOL 74316</div><div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div></div><div><div>Sarah Lopez</div><div class="wb-cell-sub">Liberty · TRK-1456</div></div><div><div class="wb-cell-mono">BOL-74316</div><div class="wb-cell-sub wb-cell-mono">TKT-81316</div></div><div><div>24.50 t</div><div class="wb-cell-sub">OCR ✓</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-green" style="margin-bottom:0">100% · Pending</span></div><div><button class="wb-btn btn-confirm btn-sm">Confirm</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-orange"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary">PX-5840891</span></div><div class="load-id-secondary">BOL 74329</div><div class="wb-cell-sub">Spectre Crescent Simul Diamond H</div></div><div><div>Mike Johnson</div><div class="wb-cell-sub">Liberty · TRK-1511</div></div><div><div class="wb-cell-mono">BOL-74329</div><div class="wb-cell-sub wb-cell-mono">TKT-81329</div></div><div><div>24.00 t</div><div class="wb-cell-sub" style="color:var(--jess-orange-text)">! rate</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-orange" style="margin-bottom:0">Needs Rate · 82%</span></div><div><button class="wb-btn btn-primary btn-sm">Resolve</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-green"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-logistiq">Logistiq</span><span class="load-id-primary">LIQ-7822</span></div><div class="load-id-secondary">BOL 74342</div><div class="wb-cell-sub">HV Nighthawk Rose City Bledsoe</div></div><div><div>Kevin Park</div><div class="wb-cell-sub">Logistix · TRK-1466</div></div><div><div class="wb-cell-mono">BOL-74342</div><div class="wb-cell-sub wb-cell-mono">TKT-81342</div></div><div><div>24.50 t</div><div class="wb-cell-sub">OCR ✓</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-green" style="margin-bottom:0">100% · Pending</span></div><div><button class="wb-btn btn-confirm btn-sm">Confirm</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-purple"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-manual">Manual</span><span class="load-id-primary">M-1034</span></div><div class="load-id-secondary">no ticket yet · BOL 74301</div><div class="wb-cell-sub">Apache Formentera Wrangler</div></div><div><div>Dan Reyes</div><div class="wb-cell-sub">JRT · TRK-1453</div></div><div><div class="wb-cell-mono" style="color:var(--jess-purple-text)">BOL-74301</div><div class="wb-cell-sub wb-cell-mono" style="color:var(--jess-purple-text)">! ticket</div></div><div><div>24.25 t</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-purple" style="margin-bottom:0">Missing Ticket · 64%</span></div><div><button class="wb-btn btn-primary btn-sm">Resolve</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-yellow"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary">PX-5840893</span></div><div class="load-id-secondary">BOL 74339 · confirmed</div><div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div></div><div><div>Sarah Lopez</div><div class="wb-cell-sub">Liberty · TRK-1456</div></div><div><div class="wb-cell-mono">BOL-74339</div><div class="wb-cell-sub wb-cell-mono">TKT-81339</div></div><div>24.25 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-yellow" style="margin-bottom:0">Ready · Scout</span></div><div><button class="wb-btn btn-primary btn-sm">Build + Duplicate</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-cyan"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-logistiq">Logistiq</span><span class="load-id-primary">LIQ-7825</span></div><div class="load-id-secondary">BOL 74338</div><div class="wb-cell-sub">HV Falcon Expand CHK LA MIN</div></div><div><div style="color:var(--jess-cyan-text)">! driver</div><div class="wb-cell-sub">Logistix · TRK-1462</div></div><div><div class="wb-cell-mono">BOL-74338</div><div class="wb-cell-sub wb-cell-mono">TKT-81338</div></div><div><div>23.80 t</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-cyan" style="margin-bottom:0">Missing Driver · 71%</span></div><div><button class="wb-btn btn-primary btn-sm">Resolve</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-yellow"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-logistiq">Logistiq</span><span class="load-id-primary">LIQ-7819</span></div><div class="load-id-secondary">BOL 74308 · confirmed</div><div class="wb-cell-sub">Dynasty DPC Dallas 10</div></div><div><div>Amy Chen</div><div class="wb-cell-sub">Logistix · TRK-1504</div></div><div><div class="wb-cell-mono">BOL-74308</div><div class="wb-cell-sub wb-cell-mono">TKT-81308</div></div><div>24.50 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-yellow" style="margin-bottom:0">Ready · Steph</span></div><div><button class="wb-btn btn-primary btn-sm">Build + Duplicate</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-pink"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary pcs">PCS #225914</span></div><div class="load-id-secondary">PX-5840881 · BOL 74294</div><div class="wb-cell-sub">Titan DNR Chili 117X</div></div><div><div>Tom Wilson</div><div class="wb-cell-sub">Liberty · TRK-1501</div></div><div><div class="wb-cell-mono">BOL-74294</div><div class="wb-cell-sub wb-cell-mono">TKT-81294</div></div><div>24.75 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-pink" style="margin-bottom:0">Completed</span></div><div><button class="wb-btn btn-ghost btn-sm">View</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-pink"></div><div class="wb-row-body"><input type="checkbox" /><div><div><span class="src-badge src-logistiq">Logistiq</span><span class="load-id-primary pcs">PCS #225918</span></div><div class="load-id-secondary">LIQ-7815 · BOL 74297</div><div class="wb-cell-sub">Comstock Nabors 5HU</div></div><div><div>Jose Ramirez</div><div class="wb-cell-sub">Logistix · TRK-1488</div></div><div><div class="wb-cell-mono">BOL-74297</div><div class="wb-cell-sub wb-cell-mono">TKT-81297</div></div><div>24.30 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-pink" style="margin-bottom:0">Completed</span></div><div><button class="wb-btn btn-ghost btn-sm">View</button></div></div></div>
               </div>
               <div style="background: var(--bg-lowest); padding: 10px 18px; font-size: 11px; color: var(--text-3); border-top: 1px solid var(--border); text-align: right">
                 Showing 9 of 60 rows · Sorted by stage-changed · Per-handler color stripe left edge
@@ -521,7 +696,7 @@
               <div class="wb-stripe stripe-orange"></div>
               <div class="wb-row-body">
                 <input type="checkbox" />
-                <div><div class="wb-cell-title">L-20260417-1051</div><div class="wb-cell-sub">Spectre Crescent Simul Diamond H</div></div>
+                <div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary">PX-5840891</span></div><div class="load-id-secondary">BOL 74329</div><div class="wb-cell-sub">Spectre Crescent Simul Diamond H</div></div>
                 <div><div>Mike Johnson</div><div class="wb-cell-sub">Liberty · TRK-1511</div></div>
                 <div><div class="wb-cell-mono">BOL-74329</div><div class="wb-cell-sub wb-cell-mono">TKT-81329</div></div>
                 <div><div>24.00 t</div><div class="wb-cell-sub" style="color:var(--jess-orange-text)">! rate</div></div>
@@ -535,8 +710,8 @@
               <div class="full-drawer-head">
                 <span class="legend-chip chip-orange" style="margin-bottom:0">Needs Rate · 82%</span>
                 <div>
-                  <div style="font-weight:700">L-20260417-1051</div>
-                  <div style="font-size:12px;color:var(--text-3)">Spectre Crescent Simul Diamond H · Mike Johnson · Liberty</div>
+                  <div style="font-weight:700"><span class="src-badge src-propx">PropX</span>PX-5840891 · BOL 74329</div>
+                  <div style="font-size:12px;color:var(--text-3)">Spectre Crescent Simul Diamond H · Mike Johnson · Liberty · will be PCS # on build</div>
                 </div>
                 <div style="margin-left:auto;display:flex;gap:8px">
                   <button class="wb-btn btn-ghost btn-sm">Flag back</button>
@@ -824,15 +999,32 @@
           </div>
         </section>
 
+        <!-- Free-form notes for Big Picture -->
+        <div class="page-note">
+          <h3>Anything off on the Big Picture? Tell us here.</h3>
+          <p>
+            If anything in the five sections above doesn't feel right — the
+            grid layout, the drawer, how BOL editing works, the reporting
+            shape, or the PCS passthrough mapping — capture it in this box.
+            It lands in the signed PDF and the email to the Lexcom team.
+          </p>
+          <textarea
+            id="bp-notes"
+            data-q="big-picture-free-form"
+            placeholder="e.g. 'The passthrough mapping row for Bill Miles doesn't include the loader-to-well calc we agreed on in March…' or 'The drawer should also show the rate history — add it before you build.'"
+          ></textarea>
+          <div class="hint">Optional — skip if everything looks right.</div>
+        </div>
+
         <div style="text-align: center; margin: 40px 0 20px; font-size: 13px; color: var(--text-3)">
-          Next: walk through each line of your email →
-          <a href="#" onclick="switchTab('drill-down');return false;" style="color: var(--primary); font-weight: 700">Open the Drill Down tab</a>
+          Ready to sign? →
+          <a href="#" onclick="switchTab('sign-off-tab');return false;" style="color: var(--primary); font-weight: 700">Open the Sign &amp; Send tab</a>
         </div>
       </div>
       <!-- ═══ /BIG PICTURE TAB ═══ -->
 
       <!-- ═══ DRILL DOWN TAB ═══ -->
-      <div id="drill-down" class="tab-panel">
+      <div id="drill-down" class="tab-panel active">
         <!-- TOC -->
         <nav class="toc">
         <h3>What you'll walk through</h3>
@@ -902,7 +1094,7 @@
             <div class="wb-stripe stripe-green"></div>
             <div class="wb-row-body">
               <input type="checkbox" />
-              <div><div class="wb-cell-title">L-20260417-1042</div><div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div></div>
+              <div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary">PX-5840890</span></div><div class="load-id-secondary">BOL 74316</div><div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div></div>
               <div><div>Sarah Lopez</div><div class="wb-cell-sub">Liberty · TRK-1456</div></div>
               <div><div class="wb-cell-mono">BOL-74316</div><div class="wb-cell-sub wb-cell-mono">TKT-81316</div></div>
               <div><div>24.50 t</div><div class="wb-cell-sub">OCR ✓</div></div>
@@ -1019,7 +1211,7 @@
             <div class="wb-stripe stripe-orange"></div>
             <div class="wb-row-body">
               <input type="checkbox" />
-              <div><div class="wb-cell-title">L-20260417-1051</div><div class="wb-cell-sub">Spectre Crescent Simul Diamond H</div></div>
+              <div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary">PX-5840891</span></div><div class="load-id-secondary">BOL 74329</div><div class="wb-cell-sub">Spectre Crescent Simul Diamond H</div></div>
               <div><div>Mike Johnson</div><div class="wb-cell-sub">Liberty · TRK-1511</div></div>
               <div><div class="wb-cell-mono">BOL-74329</div><div class="wb-cell-sub wb-cell-mono">TKT-81329</div></div>
               <div><div>24.00 t</div><div class="wb-cell-sub" style="color:var(--jess-orange-text)">! rate missing</div></div>
@@ -1032,7 +1224,7 @@
             <div class="wb-stripe stripe-purple"></div>
             <div class="wb-row-body">
               <input type="checkbox" />
-              <div><div class="wb-cell-title">L-20260417-1034</div><div class="wb-cell-sub">Apache Formentera Wrangler</div></div>
+              <div><div><span class="src-badge src-manual">Manual</span><span class="load-id-primary">M-1034</span></div><div class="load-id-secondary">no ticket yet · BOL 74301</div><div class="wb-cell-sub">Apache Formentera Wrangler</div></div>
               <div><div>Dan Reyes</div><div class="wb-cell-sub">JRT · TRK-1453</div></div>
               <div><div class="wb-cell-mono" style="color:var(--jess-purple-text)">BOL-74301</div><div class="wb-cell-sub wb-cell-mono" style="color:var(--jess-purple-text)">! ticket not arrived</div></div>
               <div><div>24.25 t</div></div>
@@ -1045,7 +1237,7 @@
             <div class="wb-stripe stripe-cyan"></div>
             <div class="wb-row-body">
               <input type="checkbox" />
-              <div><div class="wb-cell-title">L-20260417-1056</div><div class="wb-cell-sub">HV Falcon Expand CHK LA MIN</div></div>
+              <div><div><span class="src-badge src-logistiq">Logistiq</span><span class="load-id-primary">LIQ-7825</span></div><div class="load-id-secondary">BOL 74338</div><div class="wb-cell-sub">HV Falcon Expand CHK LA MIN</div></div>
               <div><div style="color:var(--jess-cyan-text)">! driver missing</div><div class="wb-cell-sub">Logistix IQ · TRK-1462</div></div>
               <div><div class="wb-cell-mono">BOL-74338</div><div class="wb-cell-sub wb-cell-mono">TKT-81338</div></div>
               <div><div>23.80 t</div></div>
@@ -1147,7 +1339,7 @@
             "<em>More options than confirm or reject — Option to color code and send to - missing ticket tab ect</em>"
           </div>
           <div class="modal-sketch">
-            <h3>Resolve L-20260417-1051</h3>
+            <h3>Resolve <span class="src-badge src-propx">PropX</span>PX-5840891 (BOL 74329)</h3>
             <div class="load-sub">Spectre Crescent Simul Diamond H · Mike Johnson · BOL-74329 · 24.00 t</div>
             <div style="font-size:12px;color:var(--text-2);line-height:1.6">Matcher found a load but flagged it. Pick what to do:</div>
             <div class="modal-actions">
@@ -1241,7 +1433,7 @@
             <div class="wb-stripe stripe-yellow"></div>
             <div class="wb-row-body">
               <input type="checkbox" />
-              <div><div class="wb-cell-title">L-20260417-1042</div><div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div></div>
+              <div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary">PX-5840890</span></div><div class="load-id-secondary">BOL 74316</div><div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div></div>
               <div><div>Sarah Lopez</div><div class="wb-cell-sub">Liberty · TRK-1456</div></div>
               <div><div class="wb-cell-mono">BOL-74316</div><div class="wb-cell-sub wb-cell-mono">TKT-81316</div></div>
               <div>24.50 t</div>
@@ -1255,7 +1447,7 @@
             <div class="wb-stripe stripe-pink"></div>
             <div class="wb-row-body">
               <input type="checkbox" />
-              <div><div class="wb-cell-title">L-20260417-1019</div><div class="wb-cell-sub">Titan DNR Chili 117X</div></div>
+              <div><div><span class="src-badge src-propx">PropX</span><span class="load-id-primary pcs">PCS #225914</span></div><div class="load-id-secondary">PX-5840881 · BOL 74294</div><div class="wb-cell-sub">Titan DNR Chili 117X</div></div>
               <div><div>Tom Wilson</div><div class="wb-cell-sub">Liberty · TRK-1501</div></div>
               <div><div class="wb-cell-mono">BOL-74294</div><div class="wb-cell-sub wb-cell-mono">TKT-81294</div></div>
               <div>24.75 t</div>
@@ -1405,6 +1597,29 @@
         </div>
       </section>
 
+      <!-- Free-form notes for Drill Down -->
+      <div class="page-note">
+        <h3>Anything off across the 13 sections? Tell us here.</h3>
+        <p>
+          If a line of your email maps to something different than what you
+          see in the mockup above — or we missed a nuance entirely — capture
+          it in this box. Gets picked up in the signed PDF and the email to
+          the Lexcom team so we can address it <strong>before</strong> we
+          build on top of a wrong assumption.
+        </p>
+        <textarea
+          id="dd-notes"
+          data-q="drill-down-free-form"
+          placeholder="e.g. 'Section 4 (override) needs to also cover the case where the photo came in after the load was already yellow — the override path should un-yellow it.' or 'The pink state should split into built-manual vs auto-pushed for Phase 2 distinction.'"
+        ></textarea>
+        <div class="hint">Optional — skip if everything looks right. Use the per-section checklist on the Sign &amp; Send tab for lightweight tweaks.</div>
+      </div>
+
+      <div style="text-align: center; margin: 40px 0 20px; font-size: 13px; color: var(--text-3)">
+        Next: see the synthesis →
+        <a href="#" onclick="switchTab('big-picture');return false;" style="color: var(--primary); font-weight: 700">Open the Big Picture tab</a>
+      </div>
+
       </div>
       <!-- ═══ /DRILL DOWN TAB ═══ -->
 
@@ -1430,6 +1645,8 @@
 
         <h3 style="font-size:16px;margin-top:16px;margin-bottom:4px">Checklist</h3>
         <ul class="signoff-checklist" id="checklist">
+          <li data-key="id-lifecycle"><input type="checkbox" id="ck0" /><label for="ck0">Load ID lifecycle (Big Picture) — the 3-ID model (upstream ticket → BOL → PCS #) matches how we think of loads<input class="tweak-input" placeholder="Anything to change about the ID model?" /></label></li>
+          <li data-key="source-badges"><input type="checkbox" id="ck0b" /><label for="ck0b">Source badges (PropX / Logistiq / Manual / JotForm) cover all the places loads come from<input class="tweak-input" placeholder="Missing source? Different label?" /></label></li>
           <li data-key="color"><input type="checkbox" id="ck1" /><label for="ck1">Color language (Section 1) matches the sheet I use today<input class="tweak-input" placeholder="Anything to tweak?" /></label></li>
           <li data-key="clear"><input type="checkbox" id="ck2" /><label for="ck2">Every-load-needs-a-click (Section 2) is right<input class="tweak-input" placeholder="Anything to tweak?" /></label></li>
           <li data-key="greenflow"><input type="checkbox" id="ck3" /><label for="ck3">Green → Yellow flow (Section 3) is what I want<input class="tweak-input" placeholder="Anything to tweak?" /></label></li>
@@ -1446,6 +1663,8 @@
         </ul>
 
         <h3 style="font-size:16px;margin-top:20px;margin-bottom:10px">Open questions — quick answers unblock specific pieces</h3>
+        <div class="field-block" style="background:#fffbf0;border:1px dashed var(--jess-yellow)"><div class="q" style="color:var(--jess-yellow-text)">A · Load ID lifecycle — for pre-build rows, which primary number do you want to see (upstream ticket / BOL # / internal ref)? For post-build, is PCS # primary?</div><textarea data-q="id-primary" placeholder="Your answer…"></textarea></div>
+        <div class="field-block" style="background:#fffbf0;border:1px dashed var(--jess-yellow)"><div class="q" style="color:var(--jess-yellow-text)">B · Source badges — anything missing from PropX / Logistiq / Manual / JotForm? Any you'd rename?</div><textarea data-q="source-badges" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">1 · Green → Yellow confirm — only you, or any dispatcher?</div><textarea data-q="confirm-who" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">2 · Pink = "built" vs "pushed" — visual difference, or same pink?</div><textarea data-q="pink-split" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">3 · Override of auto-validated — back to green or to needs-review?</div><textarea data-q="overrides" placeholder="Your answer…"></textarea></div>
@@ -1516,10 +1735,16 @@
             note: tweak && tweak.value ? tweak.value.trim() : "",
           };
         });
-        const answers = [...document.querySelectorAll("[data-q]")].map((ta) => ({
+        const answers = [...document.querySelectorAll(".field-block [data-q]")].map((ta) => ({
           question: ta.closest(".field-block").querySelector(".q").textContent.trim(),
           answer: ta.value.trim(),
         }));
+        // Page-level free-form notes (Drill Down, Big Picture)
+        const pageNotes = [...document.querySelectorAll(".page-note [data-q]")].map((ta) => ({
+          question: ta.closest(".page-note").querySelector("h3").textContent.trim(),
+          answer: ta.value.trim(),
+        })).filter(n => n.answer.length > 0);
+        answers.push(...pageNotes);
         try {
           const r = await fetch("/api/signoff", {
             method: "POST",
