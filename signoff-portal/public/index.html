@@ -270,6 +270,134 @@
       .submit-result.err { display: block; background: rgba(239,68,68,0.2); border: 1px solid #ef4444; }
 
       .section-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+
+      /* ─── Tabs ─────────────────────────────────────────── */
+      .tab-nav {
+        display: flex; gap: 2px; margin: 8px 0 32px;
+        background: var(--bg-lowest); border-radius: var(--radius-md);
+        padding: 4px; border: 1px solid var(--border);
+        position: sticky; top: 0; z-index: 10;
+      }
+      .tab-btn {
+        flex: 1; padding: 12px 20px; border: none; background: transparent;
+        font-family: "Plus Jakarta Sans", sans-serif; font-size: 14px; font-weight: 700;
+        color: var(--text-3); cursor: pointer; border-radius: var(--radius-sm);
+        letter-spacing: 0.02em;
+        transition: all 150ms;
+      }
+      .tab-btn:hover { background: rgba(109, 40, 217, 0.06); color: var(--text-2); }
+      .tab-btn.active { background: var(--primary); color: #fff; box-shadow: 0 2px 6px rgba(109, 40, 217, 0.25); }
+      .tab-btn .tab-hint { display: block; font-size: 10px; font-weight: 500;
+        opacity: 0.75; margin-top: 2px; letter-spacing: 0.04em; text-transform: uppercase; }
+      .tab-panel { display: none; }
+      .tab-panel.active { display: block; }
+
+      /* ─── Big Picture mockups ─────────────────────────── */
+      .bp-intro {
+        background: var(--primary-ct); border-left: 4px solid var(--primary);
+        padding: 16px 20px; border-radius: var(--radius-sm);
+        margin-bottom: 28px; font-size: 14px; line-height: 1.6; color: var(--text-1);
+      }
+      .bp-intro strong { color: var(--primary); }
+
+      .full-grid {
+        background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md);
+        overflow: hidden;
+      }
+      .full-grid-header {
+        background: var(--bg-lowest); padding: 12px 18px;
+        border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; gap: 12px;
+        font-family: "Plus Jakarta Sans", sans-serif; font-weight: 700; font-size: 14px;
+      }
+      .full-grid-header .count { font-size: 11px; color: var(--text-3); font-weight: 500; margin-left: auto; }
+
+      /* Passthrough mapping */
+      .passthrough-grid {
+        display: grid;
+        grid-template-columns: 1fr 36px 1fr;
+        gap: 10px 14px; align-items: start;
+        font-size: 13px;
+      }
+      .passthrough-header {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 11px; font-weight: 800; color: var(--primary);
+        text-transform: uppercase; letter-spacing: 0.08em;
+        padding-bottom: 6px; border-bottom: 2px solid var(--primary);
+      }
+      .pt-esx {
+        background: var(--primary-ct); border-radius: 6px; padding: 8px 12px;
+      }
+      .pt-esx .pt-field { font-family: "Space Grotesk", monospace; font-size: 12px; color: var(--primary); font-weight: 700; }
+      .pt-esx .pt-value { font-size: 12px; color: var(--text-1); margin-top: 2px; }
+      .pt-arrow { color: var(--primary); text-align: center; font-weight: 800; padding-top: 8px; }
+      .pt-pcs {
+        background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px;
+      }
+      .pt-pcs .pt-field { font-family: "Space Grotesk", monospace; font-size: 12px; color: var(--text-2); font-weight: 700; }
+      .pt-pcs .pt-value { font-size: 12px; color: var(--text-1); margin-top: 2px; }
+      .pt-pcs .pt-source { font-size: 10px; color: var(--text-3); font-style: italic; margin-top: 4px; }
+
+      .pcs-screenshot-ref {
+        background: #fff; border: 1px dashed var(--primary); border-radius: var(--radius-sm);
+        padding: 12px 14px; margin: 14px 0;
+        font-size: 12px; color: var(--text-2); line-height: 1.55;
+      }
+      .pcs-screenshot-ref strong { color: var(--primary); }
+
+      /* Full drawer mockup */
+      .full-drawer {
+        background: var(--bg-low); border: 2px solid var(--primary); border-radius: var(--radius-md);
+        padding: 20px; margin-top: 8px;
+      }
+      .full-drawer-head {
+        display: flex; align-items: center; gap: 14px; margin-bottom: 16px;
+        padding-bottom: 12px; border-bottom: 1px solid var(--border);
+      }
+      .full-drawer-body {
+        display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;
+      }
+      .drawer-photo {
+        background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm);
+        padding: 14px; min-height: 280px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+      }
+      .drawer-photo .photo-stub {
+        width: 100%; max-width: 280px; aspect-ratio: 3/4;
+        background: #fafafa; border: 1px solid var(--border); border-radius: 4px;
+        display: flex; flex-direction: column; padding: 20px; gap: 8px;
+        font-size: 10px; color: var(--text-3);
+      }
+      .drawer-photo .photo-stub .bol-header { font-weight: 800; font-size: 14px; color: var(--text-1); text-align: center; }
+      .drawer-photo .photo-stub .bol-field { display: flex; justify-content: space-between; font-family: "Space Grotesk", monospace; }
+      .drawer-photo .photo-stub .bol-sig { margin-top: auto; border-top: 1px solid var(--border); padding-top: 8px; color: var(--primary); font-style: italic; text-align: center; }
+
+      .drawer-fields {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+      }
+      .drawer-field {
+        background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px;
+      }
+      .drawer-field-label {
+        font-size: 10px; font-weight: 700; color: var(--text-3);
+        text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
+      }
+      .drawer-field-value { font-size: 14px; color: var(--text-1); font-weight: 600; }
+      .drawer-field-ocr {
+        font-size: 11px; color: var(--text-3); font-family: "Space Grotesk", monospace;
+        margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border);
+      }
+      .drawer-field-ocr.mismatch { color: var(--jess-orange-text); font-weight: 600; }
+      .drawer-field-ocr .ocr-label { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; margin-right: 4px; color: var(--text-3); }
+
+      .drawer-flags {
+        grid-column: 1 / -1;
+        background: var(--jess-yellow-bg); border: 1px solid var(--jess-yellow);
+        border-radius: 6px; padding: 12px 14px; margin-top: 4px;
+        font-size: 12px; color: var(--jess-yellow-text); line-height: 1.6;
+      }
+      .drawer-flags strong { display: block; font-size: 10px; text-transform: uppercase;
+        letter-spacing: 0.08em; margin-bottom: 4px; font-weight: 800; }
     </style>
   </head>
   <body>
@@ -291,8 +419,422 @@
         </div>
       </header>
 
-      <!-- TOC -->
-      <nav class="toc">
+      <!-- ═══ TAB NAV ═══ -->
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="big-picture">
+          Big Picture
+          <span class="tab-hint">Full system view · 5 pages</span>
+        </button>
+        <button class="tab-btn" data-tab="drill-down">
+          Drill Down
+          <span class="tab-hint">Your email, line by line · 13 sections</span>
+        </button>
+        <button class="tab-btn" data-tab="sign-off-tab">
+          Sign &amp; Send
+          <span class="tab-hint">Timestamped PDF to both parties</span>
+        </button>
+      </nav>
+
+      <!-- ═══ BIG PICTURE TAB ═══ -->
+      <div id="big-picture" class="tab-panel active">
+        <div class="bp-intro">
+          <strong>Start here.</strong> This tab shows the full workbench as
+          one picture — how the pieces fit together, what the drawer looks
+          like, what the BOL editor does, what the reporting output looks
+          like, and <strong>exactly which fields flow from our system into
+          PCS.</strong> The <em>Drill Down</em> tab then walks through each
+          line of your email paired with the specific screen that delivers it.
+        </div>
+
+        <!-- ─── BP-1: FULL WORKBENCH GRID ─── -->
+        <section class="frame">
+          <header class="frame-header">
+            <div class="frame-title">BP-1 · Your daily workbench view</div>
+            <div class="frame-caption">
+              One page replaces the current validation / dispatch / BOL
+              split. Filters along the top. Every row shows its state color,
+              handler stripe, BOL + ticket, weight, photo, and the primary
+              action for wherever it is in the flow.
+            </div>
+          </header>
+          <div class="frame-body">
+            <div class="full-grid">
+              <div class="full-grid-header">
+                <span>Workbench · 60 active loads</span>
+                <span class="count">Wed 04/17 · logged in as Jessica</span>
+              </div>
+              <div style="padding: 12px 18px; border-bottom: 1px solid var(--border); background: #fafafa">
+                <div class="filter-bar" style="margin-bottom: 0; padding: 8px">
+                  <button class="filter-pill active">Needs Review <span class="count">18</span></button>
+                  <button class="filter-pill">Ready to Build <span class="count">12</span></button>
+                  <button class="filter-pill">Mine <span class="count">7</span></button>
+                  <button class="filter-pill">Missing Ticket <span class="count">3</span></button>
+                  <button class="filter-pill">Missing Driver <span class="count">1</span></button>
+                  <button class="filter-pill">Needs Rate <span class="count">4</span></button>
+                  <button class="filter-pill">Built Today <span class="count">15</span></button>
+                  <button class="filter-pill">All</button>
+                  <div class="filter-divider"></div>
+                  <span class="filter-label">Date</span><input class="filter-input" value="04/11 – 04/17" />
+                  <span class="filter-label">Truck</span><input class="filter-input" placeholder="e.g. 1456" />
+                </div>
+              </div>
+              <div style="padding: 14px 18px">
+                <div class="wb-row"><div class="wb-stripe stripe-green"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1042</div><div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div></div><div><div>Sarah Lopez</div><div class="wb-cell-sub">Liberty · TRK-1456</div></div><div><div class="wb-cell-mono">BOL-74316</div><div class="wb-cell-sub wb-cell-mono">TKT-81316</div></div><div><div>24.50 t</div><div class="wb-cell-sub">OCR ✓</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-green" style="margin-bottom:0">100% · Pending</span></div><div><button class="wb-btn btn-confirm btn-sm">Confirm</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-orange"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1051</div><div class="wb-cell-sub">Spectre Crescent Simul Diamond H</div></div><div><div>Mike Johnson</div><div class="wb-cell-sub">Liberty · TRK-1511</div></div><div><div class="wb-cell-mono">BOL-74329</div><div class="wb-cell-sub wb-cell-mono">TKT-81329</div></div><div><div>24.00 t</div><div class="wb-cell-sub" style="color:var(--jess-orange-text)">! rate</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-orange" style="margin-bottom:0">Needs Rate · 82%</span></div><div><button class="wb-btn btn-primary btn-sm">Resolve</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-green"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1061</div><div class="wb-cell-sub">HV Nighthawk Rose City Bledsoe</div></div><div><div>Kevin Park</div><div class="wb-cell-sub">Logistix · TRK-1466</div></div><div><div class="wb-cell-mono">BOL-74342</div><div class="wb-cell-sub wb-cell-mono">TKT-81342</div></div><div><div>24.50 t</div><div class="wb-cell-sub">OCR ✓</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-green" style="margin-bottom:0">100% · Pending</span></div><div><button class="wb-btn btn-confirm btn-sm">Confirm</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-purple"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1034</div><div class="wb-cell-sub">Apache Formentera Wrangler</div></div><div><div>Dan Reyes</div><div class="wb-cell-sub">JRT · TRK-1453</div></div><div><div class="wb-cell-mono" style="color:var(--jess-purple-text)">BOL-74301</div><div class="wb-cell-sub wb-cell-mono" style="color:var(--jess-purple-text)">! ticket</div></div><div><div>24.25 t</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-purple" style="margin-bottom:0">Missing Ticket · 64%</span></div><div><button class="wb-btn btn-primary btn-sm">Resolve</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-yellow"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1058</div><div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div></div><div><div>Sarah Lopez</div><div class="wb-cell-sub">Liberty · TRK-1456</div></div><div><div class="wb-cell-mono">BOL-74339</div><div class="wb-cell-sub wb-cell-mono">TKT-81339</div></div><div>24.25 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-yellow" style="margin-bottom:0">Ready · Scout</span></div><div><button class="wb-btn btn-primary btn-sm">Build + Duplicate</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-cyan"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1056</div><div class="wb-cell-sub">HV Falcon Expand CHK LA MIN</div></div><div><div style="color:var(--jess-cyan-text)">! driver</div><div class="wb-cell-sub">Logistix · TRK-1462</div></div><div><div class="wb-cell-mono">BOL-74338</div><div class="wb-cell-sub wb-cell-mono">TKT-81338</div></div><div><div>23.80 t</div></div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-cyan" style="margin-bottom:0">Missing Driver · 71%</span></div><div><button class="wb-btn btn-primary btn-sm">Resolve</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-yellow"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1039</div><div class="wb-cell-sub">Dynasty DPC Dallas 10</div></div><div><div>Amy Chen</div><div class="wb-cell-sub">Logistix · TRK-1504</div></div><div><div class="wb-cell-mono">BOL-74308</div><div class="wb-cell-sub wb-cell-mono">TKT-81308</div></div><div>24.50 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-yellow" style="margin-bottom:0">Ready · Steph</span></div><div><button class="wb-btn btn-primary btn-sm">Build + Duplicate</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-pink"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1019</div><div class="wb-cell-sub">Titan DNR Chili 117X</div></div><div><div>Tom Wilson</div><div class="wb-cell-sub">Liberty · TRK-1501</div></div><div><div class="wb-cell-mono">BOL-74294</div><div class="wb-cell-sub wb-cell-mono">TKT-81294</div></div><div>24.75 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-pink" style="margin-bottom:0">Completed</span><div class="wb-cell-sub" style="margin-top:4px">PCS 198-04211</div></div><div><button class="wb-btn btn-ghost btn-sm">View</button></div></div></div>
+                <div class="wb-row"><div class="wb-stripe stripe-pink"></div><div class="wb-row-body"><input type="checkbox" /><div><div class="wb-cell-title">L-20260417-1022</div><div class="wb-cell-sub">Comstock Nabors 5HU</div></div><div><div>Jose Ramirez</div><div class="wb-cell-sub">Logistix · TRK-1488</div></div><div><div class="wb-cell-mono">BOL-74297</div><div class="wb-cell-sub wb-cell-mono">TKT-81297</div></div><div>24.30 t</div><div class="wb-photo-thumb attached">BOL</div><div><span class="legend-chip chip-pink" style="margin-bottom:0">Completed</span><div class="wb-cell-sub" style="margin-top:4px">PCS 198-04214</div></div><div><button class="wb-btn btn-ghost btn-sm">View</button></div></div></div>
+              </div>
+              <div style="background: var(--bg-lowest); padding: 10px 18px; font-size: 11px; color: var(--text-3); border-top: 1px solid var(--border); text-align: right">
+                Showing 9 of 60 rows · Sorted by stage-changed · Per-handler color stripe left edge
+              </div>
+            </div>
+            <div class="delivers">
+              <span class="label">What one page unifies</span>
+              <ul>
+                <li>Replaces the current <code>/validation</code> · <code>/bol</code> · <code>/dispatch-desk</code> three-page split.</li>
+                <li>Every state visible at a glance — you read the color, not the status label.</li>
+                <li>Left stripe tells you whose turn it is right now.</li>
+                <li>Row-level primary action button changes based on what the row needs next.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─── BP-2: DRAWER + INLINE EDITING ─── -->
+        <section class="frame">
+          <header class="frame-header">
+            <div class="frame-title">BP-2 · Click any row → drawer opens in place</div>
+            <div class="frame-caption">
+              No navigating away, no modal stacking. Click a row, the drawer
+              expands under it with the BOL photo on the left and every
+              editable field on the right — each showing the OCR value
+              underneath so you can spot mismatches at a glance.
+            </div>
+          </header>
+          <div class="frame-body">
+            <div class="wb-row">
+              <div class="wb-stripe stripe-orange"></div>
+              <div class="wb-row-body">
+                <input type="checkbox" />
+                <div><div class="wb-cell-title">L-20260417-1051</div><div class="wb-cell-sub">Spectre Crescent Simul Diamond H</div></div>
+                <div><div>Mike Johnson</div><div class="wb-cell-sub">Liberty · TRK-1511</div></div>
+                <div><div class="wb-cell-mono">BOL-74329</div><div class="wb-cell-sub wb-cell-mono">TKT-81329</div></div>
+                <div><div>24.00 t</div><div class="wb-cell-sub" style="color:var(--jess-orange-text)">! rate</div></div>
+                <div class="wb-photo-thumb attached">BOL</div>
+                <div><span class="legend-chip chip-orange" style="margin-bottom:0">Needs Rate · 82%</span></div>
+                <div><button class="wb-btn btn-primary btn-sm">▼ Close</button></div>
+              </div>
+            </div>
+
+            <div class="full-drawer">
+              <div class="full-drawer-head">
+                <span class="legend-chip chip-orange" style="margin-bottom:0">Needs Rate · 82%</span>
+                <div>
+                  <div style="font-weight:700">L-20260417-1051</div>
+                  <div style="font-size:12px;color:var(--text-3)">Spectre Crescent Simul Diamond H · Mike Johnson · Liberty</div>
+                </div>
+                <div style="margin-left:auto;display:flex;gap:8px">
+                  <button class="wb-btn btn-ghost btn-sm">Flag back</button>
+                  <button class="wb-btn btn-confirm btn-sm">Confirm → Yellow</button>
+                </div>
+              </div>
+              <div class="full-drawer-body">
+                <div class="drawer-photo">
+                  <div class="photo-stub">
+                    <div class="bol-header">Geaux Prop · BOL #74329</div>
+                    <div class="bol-field"><span>Customer</span><span>Expand Energy</span></div>
+                    <div class="bol-field"><span>Truck</span><span>ES EXPRESS 1511</span></div>
+                    <div class="bol-field"><span>Hauler</span><span>ES EXPRESS</span></div>
+                    <div class="bol-field"><span>Sales Order</span><span>4000781978-1- CLM</span></div>
+                    <div class="bol-field"><span>Product</span><span>Proppant</span></div>
+                    <div class="bol-field"><span>Gross</span><span>80,920 lb</span></div>
+                    <div class="bol-field"><span>Stored</span><span>34,360 lb</span></div>
+                    <div class="bol-field"><span>Net</span><span>46,560 lb</span></div>
+                    <div class="bol-field"><span>Net Tons</span><span>23.28</span></div>
+                    <div class="bol-sig">✍ Driver signature · 03/28/26 5:11 PM</div>
+                  </div>
+                  <div style="font-size:11px;color:var(--text-3);margin-top:10px">Click to enlarge · Lightbox + zoom</div>
+                </div>
+                <div class="drawer-fields">
+                  <div class="drawer-field">
+                    <div class="drawer-field-label">BOL #</div>
+                    <div class="drawer-field-value">BOL-74329</div>
+                    <div class="drawer-field-ocr"><span class="ocr-label">OCR</span>74329 <span style="color:var(--jess-green-text);margin-left:6px">✓ match</span></div>
+                  </div>
+                  <div class="drawer-field">
+                    <div class="drawer-field-label">Ticket #</div>
+                    <div class="drawer-field-value">TKT-81329</div>
+                  </div>
+                  <div class="drawer-field">
+                    <div class="drawer-field-label">Driver</div>
+                    <div class="drawer-field-value">Mike Johnson</div>
+                    <div class="drawer-field-ocr"><span class="ocr-label">OCR</span>Mike Johnson <span style="color:var(--jess-green-text);margin-left:6px">✓ match</span></div>
+                  </div>
+                  <div class="drawer-field">
+                    <div class="drawer-field-label">Truck #</div>
+                    <div class="drawer-field-value">TRK-1511</div>
+                  </div>
+                  <div class="drawer-field">
+                    <div class="drawer-field-label">Weight (tons)</div>
+                    <div class="drawer-field-value">24.00 t</div>
+                    <div class="drawer-field-ocr mismatch"><span class="ocr-label">OCR</span>23.28 t <span style="margin-left:6px">⚠ 3% mismatch</span></div>
+                  </div>
+                  <div class="drawer-field" style="background:var(--jess-orange-bg);border-color:var(--jess-orange)">
+                    <div class="drawer-field-label" style="color:var(--jess-orange-text)">Rate ($/ton)</div>
+                    <div class="drawer-field-value" style="color:var(--jess-orange-text)">— not set</div>
+                    <div class="drawer-field-ocr">Click to enter · blocks build</div>
+                  </div>
+                  <div class="drawer-flags">
+                    <strong>What matching caught</strong>
+                    Rate missing (blocks build) · Weight 3% off OCR (within 5% tolerance, advisory only) · All other fields agree.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="delivers">
+              <span class="label">What editing in place means</span>
+              <ul>
+                <li>Every field from the PCS form — BOL, ticket, driver, truck, weight, rate, mileage, delivery date — editable right here.</li>
+                <li>Click a value → inline text input. Blur or <kbd>Enter</kbd> saves. <kbd>Esc</kbd> cancels.</li>
+                <li>OCR value under each field lets you spot-check the photo without opening it.</li>
+                <li>Mismatch badge is advisory (weight tolerance) or blocking (BOL last-4 mismatch).</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─── BP-3: BOL EDITING ─── -->
+        <section class="frame">
+          <header class="frame-header">
+            <div class="frame-title">BP-3 · Fix BOL mistakes without leaving the workbench</div>
+            <div class="frame-caption">
+              When the BOL photo disagrees with the load record, you see
+              both values inline and edit either. No separate "BOL editor"
+              page — it's the same drawer.
+            </div>
+          </header>
+          <div class="frame-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+              <div class="drawer-photo" style="background:#fff;border:1px solid var(--border);border-radius:var(--radius-md);padding:18px">
+                <div style="font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">BOL PHOTO (CLICK TO ENLARGE)</div>
+                <div class="photo-stub" style="max-width:none">
+                  <div class="bol-header">Geaux Prop · BOL #73085</div>
+                  <div class="bol-field"><span>Customer</span><span>Expand Energy</span></div>
+                  <div class="bol-field"><span>Truck</span><span>ES EXPRESS 1715</span></div>
+                  <div class="bol-field"><span>Sales Order</span><span>4000781978-1- CLM</span></div>
+                  <div class="bol-field"><span>Product</span><span>Proppant</span></div>
+                  <div class="bol-field"><span>Gross</span><span>80,920 lb</span></div>
+                  <div class="bol-field"><span>Net</span><span>46,560 lb · 23.28 tons</span></div>
+                  <div class="bol-field" style="color:var(--jess-orange);font-weight:700;font-size:14px">← Handwritten "4569" (consignee ref)</div>
+                  <div class="bol-sig">✍ 03/28/26 5:11 PM</div>
+                </div>
+              </div>
+              <div>
+                <div class="drawer-field" style="margin-bottom:12px">
+                  <div class="drawer-field-label">BOL # — click to edit</div>
+                  <div class="drawer-field-value" style="background:var(--bg-low);padding:6px 10px;border-radius:4px;font-family:'Space Grotesk',monospace">BOL-74316</div>
+                  <div class="drawer-field-ocr mismatch">
+                    <span class="ocr-label">OCR</span>BOL-73085 · last-4 mismatch <span style="margin-left:8px">⚠</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--text-2);margin-top:10px;line-height:1.55">
+                    The OCR read "73085" from the photo but the load record shows "74316".
+                    Options: edit the load's BOL to match the photo, or flag for investigation.
+                  </div>
+                  <div style="display:flex;gap:8px;margin-top:10px">
+                    <button class="wb-btn btn-confirm btn-sm">Use OCR value (73085)</button>
+                    <button class="wb-btn btn-ghost btn-sm">Keep load value (74316)</button>
+                    <button class="wb-btn btn-ghost btn-sm" style="border-color:var(--jess-purple);color:var(--jess-purple-text)">Flag missing ticket</button>
+                  </div>
+                </div>
+                <div class="drawer-field">
+                  <div class="drawer-field-label">Consignee ref (from BOL handwriting)</div>
+                  <div class="drawer-field-value">4569</div>
+                  <div class="drawer-field-ocr"><span class="ocr-label">OCR</span>4569 (manual entry)</div>
+                </div>
+                <div style="margin-top:14px;padding:12px 14px;background:var(--primary-ct);border-radius:6px;font-size:12px;color:var(--text-1);line-height:1.55">
+                  <strong style="color:var(--primary)">Audit trail:</strong> Every edit is logged with who &amp; when. Visible in the row's history tab. So if Jenny asks "who changed this BOL on Tuesday?" — you have the answer.
+                </div>
+              </div>
+            </div>
+            <div class="delivers">
+              <span class="label">What this delivers</span>
+              <ul>
+                <li>Photo + load record side by side — no tab-switching to compare.</li>
+                <li>One-click "accept OCR" or "keep load value" for common mismatches.</li>
+                <li>Handwritten fields (like consignee ref 4569) editable even though OCR can't read them.</li>
+                <li>Full audit log — defensible changes for payroll/billing disputes.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─── BP-4: REPORTING ─── -->
+        <section class="frame">
+          <header class="frame-header">
+            <div class="frame-title">BP-4 · Reporting — one source for payroll + invoicing</div>
+            <div class="frame-caption">
+              By date range, sorted by truck, includes every imported load
+              regardless of status, PCS load number when built. Replaces the
+              Sheets copy-paste + PCS cross-reference loop.
+            </div>
+          </header>
+          <div class="frame-body">
+            <div class="report">
+              <div class="report-header">
+                <div class="report-title">Load Report · 04/11 → 04/17 · by Truck</div>
+                <span style="margin-left:auto;font-size:11px;color:var(--text-3)">62 loads · 9 trucks · all statuses</span>
+                <button class="wb-btn btn-ghost btn-sm">Export CSV</button>
+                <button class="wb-btn btn-primary btn-sm">Export PDF</button>
+              </div>
+              <table class="report-table">
+                <thead>
+                  <tr><th>Truck #</th><th>Date</th><th>Load #</th><th>BOL</th><th>Driver</th><th>Well</th><th>Tons</th><th>Rate</th><th>Status</th><th>PCS #</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><strong>1456</strong></td><td>04/15</td><td>L-1042</td><td class="wb-cell-mono">BOL-74316</td><td>Sarah Lopez</td><td>Apache Gulftex</td><td>24.50</td><td>$141.00</td><td><span class="status-cell" style="background:var(--jess-pink-bg);color:var(--jess-pink-text)">Completed</span></td><td class="wb-cell-mono">198-04211</td></tr>
+                  <tr><td><strong>1456</strong></td><td>04/16</td><td>L-1058</td><td class="wb-cell-mono">BOL-74339</td><td>Sarah Lopez</td><td>Apache Gulftex</td><td>24.25</td><td>$141.00</td><td><span class="status-cell" style="background:var(--jess-yellow-bg);color:var(--jess-yellow-text)">Ready to Build</span></td><td style="color:var(--text-3)">—</td></tr>
+                  <tr><td><strong>1453</strong></td><td>04/14</td><td>L-1034</td><td class="wb-cell-mono">BOL-74301</td><td>Dan Reyes</td><td>Formentera</td><td>24.25</td><td>—</td><td><span class="status-cell" style="background:var(--jess-purple-bg);color:var(--jess-purple-text)">Missing Ticket</span></td><td style="color:var(--text-3)">—</td></tr>
+                  <tr><td><strong>1453</strong></td><td>04/15</td><td>L-1046</td><td class="wb-cell-mono">BOL-74320</td><td>Dan Reyes</td><td>Formentera</td><td>24.50</td><td>$140.00</td><td><span class="status-cell" style="background:var(--jess-pink-bg);color:var(--jess-pink-text)">Completed</span></td><td class="wb-cell-mono">198-04212</td></tr>
+                  <tr><td><strong>1511</strong></td><td>04/15</td><td>L-1051</td><td class="wb-cell-mono">BOL-74329</td><td>Mike Johnson</td><td>Crescent</td><td>24.00</td><td>—</td><td><span class="status-cell" style="background:var(--jess-orange-bg);color:var(--jess-orange-text)">Needs Rate</span></td><td style="color:var(--text-3)">—</td></tr>
+                  <tr><td><strong>1462</strong></td><td>04/16</td><td>L-1056</td><td class="wb-cell-mono">BOL-74338</td><td style="color:var(--jess-cyan-text)">— missing —</td><td>HV Falcon</td><td>23.80</td><td>$135.00</td><td><span class="status-cell" style="background:var(--jess-cyan-bg);color:var(--jess-cyan-text)">Missing Driver</span></td><td style="color:var(--text-3)">—</td></tr>
+                  <tr><td><strong>1466</strong></td><td>04/16</td><td>L-1061</td><td class="wb-cell-mono">BOL-74342</td><td>Kevin Park</td><td>HV Nighthawk</td><td>24.50</td><td>$141.00</td><td><span class="status-cell" style="background:var(--jess-green-bg);color:var(--jess-green-text)">100% · Pending</span></td><td style="color:var(--text-3)">—</td></tr>
+                  <tr><td><strong>1501</strong></td><td>04/14</td><td>L-1019</td><td class="wb-cell-mono">BOL-74294</td><td>Tom Wilson</td><td>Titan DNR</td><td>24.75</td><td>$145.00</td><td><span class="status-cell" style="background:var(--jess-pink-bg);color:var(--jess-pink-text)">Completed</span></td><td class="wb-cell-mono">198-04211</td></tr>
+                  <tr><td><strong>1488</strong></td><td>04/15</td><td>L-1022</td><td class="wb-cell-mono">BOL-74297</td><td>Jose Ramirez</td><td>Comstock</td><td>24.30</td><td>$138.00</td><td><span class="status-cell" style="background:var(--jess-pink-bg);color:var(--jess-pink-text)">Completed</span></td><td class="wb-cell-mono">198-04214</td></tr>
+                </tbody>
+              </table>
+              <div class="report-footer">9 of 62 rows · Grouped by truck · Every imported load included (built, pending, flagged) · PCS # auto-attached when built</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─── BP-5: PCS PASSTHROUGH ─── -->
+        <section class="frame">
+          <header class="frame-header">
+            <div class="frame-title">BP-5 · ES Express → PCS · the exact passthrough</div>
+            <div class="frame-caption">
+              Below is exactly what our system passes into PCS, matched
+              against the three PCS screens you sent (Dispatch Research
+              grid, Load 225902 detail form, and the attached BOL #73085).
+              Load number in our system rewrites as the PCS-assigned number
+              post-build.
+            </div>
+          </header>
+          <div class="frame-body">
+            <div class="pcs-screenshot-ref">
+              <strong>Reference:</strong> Your 2026-04-17 screenshots — PCS
+              <em>Dispatch Research</em> (load list grid, loads 225895–225941),
+              Load <em>225902 TL</em> detail form (Liberty HV Falcon Expand CHK
+              LA MIN · Geaux Prop → Red River Parish), and the attached BOL
+              <em>#73085</em> (23.28 tons net · ES Express Truck 1715).
+            </div>
+
+            <div class="passthrough-grid">
+              <div class="passthrough-header">ES Express Workbench (our system)</div>
+              <div></div>
+              <div class="passthrough-header">PCS field (the target)</div>
+
+              <div class="pt-esx"><div class="pt-field">load.loadNo</div><div class="pt-value">L-20260328-7085</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Load</div><div class="pt-value">225902 (PCS-assigned on build)</div><div class="pt-source">Our load # carries forward as Cust Ref for cross-reference</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.customerName</div><div class="pt-value">Liberty Energy Services, LLC</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Bill To</div><div class="pt-value">Liberty Energy Services, LLC<br>950th 17th St, Denver CO 80202</div><div class="pt-source">From customer_mappings table</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.originName</div><div class="pt-value">Geaux Prop (Red River Parish LA 71019)</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Shipper stop</div><div class="pt-value">Geaux Prop · Red River Parish LA 71019</div><div class="pt-source">Address from customer_mappings, ref 73085</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.destinationName → wells.name</div><div class="pt-value">Liberty HV Falcon Exp · Mansfield LA 71052</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Consignee stop</div><div class="pt-value">Liberty HV Falcon Exp · Mansfield LA 71052</div><div class="pt-source">Address from wells table lat/long + mapping</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.bolNo</div><div class="pt-value">BOL-73085</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Shipper Ref</div><div class="pt-value">73085</div><div class="pt-source">From OCR of Geaux Prop BOL</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.consigneeRef (handwritten)</div><div class="pt-value">4569</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Consignee Ref</div><div class="pt-value">4569</div><div class="pt-source">Manual entry — handwritten on BOL photo</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.mileage</div><div class="pt-value">36 miles</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Bill Miles</div><div class="pt-value">36</div><div class="pt-source">Geocoded from wells.lat/long + loaders table</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.deliveredOn</div><div class="pt-value">03/28/2026 5:11 PM</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Received / PU / Del dates</div><div class="pt-value">03/28/26 (picked up, delivered, received all same)</div><div class="pt-source">Single-day move — one date fills three PCS fields</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.weightLbs (from BOL OCR)</div><div class="pt-value">46,560 lb (23.28 tons)</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Act Wgt · Bill Wgt · Weight</div><div class="pt-value">43,560 (bill wgt, billable)<br>46,560 (actual wgt, BOL)</div><div class="pt-source">Bill weight = Act weight minus 3,000 lb stored. Our system captures both.</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.driverName</div><div class="pt-value">Davenport, Marlon 1714 &amp; 1715</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Posted-by "Assigned" note</div><div class="pt-value">"Assigned - Davenport, Marlon 1714 &amp; 1715"</div><div class="pt-source">Auto-inserted as a stop-note on build</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.rate + rate_basis</div><div class="pt-value">$10.75/ton</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Rate · Rate By</div><div class="pt-value">10.75 · Ton</div><div class="pt-source">From wells.rate_per_ton or contract rate card</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.accessorials (FSC)</div><div class="pt-value">FSC-Ton · $0.37 · 8.06 Amt</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Accessorial · Rate · Amt · Pay</div><div class="pt-value">FSC-Ton · 0.37 · 8.06 · Y</div><div class="pt-source">Fuel surcharge calculated from mileage × wells.fsc_per_mile</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.wellReference (PropX job id)</div><div class="pt-value">"Liberty HV Falcon Expand CHK LA MIN"</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Reference (below Bill To)</div><div class="pt-value">Liberty HV Falcon Expand CHK LA MIN</div><div class="pt-source">From wells.propx_job_description</div></div>
+
+              <div class="pt-esx"><div class="pt-field">load.salesman (constant for Liberty)</div><div class="pt-value">Stuart, Clint</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Salesman</div><div class="pt-value">Stuart, Clint</div><div class="pt-source">Config: customer → default salesman mapping</div></div>
+
+              <div class="pt-esx"><div class="pt-field">handler.user (current)</div><div class="pt-value">STEPH (booked) / BRYAN (current)</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Booked / Current</div><div class="pt-value">STEPH / BRYAN</div><div class="pt-source">PCS usernames — map to our users.pcs_username</div></div>
+
+              <div class="pt-esx"><div class="pt-field">computed: rate_per_ton × net_tons</div><div class="pt-value">$234.14 (23.28 × 10.75 - conversion)</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Frt Rev</div><div class="pt-value">234.14</div><div class="pt-source">PCS recalculates; our value must match within $0.01</div></div>
+
+              <div class="pt-esx"><div class="pt-field">computed: accessorial total</div><div class="pt-value">$8.06</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Acc Rev</div><div class="pt-value">8.06</div></div>
+
+              <div class="pt-esx"><div class="pt-field">computed: Frt Rev + Acc Rev</div><div class="pt-value">$242.20</div></div>
+              <div class="pt-arrow">→</div>
+              <div class="pt-pcs"><div class="pt-field">Total Rev</div><div class="pt-value">242.20</div></div>
+            </div>
+
+            <div class="delivers">
+              <span class="label">What this map locks in</span>
+              <ul>
+                <li>Every PCS field on the 225902 screen has a single source in our system — no ad-hoc translation needed.</li>
+                <li>OCR + handwritten BOL capture feeds refs that PCS currently gets manually.</li>
+                <li>Our Load # persists as the PCS <em>Cust Ref</em>, so Jenny can cross-match ES→PCS forever.</li>
+                <li>Rate calculations pre-match what PCS will compute — pushes fail fast if math disagrees.</li>
+                <li>Driver, weight, and stop timestamps auto-fill the posted-notes history JESS maintains today.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <div style="text-align: center; margin: 40px 0 20px; font-size: 13px; color: var(--text-3)">
+          Next: walk through each line of your email →
+          <a href="#" onclick="switchTab('drill-down');return false;" style="color: var(--primary); font-weight: 700">Open the Drill Down tab</a>
+        </div>
+      </div>
+      <!-- ═══ /BIG PICTURE TAB ═══ -->
+
+      <!-- ═══ DRILL DOWN TAB ═══ -->
+      <div id="drill-down" class="tab-panel">
+        <!-- TOC -->
+        <nav class="toc">
         <h3>What you'll walk through</h3>
         <div class="toc-grid">
           <a href="#s1"><span class="num">1</span> Your color language</a>
@@ -863,6 +1405,11 @@
         </div>
       </section>
 
+      </div>
+      <!-- ═══ /DRILL DOWN TAB ═══ -->
+
+      <!-- ═══ SIGN-OFF TAB ═══ -->
+      <div id="sign-off-tab" class="tab-panel">
       <!-- ═══ SIGN-OFF FORM ═══ -->
       <form class="signoff-form" id="signoffForm" onsubmit="submitSignoff(event)" id="signoff">
         <a id="signoff"></a>
@@ -915,6 +1462,8 @@
         <button type="submit" class="submit-btn" id="submitBtn">Sign & Send →</button>
         <div class="submit-result" id="result"></div>
       </form>
+      </div>
+      <!-- ═══ /SIGN-OFF TAB ═══ -->
 
       <footer style="margin-top:48px;padding-top:24px;border-top:1px solid var(--border);text-align:center;font-size:12px;color:var(--text-3)">
         ES Express Workbench Sign-off Portal · Generated 2026-04-17 · <code>feature/workbench-v5</code>
@@ -922,6 +1471,20 @@
     </main>
 
     <script>
+      // Tab switcher
+      function switchTab(name) {
+        document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+        const panel = document.getElementById(name);
+        const btn = document.querySelector(`.tab-btn[data-tab="${name}"]`);
+        if (panel) panel.classList.add("active");
+        if (btn) btn.classList.add("active");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+      });
+
       document.querySelectorAll("#checklist li").forEach((li) => {
         const cb = li.querySelector('input[type="checkbox"]');
         if (!cb) return;
