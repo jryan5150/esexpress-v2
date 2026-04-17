@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/query-client";
 import { ToastProvider } from "./components/Toast";
@@ -10,6 +10,9 @@ import { BreadcrumbProvider } from "./breadcrumbs/BreadcrumbProvider";
 
 const Login = lazy(() =>
   import("./pages/Login").then((m) => ({ default: m.Login })),
+);
+const Workbench = lazy(() =>
+  import("./pages/Workbench").then((m) => ({ default: m.Workbench })),
 );
 const ExceptionFeed = lazy(() =>
   import("./pages/ExceptionFeed").then((m) => ({ default: m.ExceptionFeed })),
@@ -81,9 +84,19 @@ export function App() {
               <Route element={<ProtectedRoute />}>
                 <Route element={<Layout />}>
                   <Route index element={<ExceptionFeed />} />
-                  <Route path="bol" element={<BolQueue />} />
-                  <Route path="dispatch-desk" element={<DispatchDesk />} />
-                  <Route path="validation" element={<Validation />} />
+                  <Route path="workbench" element={<Workbench />} />
+                  <Route
+                    path="bol"
+                    element={<Navigate to="/workbench?filter=uncertain" replace />}
+                  />
+                  <Route
+                    path="dispatch-desk"
+                    element={<Navigate to="/workbench" replace />}
+                  />
+                  <Route
+                    path="validation"
+                    element={<Navigate to="/workbench?filter=uncertain" replace />}
+                  />
                   <Route path="finance" element={<Finance />} />
                   <Route path="wells/:wellId" element={<WellWorkspace />} />
                   <Route path="admin/wells" element={<WellsAdmin />} />
