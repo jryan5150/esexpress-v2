@@ -1599,7 +1599,7 @@
               <li>One report that replaces the Sheets copy-paste + PCS cross-reference loop.</li>
               <li>Every imported load is listed, whether built, pending, or flagged — so no load slips past payroll.</li>
               <li>PCS load # column lands automatically when the load is built; "—" when not yet.</li>
-              <li>Export to CSV for payroll, PDF for invoicing. Saved report presets (daily billing, weekly payroll) in Phase 2.</li>
+              <li>Export to CSV for payroll, PDF for invoicing. Saved report presets (daily billing, weekly payroll) can follow as a lightweight add.</li>
             </ul>
           </div>
         </div>
@@ -1671,7 +1671,7 @@
           <div class="diff-row"><div class="diff-old">BOL <em>or</em> Ticket shown</div><div class="diff-arrow">→</div><div class="diff-new">BOL <strong>and</strong> Ticket both labeled on every row</div></div>
           <div class="diff-row"><div class="diff-old">No date-range filter</div><div class="diff-arrow">→</div><div class="diff-new">Date range + well + truck filters at top of page</div></div>
           <div class="diff-row"><div class="diff-old">Muted stage palette</div><div class="diff-arrow">→</div><div class="diff-new">Your traffic-light colors — green · yellow · pink · orange · purple · cyan</div></div>
-          <div class="diff-row"><div class="diff-old">Ends at "cleared"</div><div class="diff-arrow">→</div><div class="diff-new">Ends at <strong>Completed (pink)</strong> · invoicing in Phase 2</div></div>
+          <div class="diff-row"><div class="diff-old">Ends at "cleared"</div><div class="diff-arrow">→</div><div class="diff-new">Ends at <strong>Completed (pink)</strong> · invoicing surface is a separate track</div></div>
           <div class="diff-row"><div class="diff-old">No reporting surface</div><div class="diff-arrow">→</div><div class="diff-new">Reporting: date range + truck sort + all imports + PCS # (Section 11)</div></div>
           <div class="diff-row"><div class="diff-old">No override path on auto-validated</div><div class="diff-arrow">→</div><div class="diff-new">Override with audit trail (Section 4)</div></div>
         </div>
@@ -1690,7 +1690,7 @@
         <textarea
           id="dd-notes"
           data-q="drill-down-free-form"
-          placeholder="e.g. 'Section 4 (override) needs to also cover the case where the photo came in after the load was already yellow — the override path should un-yellow it.' or 'The pink state should split into built-manual vs auto-pushed for Phase 2 distinction.'"
+          placeholder="e.g. 'Section 4 (override) needs to also cover the case where the photo came in after the load was already yellow — the override path should un-yellow it.' or 'The pink state should split into built-manual vs auto-pushed so we can tell them apart on reports.'"
         ></textarea>
         <div class="hint">Optional — skip if everything looks right. Use the per-section checklist on the Sign &amp; Send tab for lightweight tweaks.</div>
       </div>
@@ -1746,12 +1746,12 @@
         <h3 style="font-size:16px;margin-top:20px;margin-bottom:10px">Open questions — quick answers unblock specific pieces</h3>
         <div class="field-block" style="background:#fffbf0;border:1px dashed var(--jess-yellow)"><div class="q" style="color:var(--jess-yellow-text)">A · Load ID lifecycle — for pre-build rows, which primary number do you want to see (upstream ticket / BOL # / internal ref)? For post-build, is PCS # primary?</div><textarea data-q="id-primary" placeholder="Your answer…"></textarea></div>
         <div class="field-block" style="background:#fffbf0;border:1px dashed var(--jess-yellow)"><div class="q" style="color:var(--jess-yellow-text)">B · Source badges — anything missing from PropX / Logistiq / Manual / JotForm? Any you'd rename?</div><textarea data-q="source-badges" placeholder="Your answer…"></textarea></div>
-        <div class="field-block" style="background:#fffbf0;border:1px dashed var(--jess-yellow)"><div class="q" style="color:var(--jess-yellow-text)">C · Well-view depth — is the Well filter + Group-by-Well toggle (shown in Section 6 and BP-1) enough, or do you also want the Dispatch-Desk-style tabular toggle (wells picker on the left, loads on the right) as a Phase-2 addition? No wrong answer — we just don't want to build the tabular toggle if you'd never use it.</div><textarea data-q="well-view-depth" placeholder="Your answer…"></textarea></div>
+        <div class="field-block" style="background:#fffbf0;border:1px dashed var(--jess-yellow)"><div class="q" style="color:var(--jess-yellow-text)">C · Well-view depth — is the Well filter + Group-by-Well toggle (shown in Section 6 and BP-1) the right depth, or do you also want a Dispatch-Desk-style tabular toggle (wells picker on the left, loads on the right)? No wrong answer — we just don't want to build the tabular toggle if you'd never use it.</div><textarea data-q="well-view-depth" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">1 · Green → Yellow confirm — only you, or any dispatcher?</div><textarea data-q="confirm-who" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">2 · Pink = "built" vs "pushed" — visual difference, or same pink?</div><textarea data-q="pink-split" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">3 · Override of auto-validated — back to green or to needs-review?</div><textarea data-q="overrides" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">4 · Missing-ticket / missing-driver — filters on one page, or separate pages?</div><textarea data-q="tabs" placeholder="Your answer…"></textarea></div>
-        <div class="field-block"><div class="q">5 · "Being cleared" and "Invoiced" — stages in the app, or Phase-2 module?</div><textarea data-q="stages" placeholder="Your answer…"></textarea></div>
+        <div class="field-block"><div class="q">5 · "Being cleared" and "Invoiced" — stages in the app, or a separate module later?</div><textarea data-q="stages" placeholder="Your answer…"></textarea></div>
         <div class="field-block"><div class="q">6 · Reporting — any fields beyond the invoice template you sent?</div><textarea data-q="reporting" placeholder="Your answer…"></textarea></div>
 
         <div class="signature-box">
