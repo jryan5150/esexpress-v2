@@ -252,3 +252,54 @@ export interface BreadcrumbEvent {
   zone: BreadcrumbZone;
   timestamp: string;
 }
+
+// ── Workbench (v5) ────────────────────────────────────────
+export type HandlerStage =
+  | "uncertain"
+  | "ready_to_build"
+  | "building"
+  | "entered"
+  | "cleared";
+
+export type UncertainReason =
+  | "unassigned_well"
+  | "fuzzy_match"
+  | "bol_mismatch"
+  | "weight_mismatch"
+  | "no_photo_48h"
+  | "rate_missing";
+
+export type WorkbenchFilter =
+  | "uncertain"
+  | "ready_to_build"
+  | "mine"
+  | "ready_to_clear"
+  | "entered_today"
+  | "all";
+
+export interface WorkbenchRow {
+  assignmentId: number;
+  handlerStage: HandlerStage;
+  currentHandlerId: number | null;
+  currentHandlerName: string | null;
+  currentHandlerColor: string | null;
+  uncertainReasons: UncertainReason[];
+  stageChangedAt: string | null;
+  enteredOn: string | null;
+  loadId: number;
+  loadNo: string;
+  driverName: string | null;
+  carrierName: string | null;
+  bolNo: string | null;
+  ticketNo: string | null;
+  weightTons: string | null;
+  truckNo: string | null;
+  deliveredOn: string | null;
+  pickupState: "pending" | "in_progress" | "complete" | null;
+  deliveryState: "pending" | "in_progress" | "complete" | null;
+  wellId: number | null;
+  wellName: string | null;
+  photoStatus: "attached" | "pending" | "missing" | null;
+  photoThumbUrl: string | null;
+  rate: string | null;
+}
