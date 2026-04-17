@@ -2,3 +2,5 @@ node_modules/
 .vercel/
 .env
 .env.local
+.env-to-push
+.test-payload.json

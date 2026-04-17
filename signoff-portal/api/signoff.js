@@ -1,16 +1,18 @@
 // POST /api/signoff
 // Accepts a sign-off payload, generates a timestamped PDF, and emails
-// both parties via Microsoft Graph. Returns { success, timestamp, messageId }.
+// both parties via Microsoft Graph using delegated refresh-token flow
+// (matches the lexcom-command-center Outlook collector pattern).
 //
 // Env vars (set in Vercel project settings):
-//   GRAPH_TENANT_ID        — Azure AD tenant id
-//   GRAPH_CLIENT_ID        — App registration client id
-//   GRAPH_CLIENT_SECRET    — App registration client secret
-//   SIGN_OFF_FROM_EMAIL    — Address to send FROM (e.g. jryan@lexcom.com)
-//   SIGN_OFF_CC            — Comma-separated CC list (e.g. bryan@lexcom.com,jared@lexcom.com)
-//   DEV_MODE               — If "1", skips Graph send and returns the PDF inline
+//   MS_TENANT_ID          — Azure AD tenant id (shared Command Center app)
+//   MS_CLIENT_ID          — Command Center app registration client id
+//   MS_REFRESH_TOKEN      — Delegated refresh token issued with Mail.Send + offline_access scope
+//   SIGN_OFF_FROM_EMAIL   — Must match the user who consented to MS_REFRESH_TOKEN (e.g. jryan@lexcom.com)
+//   SIGN_OFF_CC           — Comma-separated CC list
+//   DEV_MODE              — If "1", skips Graph send and returns PDF inline
 //
-// Required Azure app permission: Mail.Send (Application), admin consented.
+// The refresh token must have been issued with `Mail.Send` scope. Run
+// scripts/ms-auth-mail-send.mjs once to obtain one via device code flow.
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export const config = {
@@ -466,14 +468,19 @@ function escapeHtml(s) {
     .replace(/'/g, "&#39;");
 }
 
-/** Acquire a Graph access token using client-credentials flow. */
+/**
+ * Acquire a Graph access token via delegated refresh-token flow.
+ * Matches the public-client pattern used by lexcom-command-center —
+ * no client_secret required. The refresh token rotates on each call;
+ * we capture the new one and log it so it can be updated in env.
+ */
 async function getGraphToken() {
-  const tenantId = process.env.GRAPH_TENANT_ID;
-  const clientId = process.env.GRAPH_CLIENT_ID;
-  const clientSecret = process.env.GRAPH_CLIENT_SECRET;
-  if (!tenantId || !clientId || !clientSecret) {
+  const tenantId = process.env.MS_TENANT_ID;
+  const clientId = process.env.MS_CLIENT_ID;
+  const refreshToken = process.env.MS_REFRESH_TOKEN;
+  if (!tenantId || !clientId || !refreshToken) {
     throw new Error(
-      "Missing Graph env vars. Set GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET.",
+      "Missing Graph env vars. Set MS_TENANT_ID, MS_CLIENT_ID, MS_REFRESH_TOKEN.",
     );
   }
   const res = await fetch(
@@ -483,17 +490,33 @@ async function getGraphToken() {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: "client_credentials",
-        scope: "https://graph.microsoft.com/.default",
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        scope:
+          "https://graph.microsoft.com/Mail.Send offline_access",
       }),
     },
   );
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Token request failed: ${res.status} ${text.slice(0, 200)}`);
+    throw new Error(
+      `Token refresh failed: ${res.status} ${text.slice(0, 400)}. ` +
+        "The refresh token may not have been issued with Mail.Send scope — " +
+        "run scripts/ms-auth-mail-send.mjs to obtain a new one.",
+    );
   }
   const data = await res.json();
+  // Note: Microsoft rotates refresh tokens. If data.refresh_token exists
+  // and differs, the caller should update MS_REFRESH_TOKEN in Vercel env.
+  // We log the rotation for visibility; the next call with the old token
+  // still succeeds for the token lifetime window, but long-term we want
+  // the new token in env.
+  if (data.refresh_token && data.refresh_token !== refreshToken) {
+    console.log(
+      "[signoff] refresh token rotated — update MS_REFRESH_TOKEN env in Vercel:",
+      data.refresh_token.slice(0, 20) + "..." + data.refresh_token.slice(-20),
+    );
+  }
   return data.access_token;
 }
 
