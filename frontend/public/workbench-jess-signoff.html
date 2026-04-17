@@ -1,0 +1,1295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ES Express — Workbench Sign-off · Jessica Handlin · 2026-04-17</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --bg: #f5f0e8;
+        --bg-low: #f0ebe2;
+        --bg-high: #e0d9cc;
+        --bg-lowest: #faf7f2;
+        --primary: #6d28d9;
+        --primary-lt: #7c3aed;
+        --primary-ct: #ede9f8;
+
+        /* Jessica's traffic-light palette (from her sheet Color Key) */
+        --jess-green: #22c55e;
+        --jess-green-bg: #dcfce7;
+        --jess-green-text: #166534;
+        --jess-yellow: #eab308;
+        --jess-yellow-bg: #fef9c3;
+        --jess-yellow-text: #854d0e;
+        --jess-pink: #ec4899;
+        --jess-pink-bg: #fce7f3;
+        --jess-pink-text: #9d174d;
+        --jess-orange: #f97316;
+        --jess-orange-bg: #ffedd5;
+        --jess-orange-text: #9a3412;
+        --jess-purple: #a855f7;
+        --jess-purple-bg: #f3e8ff;
+        --jess-purple-text: #6b21a8;
+        --jess-cyan: #06b6d4;
+        --jess-cyan-bg: #cffafe;
+        --jess-cyan-text: #155e75;
+
+        --text-1: #1e1b18;
+        --text-2: #4a4540;
+        --text-3: #8a8279;
+        --border: rgba(110, 98, 85, 0.18);
+        --radius-sm: 6px;
+        --radius-md: 10px;
+        --radius-lg: 14px;
+      }
+      body {
+        font-family: "Inter", system-ui, sans-serif;
+        background: #ffffff;
+        color: var(--text-1);
+        padding: 48px 24px 96px;
+      }
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        letter-spacing: -0.02em;
+      }
+
+      /* Top banner */
+      .top {
+        margin-bottom: 32px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid var(--border);
+      }
+      .top-tag {
+        display: inline-block;
+        background: var(--primary);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        padding: 5px 10px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      .top h1 {
+        font-size: 30px;
+        font-weight: 800;
+        color: var(--text-1);
+        margin-bottom: 6px;
+      }
+      .top .subtitle {
+        font-size: 14px;
+        color: var(--text-2);
+        font-weight: 500;
+      }
+      .top .sub-meta {
+        font-size: 12px;
+        color: var(--text-3);
+        margin-top: 6px;
+        font-family: "Space Grotesk", sans-serif;
+      }
+
+      /* Frame (section) — matches mockups-call.html */
+      .frame {
+        background: var(--bg);
+        border-radius: var(--radius-lg);
+        margin-bottom: 40px;
+        border: 1px solid var(--border);
+        box-shadow:
+          0 4px 16px rgba(30, 27, 24, 0.05),
+          0 1px 3px rgba(30, 27, 24, 0.04);
+        overflow: hidden;
+      }
+      .frame-header {
+        padding: 18px 28px;
+        background: var(--bg-lowest);
+        border-bottom: 2px solid var(--primary);
+      }
+      .frame-title {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--primary);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .frame-caption {
+        font-size: 14px;
+        color: var(--text-1);
+        margin-top: 6px;
+        font-weight: 500;
+        line-height: 1.55;
+      }
+      .frame-body {
+        padding: 24px 28px;
+      }
+
+      /* Color legend (Section 1) */
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+        margin-top: 8px;
+      }
+      .legend-card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 14px;
+        background: #fff;
+      }
+      .legend-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 10px;
+      }
+      .chip-green {
+        background: var(--jess-green-bg);
+        color: var(--jess-green-text);
+      }
+      .chip-yellow {
+        background: var(--jess-yellow-bg);
+        color: var(--jess-yellow-text);
+      }
+      .chip-pink {
+        background: var(--jess-pink-bg);
+        color: var(--jess-pink-text);
+      }
+      .chip-orange {
+        background: var(--jess-orange-bg);
+        color: var(--jess-orange-text);
+      }
+      .chip-purple {
+        background: var(--jess-purple-bg);
+        color: var(--jess-purple-text);
+      }
+      .chip-cyan {
+        background: var(--jess-cyan-bg);
+        color: var(--jess-cyan-text);
+      }
+      .legend-card h4 {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-1);
+        margin-bottom: 4px;
+      }
+      .legend-card p {
+        font-size: 12px;
+        color: var(--text-2);
+        line-height: 1.5;
+      }
+
+      /* Workbench rows */
+      .wb-row {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: stretch;
+        margin-bottom: 8px;
+        overflow: hidden;
+        font-size: 13px;
+      }
+      .wb-stripe {
+        width: 5px;
+        flex-shrink: 0;
+      }
+      .stripe-green {
+        background: var(--jess-green);
+      }
+      .stripe-yellow {
+        background: var(--jess-yellow);
+      }
+      .stripe-pink {
+        background: var(--jess-pink);
+      }
+      .stripe-orange {
+        background: var(--jess-orange);
+      }
+      .stripe-purple {
+        background: var(--jess-purple);
+      }
+      .stripe-cyan {
+        background: var(--jess-cyan);
+      }
+      .wb-row-body {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 32px 1.5fr 1.4fr 1fr 1fr 0.7fr 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 14px;
+      }
+      .wb-row-body input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+      }
+      .wb-cell-title {
+        font-weight: 600;
+      }
+      .wb-cell-sub {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 2px;
+      }
+      .wb-cell-mono {
+        font-family: "Space Grotesk", monospace;
+        font-size: 12px;
+      }
+      .wb-photo-thumb {
+        width: 34px;
+        height: 34px;
+        border-radius: 4px;
+        background: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-3);
+        font-size: 10px;
+      }
+      .wb-photo-thumb.attached {
+        background: linear-gradient(135deg, #6ee7b7, #10b981);
+        color: #fff;
+      }
+      .wb-photo-thumb.missing {
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .wb-btn {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-confirm {
+        background: var(--jess-green);
+        color: #fff;
+      }
+      .btn-flag {
+        background: #fff;
+        border: 1px solid var(--jess-orange);
+        color: var(--jess-orange-text);
+      }
+      .btn-ghost {
+        background: #fff;
+        border: 1px solid var(--border);
+        color: var(--text-2);
+      }
+      .btn-sm {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+
+      /* Filter bar */
+      .filter-bar {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        padding: 14px;
+        background: #fff;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+      }
+      .filter-pill {
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-2);
+        background: #fff;
+      }
+      .filter-pill.active {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+      }
+      .filter-pill .count {
+        margin-left: 4px;
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.3);
+        font-size: 10px;
+      }
+      .filter-pill:not(.active) .count {
+        background: rgba(0, 0, 0, 0.08);
+      }
+      .filter-divider {
+        width: 1px;
+        background: var(--border);
+        margin: 4px 6px;
+      }
+      .filter-input {
+        padding: 6px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        font-size: 12px;
+        font-family: "Space Grotesk", monospace;
+        min-width: 140px;
+      }
+      .filter-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text-3);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        align-self: center;
+        margin-right: 4px;
+      }
+
+      /* Bulk bar */
+      .bulk-bar {
+        background: var(--primary-ct);
+        border: 1px solid var(--primary);
+        border-radius: var(--radius-md);
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        font-size: 13px;
+      }
+      .bulk-bar-count {
+        font-weight: 700;
+        color: var(--primary);
+      }
+
+      /* Resolve modal sketch */
+      .modal-sketch {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        max-width: 560px;
+        margin: 0 auto;
+        box-shadow: 0 12px 32px rgba(30, 27, 24, 0.12);
+      }
+      .modal-sketch h3 {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .modal-sketch .load-sub {
+        font-size: 12px;
+        color: var(--text-3);
+        margin-bottom: 16px;
+      }
+      .modal-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .modal-action {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #fafafa;
+        text-align: left;
+        cursor: pointer;
+        font-size: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .modal-action-icon {
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 11px;
+      }
+      .modal-action-title {
+        font-weight: 700;
+        color: var(--text-1);
+        display: block;
+      }
+      .modal-action-desc {
+        font-size: 11px;
+        color: var(--text-3);
+        margin-top: 2px;
+      }
+
+      /* Sign-off block */
+      .signoff {
+        background: var(--primary);
+        color: #fff;
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        margin-top: 40px;
+      }
+      .signoff h2 {
+        font-size: 22px;
+        font-weight: 800;
+        margin-bottom: 8px;
+      }
+      .signoff p {
+        font-size: 14px;
+        line-height: 1.6;
+        opacity: 0.9;
+        margin-bottom: 16px;
+      }
+      .signoff-checklist {
+        list-style: none;
+        padding: 0;
+        margin: 20px 0;
+      }
+      .signoff-checklist li {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .signoff-checkbox {
+        width: 18px;
+        height: 18px;
+        border: 1.5px solid rgba(255, 255, 255, 0.5);
+        border-radius: 3px;
+        flex-shrink: 0;
+      }
+      .signoff-btn {
+        background: #fff;
+        color: var(--primary);
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13px;
+        text-decoration: none;
+        display: inline-block;
+        margin-right: 10px;
+      }
+
+      /* Question block */
+      .questions {
+        background: var(--jess-yellow-bg);
+        border: 1px solid var(--jess-yellow);
+        border-radius: var(--radius-md);
+        padding: 18px 20px;
+        margin: 14px 0;
+      }
+      .questions h4 {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--jess-yellow-text);
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .questions ol {
+        margin-left: 20px;
+        font-size: 13px;
+        color: var(--text-1);
+        line-height: 1.7;
+      }
+
+      .cite {
+        font-size: 12px;
+        color: var(--text-3);
+        font-style: italic;
+        border-left: 3px solid var(--border);
+        padding: 8px 14px;
+        margin: 12px 0;
+        background: #fff;
+      }
+
+      .diff-row {
+        display: grid;
+        grid-template-columns: 1fr 20px 1fr;
+        gap: 14px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+      }
+      .diff-row:last-child {
+        border-bottom: none;
+      }
+      .diff-label {
+        font-weight: 700;
+        color: var(--text-3);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .diff-old {
+        color: var(--text-3);
+        background: #f5f5f5;
+        padding: 6px 10px;
+        border-radius: 4px;
+      }
+      .diff-new {
+        color: var(--text-1);
+        background: var(--primary-ct);
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-weight: 500;
+      }
+      .diff-arrow {
+        color: var(--primary);
+        text-align: center;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <!-- ─── TOP ─────────────────────────────────────────────── -->
+      <header class="top">
+        <span class="top-tag">Draft · Awaiting Sign-off</span>
+        <h1>ES Express Workbench — Your Workflow, Laid Out</h1>
+        <p class="subtitle">
+          Jessica, this mockup captures exactly what you described in your
+          <strong>PCS Green Light</strong> email (Apr 17, 2:14 PM). Walk through
+          it, mark anything that's wrong, then give the thumbs-up at the bottom
+          so we can build with confidence and hit the 1-week internal
+          validation window you asked for.
+        </p>
+        <div class="sub-meta">
+          Decision record: <code>docs/superpowers/decisions/2026-04-17-jessica-pcs-green-light-workflow.md</code>
+          · Build: <code>feature/workbench-v5</code>
+        </div>
+      </header>
+
+      <!-- ─── 1. COLOR LEGEND ────────────────────────────────── -->
+      <section class="frame">
+        <header class="frame-header">
+          <div class="frame-title">1 · Your color language — confirmed</div>
+          <div class="frame-caption">
+            These are the colors you already use in your Load Count sheet. We're
+            going to use the same ones in the app so nothing new to learn.
+          </div>
+        </header>
+        <div class="frame-body">
+          <div class="legend">
+            <div class="legend-card">
+              <span class="legend-chip chip-green">● Green</span>
+              <h4>Auto-validated · awaiting your confirm</h4>
+              <p>
+                100% matched load with a photo attached. The matcher thinks
+                it's clean. You still have to click <em>Confirm</em> before it
+                moves to ready-to-build.
+              </p>
+            </div>
+            <div class="legend-card">
+              <span class="legend-chip chip-yellow">● Yellow</span>
+              <h4>Ready to build · in the dispatch queue</h4>
+              <p>
+                You confirmed it. Steph, Scout, or Keli can now grab it and
+                build it in PCS.
+              </p>
+            </div>
+            <div class="legend-card">
+              <span class="legend-chip chip-pink">● Pink</span>
+              <h4>Built / pushed · completed</h4>
+              <p>
+                Typed into PCS (or auto-pushed, post-OAuth). Done from the
+                build side; Katie's verification begins here.
+              </p>
+            </div>
+            <div class="legend-card">
+              <span class="legend-chip chip-orange">● Orange</span>
+              <h4>Needs rate / facility info</h4>
+              <p>
+                The matcher knows the weight but not the rate. Goes to the
+                <em>Needs Rate</em> sub-tab.
+              </p>
+            </div>
+            <div class="legend-card">
+              <span class="legend-chip chip-purple">● Purple</span>
+              <h4>Missing ticket / not arrived</h4>
+              <p>
+                Ticket number not yet on file or load isn't showing as
+                delivered. Goes to the <em>Missing Ticket</em> sub-tab.
+              </p>
+            </div>
+            <div class="legend-card">
+              <span class="legend-chip chip-cyan">● Cyan</span>
+              <h4>Missing driver</h4>
+              <p>
+                Driver field is blank or doesn't match a known driver. Goes to
+                the <em>Missing Driver</em> sub-tab.
+              </p>
+            </div>
+          </div>
+          <div class="cite">
+            "I do like the tiers and percentages for matched loads. 100%
+            matched load (have to have a photo attached). These can auto turn
+            yellow (they are currently green) and go to the ready to build tab
+            under the dispatch desk." — Jess, 2026-04-17
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── 2. VALIDATION PAGE ─────────────────────────────── -->
+      <section class="frame">
+        <header class="frame-header">
+          <div class="frame-title">2 · Validation page — every load gets a click</div>
+          <div class="frame-caption">
+            Nothing skips the gate. 100% matches are one fast click. Sub-100%
+            opens investigation. Date range and well sort at the top. BOL and
+            Ticket both visible (no more guessing which is which).
+          </div>
+        </header>
+        <div class="frame-body">
+          <!-- Filter bar -->
+          <div class="filter-bar">
+            <span class="filter-label">Show</span>
+            <button class="filter-pill active">
+              Needs Review <span class="count">18</span>
+            </button>
+            <button class="filter-pill">
+              Ready to Build <span class="count">12</span>
+            </button>
+            <button class="filter-pill">
+              Missing Ticket <span class="count">3</span>
+            </button>
+            <button class="filter-pill">
+              Missing Driver <span class="count">1</span>
+            </button>
+            <button class="filter-pill">
+              Needs Rate <span class="count">4</span>
+            </button>
+            <button class="filter-pill">All</button>
+            <div class="filter-divider"></div>
+            <span class="filter-label">Well</span>
+            <input class="filter-input" value="Apache Gulftex Fred Gawlik" />
+            <span class="filter-label">Date</span>
+            <input class="filter-input" value="04/11 – 04/17" />
+            <span class="filter-label">Truck</span>
+            <input class="filter-input" placeholder="e.g. 1456" />
+          </div>
+
+          <!-- Row: green (100% matched, awaiting confirm) -->
+          <div class="wb-row">
+            <div class="wb-stripe stripe-green"></div>
+            <div class="wb-row-body">
+              <input type="checkbox" />
+              <div>
+                <div class="wb-cell-title">L-20260417-1042</div>
+                <div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div>
+              </div>
+              <div>
+                <div>Sarah Lopez</div>
+                <div class="wb-cell-sub">Liberty Trucking · TRK-1456</div>
+              </div>
+              <div>
+                <div class="wb-cell-mono">BOL-74316</div>
+                <div class="wb-cell-sub wb-cell-mono">TKT-81316</div>
+              </div>
+              <div>
+                <div>24.50 t</div>
+                <div class="wb-cell-sub">49,000 lbs · OCR ✓</div>
+              </div>
+              <div class="wb-photo-thumb attached">BOL</div>
+              <div>
+                <span class="legend-chip chip-green" style="margin-bottom:0">
+                  100% · Auto-matched
+                </span>
+              </div>
+              <div>
+                <button class="wb-btn btn-confirm btn-sm">
+                  ✓ Confirm → Yellow
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row: orange (needs rate) -->
+          <div class="wb-row">
+            <div class="wb-stripe stripe-orange"></div>
+            <div class="wb-row-body">
+              <input type="checkbox" />
+              <div>
+                <div class="wb-cell-title">L-20260417-1051</div>
+                <div class="wb-cell-sub">Spectre Crescent Simul Diamond H</div>
+              </div>
+              <div>
+                <div>Mike Johnson</div>
+                <div class="wb-cell-sub">Liberty Trucking · TRK-1511</div>
+              </div>
+              <div>
+                <div class="wb-cell-mono">BOL-74329</div>
+                <div class="wb-cell-sub wb-cell-mono">TKT-81329</div>
+              </div>
+              <div>
+                <div>24.00 t</div>
+                <div class="wb-cell-sub" style="color: var(--jess-orange-text)">
+                  ! rate missing
+                </div>
+              </div>
+              <div class="wb-photo-thumb attached">BOL</div>
+              <div>
+                <span class="legend-chip chip-orange" style="margin-bottom:0">
+                  Needs Rate
+                </span>
+              </div>
+              <div>
+                <button class="wb-btn btn-primary btn-sm">Resolve</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row: purple (missing ticket) -->
+          <div class="wb-row">
+            <div class="wb-stripe stripe-purple"></div>
+            <div class="wb-row-body">
+              <input type="checkbox" />
+              <div>
+                <div class="wb-cell-title">L-20260417-1034</div>
+                <div class="wb-cell-sub">Apache Formentera Wrangler</div>
+              </div>
+              <div>
+                <div>Dan Reyes</div>
+                <div class="wb-cell-sub">JRT Transport · TRK-1453</div>
+              </div>
+              <div>
+                <div class="wb-cell-mono" style="color: var(--jess-purple-text)">
+                  BOL-74301
+                </div>
+                <div class="wb-cell-sub wb-cell-mono" style="color: var(--jess-purple-text)">
+                  ! ticket not arrived
+                </div>
+              </div>
+              <div>
+                <div>24.25 t</div>
+              </div>
+              <div class="wb-photo-thumb attached">BOL</div>
+              <div>
+                <span class="legend-chip chip-purple" style="margin-bottom:0">
+                  Missing Ticket
+                </span>
+              </div>
+              <div>
+                <button class="wb-btn btn-primary btn-sm">Resolve</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row: cyan (missing driver) -->
+          <div class="wb-row">
+            <div class="wb-stripe stripe-cyan"></div>
+            <div class="wb-row-body">
+              <input type="checkbox" />
+              <div>
+                <div class="wb-cell-title">L-20260417-1056</div>
+                <div class="wb-cell-sub">HV Falcon Expand CHK LA MIN</div>
+              </div>
+              <div>
+                <div style="color: var(--jess-cyan-text)">
+                  ! driver missing
+                </div>
+                <div class="wb-cell-sub">Logistix IQ · TRK-1462</div>
+              </div>
+              <div>
+                <div class="wb-cell-mono">BOL-74338</div>
+                <div class="wb-cell-sub wb-cell-mono">TKT-81338</div>
+              </div>
+              <div>
+                <div>23.80 t</div>
+              </div>
+              <div class="wb-photo-thumb attached">BOL</div>
+              <div>
+                <span class="legend-chip chip-cyan" style="margin-bottom:0">
+                  Missing Driver
+                </span>
+              </div>
+              <div>
+                <button class="wb-btn btn-primary btn-sm">Resolve</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row: another green -->
+          <div class="wb-row">
+            <div class="wb-stripe stripe-green"></div>
+            <div class="wb-row-body">
+              <input type="checkbox" />
+              <div>
+                <div class="wb-cell-title">L-20260417-1061</div>
+                <div class="wb-cell-sub">HV Nighthawk Rose City Bledsoe</div>
+              </div>
+              <div>
+                <div>Kevin Park</div>
+                <div class="wb-cell-sub">Logistix IQ · TRK-1466</div>
+              </div>
+              <div>
+                <div class="wb-cell-mono">BOL-74342</div>
+                <div class="wb-cell-sub wb-cell-mono">TKT-81342</div>
+              </div>
+              <div>
+                <div>24.50 t</div>
+                <div class="wb-cell-sub">OCR ✓</div>
+              </div>
+              <div class="wb-photo-thumb attached">BOL</div>
+              <div>
+                <span class="legend-chip chip-green" style="margin-bottom:0">
+                  100% · Auto-matched
+                </span>
+              </div>
+              <div>
+                <button class="wb-btn btn-confirm btn-sm">
+                  ✓ Confirm → Yellow
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bulk bar example -->
+          <div style="margin-top: 24px">
+            <h3 style="font-size:14px; margin-bottom: 8px">
+              Bulk action — when you select multiple 100% matches
+            </h3>
+            <div class="bulk-bar">
+              <input type="checkbox" checked />
+              <span class="bulk-bar-count">12 loads selected</span>
+              <button class="wb-btn btn-confirm">
+                ✓ Confirm all 12 → Yellow
+              </button>
+              <button class="wb-btn btn-ghost">Clear selection</button>
+            </div>
+          </div>
+
+          <div class="cite">
+            "Option to individually validate or select multiple loads to
+            validate. … More options than confirm or reject — option to color
+            code and send to - missing ticket tab ect." — Jess, 2026-04-17
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── 3. RESOLVE MODAL ───────────────────────────────── -->
+      <section class="frame">
+        <header class="frame-header">
+          <div class="frame-title">3 · Resolve modal — more than confirm / reject</div>
+          <div class="frame-caption">
+            When a row isn't a clean 100% match, clicking "Resolve" opens this.
+            You pick the right destination instead of just approving or
+            throwing it back.
+          </div>
+        </header>
+        <div class="frame-body" style="background: var(--bg-low)">
+          <div class="modal-sketch">
+            <h3>Resolve L-20260417-1051</h3>
+            <div class="load-sub">
+              Spectre Crescent Simul Diamond H · Mike Johnson · BOL-74329 · 24.00 t
+            </div>
+            <div style="font-size: 12px; color: var(--text-2); line-height: 1.6">
+              The matcher found a load but flagged it. Pick what to do:
+            </div>
+
+            <div class="modal-actions">
+              <button class="modal-action">
+                <div
+                  class="modal-action-icon"
+                  style="background: var(--jess-green)"
+                >
+                  ✓
+                </div>
+                <div>
+                  <span class="modal-action-title">Confirm & route to build</span>
+                  <div class="modal-action-desc">
+                    Override the flag — I already checked this one.
+                  </div>
+                </div>
+              </button>
+
+              <button class="modal-action">
+                <div
+                  class="modal-action-icon"
+                  style="background: var(--jess-orange)"
+                >
+                  $
+                </div>
+                <div>
+                  <span class="modal-action-title">Send to Needs Rate</span>
+                  <div class="modal-action-desc">
+                    Hold until Jeri sets the facility rate.
+                  </div>
+                </div>
+              </button>
+
+              <button class="modal-action">
+                <div
+                  class="modal-action-icon"
+                  style="background: var(--jess-purple)"
+                >
+                  ✕
+                </div>
+                <div>
+                  <span class="modal-action-title">Missing Ticket</span>
+                  <div class="modal-action-desc">
+                    No ticket on file or load not arrived.
+                  </div>
+                </div>
+              </button>
+
+              <button class="modal-action">
+                <div
+                  class="modal-action-icon"
+                  style="background: var(--jess-cyan)"
+                >
+                  ?
+                </div>
+                <div>
+                  <span class="modal-action-title">Missing Driver</span>
+                  <div class="modal-action-desc">
+                    Driver field is blank or wrong name.
+                  </div>
+                </div>
+              </button>
+
+              <button class="modal-action">
+                <div
+                  class="modal-action-icon"
+                  style="background: #6b7280"
+                >
+                  ↩
+                </div>
+                <div>
+                  <span class="modal-action-title">Flag back (other)</span>
+                  <div class="modal-action-desc">
+                    Not one of the above — add a note.
+                  </div>
+                </div>
+              </button>
+
+              <button class="modal-action">
+                <div
+                  class="modal-action-icon"
+                  style="background: #dc2626"
+                >
+                  🗑
+                </div>
+                <div>
+                  <span class="modal-action-title">Reject load</span>
+                  <div class="modal-action-desc">
+                    Bad row — remove from my queue.
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── 4. DISPATCH DESK ───────────────────────────────── -->
+      <section class="frame">
+        <header class="frame-header">
+          <div class="frame-title">4 · Dispatch Desk — yellow to pink</div>
+          <div class="frame-caption">
+            Steph / Scout / Keli pick up yellow rows, build them, and mark pink
+            when the row is in PCS. Same mental model you use today — just a
+            click instead of a color-change in the sheet.
+          </div>
+        </header>
+        <div class="frame-body">
+          <!-- Yellow row: ready to build -->
+          <div class="wb-row">
+            <div class="wb-stripe stripe-yellow"></div>
+            <div class="wb-row-body">
+              <input type="checkbox" />
+              <div>
+                <div class="wb-cell-title">L-20260417-1042</div>
+                <div class="wb-cell-sub">Apache Gulftex Fred Gawlik</div>
+              </div>
+              <div>
+                <div>Sarah Lopez</div>
+                <div class="wb-cell-sub">Liberty Trucking · TRK-1456</div>
+              </div>
+              <div>
+                <div class="wb-cell-mono">BOL-74316</div>
+                <div class="wb-cell-sub wb-cell-mono">TKT-81316</div>
+              </div>
+              <div>24.50 t</div>
+              <div class="wb-photo-thumb attached">BOL</div>
+              <div>
+                <span class="legend-chip chip-yellow" style="margin-bottom:0">
+                  Ready to Build
+                </span>
+                <div class="wb-cell-sub" style="margin-top:4px">
+                  Assigned: Scout
+                </div>
+              </div>
+              <div>
+                <button class="wb-btn btn-primary btn-sm">
+                  Build + Duplicate
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Yellow row: ready to build (Steph) -->
+          <div class="wb-row">
+            <div class="wb-stripe stripe-yellow"></div>
+            <div class="wb-row-body">
+              <input type="checkbox" />
+              <div>
+                <div class="wb-cell-title">L-20260417-1061</div>
+                <div class="wb-cell-sub">HV Nighthawk Rose City Bledsoe</div>
+              </div>
+              <div>
+                <div>Kevin Park</div>
+                <div class="wb-cell-sub">Logistix IQ · TRK-1466</div>
+              </div>
+              <div>
+                <div class="wb-cell-mono">BOL-74342</div>
+                <div class="wb-cell-sub wb-cell-mono">TKT-81342</div>
+              </div>
+              <div>24.50 t</div>
+              <div class="wb-photo-thumb attached">BOL</div>
+              <div>
+                <span class="legend-chip chip-yellow" style="margin-bottom:0">
+                  Ready to Build
+                </span>
+                <div class="wb-cell-sub" style="margin-top:4px">
+                  Assigned: Steph
+                </div>
+              </div>
+              <div>
+                <button class="wb-btn btn-primary btn-sm">
+                  Build + Duplicate
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pink row: completed -->
+          <div class="wb-row">
+            <div class="wb-stripe stripe-pink"></div>
+            <div class="wb-row-body">
+              <input type="checkbox" />
+              <div>
+                <div class="wb-cell-title">L-20260417-1019</div>
+                <div class="wb-cell-sub">Titan DNR Chili 117X</div>
+              </div>
+              <div>
+                <div>Tom Wilson</div>
+                <div class="wb-cell-sub">Liberty Trucking · TRK-1501</div>
+              </div>
+              <div>
+                <div class="wb-cell-mono">BOL-74294</div>
+                <div class="wb-cell-sub wb-cell-mono">TKT-81294</div>
+              </div>
+              <div>24.75 t</div>
+              <div class="wb-photo-thumb attached">BOL</div>
+              <div>
+                <span class="legend-chip chip-pink" style="margin-bottom:0">
+                  Completed
+                </span>
+                <div class="wb-cell-sub" style="margin-top:4px">
+                  PCS #  198-04211
+                </div>
+              </div>
+              <div>
+                <button class="wb-btn btn-ghost btn-sm">View</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="cite">
+            "Loads would be yellow and available to turn green (to be built or
+            pushed). Once built or pushed they will turn Pink to completed." —
+            Jess, 2026-04-17
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── 5. WHAT CHANGES ─────────────────────────────────── -->
+      <section class="frame">
+        <header class="frame-header">
+          <div class="frame-title">5 · What this changes from the current build</div>
+          <div class="frame-caption">
+            Be explicit about what's new so nothing surprises you later.
+          </div>
+        </header>
+        <div class="frame-body">
+          <div class="diff-row">
+            <div class="diff-old">Clean loads auto-advanced to "Ready to Build" without a click</div>
+            <div class="diff-arrow">→</div>
+            <div class="diff-new">Every load needs a human click — even 100% matches. Clean ones are fast: just <strong>Confirm</strong>.</div>
+          </div>
+          <div class="diff-row">
+            <div class="diff-old">Resolve options: Advance or Flag back (2 options)</div>
+            <div class="diff-arrow">→</div>
+            <div class="diff-new">Six granular options: Confirm · Needs Rate · Missing Ticket · Missing Driver · Flag Back · Reject</div>
+          </div>
+          <div class="diff-row">
+            <div class="diff-old">One field showed either BOL or Ticket</div>
+            <div class="diff-arrow">→</div>
+            <div class="diff-new">Both BOL and Ticket visible on every row</div>
+          </div>
+          <div class="diff-row">
+            <div class="diff-old">No date range filter</div>
+            <div class="diff-arrow">→</div>
+            <div class="diff-new">Date range + well sort at the top of the page</div>
+          </div>
+          <div class="diff-row">
+            <div class="diff-old">No truck search</div>
+            <div class="diff-arrow">→</div>
+            <div class="diff-new">Filter by truck number (Jeri's pattern)</div>
+          </div>
+          <div class="diff-row">
+            <div class="diff-old">Muted stage colors (amber / blue / teal / slate)</div>
+            <div class="diff-arrow">→</div>
+            <div class="diff-new">Your traffic-light colors — green · yellow · pink · orange · purple · cyan</div>
+          </div>
+          <div class="diff-row">
+            <div class="diff-old">Ended at "cleared"</div>
+            <div class="diff-arrow">→</div>
+            <div class="diff-new">Explicit "Completed" (pink) post-build · invoicing surface in Phase 2</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── 6. OPEN QUESTIONS ──────────────────────────────── -->
+      <section class="frame">
+        <header class="frame-header">
+          <div class="frame-title">6 · Open questions — please answer</div>
+          <div class="frame-caption">
+            Quick yes/no or a one-line reply works. Each answer unblocks a
+            specific piece of the build.
+          </div>
+        </header>
+        <div class="frame-body">
+          <div class="questions">
+            <h4>For Jessica — need by Monday</h4>
+            <ol>
+              <li>
+                <strong>Green → Yellow confirm:</strong> Only you confirm, or
+                can any dispatcher on the chain (Scout, Steph, Keli)?
+              </li>
+              <li>
+                <strong>Pink = "built" or "pushed":</strong> Is there a visual
+                difference between "typed into PCS manually" and "auto-pushed
+                via API" post-OAuth? Or same pink for both?
+              </li>
+              <li>
+                <strong>Overrides:</strong> If you un-confirm a green-turned-yellow
+                load, should it go back to the green queue or straight to
+                needs-review?
+              </li>
+              <li>
+                <strong>Missing Ticket / Missing Driver tabs:</strong> Keep
+                them as filters on this one Workbench page, or do you prefer
+                separate pages like BOL / Validation used to be?
+              </li>
+              <li>
+                <strong>"Being cleared" and "Invoiced":</strong> From your
+                sheet color key — should these also be stages in the app, or
+                is Katie's verification + Jenny's invoicing a separate module
+                for Phase 2?
+              </li>
+              <li>
+                <strong>Reporting:</strong> A single exportable report covering
+                all imported loads (not just built), by date range, sorted by
+                truck, with PCS load numbers where present — is that the full
+                shape, or are there fields you need besides what's on the
+                invoice template you sent?
+              </li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── SIGN-OFF ───────────────────────────────────────── -->
+      <section class="signoff">
+        <h2>Sign-off</h2>
+        <p>
+          If the flow above matches what you meant, send a quick reply to the
+          PCS Green Light thread saying something like: <em>"Mockup looks right
+          — go build,"</em> and answer whichever of the six open questions you
+          can. That's the trigger for us to cut the 1-week internal validation
+          window and start building toward PCS push.
+        </p>
+
+        <ul class="signoff-checklist">
+          <li>
+            <div class="signoff-checkbox"></div>
+            <span>Color model (Section 1) matches my mental model — yes / tweak</span>
+          </li>
+          <li>
+            <div class="signoff-checkbox"></div>
+            <span>Validation page flow (Section 2) matches how I work — yes / tweak</span>
+          </li>
+          <li>
+            <div class="signoff-checkbox"></div>
+            <span>Resolve options (Section 3) cover my cases — yes / tweak</span>
+          </li>
+          <li>
+            <div class="signoff-checkbox"></div>
+            <span>Dispatch Desk progression (Section 4) matches my team's flow — yes / tweak</span>
+          </li>
+          <li>
+            <div class="signoff-checkbox"></div>
+            <span>Answers to the six open questions (Section 6) attached</span>
+          </li>
+          <li>
+            <div class="signoff-checkbox"></div>
+            <span>Go-ahead to cut the 1-week internal validation window</span>
+          </li>
+        </ul>
+
+        <div style="margin-top: 24px">
+          <a class="signoff-btn" href="mailto:JRyan@Lexcom.com?subject=Re%3A%20PCS%20Green%20Light%20%E2%80%94%20Mockup%20sign-off&body=Sign-off%20checklist%3A%0A%0A1.%20Color%20model%20%E2%80%94%20yes%20%2F%20tweak%3A%0A2.%20Validation%20page%20%E2%80%94%20yes%20%2F%20tweak%3A%0A3.%20Resolve%20options%20%E2%80%94%20yes%20%2F%20tweak%3A%0A4.%20Dispatch%20Desk%20%E2%80%94%20yes%20%2F%20tweak%3A%0A%0AOpen%20questions%3A%0A1.%20Who%20confirms%3F%20%0A2.%20Pink%20%3D%20built%20vs%20pushed%3F%20%0A3.%20Overrides%20go%20where%3F%20%0A4.%20Tabs%20vs%20pages%3F%20%0A5.%20Being%20cleared%20%2F%20Invoiced%20as%20stages%3F%20%0A6.%20Reporting%20shape%3F%20%0A%0AGo-ahead%20on%201-week%20validation%20window%3A%20">
+            Reply & sign off
+          </a>
+          <span style="font-size: 12px; opacity: 0.75">
+            or annotate this page and reply directly in the email thread
+          </span>
+        </div>
+      </section>
+
+      <footer style="margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--text-3)">
+        ES Express Workbench · Sign-off Mockup · Generated 2026-04-17
+        · <code>frontend/public/workbench-jess-signoff.html</code>
+      </footer>
+    </main>
+  </body>
+</html>
