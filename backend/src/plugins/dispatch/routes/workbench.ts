@@ -45,6 +45,9 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
             dateTo: { type: "string", format: "date" },
             // Truck filter — substring match on loads.truck_no.
             truckNo: { type: "string", maxLength: 40 },
+            // Well filter — exact well id or substring on wells.name.
+            wellId: { type: "integer", minimum: 1 },
+            wellName: { type: "string", maxLength: 200 },
             limit: { type: "integer", minimum: 1, maximum: 500, default: 100 },
             offset: { type: "integer", minimum: 0, default: 0 },
           },
@@ -64,6 +67,8 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
         dateFrom?: string;
         dateTo?: string;
         truckNo?: string;
+        wellId?: number;
+        wellName?: string;
         limit?: number;
         offset?: number;
       };
@@ -76,6 +81,8 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
           dateFrom: query.dateFrom,
           dateTo: query.dateTo,
           truckNo: query.truckNo,
+          wellId: query.wellId,
+          wellName: query.wellName,
           limit: query.limit,
           offset: query.offset,
         });
@@ -242,6 +249,139 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
           error: { code: "INTERNAL", message: "Operation failed" },
         });
       }
+    },
+  );
+
+  // POST /:id/route — granular Resolve actions for an uncertain row.
+  // action=confirm        → clears reasons + advances to ready_to_build
+  // action=needs_rate     → re-tags with rate_missing, stays uncertain
+  // action=missing_ticket → re-tags with missing_tickets
+  // action=missing_driver → re-tags with missing_driver
+  // action=flag_other     → clears reason tags, holds context in notes
+  fastify.post(
+    "/:id/route",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" } },
+        },
+        body: {
+          type: "object",
+          required: ["action"],
+          properties: {
+            action: {
+              type: "string",
+              enum: [
+                "confirm",
+                "needs_rate",
+                "missing_ticket",
+                "missing_driver",
+                "flag_other",
+              ],
+            },
+            notes: { type: "string" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
+
+      const { routeUncertain } =
+        await import("../services/workbench.service.js");
+      const { id } = request.params as { id: number };
+      const { action, notes } = request.body as {
+        action:
+          | "confirm"
+          | "needs_rate"
+          | "missing_ticket"
+          | "missing_driver"
+          | "flag_other";
+        notes?: string;
+      };
+      const user = request.user as { id: number; name: string };
+
+      try {
+        await routeUncertain(db, id, action, {
+          userId: user.id,
+          userName: user.name,
+          notes,
+        });
+        return { success: true };
+      } catch (err) {
+        if (err instanceof AppError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        request.log.error({ err }, "workbench route failed");
+        return reply.status(500).send({
+          success: false,
+          error: { code: "INTERNAL", message: "Operation failed" },
+        });
+      }
+    },
+  );
+
+  // POST /bulk-confirm — batch advance from uncertain → ready_to_build.
+  // Mirror of /build-duplicate but for the validation gate step. The state
+  // machine's allowedTransition blocks uncertain→ready_to_build when the
+  // row still has open uncertain_reasons, so rows with triggers fail
+  // individually in the results list without blocking the rest.
+  fastify.post(
+    "/bulk-confirm",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        body: {
+          type: "object",
+          required: ["assignmentIds"],
+          properties: {
+            assignmentIds: {
+              type: "array",
+              items: { type: "integer" },
+              minItems: 1,
+              maxItems: 200,
+            },
+            notes: { type: "string" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
+
+      const { advanceStage } = await import("../services/workbench.service.js");
+      const { assignmentIds, notes } = request.body as {
+        assignmentIds: number[];
+        notes?: string;
+      };
+      const user = request.user as { id: number; name: string };
+
+      const ctx = {
+        userId: user.id,
+        userName: user.name,
+        notes: notes ?? "bulk-confirm batch",
+      };
+
+      const results: { id: number; ok: boolean; error?: string }[] = [];
+      for (const id of assignmentIds) {
+        try {
+          await advanceStage(db, id, "ready_to_build", ctx);
+          results.push({ id, ok: true });
+        } catch (err) {
+          const error =
+            err instanceof AppError ? err.message : "Operation failed";
+          results.push({ id, ok: false, error });
+        }
+      }
+      return { success: true, data: { results } };
     },
   );
 

@@ -177,6 +177,10 @@ export interface WorkbenchListParams {
   dateTo?: string;
   /** Substring match on loads.truck_no (ilike). */
   truckNo?: string;
+  /** Exact match on assignments.well_id. Takes precedence over wellName. */
+  wellId?: number;
+  /** Substring match on wells.name (ilike). Ignored if wellId is set. */
+  wellName?: string;
   limit?: number;
   offset?: number;
 }
@@ -271,13 +275,24 @@ export async function listWorkbenchRows(
     ? ilike(loads.truckNo, `%${params.truckNo}%`)
     : undefined;
 
+  // Well filter — wellId takes precedence when both are provided. Names
+  // match via ilike so "apache" finds "Apache Gulftex Fred Gawlik" etc.
+  // When wellName is used, the count query must also join wells (done
+  // unconditionally below to preserve the count/data invariant).
+  const wellCondition = params.wellId
+    ? eq(assignments.wellId, params.wellId)
+    : params.wellName
+      ? ilike(wells.name, `%${params.wellName}%`)
+      : undefined;
+
   // Compose all conditions in one place — preserves the count-query
-  // invariant that only assignments/loads columns are touched.
+  // invariant that only assignments/loads/wells columns are touched.
   const allConditions = [
     filterCondition,
     searchCondition,
     dateCondition,
     truckCondition,
+    wellCondition,
   ].filter(Boolean);
   const whereClause =
     allConditions.length === 0
@@ -334,10 +349,14 @@ export async function listWorkbenchRows(
   // only touches assignments columns and searchCondition only touches
   // loads columns. If a future filter references wells or users, this
   // join chain must be expanded to match the data query.
+  // Count query joins wells too so wellName ilike conditions still apply.
+  // Kept in sync with the data query's join chain — any future filter that
+  // references a new table must be added here as well.
   const totalQuery = db
     .select({ count: sql<number>`count(*)::int` })
     .from(assignments)
-    .leftJoin(loads, eq(loads.id, assignments.loadId));
+    .leftJoin(loads, eq(loads.id, assignments.loadId))
+    .leftJoin(wells, eq(wells.id, assignments.wellId));
   const [{ count }] = await (whereClause
     ? totalQuery.where(whereClause)
     : totalQuery);
@@ -473,5 +492,126 @@ export async function flagToUncertain(
   return advanceStage(db, assignmentId, "uncertain", {
     ...ctx,
     notes: `flag-back: ${ctx.reason}${ctx.notes ? ` — ${ctx.notes}` : ""}`,
+  });
+}
+
+/**
+ * Route an uncertain row via the granular Resolve modal.
+ *
+ * Actions:
+ * - confirm          — human override: clear uncertain_reasons + advance to ready_to_build
+ * - needs_rate       — tag with rate_missing (stays in uncertain)
+ * - missing_ticket   — tag with missing_tickets
+ * - missing_driver   — tag with missing_driver
+ * - flag_other       — tag with an open-ended note (no reason tag; reason held in notes)
+ * - reject           — (not implemented in MVP; frontend exposes it but routing skips)
+ *
+ * All writes go through a transaction with FOR UPDATE to avoid races with
+ * the reconciliation refresher.
+ */
+export type ResolveAction =
+  | "confirm"
+  | "needs_rate"
+  | "missing_ticket"
+  | "missing_driver"
+  | "flag_other";
+
+const ACTION_TO_REASON: Record<
+  Exclude<ResolveAction, "confirm" | "flag_other">,
+  string
+> = {
+  needs_rate: "rate_missing",
+  missing_ticket: "missing_tickets",
+  missing_driver: "missing_driver",
+};
+
+export async function routeUncertain(
+  db: Database,
+  assignmentId: number,
+  action: ResolveAction,
+  ctx: TransitionContext,
+): Promise<void> {
+  if (action === "confirm") {
+    // Human override path: clear open reasons, then advance through the
+    // normal state machine. Clearing reasons BEFORE advanceStage lets
+    // allowedTransition's gate succeed (reasons.length === 0 required).
+    return db.transaction(async (tx) => {
+      const [row] = await tx
+        .select()
+        .from(assignments)
+        .where(eq(assignments.id, assignmentId))
+        .limit(1)
+        .for("update");
+      if (!row) throw new NotFoundError(`Assignment ${assignmentId} not found`);
+      if (row.handlerStage !== "uncertain") {
+        throw new ValidationError(
+          `Cannot confirm: assignment is in stage ${row.handlerStage}, not uncertain`,
+        );
+      }
+
+      const now = new Date();
+      const historyEntry = {
+        status: "confirm-override",
+        changedAt: now.toISOString(),
+        changedBy: ctx.userId,
+        changedByName: ctx.userName,
+        notes: ctx.notes ?? "confirmed via resolve modal (override)",
+      };
+
+      await tx
+        .update(assignments)
+        .set({
+          uncertainReasons: [],
+          statusHistory: sql`coalesce(${assignments.statusHistory}, '[]'::jsonb) || ${JSON.stringify([historyEntry])}::jsonb`,
+          updatedAt: now,
+        })
+        .where(eq(assignments.id, assignmentId));
+    }).then(() =>
+      advanceStage(db, assignmentId, "ready_to_build", {
+        ...ctx,
+        notes: ctx.notes ?? "confirmed via resolve modal",
+      }),
+    );
+  }
+
+  // Re-tag path: replace uncertain_reasons with a single specific reason
+  // (needs_rate / missing_ticket / missing_driver) or a free-form "flag_other".
+  // Does NOT change handler_stage — row stays in uncertain.
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({ id: assignments.id, handlerStage: assignments.handlerStage })
+      .from(assignments)
+      .where(eq(assignments.id, assignmentId))
+      .limit(1)
+      .for("update");
+    if (!row) throw new NotFoundError(`Assignment ${assignmentId} not found`);
+    if (row.handlerStage !== "uncertain") {
+      throw new ValidationError(
+        `Cannot re-tag: assignment is in stage ${row.handlerStage}, not uncertain`,
+      );
+    }
+
+    const reasonTag: UncertainReason[] =
+      action === "flag_other"
+        ? []
+        : [ACTION_TO_REASON[action] as UncertainReason];
+
+    const now = new Date();
+    const historyEntry = {
+      status: `route:${action}`,
+      changedAt: now.toISOString(),
+      changedBy: ctx.userId,
+      changedByName: ctx.userName,
+      notes: ctx.notes,
+    };
+
+    await tx
+      .update(assignments)
+      .set({
+        uncertainReasons: reasonTag,
+        statusHistory: sql`coalesce(${assignments.statusHistory}, '[]'::jsonb) || ${JSON.stringify([historyEntry])}::jsonb`,
+        updatedAt: now,
+      })
+      .where(eq(assignments.id, assignmentId));
   });
 }

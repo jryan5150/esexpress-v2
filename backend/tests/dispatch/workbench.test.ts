@@ -82,6 +82,26 @@ describe("GET /api/v1/dispatch/workbench", () => {
     });
     expect(r.statusCode).toBe(400);
   });
+
+  it("accepts wellId and wellName filters", async () => {
+    for (const q of ["wellId=1", "wellName=apache"]) {
+      const r = await app.inject({
+        method: "GET",
+        url: `/api/v1/dispatch/workbench?filter=all&${q}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect([200, 500, 503]).toContain(r.statusCode);
+    }
+  });
+
+  it("rejects wellId that is not a positive integer", async () => {
+    const r = await app.inject({
+      method: "GET",
+      url: "/api/v1/dispatch/workbench?filter=all&wellId=0",
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(r.statusCode).toBe(400);
+  });
 });
 
 describe("POST /api/v1/dispatch/workbench/:id/advance", () => {

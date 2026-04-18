@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useWorkbench, useAdvanceStage } from "../hooks/use-workbench";
+import {
+  useWorkbench,
+  useAdvanceStage,
+  useBulkConfirm,
+} from "../hooks/use-workbench";
 import { useCurrentUser } from "../hooks/use-auth";
 import { WorkbenchRow } from "../components/WorkbenchRow";
 import { WorkbenchDrawer } from "../components/WorkbenchDrawer";
@@ -25,6 +29,7 @@ export function Workbench() {
   const dateFrom = params.get("dateFrom") ?? "";
   const dateTo = params.get("dateTo") ?? "";
   const truckNo = params.get("truckNo") ?? "";
+  const wellName = params.get("wellName") ?? "";
 
   const userQuery = useCurrentUser();
   const user = userQuery.data;
@@ -34,8 +39,10 @@ export function Workbench() {
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
     truckNo: truckNo || undefined,
+    wellName: wellName || undefined,
   });
   const advance = useAdvanceStage();
+  const bulkConfirm = useBulkConfirm();
 
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -48,6 +55,22 @@ export function Workbench() {
     [workbenchQuery.data],
   );
   const total = workbenchQuery.data?.total ?? 0;
+
+  // For bulk-bar: categorize selected rows so we know which bulk actions
+  // apply. Clean-uncertain rows can be confirmed; ready_to_build rows can
+  // be batch-built.
+  const selectedRows = useMemo(
+    () => rows.filter((r) => selected.has(r.assignmentId)),
+    [rows, selected],
+  );
+  const selectedCleanUncertainIds = selectedRows
+    .filter(
+      (r) => r.handlerStage === "uncertain" && r.uncertainReasons.length === 0,
+    )
+    .map((r) => r.assignmentId);
+  const selectedReadyToBuildIds = selectedRows
+    .filter((r) => r.handlerStage === "ready_to_build")
+    .map((r) => r.assignmentId);
 
   const setFilter = (f: WorkbenchFilter) => {
     const next = new URLSearchParams(params);
@@ -169,7 +192,23 @@ export function Workbench() {
               onBlur={(e) => setParam("truckNo", e.target.value)}
             />
           </label>
-          {(dateFrom || dateTo || truckNo || search) && (
+          <label className="flex items-center gap-1 text-xs text-on-surface-variant">
+            <span className="font-medium uppercase tracking-wider text-[10px]">
+              Well
+            </span>
+            <input
+              type="text"
+              className="bg-surface-variant rounded px-2 py-1 text-sm w-40"
+              placeholder="e.g. Apache Gulftex"
+              defaultValue={wellName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter")
+                  setParam("wellName", (e.target as HTMLInputElement).value);
+              }}
+              onBlur={(e) => setParam("wellName", e.target.value)}
+            />
+          </label>
+          {(dateFrom || dateTo || truckNo || wellName || search) && (
             <button
               type="button"
               onClick={() => {
@@ -218,15 +257,47 @@ export function Workbench() {
           data-batch-bar
           className="flex items-center justify-between p-2 bg-surface-variant rounded"
         >
-          <div className="text-sm">{selected.size} selected</div>
+          <div className="text-sm">
+            {selected.size} selected
+            {selectedCleanUncertainIds.length > 0 && (
+              <span className="ml-2 text-xs text-on-surface-variant">
+                · {selectedCleanUncertainIds.length} ready to confirm
+              </span>
+            )}
+            {selectedReadyToBuildIds.length > 0 && (
+              <span className="ml-2 text-xs text-on-surface-variant">
+                · {selectedReadyToBuildIds.length} ready to build
+              </span>
+            )}
+          </div>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setBuildModalOpen(true)}
-              className="px-3 py-1 text-sm rounded bg-primary text-on-primary"
-            >
-              Build + Duplicate batch
-            </button>
+            {selectedCleanUncertainIds.length > 0 && (
+              <button
+                type="button"
+                disabled={bulkConfirm.isPending}
+                onClick={async () => {
+                  await bulkConfirm.mutateAsync({
+                    assignmentIds: selectedCleanUncertainIds,
+                    notes: "bulk-confirm via selection bar",
+                  });
+                  setSelected(new Set());
+                }}
+                className="px-3 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                {bulkConfirm.isPending
+                  ? "Confirming…"
+                  : `Confirm ${selectedCleanUncertainIds.length} → Yellow`}
+              </button>
+            )}
+            {selectedReadyToBuildIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setBuildModalOpen(true)}
+                className="px-3 py-1 text-sm rounded bg-primary text-on-primary"
+              >
+                Build + Duplicate batch
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setSelected(new Set())}
