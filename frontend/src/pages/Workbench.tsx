@@ -81,7 +81,19 @@ export function Workbench() {
   const primaryActionFor = async (row: Row) => {
     switch (row.handlerStage) {
       case "uncertain":
-        setResolveRow(row);
+        // Fast path: 100% matched load with no open reasons → one-click Confirm
+        // advances directly to Ready to Build per Jessica's workflow ask.
+        // Loads with open reasons go through the Resolve modal to pick a
+        // specific route (Needs Rate, Missing Ticket, etc.).
+        if (row.uncertainReasons.length === 0) {
+          await advance.mutateAsync({
+            id: row.assignmentId,
+            stage: "ready_to_build",
+            notes: "confirmed via fast-path",
+          });
+        } else {
+          setResolveRow(row);
+        }
         return;
       case "ready_to_build":
         setSelected(new Set([row.assignmentId]));

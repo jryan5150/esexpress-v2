@@ -42,20 +42,27 @@ function SourceBadge({ source }: { source: LoadSource }) {
   );
 }
 
-// Returns the CTA label for the current stage. Keep text short — the
-// button has to fit next to the other columns.
-function primaryActionLabel(stage: HandlerStage): string {
+// Returns the CTA label + variant for the current stage. Keep text short —
+// the button has to fit next to the other columns.
+// Clean uncertain (no reasons) gets the fast-path "Confirm → Yellow" button
+// in green; triggered uncertain (reasons present) shows "Resolve" in primary.
+function primaryAction(
+  stage: HandlerStage,
+  clean: boolean,
+): { label: string; variant: "confirm" | "primary" | "ghost" } {
   switch (stage) {
     case "uncertain":
-      return "Resolve";
+      return clean
+        ? { label: "Confirm → Yellow", variant: "confirm" }
+        : { label: "Resolve", variant: "primary" };
     case "ready_to_build":
-      return "Build + Duplicate";
+      return { label: "Build + Duplicate", variant: "primary" };
     case "building":
-      return "Mark Entered";
+      return { label: "Mark Entered", variant: "primary" };
     case "entered":
-      return "Mark Cleared";
+      return { label: "Mark Cleared", variant: "primary" };
     case "cleared":
-      return "";
+      return { label: "", variant: "ghost" };
   }
 }
 
@@ -107,7 +114,9 @@ export const WorkbenchRow = memo(function WorkbenchRow({
   isPending,
 }: WorkbenchRowProps) {
   const handlerColor = row.currentHandlerColor ?? "#334155";
-  const actionLabel = primaryActionLabel(row.handlerStage);
+  const isCleanUncertain =
+    row.handlerStage === "uncertain" && row.uncertainReasons.length === 0;
+  const action = primaryAction(row.handlerStage, isCleanUncertain);
 
   return (
     <div
@@ -194,14 +203,14 @@ export const WorkbenchRow = memo(function WorkbenchRow({
         </div>
 
         <div className="col-span-2">
-          <StagePill stage={row.handlerStage} />
+          <StagePill stage={row.handlerStage} clean={isCleanUncertain} />
           <div className="text-xs text-on-surface-variant mt-0.5">
             {formatDate(row.stageChangedAt)}
           </div>
         </div>
 
         <div className="col-span-2 text-right">
-          {actionLabel ? (
+          {action.label ? (
             <button
               type="button"
               disabled={isPending}
@@ -209,9 +218,16 @@ export const WorkbenchRow = memo(function WorkbenchRow({
                 e.stopPropagation();
                 onPrimaryAction();
               }}
-              className="px-3 py-1 text-xs font-medium rounded bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-50"
+              className={
+                "px-3 py-1 text-xs font-medium rounded disabled:opacity-50 " +
+                (action.variant === "confirm"
+                  ? "bg-emerald-600 text-white hover:bg-emerald-500"
+                  : action.variant === "primary"
+                    ? "bg-primary text-on-primary hover:bg-primary/90"
+                    : "bg-surface-variant text-on-surface hover:bg-surface-variant/80")
+              }
             >
-              {isPending ? "…" : actionLabel}
+              {isPending ? "…" : action.label}
             </button>
           ) : null}
         </div>

@@ -8,26 +8,45 @@ const STAGE_LABELS: Record<HandlerStage, string> = {
   cleared: "Cleared",
 };
 
-// Neutral palette so the pill complements — not competes with — the
-// per-user color stripe on the left edge of the row.
+// Traffic-light palette from Jessica's Load Count sheet color key:
+//   amber  = needs review (uncertain + open reasons)
+//   green  = auto-validated / pending one-click confirm
+//   yellow = ready / building / in queue
+//   pink   = built or cleared (done)
+// The `uncertain` stage defaults to amber; the <StagePill clean> variant
+// renders the same stage in green for rows with no open reasons — the
+// "one click Confirm → Yellow" fast path Jessica asked for.
 const STAGE_CLASSES: Record<HandlerStage, string> = {
   uncertain: "bg-amber-500/15 text-amber-300 border-amber-500/40",
-  ready_to_build: "bg-blue-500/15 text-blue-300 border-blue-500/40",
-  building: "bg-sky-500/15 text-sky-300 border-sky-500/40",
-  entered: "bg-teal-500/15 text-teal-300 border-teal-500/40",
-  cleared: "bg-slate-500/15 text-slate-300 border-slate-500/40",
+  ready_to_build: "bg-yellow-500/15 text-yellow-300 border-yellow-500/40",
+  building: "bg-yellow-600/20 text-yellow-200 border-yellow-600/50",
+  entered: "bg-pink-500/15 text-pink-300 border-pink-500/40",
+  cleared: "bg-pink-500/10 text-pink-300/80 border-pink-500/30",
 };
+
+const UNCERTAIN_CLEAN_CLASS =
+  "bg-emerald-500/15 text-emerald-300 border-emerald-500/40";
+const UNCERTAIN_CLEAN_LABEL = "Pending Confirm";
 
 interface StagePillProps {
   stage: HandlerStage;
+  /**
+   * When stage === "uncertain" and `clean` is true, render the pill in
+   * green with "Pending Confirm" — Jessica's 100%-matched auto-validated
+   * state that needs a one-click confirm to move to Ready to Build.
+   */
+  clean?: boolean;
 }
 
-export function StagePill({ stage }: StagePillProps) {
+export function StagePill({ stage, clean }: StagePillProps) {
+  const isCleanUncertain = stage === "uncertain" && clean;
+  const cls = isCleanUncertain ? UNCERTAIN_CLEAN_CLASS : STAGE_CLASSES[stage];
+  const label = isCleanUncertain ? UNCERTAIN_CLEAN_LABEL : STAGE_LABELS[stage];
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${STAGE_CLASSES[stage]}`}
+      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full border ${cls}`}
     >
-      {STAGE_LABELS[stage]}
+      {label}
     </span>
   );
 }
