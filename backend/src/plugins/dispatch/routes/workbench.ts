@@ -1,5 +1,10 @@
 import { type FastifyPluginAsync } from "fastify";
 import { AppError } from "../../../lib/errors.js";
+import {
+  recordDecision,
+  snapshotAssignmentScore,
+  type DecisionAction,
+} from "../services/match-decisions.service.js";
 
 const DB_UNAVAILABLE = {
   success: false,
@@ -130,12 +135,26 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
       };
       const user = request.user as { id: number; name: string };
 
+      const snapshot = await snapshotAssignmentScore(db, id).catch(() => null);
+
       try {
         await advanceStage(db, id, stage, {
           userId: user.id,
           userName: user.name,
           notes,
         });
+        if (snapshot) {
+          recordDecision(db, {
+            assignmentId: id,
+            action: `advance:${stage}` as DecisionAction,
+            userId: user.id,
+            notes,
+            featuresBefore: snapshot.features,
+            scoreBefore: snapshot.score,
+          }).catch((err) =>
+            request.log.warn({ err }, "recordDecision failed (advance)"),
+          );
+        }
         return { success: true };
       } catch (err) {
         if (err instanceof AppError) {
@@ -228,6 +247,8 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
       };
       const user = request.user as { id: number; name: string };
 
+      const snapshot = await snapshotAssignmentScore(db, id).catch(() => null);
+
       try {
         await flagToUncertain(db, id, {
           userId: user.id,
@@ -235,6 +256,18 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
           reason,
           notes,
         });
+        if (snapshot) {
+          recordDecision(db, {
+            assignmentId: id,
+            action: "flag_back",
+            userId: user.id,
+            notes: `flag_back:${reason}${notes ? ` — ${notes}` : ""}`,
+            featuresBefore: snapshot.features,
+            scoreBefore: snapshot.score,
+          }).catch((err) =>
+            request.log.warn({ err }, "recordDecision failed (flag)"),
+          );
+        }
         return { success: true };
       } catch (err) {
         if (err instanceof AppError) {
@@ -305,12 +338,26 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
       };
       const user = request.user as { id: number; name: string };
 
+      const snapshot = await snapshotAssignmentScore(db, id).catch(() => null);
+
       try {
         await routeUncertain(db, id, action, {
           userId: user.id,
           userName: user.name,
           notes,
         });
+        if (snapshot) {
+          recordDecision(db, {
+            assignmentId: id,
+            action: `route:${action}` as DecisionAction,
+            userId: user.id,
+            notes,
+            featuresBefore: snapshot.features,
+            scoreBefore: snapshot.score,
+          }).catch((err) =>
+            request.log.warn({ err }, "recordDecision failed (route)"),
+          );
+        }
         return { success: true };
       } catch (err) {
         if (err instanceof AppError) {
@@ -372,9 +419,27 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
 
       const results: { id: number; ok: boolean; error?: string }[] = [];
       for (const id of assignmentIds) {
+        const snapshot = await snapshotAssignmentScore(db, id).catch(
+          () => null,
+        );
         try {
           await advanceStage(db, id, "ready_to_build", ctx);
           results.push({ id, ok: true });
+          if (snapshot) {
+            recordDecision(db, {
+              assignmentId: id,
+              action: "bulk_confirm",
+              userId: user.id,
+              notes: ctx.notes,
+              featuresBefore: snapshot.features,
+              scoreBefore: snapshot.score,
+            }).catch((err) =>
+              request.log.warn(
+                { err },
+                "recordDecision failed (bulk_confirm)",
+              ),
+            );
+          }
         } catch (err) {
           const error =
             err instanceof AppError ? err.message : "Operation failed";
