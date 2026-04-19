@@ -1,14 +1,14 @@
 import { type FastifyPluginAsync } from "fastify";
 import {
   PCS_DISPATCH_ENABLED,
-  dispatch,
   postStatus,
   sendDispatchMessage,
   clearRoutes,
   healthCheck,
-  buildDispatchPackage,
   diagnostics,
 } from "../services/pcs-soap.service.js";
+import { dispatchLoad } from "../services/pcs-rest.service.js";
+import { buildDispatchPackage } from "../lib/dispatch-package.js";
 import { NotFoundError } from "../../../lib/errors.js";
 import { assignments, loads, wells } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
@@ -156,7 +156,7 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const { assignmentId } = request.body as { assignmentId: number };
-      const result = await dispatch(db, assignmentId);
+      const result = await dispatchLoad(db, assignmentId);
 
       return {
         success: result.success,
