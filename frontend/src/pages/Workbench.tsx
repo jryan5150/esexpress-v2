@@ -11,7 +11,10 @@ import { WorkbenchDrawer } from "../components/WorkbenchDrawer";
 import { BuildDuplicateModal } from "../components/BuildDuplicateModal";
 import { ResolveModal } from "../components/ResolveModal";
 import { WorkbenchOnboarding } from "../components/WorkbenchOnboarding";
+import { WorkbenchWellPicker } from "../components/WorkbenchWellPicker";
 import type { WorkbenchFilter, WorkbenchRow as Row } from "../types/api";
+
+type WorkbenchView = "list" | "tabular";
 
 const FILTERS: { value: WorkbenchFilter; label: string }[] = [
   { value: "uncertain", label: "Uncertain" },
@@ -30,16 +33,21 @@ export function Workbench() {
   const dateTo = params.get("dateTo") ?? "";
   const truckNo = params.get("truckNo") ?? "";
   const wellName = params.get("wellName") ?? "";
+  const view: WorkbenchView =
+    params.get("view") === "tabular" ? "tabular" : "list";
 
   const userQuery = useCurrentUser();
   const user = userQuery.data;
 
+  // In tabular mode, drop wellName from the query so the left-pane picker
+  // reflects every well in the current filter/date/truck scope. The user then
+  // narrows by clicking a well (client-side filter via tabularWell below).
   const workbenchQuery = useWorkbench(filter, {
     search: search || undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
     truckNo: truckNo || undefined,
-    wellName: wellName || undefined,
+    wellName: view === "tabular" ? undefined : wellName || undefined,
   });
   const advance = useAdvanceStage();
   const bulkConfirm = useBulkConfirm();
@@ -49,12 +57,24 @@ export function Workbench() {
   const [buildModalOpen, setBuildModalOpen] = useState(false);
   const [resolveRow, setResolveRow] = useState<Row | null>(null);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
+  const [tabularWell, setTabularWell] = useState<string | null>(null);
 
   const rows = useMemo<Row[]>(
     () => workbenchQuery.data?.rows ?? [],
     [workbenchQuery.data],
   );
   const total = workbenchQuery.data?.total ?? 0;
+
+  // In tabular mode, client-side narrow by the currently-selected well. The
+  // left pane still sees the full `rows` set so users can switch wells without
+  // a re-fetch. In list mode, all rows pass through unchanged.
+  const displayedRows = useMemo<Row[]>(() => {
+    if (view !== "tabular" || tabularWell === null) return rows;
+    return rows.filter((r) => {
+      const key = r.wellName ?? "__unassigned__";
+      return key === tabularWell;
+    });
+  }, [rows, view, tabularWell]);
 
   // For bulk-bar: categorize selected rows so we know which bulk actions
   // apply. Clean-uncertain rows can be confirmed; ready_to_build rows can
@@ -231,7 +251,7 @@ export function Workbench() {
         </div>
       </div>
 
-      <div className="flex gap-1 flex-wrap">
+      <div className="flex gap-1 flex-wrap items-center">
         {FILTERS.map((f) => (
           <button
             key={f.value}
@@ -247,8 +267,44 @@ export function Workbench() {
             {f.label}
           </button>
         ))}
+        <div
+          data-workbench-view-toggle
+          className="ml-2 flex rounded border border-surface-variant overflow-hidden text-xs"
+          role="group"
+          aria-label="View mode"
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setParam("view", "");
+              setTabularWell(null);
+            }}
+            aria-pressed={view === "list"}
+            className={`px-2 py-1 ${
+              view === "list"
+                ? "bg-primary text-on-primary"
+                : "text-on-surface-variant hover:bg-surface-variant"
+            }`}
+          >
+            List
+          </button>
+          <button
+            type="button"
+            onClick={() => setParam("view", "tabular")}
+            aria-pressed={view === "tabular"}
+            className={`px-2 py-1 border-l border-surface-variant ${
+              view === "tabular"
+                ? "bg-primary text-on-primary"
+                : "text-on-surface-variant hover:bg-surface-variant"
+            }`}
+          >
+            Tabular
+          </button>
+        </div>
         <div className="ml-auto text-xs text-on-surface-variant self-center">
-          {total} {total === 1 ? "load" : "loads"}
+          {view === "tabular" && tabularWell !== null
+            ? `${displayedRows.length} of ${total}`
+            : `${total} ${total === 1 ? "load" : "loads"}`}
         </div>
       </div>
 
@@ -309,37 +365,59 @@ export function Workbench() {
         </div>
       ) : null}
 
-      <div className="flex-1 overflow-auto space-y-1">
-        {workbenchQuery.isLoading ? (
-          <div className="text-sm text-on-surface-variant p-4">Loading…</div>
-        ) : rows.length === 0 ? (
-          <div className="text-sm text-on-surface-variant p-4">
-            Nothing on this filter.
-          </div>
-        ) : (
-          rows.map((row) => (
-            <div key={row.assignmentId} data-workbench-row>
-              <WorkbenchRow
-                row={row}
-                selected={selected.has(row.assignmentId)}
-                onToggleSelect={() => toggleSelect(row.assignmentId)}
-                onRowClick={() =>
-                  setExpandedId((prev) =>
-                    prev === row.assignmentId ? null : row.assignmentId,
-                  )
-                }
-                onPrimaryAction={() => primaryActionFor(row)}
-                isPending={advance.isPending}
-              />
-              {expandedId === row.assignmentId && (
-                <WorkbenchDrawer
-                  row={row}
-                  onClose={() => setExpandedId(null)}
-                />
-              )}
-            </div>
-          ))
+      <div
+        className={`flex-1 min-h-0 ${view === "tabular" ? "flex gap-3 overflow-hidden" : "overflow-auto space-y-1"}`}
+        data-workbench-view={view}
+      >
+        {view === "tabular" && !workbenchQuery.isLoading && (
+          <WorkbenchWellPicker
+            rows={rows}
+            selectedWell={tabularWell}
+            onSelect={(name) => {
+              setTabularWell(name);
+              setSelected(new Set());
+              setExpandedId(null);
+            }}
+          />
         )}
+        <div
+          className={
+            view === "tabular" ? "flex-1 overflow-auto space-y-1" : "contents"
+          }
+        >
+          {workbenchQuery.isLoading ? (
+            <div className="text-sm text-on-surface-variant p-4">Loading…</div>
+          ) : displayedRows.length === 0 ? (
+            <div className="text-sm text-on-surface-variant p-4">
+              {view === "tabular" && tabularWell !== null
+                ? "No loads for this well in the current filter."
+                : "Nothing on this filter."}
+            </div>
+          ) : (
+            displayedRows.map((row) => (
+              <div key={row.assignmentId} data-workbench-row>
+                <WorkbenchRow
+                  row={row}
+                  selected={selected.has(row.assignmentId)}
+                  onToggleSelect={() => toggleSelect(row.assignmentId)}
+                  onRowClick={() =>
+                    setExpandedId((prev) =>
+                      prev === row.assignmentId ? null : row.assignmentId,
+                    )
+                  }
+                  onPrimaryAction={() => primaryActionFor(row)}
+                  isPending={advance.isPending}
+                />
+                {expandedId === row.assignmentId && (
+                  <WorkbenchDrawer
+                    row={row}
+                    onClose={() => setExpandedId(null)}
+                  />
+                )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <BuildDuplicateModal
