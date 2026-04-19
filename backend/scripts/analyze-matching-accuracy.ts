@@ -31,7 +31,7 @@ interface Row {
 }
 
 async function main() {
-  const rows: Row[] = await sql`
+  const rows = await sql`
     SELECT
       a.id,
       a.handler_stage,
@@ -43,15 +43,34 @@ async function main() {
       l.ticket_no,
       l.rate,
       l.driver_name,
-      l.delivered_on
+      l.delivered_on,
+      l.weight_lbs AS load_weight_lbs,
+      (
+        SELECT bs.ai_extracted_data->>'bolNo'
+        FROM bol_submissions bs
+        WHERE bs.matched_load_id = l.id
+        ORDER BY bs.id DESC
+        LIMIT 1
+      ) AS ocr_bol_no,
+      (
+        SELECT (bs.ai_extracted_data->>'weight')::numeric
+        FROM bol_submissions bs
+        WHERE bs.matched_load_id = l.id
+        ORDER BY bs.id DESC
+        LIMIT 1
+      ) AS ocr_weight_lbs
     FROM assignments a
     LEFT JOIN loads l ON l.id = a.load_id
-  `;
+  ` as unknown as Array<Row & {
+    load_weight_lbs: number | null;
+    ocr_bol_no: string | null;
+    ocr_weight_lbs: number | null;
+  }>;
 
   console.log(`\n=== Matching v2 accuracy snapshot ===`);
   console.log(`Dataset: ${rows.length} seeded assignments\n`);
 
-  // Score every row
+  // Score every row — Phase 5 pulls real OCR from bol_submissions
   const scored = rows.map((r) => {
     const features = extractMatchFeatures({
       bolNo: r.bol_no,
@@ -63,10 +82,20 @@ async function main() {
       deliveredOn: r.delivered_on,
       autoMapTier: r.auto_map_tier,
       uncertainReasons: (r.uncertain_reasons ?? []) as string[],
+      ocrBolNo: r.ocr_bol_no,
+      ocrWeightLbs:
+        r.ocr_weight_lbs != null ? Number(r.ocr_weight_lbs) : null,
+      loadWeightLbs:
+        r.load_weight_lbs != null ? Number(r.load_weight_lbs) : null,
     });
     const score = scoreMatch(features);
     return { row: r, features, score };
   });
+
+  const phase5Coverage = rows.filter((r) => r.ocr_bol_no !== null).length;
+  console.log(
+    `Phase 5 OCR coverage: ${phase5Coverage}/${rows.length} rows (${((phase5Coverage / rows.length) * 100).toFixed(1)}%)`,
+  );
 
   // --- Tier distribution ---
   const tierCounts = { high: 0, medium: 0, low: 0, uncertain: 0 };

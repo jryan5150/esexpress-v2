@@ -34,6 +34,92 @@ describe("extractMatchFeatures — clean row", () => {
   });
 });
 
+describe("extractMatchFeatures — Phase 5 real OCR path", () => {
+  it("returns 'exact' when OCR last-4 matches load last-4", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, bolNo: "BOL-71234", ocrBolNo: "BOL-71234" },
+      NOW,
+    );
+    expect(f.bolMatch).toBe("exact");
+  });
+
+  it("returns 'exact' when OCR last-4 matches despite different prefixes", () => {
+    // Carrier prefix differs but the stable identity last-4 matches
+    const f = extractMatchFeatures(
+      { ...baseSource, bolNo: "BOL-71234", ocrBolNo: "71234" },
+      NOW,
+    );
+    expect(f.bolMatch).toBe("exact");
+  });
+
+  it("returns 'none' when OCR last-4 doesn't match", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, bolNo: "BOL-71234", ocrBolNo: "BOL-99999" },
+      NOW,
+    );
+    expect(f.bolMatch).toBe("none");
+  });
+
+  it("OCR match overrides the bol_mismatch flag (real data wins over proxy)", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        bolNo: "BOL-71234",
+        ocrBolNo: "BOL-71234",
+        uncertainReasons: ["bol_mismatch"],
+      },
+      NOW,
+    );
+    // Real OCR compare says they match; flag was stale/wrong
+    expect(f.bolMatch).toBe("exact");
+  });
+
+  it("falls back to flag-based when OCR is null", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, ocrBolNo: null, uncertainReasons: ["bol_mismatch"] },
+      NOW,
+    );
+    expect(f.bolMatch).toBe("none");
+  });
+
+  it("computes real weight delta percentage when both weights present", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        loadWeightLbs: 48000,
+        ocrWeightLbs: 48600, // 1.25% delta
+      },
+      NOW,
+    );
+    expect(f.weightDeltaPct).toBeCloseTo(1.25, 1);
+  });
+
+  it("computes large weight delta when OCR differs significantly", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        loadWeightLbs: 48000,
+        ocrWeightLbs: 36000, // 25% below
+      },
+      NOW,
+    );
+    expect(f.weightDeltaPct).toBeCloseTo(25, 1);
+  });
+
+  it("falls back to flag-based when OCR weight is null", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        loadWeightLbs: 48000,
+        ocrWeightLbs: null,
+        uncertainReasons: ["weight_mismatch"],
+      },
+      NOW,
+    );
+    expect(f.weightDeltaPct).toBe(30);
+  });
+});
+
 describe("extractMatchFeatures — bolMatch tri-value", () => {
   it("returns 'none' when bolNo is null", () => {
     const f = extractMatchFeatures({ ...baseSource, bolNo: null }, NOW);

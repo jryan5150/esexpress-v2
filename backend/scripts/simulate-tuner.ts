@@ -40,7 +40,14 @@ async function loadExamples(): Promise<LabeledExample[]> {
     SELECT
       a.id, a.handler_stage, a.auto_map_tier, a.photo_status,
       a.uncertain_reasons, a.well_id,
-      l.bol_no, l.ticket_no, l.rate, l.driver_name, l.delivered_on
+      l.bol_no, l.ticket_no, l.rate, l.driver_name, l.delivered_on,
+      l.weight_lbs AS load_weight_lbs,
+      (SELECT bs.ai_extracted_data->>'bolNo' FROM bol_submissions bs
+       WHERE bs.matched_load_id = l.id ORDER BY bs.id DESC LIMIT 1)
+        AS ocr_bol_no,
+      (SELECT (bs.ai_extracted_data->>'weight')::numeric FROM bol_submissions bs
+       WHERE bs.matched_load_id = l.id ORDER BY bs.id DESC LIMIT 1)
+        AS ocr_weight_lbs
     FROM assignments a
     LEFT JOIN loads l ON l.id = a.load_id
   `;
@@ -56,6 +63,11 @@ async function loadExamples(): Promise<LabeledExample[]> {
       deliveredOn: r.delivered_on as Date | null,
       autoMapTier: r.auto_map_tier as number | null,
       uncertainReasons: (r.uncertain_reasons ?? []) as string[],
+      ocrBolNo: (r.ocr_bol_no as string | null) ?? null,
+      ocrWeightLbs:
+        r.ocr_weight_lbs != null ? Number(r.ocr_weight_lbs) : null,
+      loadWeightLbs:
+        r.load_weight_lbs != null ? Number(r.load_weight_lbs) : null,
     });
     const stage = r.handler_stage as string;
     const label: 0 | 1 = stage === "uncertain" ? 0 : 1;

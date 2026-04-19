@@ -13,11 +13,12 @@
  * not thrown — decisions are observational, not correctness-critical.
  */
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   assignments,
   loads,
   matchDecisions,
+  bolSubmissions,
 } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 import type { MatchFeatures, MatchScore } from "./match-scorer.service.js";
@@ -111,6 +112,13 @@ export async function snapshotAssignmentScore(
       deliveredOn: loads.deliveredOn,
       autoMapTier: assignments.autoMapTier,
       uncertainReasons: assignments.uncertainReasons,
+      loadWeightLbs: loads.weightLbs,
+      ocrBolNo: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'bolNo' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrWeightLbs: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'weight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
     })
     .from(assignments)
     .leftJoin(loads, eq(loads.id, assignments.loadId))
@@ -129,6 +137,10 @@ export async function snapshotAssignmentScore(
     deliveredOn: row.deliveredOn ?? null,
     autoMapTier: row.autoMapTier,
     uncertainReasons: (row.uncertainReasons ?? []) as string[],
+    ocrBolNo: row.ocrBolNo,
+    ocrWeightLbs: row.ocrWeightLbs != null ? Number(row.ocrWeightLbs) : null,
+    loadWeightLbs:
+      row.loadWeightLbs != null ? Number(row.loadWeightLbs) : null,
   });
   const score = scoreMatch(features);
   return { features, score };

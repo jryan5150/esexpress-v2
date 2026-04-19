@@ -23,6 +23,22 @@ export interface FeatureSource {
   deliveredOn: string | Date | null;
   autoMapTier: number | null;
   uncertainReasons: readonly string[];
+  /**
+   * Phase 5: OCR-extracted BOL from the matched bol_submissions row. When
+   * present, enables real last-4 comparison vs. the load's bol_no. When
+   * null, derive* functions fall back to Phase 1 flag-based signal.
+   */
+  ocrBolNo?: string | null;
+  /**
+   * Phase 5: OCR-extracted weight in pounds. When present, computes real
+   * weight delta percentage vs. loadWeightLbs (or weightTons * 2000).
+   */
+  ocrWeightLbs?: number | null;
+  /**
+   * Phase 5: load's canonical weight in pounds for delta calculation.
+   * Passed separately from weightTons to avoid string parsing in the hot path.
+   */
+  loadWeightLbs?: number | null;
 }
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -35,33 +51,57 @@ function isRecent(iso: string | Date | null, nowMs: number = Date.now()): boolea
 }
 
 /**
- * Translate the BOL state into the tri-value signal the scorer expects.
- * - no BOL on the row → "none"  (missing data → negative contribution)
- * - BOL present AND reconciliation flagged bol_mismatch → "none" too,
- *   because a flagged mismatch should NOT score as a partial match —
- *   the matcher wasn't confident in the BOL's correctness
- * - BOL present with no mismatch flag → "exact"
+ * Phase 5: when OCR data is available, compare the last 4 characters of the
+ * load's bol_no against the OCR-extracted value. When OCR isn't available,
+ * fall back to Phase 1 flag-based derivation.
  *
- * Phase 5 replaces this with an actual comparison against OCR-extracted BOL,
- * at which point "last4" becomes a real intermediate state (BOL present, OCR
- * agrees on last-4 digits only).
+ * Last-4 (vs full string) because real-world BOLs often have carrier prefixes
+ * ("BOL-71023" vs "71023") that drop in/out at different pipeline steps.
+ * The last 4 digits are the stable identity portion.
  */
+function last4(v: string): string {
+  const digits = v.replace(/\s+/g, "");
+  return digits.slice(-4);
+}
+
 function deriveBolMatch(src: FeatureSource): BolMatch {
   if (!src.bolNo) return "none";
+
+  // Phase 5 path: real OCR comparison when extraction is available
+  if (src.ocrBolNo && src.ocrBolNo.trim().length > 0) {
+    const loadTail = last4(src.bolNo);
+    const ocrTail = last4(src.ocrBolNo);
+    if (loadTail === ocrTail) return "exact";
+    // Different last-4 digits = true mismatch; not a partial match
+    return "none";
+  }
+
+  // Phase 1 fallback: flag-based approximation
   if (src.uncertainReasons.includes("bol_mismatch")) return "none";
   return "exact";
 }
 
 /**
- * Approximate weight delta percentage from the uncertain_reasons flag.
- *   - flagged with weight_mismatch → 30 (in the >20% hard-penalty band)
- *   - not flagged + BOL present → 2 (in the "<=5%" green band, implies OCR
- *     extraction succeeded and agreed)
- *   - no BOL → null (no OCR, no signal)
+ * Phase 5: compute real weight delta from OCR extraction when available.
+ * Phase 1 fallback: map flag state to representative band value.
  *
- * Phase 5 replaces with actual computed delta from bol_submissions.
+ * Delta formula: abs(loadWeightLbs - ocrWeightLbs) / loadWeightLbs * 100.
+ * Returns null when inputs make the calculation impossible.
  */
 function deriveWeightDelta(src: FeatureSource): number | null {
+  // Phase 5 path: real calculation when both weights present
+  if (
+    src.ocrWeightLbs != null &&
+    src.loadWeightLbs != null &&
+    src.loadWeightLbs > 0
+  ) {
+    const pct =
+      (Math.abs(src.loadWeightLbs - src.ocrWeightLbs) / src.loadWeightLbs) *
+      100;
+    return pct;
+  }
+
+  // Phase 1 fallback: flag-based approximation
   if (src.uncertainReasons.includes("weight_mismatch")) return 30;
   if (!src.bolNo) return null;
   return 2;

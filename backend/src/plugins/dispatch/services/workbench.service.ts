@@ -1,5 +1,12 @@
 import { eq, and, sql, inArray, ilike, or } from "drizzle-orm";
-import { assignments, loads, wells, users, photos } from "../../../db/schema.js";
+import {
+  assignments,
+  loads,
+  wells,
+  users,
+  photos,
+  bolSubmissions,
+} from "../../../db/schema.js";
 import type {
   PhotoStatus,
   UncertainReason,
@@ -349,6 +356,16 @@ export async function listWorkbenchRows(
         string | null
       >`(SELECT ${photos.sourceUrl} FROM ${photos} WHERE ${photos.assignmentId} = ${assignments.id} ORDER BY ${photos.id} ASC LIMIT 1)`,
       rate: loads.rate,
+      // Phase 5: OCR-extracted BOL + weight from the most-recent
+      // bol_submission matched to this load. Correlated subqueries to avoid
+      // multiplying rows when a load has multiple submissions over time.
+      ocrBolNo: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'bolNo' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrWeightLbs: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'weight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      loadWeightLbs: loads.weightLbs,
     })
     .from(assignments)
     .leftJoin(loads, eq(loads.id, assignments.loadId))
@@ -390,6 +407,11 @@ export async function listWorkbenchRows(
       deliveredOn: r.deliveredOn,
       autoMapTier: r.autoMapTier,
       uncertainReasons,
+      ocrBolNo: r.ocrBolNo,
+      ocrWeightLbs:
+        r.ocrWeightLbs != null ? Number(r.ocrWeightLbs) : null,
+      loadWeightLbs:
+        r.loadWeightLbs != null ? Number(r.loadWeightLbs) : null,
     });
     const score = scoreMatch(features);
 
