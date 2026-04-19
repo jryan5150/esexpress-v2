@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "workbench_onboarding_v5_seen";
 
-type Role = "jess" | "builder" | "clearer" | "other";
+type Role = "jess" | "builder" | "keli" | "clearer" | "other";
 
 interface Step {
   target?: string;
@@ -53,10 +53,31 @@ const STEPS: Record<Role, Step[]> = {
       text: "Your color stripe is blue. When you've typed a load into PCS, Mark Entered. Stripe turns teal — Katie's color — and she knows to verify it.",
     },
   ],
+  keli: [
+    {
+      target: '[data-filter="ready_to_build"]',
+      text: "Keli — Ready to Build is where your JRT loads land after Jessica releases them.",
+    },
+    {
+      target: "[data-primary-action]",
+      text: "Click any row, then Build + Duplicate. Same PCS pattern, just faster because the well, driver, and weight are already there.",
+    },
+    {
+      target: "[data-batch-bar]",
+      text: "Selecting multiple JRT loads on the same well? Batch duplicate — one template, every load at that well in one shot.",
+    },
+    {
+      text: "j/k to step through the queue. Enter to build. Shift+E to mark entered once it's in PCS.",
+    },
+    {
+      target: "[data-handler-stripe]",
+      text: "Your stripe is blue while it's yours. Mark Entered flips it to Katie's color so she knows to verify.",
+    },
+  ],
   clearer: [
     {
       target: '[data-filter="ready_to_clear"]',
-      text: "Open Ready to Clear — loads Steph or Scout built, now in PCS, ready for you to verify.",
+      text: "Open Ready to Clear — loads Steph, Scout, or Keli built, now in PCS, ready for you to verify.",
     },
     {
       target: "[data-load-no]",
@@ -88,6 +109,7 @@ function resolveRole(
 ): Role {
   const n = (userName ?? "").toLowerCase();
   if (n.includes("jess") || userRole === "jess") return "jess";
+  if (n.includes("keli") || userRole === "keli") return "keli";
   if (n.includes("steph") || n.includes("scout") || userRole === "builder")
     return "builder";
   if (n.includes("katie") || userRole === "clearer") return "clearer";
