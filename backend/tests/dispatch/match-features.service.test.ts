@@ -40,12 +40,15 @@ describe("extractMatchFeatures — bolMatch tri-value", () => {
     expect(f.bolMatch).toBe("none");
   });
 
-  it("returns 'last4' when bol_mismatch is among uncertain reasons", () => {
+  it("returns 'none' when bol_mismatch is among uncertain reasons", () => {
+    // A flagged mismatch should NOT score as a partial positive — the
+    // matcher wasn't confident in the BOL's correctness. Treat it as
+    // missing-signal until Phase 5 upgrades to real OCR last-4 compare.
     const f = extractMatchFeatures(
       { ...baseSource, uncertainReasons: ["bol_mismatch"] },
       NOW,
     );
-    expect(f.bolMatch).toBe("last4");
+    expect(f.bolMatch).toBe("none");
   });
 
   it("returns 'exact' when BOL present and no mismatch flag", () => {
@@ -55,12 +58,12 @@ describe("extractMatchFeatures — bolMatch tri-value", () => {
 });
 
 describe("extractMatchFeatures — weight delta", () => {
-  it("returns 15 when weight_mismatch is flagged (soft penalty band)", () => {
+  it("returns 30 when weight_mismatch is flagged (hard-penalty band)", () => {
     const f = extractMatchFeatures(
       { ...baseSource, uncertainReasons: ["weight_mismatch"] },
       NOW,
     );
-    expect(f.weightDeltaPct).toBe(15);
+    expect(f.weightDeltaPct).toBe(30);
   });
 
   it("returns 2 when no flag and BOL present (green band)", () => {
@@ -75,7 +78,7 @@ describe("extractMatchFeatures — weight delta", () => {
 });
 
 describe("extractMatchFeatures — photo + driver + well + ticket", () => {
-  it("hasPhoto=true only when photoStatus is 'attached'", () => {
+  it("hasPhoto=true only when photoStatus is 'attached' AND no_photo_48h not flagged", () => {
     expect(extractMatchFeatures(baseSource, NOW).hasPhoto).toBe(true);
     expect(
       extractMatchFeatures({ ...baseSource, photoStatus: "pending" }, NOW)
@@ -87,6 +90,14 @@ describe("extractMatchFeatures — photo + driver + well + ticket", () => {
     ).toBe(false);
     expect(
       extractMatchFeatures({ ...baseSource, photoStatus: null }, NOW).hasPhoto,
+    ).toBe(false);
+    // no_photo_48h flag overrides a green photoStatus column (data
+    // inconsistency case in the seeds)
+    expect(
+      extractMatchFeatures(
+        { ...baseSource, photoStatus: "attached", uncertainReasons: ["no_photo_48h"] },
+        NOW,
+      ).hasPhoto,
     ).toBe(false);
   });
 
@@ -106,12 +117,20 @@ describe("extractMatchFeatures — photo + driver + well + ticket", () => {
     ).toBeNull();
   });
 
-  it("driverSimilarity=0.4 when driver_mismatch is flagged", () => {
+  it("driverSimilarity=0.3 when driver_mismatch is flagged", () => {
     const f = extractMatchFeatures(
       { ...baseSource, uncertainReasons: ["driver_mismatch"] },
       NOW,
     );
-    expect(f.driverSimilarity).toBe(0.4);
+    expect(f.driverSimilarity).toBe(0.3);
+  });
+
+  it("driverSimilarity=0.6 when fuzzy_match flag is set", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, uncertainReasons: ["fuzzy_match"] },
+      NOW,
+    );
+    expect(f.driverSimilarity).toBe(0.6);
   });
 
   it("wellAssigned follows wellId presence", () => {
