@@ -118,6 +118,78 @@ describe("extractMatchFeatures — Phase 5 real OCR path", () => {
     );
     expect(f.weightDeltaPct).toBe(30);
   });
+
+  // -------------------------------------------------------------------------
+  // Phase 5c — driver roster fuzzy match
+  // -------------------------------------------------------------------------
+
+  const roster = ["Mike Johnson", "Jose Ramirez", "Amy Chen", "Tom Wilson"];
+
+  it("driver similarity = 1.0 for exact roster match", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, driverName: "Mike Johnson", driverRoster: roster },
+      NOW,
+    );
+    expect(f.driverSimilarity).toBe(1);
+  });
+
+  it("driver similarity high for typo against roster", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, driverName: "Mike Jonhson", driverRoster: roster },
+      NOW,
+    );
+    expect(f.driverSimilarity).toBeGreaterThan(0.9);
+    expect(f.driverSimilarity).toBeLessThan(1);
+  });
+
+  it("driver similarity moderate for order-swap against roster", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, driverName: "Johnson, Mike", driverRoster: roster },
+      NOW,
+    );
+    expect(f.driverSimilarity).toBeGreaterThan(0.6);
+  });
+
+  it("driver similarity low when no roster match", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, driverName: "Unknown Person", driverRoster: roster },
+      NOW,
+    );
+    expect(f.driverSimilarity).toBeLessThan(0.65);
+  });
+
+  it("driver similarity falls back to flag-based when roster is empty", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        driverName: "Mike Johnson",
+        uncertainReasons: ["driver_mismatch"],
+        driverRoster: [],
+      },
+      NOW,
+    );
+    expect(f.driverSimilarity).toBe(0.3);
+  });
+
+  it("driver similarity falls back when roster is undefined", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        driverName: "Mike Johnson",
+        uncertainReasons: ["fuzzy_match"],
+      },
+      NOW,
+    );
+    expect(f.driverSimilarity).toBe(0.6);
+  });
+
+  it("driver similarity null when driverName is null even with roster", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, driverName: null, driverRoster: roster },
+      NOW,
+    );
+    expect(f.driverSimilarity).toBeNull();
+  });
 });
 
 describe("extractMatchFeatures — bolMatch tri-value", () => {

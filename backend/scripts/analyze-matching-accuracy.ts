@@ -67,6 +67,13 @@ async function main() {
     ocr_weight_lbs: number | null;
   }>;
 
+  // Phase 5c: driver roster for fuzzy similarity
+  const rosterRows = await sql`
+    SELECT DISTINCT canonical_name FROM driver_crossrefs
+  ` as unknown as Array<{ canonical_name: string }>;
+  const driverRoster = rosterRows.map((r) => r.canonical_name);
+  console.log(`\nDriver roster: ${driverRoster.length} canonical names`);
+
   console.log(`\n=== Matching v2 accuracy snapshot ===`);
   console.log(`Dataset: ${rows.length} seeded assignments\n`);
 
@@ -87,6 +94,7 @@ async function main() {
         r.ocr_weight_lbs != null ? Number(r.ocr_weight_lbs) : null,
       loadWeightLbs:
         r.load_weight_lbs != null ? Number(r.load_weight_lbs) : null,
+      driverRoster,
     });
     const score = scoreMatch(features);
     return { row: r, features, score };

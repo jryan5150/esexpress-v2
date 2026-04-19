@@ -19,6 +19,7 @@ import {
   loads,
   matchDecisions,
   bolSubmissions,
+  driverCrossrefs,
 } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 import type { MatchFeatures, MatchScore } from "./match-scorer.service.js";
@@ -127,6 +128,14 @@ export async function snapshotAssignmentScore(
 
   if (!row) return null;
 
+  // Phase 5c: pull the driver roster once for fuzzy similarity
+  const rosterRows = await db
+    .selectDistinct({ canonicalName: driverCrossrefs.canonicalName })
+    .from(driverCrossrefs);
+  const driverRoster: readonly string[] = rosterRows.map(
+    (rr) => rr.canonicalName,
+  );
+
   const features = extractMatchFeatures({
     bolNo: row.bolNo ?? null,
     ticketNo: row.ticketNo ?? null,
@@ -141,6 +150,7 @@ export async function snapshotAssignmentScore(
     ocrWeightLbs: row.ocrWeightLbs != null ? Number(row.ocrWeightLbs) : null,
     loadWeightLbs:
       row.loadWeightLbs != null ? Number(row.loadWeightLbs) : null,
+    driverRoster,
   });
   const score = scoreMatch(features);
   return { features, score };

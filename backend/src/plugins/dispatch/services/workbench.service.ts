@@ -6,6 +6,7 @@ import {
   users,
   photos,
   bolSubmissions,
+  driverCrossrefs,
 } from "../../../db/schema.js";
 import type {
   PhotoStatus,
@@ -379,6 +380,16 @@ export async function listWorkbenchRows(
     .limit(limit)
     .offset(offset);
 
+  // Phase 5c: driver roster for fuzzy similarity. Fetched once per request;
+  // passed by reference to each row's feature extraction. Empty array when
+  // driver_crossrefs is unpopulated (Phase 1 fallback kicks in downstream).
+  const rosterRows = await db
+    .selectDistinct({ canonicalName: driverCrossrefs.canonicalName })
+    .from(driverCrossrefs);
+  const driverRoster: readonly string[] = rosterRows.map(
+    (r) => r.canonicalName,
+  );
+
   // Count query omits wells/users joins — safe because filterCondition
   // only touches assignments columns and searchCondition only touches
   // loads columns. If a future filter references wells or users, this
@@ -412,6 +423,7 @@ export async function listWorkbenchRows(
         r.ocrWeightLbs != null ? Number(r.ocrWeightLbs) : null,
       loadWeightLbs:
         r.loadWeightLbs != null ? Number(r.loadWeightLbs) : null,
+      driverRoster,
     });
     const score = scoreMatch(features);
 

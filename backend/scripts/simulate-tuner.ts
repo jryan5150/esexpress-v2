@@ -51,6 +51,10 @@ async function loadExamples(): Promise<LabeledExample[]> {
     FROM assignments a
     LEFT JOIN loads l ON l.id = a.load_id
   `;
+  const rosterRows = (await sql`
+    SELECT DISTINCT canonical_name FROM driver_crossrefs
+  `) as unknown as Array<{ canonical_name: string }>;
+  const driverRoster = rosterRows.map((r) => r.canonical_name);
 
   return rows.map((r: Record<string, unknown>) => {
     const features = extractMatchFeatures({
@@ -68,6 +72,7 @@ async function loadExamples(): Promise<LabeledExample[]> {
         r.ocr_weight_lbs != null ? Number(r.ocr_weight_lbs) : null,
       loadWeightLbs:
         r.load_weight_lbs != null ? Number(r.load_weight_lbs) : null,
+      driverRoster,
     });
     const stage = r.handler_stage as string;
     const label: 0 | 1 = stage === "uncertain" ? 0 : 1;

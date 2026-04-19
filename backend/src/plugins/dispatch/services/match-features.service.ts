@@ -12,6 +12,7 @@
  */
 
 import type { MatchFeatures, BolMatch } from "./match-scorer.service.js";
+import { bestRosterMatch } from "../../../lib/string-similarity.js";
 
 export interface FeatureSource {
   bolNo: string | null;
@@ -39,6 +40,16 @@ export interface FeatureSource {
    * Passed separately from weightTons to avoid string parsing in the hot path.
    */
   loadWeightLbs?: number | null;
+  /**
+   * Phase 5c: canonical driver names from driver_crossrefs (one per
+   * distinct canonical_name). When provided + non-empty, driverSimilarity
+   * is computed via Jaro-Winkler against the roster. When null/empty,
+   * falls back to Phase 1 flag-based derivation.
+   *
+   * Callers (listWorkbenchRows, snapshotAssignmentScore) fetch this once
+   * per request and pass the same reference to every row's extractor call.
+   */
+  driverRoster?: readonly string[];
 }
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -108,15 +119,21 @@ function deriveWeightDelta(src: FeatureSource): number | null {
 }
 
 /**
- * Approximate driver fuzzy similarity.
- * - driver name missing → null (no signal)
- * - driver_mismatch flag → 0.3 (clearly failed fuzzy match)
- * - fuzzy_match flag → 0.6 (cascade hit on fuzzy, lower confidence than
- *   ticket_no/load_no exact matches)
- * - otherwise present → 1.0 (assume match)
+ * Phase 5c: compute real driver fuzzy similarity when a canonical roster
+ * is provided. Falls back to Phase 1 flag-based derivation when no roster.
+ *
+ * Roster source of truth is driver_crossrefs (canonical_name distinct
+ * values). Caller fetches the roster once per request and passes by ref.
  */
 function deriveDriverSimilarityValue(src: FeatureSource): number | null {
   if (!src.driverName || src.driverName.trim().length === 0) return null;
+
+  // Phase 5c path: real Jaro-Winkler against canonical roster
+  if (src.driverRoster && src.driverRoster.length > 0) {
+    return bestRosterMatch(src.driverName, src.driverRoster);
+  }
+
+  // Phase 1 fallback: flag-based approximation
   if (src.uncertainReasons.includes("driver_mismatch")) return 0.3;
   if (src.uncertainReasons.includes("fuzzy_match")) return 0.6;
   return 1.0;
