@@ -357,15 +357,34 @@ export async function listWorkbenchRows(
         string | null
       >`(SELECT ${photos.sourceUrl} FROM ${photos} WHERE ${photos.assignmentId} = ${assignments.id} ORDER BY ${photos.id} ASC LIMIT 1)`,
       rate: loads.rate,
-      // Phase 5: OCR-extracted BOL + weight from the most-recent
-      // bol_submission matched to this load. Correlated subqueries to avoid
-      // multiplying rows when a load has multiple submissions over time.
+      // Phase 5+6: OCR-extracted fields from the most-recent bol_submission
+      // matched to this load. Correlated subqueries avoid row multiplication
+      // when a load has multiple submissions over time. The same latest row
+      // feeds every OCR-derived feature (keeps the snapshot consistent).
       ocrBolNo: sql<
         string | null
       >`(SELECT ${bolSubmissions.aiExtractedData}->>'bolNo' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
       ocrWeightLbs: sql<
         number | null
       >`(SELECT (${bolSubmissions.aiExtractedData}->>'weight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrGrossWeightLbs: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'grossWeight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrTareWeightLbs: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'tareWeight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrTruckNo: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'truckNo' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrCarrierName: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'carrier' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrNotes: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'notes' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrOverallConfidence: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'overallConfidence')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
       loadWeightLbs: loads.weightLbs,
     })
     .from(assignments)
@@ -424,6 +443,20 @@ export async function listWorkbenchRows(
       loadWeightLbs:
         r.loadWeightLbs != null ? Number(r.loadWeightLbs) : null,
       driverRoster,
+      // Phase 6
+      loadTruckNo: r.truckNo,
+      loadCarrierName: r.carrierName,
+      ocrTruckNo: r.ocrTruckNo,
+      ocrCarrierName: r.ocrCarrierName,
+      ocrGrossWeightLbs:
+        r.ocrGrossWeightLbs != null ? Number(r.ocrGrossWeightLbs) : null,
+      ocrTareWeightLbs:
+        r.ocrTareWeightLbs != null ? Number(r.ocrTareWeightLbs) : null,
+      ocrNotes: r.ocrNotes,
+      ocrOverallConfidence:
+        r.ocrOverallConfidence != null
+          ? Number(r.ocrOverallConfidence)
+          : null,
     });
     const score = scoreMatch(features);
 

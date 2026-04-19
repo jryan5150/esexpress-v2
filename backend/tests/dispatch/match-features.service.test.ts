@@ -192,6 +192,230 @@ describe("extractMatchFeatures — Phase 5 real OCR path", () => {
   });
 });
 
+// ──────────────────────────────────────────────────────────────────────
+// Phase 6 — additional OCR-derived features
+// ──────────────────────────────────────────────────────────────────────
+
+describe("extractMatchFeatures — Phase 6 truck OCR match", () => {
+  it("returns 'exact' when OCR truckNo matches load truckNo", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, loadTruckNo: "1456", ocrTruckNo: "1456" },
+      NOW,
+    );
+    expect(f.truckOcrMatch).toBe("exact");
+  });
+
+  it("returns 'partial' when OCR strips a carrier prefix", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, loadTruckNo: "T-1456", ocrTruckNo: "1456" },
+      NOW,
+    );
+    expect(f.truckOcrMatch).toBe("partial");
+  });
+
+  it("returns 'none' on clear mismatch", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, loadTruckNo: "1456", ocrTruckNo: "9999" },
+      NOW,
+    );
+    expect(f.truckOcrMatch).toBe("none");
+  });
+
+  it("returns null when either side is missing", () => {
+    expect(
+      extractMatchFeatures({ ...baseSource, loadTruckNo: null, ocrTruckNo: "1456" }, NOW)
+        .truckOcrMatch,
+    ).toBeNull();
+    expect(
+      extractMatchFeatures({ ...baseSource, loadTruckNo: "1456", ocrTruckNo: null }, NOW)
+        .truckOcrMatch,
+    ).toBeNull();
+  });
+
+  it("normalizes case + punctuation before comparing", () => {
+    const f = extractMatchFeatures(
+      { ...baseSource, loadTruckNo: "t-1456", ocrTruckNo: "T 1456" },
+      NOW,
+    );
+    expect(f.truckOcrMatch).toBe("exact");
+  });
+});
+
+describe("extractMatchFeatures — Phase 6 carrier similarity", () => {
+  it("high similarity on exact carrier match", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        loadCarrierName: "Liberty Trucking",
+        ocrCarrierName: "Liberty Trucking",
+      },
+      NOW,
+    );
+    expect(f.carrierSimilarity).toBe(1);
+  });
+
+  it("high similarity on name typo", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        loadCarrierName: "Liberty Trucking",
+        ocrCarrierName: "Libery Trucking",
+      },
+      NOW,
+    );
+    expect(f.carrierSimilarity).toBeGreaterThan(0.9);
+  });
+
+  it("null when either side missing", () => {
+    expect(
+      extractMatchFeatures(
+        { ...baseSource, loadCarrierName: null, ocrCarrierName: "Liberty" },
+        NOW,
+      ).carrierSimilarity,
+    ).toBeNull();
+  });
+});
+
+describe("extractMatchFeatures — Phase 6 gross/tare consistency", () => {
+  it("1.0 when (gross - tare) ≈ load weight within 1%", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        loadWeightLbs: 48000,
+        ocrGrossWeightLbs: 78000,
+        ocrTareWeightLbs: 30050, // net = 47950 (0.1% off)
+      },
+      NOW,
+    );
+    expect(f.grossTareConsistency).toBe(1);
+  });
+
+  it("0.9 when within 5% tolerance", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        loadWeightLbs: 48000,
+        ocrGrossWeightLbs: 78000,
+        ocrTareWeightLbs: 31500, // net = 46500 (3.1% off)
+      },
+      NOW,
+    );
+    expect(f.grossTareConsistency).toBe(0.9);
+  });
+
+  it("0 when grossly inconsistent", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        loadWeightLbs: 48000,
+        ocrGrossWeightLbs: 78000,
+        ocrTareWeightLbs: 60000, // net = 18000 (62% off)
+      },
+      NOW,
+    );
+    expect(f.grossTareConsistency).toBe(0);
+  });
+
+  it("0 when gross < tare (nonsensical)", () => {
+    const f = extractMatchFeatures(
+      {
+        ...baseSource,
+        loadWeightLbs: 48000,
+        ocrGrossWeightLbs: 20000,
+        ocrTareWeightLbs: 30000,
+      },
+      NOW,
+    );
+    expect(f.grossTareConsistency).toBe(0);
+  });
+
+  it("null when any weight is missing", () => {
+    expect(
+      extractMatchFeatures(
+        {
+          ...baseSource,
+          loadWeightLbs: 48000,
+          ocrGrossWeightLbs: null,
+          ocrTareWeightLbs: 30000,
+        },
+        NOW,
+      ).grossTareConsistency,
+    ).toBeNull();
+  });
+});
+
+describe("extractMatchFeatures — Phase 6 anomaly notes", () => {
+  it("true when notes contain anomaly keywords", () => {
+    expect(
+      extractMatchFeatures({ ...baseSource, ocrNotes: "Short 400 lbs" }, NOW)
+        .hasAnomalyNote,
+    ).toBe(true);
+    expect(
+      extractMatchFeatures(
+        { ...baseSource, ocrNotes: "Small spill at load site" },
+        NOW,
+      ).hasAnomalyNote,
+    ).toBe(true);
+    expect(
+      extractMatchFeatures(
+        { ...baseSource, ocrNotes: "Load REJECTED by dispatcher" },
+        NOW,
+      ).hasAnomalyNote,
+    ).toBe(true);
+  });
+
+  it("false on clean or empty notes", () => {
+    expect(
+      extractMatchFeatures({ ...baseSource, ocrNotes: "standard delivery" }, NOW)
+        .hasAnomalyNote,
+    ).toBe(false);
+    expect(
+      extractMatchFeatures({ ...baseSource, ocrNotes: "" }, NOW).hasAnomalyNote,
+    ).toBe(false);
+  });
+
+  it("null when no notes field at all", () => {
+    expect(
+      extractMatchFeatures({ ...baseSource, ocrNotes: null }, NOW)
+        .hasAnomalyNote,
+    ).toBeNull();
+  });
+});
+
+describe("extractMatchFeatures — Phase 6 OCR overall confidence", () => {
+  it("scales 0-100 input to 0-1", () => {
+    expect(
+      extractMatchFeatures({ ...baseSource, ocrOverallConfidence: 95 }, NOW)
+        .ocrOverallConfidence,
+    ).toBeCloseTo(0.95, 2);
+  });
+
+  it("accepts 0-1 input as-is", () => {
+    expect(
+      extractMatchFeatures({ ...baseSource, ocrOverallConfidence: 0.92 }, NOW)
+        .ocrOverallConfidence,
+    ).toBeCloseTo(0.92, 2);
+  });
+
+  it("clamps to 0-1", () => {
+    expect(
+      extractMatchFeatures({ ...baseSource, ocrOverallConfidence: -5 }, NOW)
+        .ocrOverallConfidence,
+    ).toBe(0);
+    expect(
+      extractMatchFeatures({ ...baseSource, ocrOverallConfidence: 150 }, NOW)
+        .ocrOverallConfidence,
+    ).toBe(1);
+  });
+
+  it("null when not provided", () => {
+    expect(
+      extractMatchFeatures({ ...baseSource, ocrOverallConfidence: null }, NOW)
+        .ocrOverallConfidence,
+    ).toBeNull();
+  });
+});
+
 describe("extractMatchFeatures — bolMatch tri-value", () => {
   it("returns 'none' when bolNo is null", () => {
     const f = extractMatchFeatures({ ...baseSource, bolNo: null }, NOW);

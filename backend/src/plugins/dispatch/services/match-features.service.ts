@@ -11,8 +11,16 @@
  * stays easy to call from listWorkbenchRows's mapping step.
  */
 
-import type { MatchFeatures, BolMatch } from "./match-scorer.service.js";
-import { bestRosterMatch } from "../../../lib/string-similarity.js";
+import type {
+  MatchFeatures,
+  BolMatch,
+  TruckMatch,
+} from "./match-scorer.service.js";
+import {
+  bestRosterMatch,
+  jaroWinkler,
+  normalizeName,
+} from "../../../lib/string-similarity.js";
 
 export interface FeatureSource {
   bolNo: string | null;
@@ -50,6 +58,24 @@ export interface FeatureSource {
    * per request and pass the same reference to every row's extractor call.
    */
   driverRoster?: readonly string[];
+
+  // ── Phase 6 (2026-04-19): additional OCR fields from bol_submissions.ai_extracted_data ──
+  /** Canonical truck number on the load record. */
+  loadTruckNo?: string | null;
+  /** Canonical carrier name on the load record. */
+  loadCarrierName?: string | null;
+  /** Truck number extracted from the BOL photo. */
+  ocrTruckNo?: string | null;
+  /** Carrier name extracted from the BOL photo. */
+  ocrCarrierName?: string | null;
+  /** Gross weight (lbs) from OCR for gross/tare/net consistency check. */
+  ocrGrossWeightLbs?: number | null;
+  /** Tare weight (lbs) from OCR for gross/tare/net consistency check. */
+  ocrTareWeightLbs?: number | null;
+  /** Free-form notes field from OCR (anomaly-keyword parse target). */
+  ocrNotes?: string | null;
+  /** Overall extraction confidence reported by Claude Vision (0-100 or 0-1). */
+  ocrOverallConfidence?: number | null;
 }
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -139,6 +165,89 @@ function deriveDriverSimilarityValue(src: FeatureSource): number | null {
   return 1.0;
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Phase 6 derivations: truck / carrier / weights / notes / confidence
+// ──────────────────────────────────────────────────────────────────────────
+
+const ANOMALY_KEYWORDS = [
+  "short",
+  "spill",
+  "reject",
+  "rejected",
+  "damage",
+  "damaged",
+  "reweigh",
+  "reweighed",
+  "overage",
+  "shortage",
+  "contaminat",
+  "refused",
+  "dispute",
+];
+
+function deriveTruckOcrMatch(src: FeatureSource): TruckMatch | null {
+  const load = src.loadTruckNo?.trim();
+  const ocr = src.ocrTruckNo?.trim();
+  if (!load || !ocr) return null;
+  const loadN = load.replace(/[^0-9a-z]/gi, "").toLowerCase();
+  const ocrN = ocr.replace(/[^0-9a-z]/gi, "").toLowerCase();
+  if (loadN === ocrN) return "exact";
+  // Partial: one is a suffix/prefix of the other (e.g., "1456" vs "T-1456")
+  if (loadN.length >= 3 && ocrN.length >= 3) {
+    if (loadN.endsWith(ocrN) || ocrN.endsWith(loadN)) return "partial";
+    if (loadN.startsWith(ocrN) || ocrN.startsWith(loadN)) return "partial";
+  }
+  return "none";
+}
+
+function deriveCarrierSimilarity(src: FeatureSource): number | null {
+  const load = src.loadCarrierName?.trim();
+  const ocr = src.ocrCarrierName?.trim();
+  if (!load || !ocr) return null;
+  return jaroWinkler(load, ocr);
+}
+
+/**
+ * BOL math sanity: does (gross - tare) ≈ the load's declared weight?
+ * Returns 1.0 when within 1% tolerance, scales down with larger divergence.
+ * Null when gross, tare, or load weight is missing.
+ */
+function deriveGrossTareConsistency(src: FeatureSource): number | null {
+  const gross = src.ocrGrossWeightLbs;
+  const tare = src.ocrTareWeightLbs;
+  const load = src.loadWeightLbs;
+  if (gross == null || tare == null || load == null || load <= 0) return null;
+  const computedNet = gross - tare;
+  if (computedNet <= 0) return 0; // nonsensical — treat as failed check
+  const pctDiff = Math.abs(computedNet - load) / load;
+  if (pctDiff <= 0.01) return 1.0;
+  if (pctDiff <= 0.05) return 0.9;
+  if (pctDiff <= 0.1) return 0.7;
+  if (pctDiff <= 0.2) return 0.4;
+  return 0;
+}
+
+function deriveHasAnomalyNote(src: FeatureSource): boolean | null {
+  if (src.ocrNotes == null) return null;
+  const normalized = normalizeName(src.ocrNotes);
+  if (normalized.length === 0) return false;
+  for (const kw of ANOMALY_KEYWORDS) {
+    if (normalized.includes(kw)) return true;
+  }
+  return false;
+}
+
+/**
+ * Claude Vision reports overallConfidence as 0-100 in the prompt contract;
+ * we normalize to 0-1 for scorer consumption. Accepts both scales defensively.
+ */
+function deriveOcrOverallConfidence(src: FeatureSource): number | null {
+  const v = src.ocrOverallConfidence;
+  if (v == null) return null;
+  if (v > 1) return Math.min(1, v / 100);
+  return Math.max(0, Math.min(1, v));
+}
+
 export function extractMatchFeatures(
   src: FeatureSource,
   nowMs: number = Date.now(),
@@ -159,5 +268,11 @@ export function extractMatchFeatures(
     hasTicket: !!src.ticketNo && src.ticketNo.trim().length > 0,
     hasRate: !!src.rate && src.rate.trim().length > 0,
     deliveredRecent: isRecent(src.deliveredOn, nowMs),
+    // Phase 6
+    truckOcrMatch: deriveTruckOcrMatch(src),
+    carrierSimilarity: deriveCarrierSimilarity(src),
+    grossTareConsistency: deriveGrossTareConsistency(src),
+    hasAnomalyNote: deriveHasAnomalyNote(src),
+    ocrOverallConfidence: deriveOcrOverallConfidence(src),
   };
 }

@@ -114,12 +114,32 @@ export async function snapshotAssignmentScore(
       autoMapTier: assignments.autoMapTier,
       uncertainReasons: assignments.uncertainReasons,
       loadWeightLbs: loads.weightLbs,
+      loadTruckNo: loads.truckNo,
+      loadCarrierName: loads.carrierName,
       ocrBolNo: sql<
         string | null
       >`(SELECT ${bolSubmissions.aiExtractedData}->>'bolNo' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
       ocrWeightLbs: sql<
         number | null
       >`(SELECT (${bolSubmissions.aiExtractedData}->>'weight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrGrossWeightLbs: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'grossWeight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrTareWeightLbs: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'tareWeight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrTruckNo: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'truckNo' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrCarrierName: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'carrier' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrNotes: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'notes' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrOverallConfidence: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'overallConfidence')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
     })
     .from(assignments)
     .leftJoin(loads, eq(loads.id, assignments.loadId))
@@ -151,6 +171,20 @@ export async function snapshotAssignmentScore(
     loadWeightLbs:
       row.loadWeightLbs != null ? Number(row.loadWeightLbs) : null,
     driverRoster,
+    // Phase 6
+    loadTruckNo: row.loadTruckNo ?? null,
+    loadCarrierName: row.loadCarrierName ?? null,
+    ocrTruckNo: row.ocrTruckNo,
+    ocrCarrierName: row.ocrCarrierName,
+    ocrGrossWeightLbs:
+      row.ocrGrossWeightLbs != null ? Number(row.ocrGrossWeightLbs) : null,
+    ocrTareWeightLbs:
+      row.ocrTareWeightLbs != null ? Number(row.ocrTareWeightLbs) : null,
+    ocrNotes: row.ocrNotes,
+    ocrOverallConfidence:
+      row.ocrOverallConfidence != null
+        ? Number(row.ocrOverallConfidence)
+        : null,
   });
   const score = scoreMatch(features);
   return { features, score };

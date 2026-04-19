@@ -24,6 +24,12 @@ const FEATURE_LABELS: Record<string, string> = {
   hasTicket: "Ticket#",
   hasRate: "Rate",
   deliveredRecent: "Recent",
+  // Phase 6
+  truckOcrMatch: "Truck# OCR",
+  carrierSimilarity: "Carrier",
+  grossTareConsistency: "Gross-Tare math",
+  hasAnomalyNote: "Notes anomaly",
+  ocrOverallConfidence: "OCR confidence",
 };
 
 function fmtContribution(n: number): string {

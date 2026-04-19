@@ -23,6 +23,7 @@
 const BASE_SCORE = 0.5;
 
 export type BolMatch = "exact" | "last4" | "none";
+export type TruckMatch = "exact" | "partial" | "none";
 export type TierLabel = "high" | "medium" | "low" | "uncertain";
 
 export interface MatchFeatures {
@@ -35,6 +36,36 @@ export interface MatchFeatures {
   hasTicket: boolean;
   hasRate: boolean;
   deliveredRecent: boolean; // within last 30 days
+  // ── Phase 6 (matching-v2, 2026-04-19): features from expanded BOL OCR ──
+  /**
+   * Truck number from OCR vs. load.truck_no. "exact" = identical after
+   * normalization; "partial" = leading-digit match (common when one source
+   * strips/adds prefixes); "none" = mismatch.
+   */
+  truckOcrMatch: TruckMatch | null;
+  /**
+   * Fuzzy similarity between OCR carrier name and load.carrier_name
+   * (Jaro-Winkler, 0..1). Null when either side is missing.
+   */
+  carrierSimilarity: number | null;
+  /**
+   * BOL-math consistency: does (grossWeight - tareWeight) ≈ net weight?
+   * 1.0 = exact match, 0.95 = within 1% tolerance, <0.9 = math error.
+   * Null when any of the three weights is missing.
+   */
+  grossTareConsistency: number | null;
+  /**
+   * Anomaly indicators parsed from OCR notes field (short, spill, reject,
+   * damage, reweigh, etc.). True = problem hint detected; false = clean or
+   * empty notes; null = no OCR at all.
+   */
+  hasAnomalyNote: boolean | null;
+  /**
+   * Overall OCR confidence reported by Claude Vision (0..1). Acts as a
+   * trust-gate: low confidence = downstream features should carry less
+   * weight even when their individual values look clean.
+   */
+  ocrOverallConfidence: number | null;
 }
 
 export interface FeatureContribution {
@@ -66,6 +97,12 @@ export const DEFAULT_CONFIG: ScorerConfig = {
     hasTicket: 0.04,
     hasRate: 0.04,
     deliveredRecent: 0.04,
+    // Phase 6 expansion — secondary OCR-derived signals
+    truckOcrMatch: 0.06,
+    carrierSimilarity: 0.04,
+    grossTareConsistency: 0.04,
+    hasAnomalyNote: 0.05,
+    ocrOverallConfidence: 0.05,
   },
 };
 
@@ -93,6 +130,18 @@ function autoMapTierValue(tier: number): number {
   if (tier === 2) return 0.5;
   if (tier === 3) return 0;
   return -0.5; // 0 or unknown — no cascade hit
+}
+
+function truckMatchValue(v: TruckMatch | null): number {
+  if (v === null) return 0;
+  if (v === "exact") return 1.0;
+  if (v === "partial") return 0.4;
+  return -0.66; // mismatch is a strong negative
+}
+
+function anomalyNoteValue(v: boolean | null): number {
+  if (v === null) return 0;
+  return v ? -1.0 : 0.1; // presence = strong penalty; absence = small positive
 }
 
 // ---------------------------------------------------------------------------
@@ -170,6 +219,37 @@ export function scoreMatch(
       feature: "deliveredRecent",
       value: features.deliveredRecent ? 1 : 0,
       weight: w.deliveredRecent ?? 0,
+      contribution: 0,
+    },
+    // ── Phase 6 additions ──
+    {
+      feature: "truckOcrMatch",
+      value: truckMatchValue(features.truckOcrMatch),
+      weight: w.truckOcrMatch ?? 0,
+      contribution: 0,
+    },
+    {
+      feature: "carrierSimilarity",
+      value: features.carrierSimilarity ?? 0,
+      weight: w.carrierSimilarity ?? 0,
+      contribution: 0,
+    },
+    {
+      feature: "grossTareConsistency",
+      value: features.grossTareConsistency ?? 0,
+      weight: w.grossTareConsistency ?? 0,
+      contribution: 0,
+    },
+    {
+      feature: "hasAnomalyNote",
+      value: anomalyNoteValue(features.hasAnomalyNote),
+      weight: w.hasAnomalyNote ?? 0,
+      contribution: 0,
+    },
+    {
+      feature: "ocrOverallConfidence",
+      value: features.ocrOverallConfidence ?? 0,
+      weight: w.ocrOverallConfidence ?? 0,
       contribution: 0,
     },
   ];

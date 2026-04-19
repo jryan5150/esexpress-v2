@@ -20,6 +20,11 @@ const greenFeatures: MatchFeatures = {
   hasTicket: true,
   hasRate: true,
   deliveredRecent: true,
+  truckOcrMatch: "exact",
+  carrierSimilarity: 1,
+  grossTareConsistency: 1,
+  hasAnomalyNote: false,
+  ocrOverallConfidence: 0.95,
 };
 
 const redFeatures: MatchFeatures = {
@@ -32,6 +37,11 @@ const redFeatures: MatchFeatures = {
   hasTicket: false,
   hasRate: false,
   deliveredRecent: false,
+  truckOcrMatch: "none",
+  carrierSimilarity: null,
+  grossTareConsistency: null,
+  hasAnomalyNote: true,
+  ocrOverallConfidence: 0.3,
 };
 
 // ---------------------------------------------------------------------------
@@ -70,8 +80,8 @@ describe("scoreMatch — base contract", () => {
 
   it("returns a drivers array with one entry per scored feature", () => {
     const s = scoreMatch(greenFeatures);
-    // 9 features defined on MatchFeatures → 9 driver entries
-    expect(s.drivers.length).toBe(9);
+    // 14 features after Phase 6 expansion
+    expect(s.drivers.length).toBe(14);
     const featureNames = s.drivers.map((d) => d.feature);
     expect(featureNames).toContain("bolMatch");
     expect(featureNames).toContain("weightDeltaPct");
@@ -82,6 +92,12 @@ describe("scoreMatch — base contract", () => {
     expect(featureNames).toContain("hasTicket");
     expect(featureNames).toContain("hasRate");
     expect(featureNames).toContain("deliveredRecent");
+    // Phase 6
+    expect(featureNames).toContain("truckOcrMatch");
+    expect(featureNames).toContain("carrierSimilarity");
+    expect(featureNames).toContain("grossTareConsistency");
+    expect(featureNames).toContain("hasAnomalyNote");
+    expect(featureNames).toContain("ocrOverallConfidence");
   });
 
   it("drivers are ordered by absolute contribution magnitude, descending", () => {
@@ -277,6 +293,11 @@ describe("scoreMatch — config overrides", () => {
       "hasTicket",
       "hasRate",
       "deliveredRecent",
+      "truckOcrMatch",
+      "carrierSimilarity",
+      "grossTareConsistency",
+      "hasAnomalyNote",
+      "ocrOverallConfidence",
     ];
     for (const f of expected) {
       expect(DEFAULT_CONFIG.weights).toHaveProperty(f);
