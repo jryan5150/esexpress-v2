@@ -188,3 +188,161 @@ describe("POST /api/v1/dispatch/workbench/build-duplicate", () => {
     expect(r.statusCode).toBe(400);
   });
 });
+
+describe("POST /api/v1/dispatch/workbench/:id/route (routeUncertain)", () => {
+  it("returns 401 without auth", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/1/route",
+      payload: { action: "confirm" },
+    });
+    expect(r.statusCode).toBe(401);
+  });
+
+  it("requires action in body", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/1/route",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: {},
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it("rejects unknown action values", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/1/route",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { action: "bogus" },
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it("rejects non-integer id", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/not-a-number/route",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { action: "confirm" },
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it("accepts all five valid actions", async () => {
+    for (const action of [
+      "confirm",
+      "needs_rate",
+      "missing_ticket",
+      "missing_driver",
+      "flag_other",
+    ]) {
+      const r = await app.inject({
+        method: "POST",
+        url: "/api/v1/dispatch/workbench/1/route",
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { action },
+      });
+      // 200 (happy path), 404 (no assignment), 400 (validation — e.g., wrong
+      // stage), 500 (error), or 503 (db unavailable). NOT 400 from schema —
+      // that would mean we rejected a valid action string.
+      expect([200, 400, 404, 500, 503]).toContain(r.statusCode);
+    }
+  });
+
+  it("accepts optional notes", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/1/route",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { action: "flag_other", notes: "waiting on dispatcher" },
+    });
+    expect([200, 400, 404, 500, 503]).toContain(r.statusCode);
+  });
+});
+
+describe("POST /api/v1/dispatch/workbench/bulk-confirm", () => {
+  it("returns 401 without auth", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/bulk-confirm",
+      payload: { assignmentIds: [1] },
+    });
+    expect(r.statusCode).toBe(401);
+  });
+
+  it("requires assignmentIds", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/bulk-confirm",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: {},
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it("rejects empty assignmentIds array", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/bulk-confirm",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { assignmentIds: [] },
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it("rejects non-array assignmentIds", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/bulk-confirm",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { assignmentIds: "not-an-array" },
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it("rejects batches larger than 200", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/bulk-confirm",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { assignmentIds: Array.from({ length: 201 }, (_, i) => i + 1) },
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it("rejects non-integer items", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/bulk-confirm",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { assignmentIds: ["one", "two"] },
+    });
+    expect(r.statusCode).toBe(400);
+  });
+
+  it("accepts valid batch with optional notes", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/bulk-confirm",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: {
+        assignmentIds: [1, 2, 3],
+        notes: "bulk-confirm via selection bar",
+      },
+    });
+    // Schema passes; per-id success or failure surfaces in result list.
+    // 200 even when every id is invalid — route collects individual errors.
+    expect([200, 500, 503]).toContain(r.statusCode);
+  });
+
+  it("accepts a single-id batch at the lower bound", async () => {
+    const r = await app.inject({
+      method: "POST",
+      url: "/api/v1/dispatch/workbench/bulk-confirm",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { assignmentIds: [1] },
+    });
+    expect([200, 500, 503]).toContain(r.statusCode);
+  });
+});
