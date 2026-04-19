@@ -7,6 +7,8 @@ import type {
 } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 import { ValidationError, NotFoundError } from "../../../lib/errors.js";
+import { scoreMatch } from "./match-scorer.service.js";
+import { extractMatchFeatures } from "./match-features.service.js";
 
 export interface UncertainReasonInput {
   wellId: number | null;
@@ -211,6 +213,20 @@ export interface WorkbenchRow {
   photoStatus: string | null;
   photoThumbUrl: string | null;
   rate: string | null;
+  /** Match confidence score in [0, 1]. Computed per-request in Phase 1. */
+  matchScore: number;
+  /** Coarse tier for backward-compat UI bucketing. */
+  matchTier: "high" | "medium" | "low" | "uncertain";
+  /**
+   * Per-feature breakdown of the match score. Array is sorted by absolute
+   * contribution descending (most impactful first — optimized for tooltip).
+   */
+  matchDrivers: Array<{
+    feature: string;
+    value: number;
+    weight: number;
+    contribution: number;
+  }>;
 }
 
 export async function listWorkbenchRows(
@@ -325,6 +341,7 @@ export async function listWorkbenchRows(
       deliveryState: loads.deliveryState,
       wellId: wells.id,
       wellName: wells.name,
+      autoMapTier: assignments.autoMapTier,
       photoStatus: assignments.photoStatus,
       // Correlated subquery avoids row-multiplication when multiple photos
       // exist per assignment. Orders by id ascending (first submitted wins).
@@ -361,33 +378,57 @@ export async function listWorkbenchRows(
     ? totalQuery.where(whereClause)
     : totalQuery);
 
-  const rows: WorkbenchRow[] = rawRows.map((r) => ({
-    assignmentId: r.assignmentId,
-    handlerStage: r.handlerStage,
-    currentHandlerId: r.currentHandlerId,
-    currentHandlerName: r.currentHandlerName,
-    currentHandlerColor: r.currentHandlerColor,
-    uncertainReasons: (r.uncertainReasons ?? []) as string[],
-    stageChangedAt: r.stageChangedAt ? r.stageChangedAt.toISOString() : null,
-    enteredOn: r.enteredOn ? String(r.enteredOn) : null,
-    loadId: r.loadId!,
-    loadNo: r.loadNo!,
-    loadSource: r.loadSource ?? "manual",
-    driverName: r.driverName,
-    carrierName: r.carrierName,
-    bolNo: r.bolNo,
-    ticketNo: r.ticketNo,
-    weightTons: r.weightTons,
-    truckNo: r.truckNo,
-    deliveredOn: r.deliveredOn ? r.deliveredOn.toISOString() : null,
-    pickupState: r.pickupState,
-    deliveryState: r.deliveryState,
-    wellId: r.wellId,
-    wellName: r.wellName,
-    photoStatus: r.photoStatus,
-    photoThumbUrl: r.photoThumbUrl,
-    rate: r.rate,
-  }));
+  const rows: WorkbenchRow[] = rawRows.map((r) => {
+    const uncertainReasons = (r.uncertainReasons ?? []) as string[];
+    const features = extractMatchFeatures({
+      bolNo: r.bolNo,
+      ticketNo: r.ticketNo,
+      rate: r.rate,
+      wellId: r.wellId,
+      driverName: r.driverName,
+      photoStatus: r.photoStatus,
+      deliveredOn: r.deliveredOn,
+      autoMapTier: r.autoMapTier,
+      uncertainReasons,
+    });
+    const score = scoreMatch(features);
+
+    return {
+      assignmentId: r.assignmentId,
+      handlerStage: r.handlerStage,
+      currentHandlerId: r.currentHandlerId,
+      currentHandlerName: r.currentHandlerName,
+      currentHandlerColor: r.currentHandlerColor,
+      uncertainReasons,
+      stageChangedAt: r.stageChangedAt ? r.stageChangedAt.toISOString() : null,
+      enteredOn: r.enteredOn ? String(r.enteredOn) : null,
+      loadId: r.loadId!,
+      loadNo: r.loadNo!,
+      loadSource: r.loadSource ?? "manual",
+      driverName: r.driverName,
+      carrierName: r.carrierName,
+      bolNo: r.bolNo,
+      ticketNo: r.ticketNo,
+      weightTons: r.weightTons,
+      truckNo: r.truckNo,
+      deliveredOn: r.deliveredOn ? r.deliveredOn.toISOString() : null,
+      pickupState: r.pickupState,
+      deliveryState: r.deliveryState,
+      wellId: r.wellId,
+      wellName: r.wellName,
+      photoStatus: r.photoStatus,
+      photoThumbUrl: r.photoThumbUrl,
+      rate: r.rate,
+      matchScore: score.score,
+      matchTier: score.tier,
+      matchDrivers: score.drivers.map((d) => ({
+        feature: String(d.feature),
+        value: d.value,
+        weight: d.weight,
+        contribution: d.contribution,
+      })),
+    };
+  });
 
   return { rows, total: count };
 }
