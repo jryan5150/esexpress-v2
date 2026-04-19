@@ -2,8 +2,15 @@
 
 **Date:** 2026-04-19
 **Author:** Jace / Opus 4.7 session
-**Status:** Proposed · awaiting greenlight on Phase 7 scope
+**Status:** Phase 7a ready to kick · awaiting project ID confirmation
 **Scope:** How the matching engine scales from today's 50 decisions/day / manual OCR / Phase 1-6 features to a production system ingesting 500-5,000 BOLs/day with continuous learning, cross-carrier templates, and multi-region resilience.
+
+## Confirmed inputs (2026-04-19)
+
+- **Corpus:** `gs://esexpress-weight-tickets` · 5,958 BOL photos · 14.37 GB · US-CENTRAL1
+- **Org:** Lexcom (auth: `noc@lexcom.com`)
+- **Current OCR pipeline:** `bol-extraction.service.ts` in the main Fastify backend, Claude-direct via Helicone, `claude-opus-4-7` post-Phase-6 upgrade
+- **Corpus avg photo size:** ~2.4 MB (consistent with phone-snapped BOLs)
 
 ---
 
@@ -11,7 +18,7 @@
 
 Today: 14-feature scorer, pre-tuned weights, Claude-direct OCR, in-process rate limiter, one Postgres instance, manual-only driver crossref seeding.
 
-The highest-leverage move is NOT more features. It's **taking the 5-10K historical JotForm BOL corpus, running it through the (now-Opus-4.7) extraction pipeline once, and using the resulting labeled decisions to bootstrap the Phase 3 tuner with 50,000+ real training features on day one.** Without this, the tuner starts cold and takes ~90 days to converge. With it, the system launches already-tuned.
+The highest-leverage move is NOT more features. It's **taking the 5,958 historical BOL photos sitting in `gs://esexpress-weight-tickets`, running them through the (now-Opus-4.7) extraction pipeline once (~$90 one-time), and using the resulting labeled decisions to bootstrap the Phase 3 tuner with ~71,000 real training features on day one.** Without this, the tuner starts cold and takes ~90 days to converge. With it, the system launches pre-tuned at projected 82-86% accuracy.
 
 Secondary: turn the extraction pipeline into a GCP-native, horizontally-scaled worker with Document AI + LayoutLMv3 as a dual-extractor to Claude. Cross-carrier template patterns (PropX/Logistiq/JotForm/JRT) emerge naturally from the labeled corpus and become per-source scoring priors.
 
@@ -21,73 +28,92 @@ Secondary: turn the extraction pipeline into a GCP-native, horizontally-scaled w
 
 ### The vision (Jace, 2026-04-19)
 
-> Thousands of historical JotForm BOLs are the golden training ground. Run the corpus through the pipeline once, use the reconciliation outcomes as labels, and the scorer launches pre-trained against real operational patterns. PropX + Logistiq matches get smarter because the JotForm corpus tells us what a good match actually looks like.
+> The JotForm BOL corpus is the golden training ground. Run it through the pipeline once, use the reconciliation outcomes as labels, and the scorer launches pre-trained against real operational patterns. PropX + Logistiq matches get smarter because the JotForm corpus tells us what a good match actually looks like.
 
-### The pipeline
+### Plan v2 — Dual-pass with auto-validation
+
+The corpus is **5,958 photos / 14.4 GB** — smaller than original sizing assumptions allowed for. At Opus 4.7 rates (~$0.015/image), full extraction of every BOL is **~$90 one-time**. Cost stops being a stratification driver; **quality harness becomes the creative lever**.
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  CORPUS BACKFILL (one-time)                                  │
-│                                                               │
-│  5-10K JotForm BOL photos (zipped, ~50-60GB)                  │
-│            │                                                  │
-│            ▼                                                  │
-│  Upload → gs://esexpress-bol-corpus/                          │
-│            │                                                  │
-│            ▼                                                  │
-│  Cloud Run worker, parallelized at shard=64                   │
-│    ├→ Claude Vision Opus 4.7 (15-field extraction)            │
-│    ├→ (Phase 7) Document AI Form Parser + LayoutLMv3          │
-│    └→ Facts Merger (confidence-tagged per-field)              │
-│            │                                                  │
-│            ▼                                                  │
-│  Write to bol_submissions.ai_extracted_data (rich jsonb)      │
-│            │                                                  │
-│            ▼                                                  │
-│  Reconciliation replay — match each BOL against historical    │
-│  loads table; tag with matched_load_id + reconciliation       │
-│  status (cleared / entered / uncertain / unmatched)           │
-│            │                                                  │
-│            ▼                                                  │
-│  Synthetic match_decisions rows                               │
-│    - cleared/entered BOLs    → label = 1 (confident match)    │
-│    - uncertain BOLs          → label = 0 (skeptical match)    │
-│    - unmatched BOLs          → label = -1 (no-match class)    │
-│    - 5-10K rows × 14 features = 70K-140K labeled feature      │
-│      observations for the tuner                               │
-│            │                                                  │
-│            ▼                                                  │
-│  Phase 3 tuner cold-start run → initial production weights    │
-│  + per-carrier weight overrides (see §4 templates)            │
-└──────────────────────────────────────────────────────────────┘
+Pass 1 — Full Opus extraction  (5,958 × $0.015 = ~$90, 2-3 hr wall-clock)
+  Every BOL gets:
+    • 15 structured fields (ticketNo, loadNumber, weight, gross, tare,
+      pickupDate, deliveryDate, shipper, consignee, product, truckNo,
+      trailerNo, carrier, driverName, notes)
+    • Per-field confidence (0-100)
+    • Overall confidence
+  Output → bol_submissions.ai_extracted_data (rich jsonb)
+
+Pass 2 — Reconciliation-as-labeler  (free, ~30 min)
+  For each extracted BOL, match against historical `loads` table
+  via reconciliation.service.ts. Assign outcome bucket:
+    A. Clean match      — load found, all fields agree        (gold positive)
+    B. Partial match    — load found, 1-2 fields disagree     (edge case)
+    C. No match         — couldn't find load (old, or bad OCR)(negative)
+    D. Multi-match      — ambiguous (2+ candidate loads)      (the hard cases)
+  Output → synthetic match_decisions rows, bucket-tagged
+
+Pass 3 — Pattern mining across the extractions  (free, ~half-day)
+  For each carrier (Liberty, Logistiq, Scout, JRT, other):
+    • Confidence distribution per field
+    • OCR-vs-load agreement rate per field
+    • Regex mining: what formats does BOL/ticket/load# take?
+    • Outlier catalog: top 50 weirdest extractions
+  Output →
+    template_candidates.json     (regex/rule proposals per carrier)
+    field_trust_priors.json      (which fields are reliable per carrier)
+    anomaly_catalog.json         (bucket B/C/D hard cases)
+
+Pass 4 — Tuner bootstrap  (free, ~half-day)
+  Feed labeled decisions from Pass 2 into the scorer tuner
+  Produce:
+    • Global baseline weights (all 14 features)
+    • Per-carrier weight overrides (Liberty-specific, JRT-specific, etc.)
+  Write scorer_config rows, is_active=false, for manual review
 ```
 
-### What we get out of it
+### What Plan v2 produces
 
-- **Initial tuner weights on day 1.** Launch score accuracy projected 85-88% instead of 68% baseline.
-- **Per-carrier priors.** Liberty / Logistiq / Scout / JRT each have distinct BOL patterns — tuner learns carrier-specific weight overrides.
-- **Template extraction for the matcher.** Rulesets like "JRT BOLs always have format `JR-#####`" emerge as queryable patterns (§4).
-- **Ranking calibration.** We learn the true score→confidence curve instead of guessing.
-- **A/B measurement baseline.** When Phase 3 tuner runs nightly, we measure it against the corpus-derived baseline.
+- **~71K labeled feature observations** (5,958 × ~12 confidence-tagged fields avg)
+- **5 scorer_config baselines** — global + 4 per-carrier — day one
+- **10-30 ingest-guardrails template rules** (BOL format regex per carrier, weight range sanity)
+- **Anomaly catalog** of ~200-400 hard cases for human review → gold training set
+- **Field trust priors** — scorer downweights unreliable per-carrier fields automatically
 
-### Effort + cost
+### Why this beats stratified sampling
+
+The original cost concern (original estimate $300-500) made stratified sampling look smart. At real scale ($90 total), sampling leaves signal on the floor. Instead:
+- **Bucket D (multi-match)** — the ambiguous cases are where the matcher currently fails. Running everything surfaces them all; we can't find them by sampling.
+- **Rare carrier patterns** — if JRT is 8% of the corpus (~480 BOLs), stratified sampling may miss systematic issues. Full run catches them.
+- **Regex mining reliability** — template patterns at >0.95 confirmed rate need the full corpus to be statistically sound.
+
+### Baseline accuracy expectations (revised)
+
+| Snapshot | Accuracy | Rationale |
+| --- | --- | --- |
+| Today (pre-corpus, default weights) | 68.3% | Measured on seeded dev data |
+| After Pass 4 tuner cold-start | 82-86% | 71K labeled observations = far more signal than a 90-day cold start |
+| + per-carrier overrides | 85-89% | Carrier priors add 2-4 points in tests |
+| + ongoing Phase 3 nightly tuner (month 1) | 88-92% | Operational decisions compound on the corpus baseline |
+| Phase 5+ OCR-field fidelity ceiling | 92-95% | Label noise + OCR limits |
+
+### Effort + cost (revised)
 
 | Step | Effort | GCP cost |
 | --- | --- | --- |
-| Upload 50-60GB corpus to GCS | ~30 min + transfer time | <$5 one-time |
-| Cloud Run worker (Python/TS) that iterates corpus through existing extraction service | 2 days | ~$5 |
-| Claude Opus 4.7 extraction on 5-10K images | 1-2 days wall-clock | ~$300-500 one-time |
-| Reconciliation replay + synthetic decisions write | 1 day | negligible |
-| Phase 3 tuner cold-start run | 2 hours | negligible |
-| **Total** | **~5 days** | **~$310-510 one-time, ~$5/mo ongoing** |
+| (Corpus already in GCS — gs://esexpress-weight-tickets) | — | — |
+| Cloud Run worker that iterates bucket + invokes extraction | 1 day | <$5 ongoing |
+| Opus 4.7 Pass 1 over 5,958 images | 2-3 hr wall-clock | **~$90 one-time** |
+| Reconciliation replay Pass 2 | 30 min compute | negligible |
+| Pattern mining Pass 3 (Python/SQL) | half-day | negligible |
+| Tuner Pass 4 + review package | half-day | negligible |
+| **Total to Phase 7a complete** | **~3 days + $90** | |
 
-### Kickoff
+### Kickoff — remaining unknowns
 
-Three concrete kickoffs to unblock the corpus pipeline:
-
-1. **Corpus location** — confirm where the ZIPs live, get auth to upload to `gs://esexpress-bol-corpus/`
-2. **GCP project ID** — confirm weavefield.io org + project for the Cloud Run worker + Document AI endpoints
-3. **Anthropic budget** — confirm $500 one-time for Opus on 10K BOLs is authorized (can be billed via Vertex or direct API)
+1. **GCP project ID owning the bucket** — in progress, one `gsutil ls -L -b` away
+2. **Anthropic billing pathway** — Vertex AI (recommended, single GCP bill) vs. direct Anthropic API (existing Helicone setup, faster to ship). Recommend Vertex for Phase 7+ consolidation.
+3. **Auto-activation guardrails for tuner** — do we auto-activate new scorer_config if accuracy delta is positive, or require Jessica's one-click confirm? Ship with confirm; relax after 3 proven cycles.
 
 ---
 
