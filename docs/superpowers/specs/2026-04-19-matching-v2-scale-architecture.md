@@ -7,10 +7,13 @@
 
 ## Confirmed inputs (2026-04-19)
 
-- **Corpus:** `gs://esexpress-weight-tickets` · 5,958 BOL photos · 14.37 GB · US-CENTRAL1
-- **Org:** Lexcom (auth: `noc@lexcom.com`)
+- **GCP project:** `esexpress-dispatch` (project number `284348866856`), Lexcom org
+- **Corpus bucket:** `gs://esexpress-weight-tickets` · 5,958 BOL photos · 14.37 GB · `us-central1`
+- **Bucket age:** created 2026-04-02 · uniform IAM access · 7d soft-delete · STANDARD class
+- **Auth identity:** `noc@lexcom.com`
 - **Current OCR pipeline:** `bol-extraction.service.ts` in the main Fastify backend, Claude-direct via Helicone, `claude-opus-4-7` post-Phase-6 upgrade
 - **Corpus avg photo size:** ~2.4 MB (consistent with phone-snapped BOLs)
+- **Cloud Run region target:** `us-central1` (co-located with bucket, zero egress cost for reads)
 
 ---
 
