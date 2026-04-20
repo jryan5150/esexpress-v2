@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { StagePill } from "./StagePill";
+import { MatchScoreBadge } from "./MatchScoreBadge";
 import type {
   WorkbenchRow as Row,
   HandlerStage,
@@ -151,6 +152,11 @@ export const WorkbenchRow = memo(function WorkbenchRow({
           <div className="flex items-center gap-1.5">
             <SourceBadge source={row.loadSource} />
             <span className="font-medium truncate">{row.loadNo}</span>
+            <MatchScoreBadge
+              score={row.matchScore}
+              tier={row.matchTier}
+              drivers={row.matchDrivers}
+            />
           </div>
           <div className="text-xs text-on-surface-variant truncate">
             {row.wellName ?? "— no well"}

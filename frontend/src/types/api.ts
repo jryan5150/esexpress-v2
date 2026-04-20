@@ -307,4 +307,12 @@ export interface WorkbenchRow {
   photoStatus: "attached" | "pending" | "missing" | null;
   photoThumbUrl: string | null;
   rate: string | null;
+  matchScore: number;
+  matchTier: "high" | "medium" | "low" | "uncertain";
+  matchDrivers: Array<{
+    feature: string;
+    value: number;
+    weight: number;
+    contribution: number;
+  }>;
 }

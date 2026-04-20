@@ -1,5 +1,13 @@
 import { eq, and, sql, inArray, ilike, or } from "drizzle-orm";
-import { assignments, loads, wells, users, photos } from "../../../db/schema.js";
+import {
+  assignments,
+  loads,
+  wells,
+  users,
+  photos,
+  bolSubmissions,
+  driverCrossrefs,
+} from "../../../db/schema.js";
 import type {
   PhotoStatus,
   UncertainReason,
@@ -7,6 +15,8 @@ import type {
 } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 import { ValidationError, NotFoundError } from "../../../lib/errors.js";
+import { scoreMatch } from "./match-scorer.service.js";
+import { extractMatchFeatures } from "./match-features.service.js";
 
 export interface UncertainReasonInput {
   wellId: number | null;
@@ -211,6 +221,20 @@ export interface WorkbenchRow {
   photoStatus: string | null;
   photoThumbUrl: string | null;
   rate: string | null;
+  /** Match confidence score in [0, 1]. Computed per-request in Phase 1. */
+  matchScore: number;
+  /** Coarse tier for backward-compat UI bucketing. */
+  matchTier: "high" | "medium" | "low" | "uncertain";
+  /**
+   * Per-feature breakdown of the match score. Array is sorted by absolute
+   * contribution descending (most impactful first — optimized for tooltip).
+   */
+  matchDrivers: Array<{
+    feature: string;
+    value: number;
+    weight: number;
+    contribution: number;
+  }>;
 }
 
 export async function listWorkbenchRows(
@@ -325,6 +349,7 @@ export async function listWorkbenchRows(
       deliveryState: loads.deliveryState,
       wellId: wells.id,
       wellName: wells.name,
+      autoMapTier: assignments.autoMapTier,
       photoStatus: assignments.photoStatus,
       // Correlated subquery avoids row-multiplication when multiple photos
       // exist per assignment. Orders by id ascending (first submitted wins).
@@ -332,6 +357,35 @@ export async function listWorkbenchRows(
         string | null
       >`(SELECT ${photos.sourceUrl} FROM ${photos} WHERE ${photos.assignmentId} = ${assignments.id} ORDER BY ${photos.id} ASC LIMIT 1)`,
       rate: loads.rate,
+      // Phase 5+6: OCR-extracted fields from the most-recent bol_submission
+      // matched to this load. Correlated subqueries avoid row multiplication
+      // when a load has multiple submissions over time. The same latest row
+      // feeds every OCR-derived feature (keeps the snapshot consistent).
+      ocrBolNo: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'bolNo' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrWeightLbs: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'weight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrGrossWeightLbs: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'grossWeight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrTareWeightLbs: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'tareWeight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrTruckNo: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'truckNo' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrCarrierName: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'carrier' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrNotes: sql<
+        string | null
+      >`(SELECT ${bolSubmissions.aiExtractedData}->>'notes' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      ocrOverallConfidence: sql<
+        number | null
+      >`(SELECT (${bolSubmissions.aiExtractedData}->>'overallConfidence')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      loadWeightLbs: loads.weightLbs,
     })
     .from(assignments)
     .leftJoin(loads, eq(loads.id, assignments.loadId))
@@ -344,6 +398,16 @@ export async function listWorkbenchRows(
     .orderBy(sql`${assignments.stageChangedAt} DESC NULLS LAST`)
     .limit(limit)
     .offset(offset);
+
+  // Phase 5c: driver roster for fuzzy similarity. Fetched once per request;
+  // passed by reference to each row's feature extraction. Empty array when
+  // driver_crossrefs is unpopulated (Phase 1 fallback kicks in downstream).
+  const rosterRows = await db
+    .selectDistinct({ canonicalName: driverCrossrefs.canonicalName })
+    .from(driverCrossrefs);
+  const driverRoster: readonly string[] = rosterRows.map(
+    (r) => r.canonicalName,
+  );
 
   // Count query omits wells/users joins — safe because filterCondition
   // only touches assignments columns and searchCondition only touches
@@ -361,33 +425,77 @@ export async function listWorkbenchRows(
     ? totalQuery.where(whereClause)
     : totalQuery);
 
-  const rows: WorkbenchRow[] = rawRows.map((r) => ({
-    assignmentId: r.assignmentId,
-    handlerStage: r.handlerStage,
-    currentHandlerId: r.currentHandlerId,
-    currentHandlerName: r.currentHandlerName,
-    currentHandlerColor: r.currentHandlerColor,
-    uncertainReasons: (r.uncertainReasons ?? []) as string[],
-    stageChangedAt: r.stageChangedAt ? r.stageChangedAt.toISOString() : null,
-    enteredOn: r.enteredOn ? String(r.enteredOn) : null,
-    loadId: r.loadId!,
-    loadNo: r.loadNo!,
-    loadSource: r.loadSource ?? "manual",
-    driverName: r.driverName,
-    carrierName: r.carrierName,
-    bolNo: r.bolNo,
-    ticketNo: r.ticketNo,
-    weightTons: r.weightTons,
-    truckNo: r.truckNo,
-    deliveredOn: r.deliveredOn ? r.deliveredOn.toISOString() : null,
-    pickupState: r.pickupState,
-    deliveryState: r.deliveryState,
-    wellId: r.wellId,
-    wellName: r.wellName,
-    photoStatus: r.photoStatus,
-    photoThumbUrl: r.photoThumbUrl,
-    rate: r.rate,
-  }));
+  const rows: WorkbenchRow[] = rawRows.map((r) => {
+    const uncertainReasons = (r.uncertainReasons ?? []) as string[];
+    const features = extractMatchFeatures({
+      bolNo: r.bolNo,
+      ticketNo: r.ticketNo,
+      rate: r.rate,
+      wellId: r.wellId,
+      driverName: r.driverName,
+      photoStatus: r.photoStatus,
+      deliveredOn: r.deliveredOn,
+      autoMapTier: r.autoMapTier,
+      uncertainReasons,
+      ocrBolNo: r.ocrBolNo,
+      ocrWeightLbs:
+        r.ocrWeightLbs != null ? Number(r.ocrWeightLbs) : null,
+      loadWeightLbs:
+        r.loadWeightLbs != null ? Number(r.loadWeightLbs) : null,
+      driverRoster,
+      // Phase 6
+      loadTruckNo: r.truckNo,
+      loadCarrierName: r.carrierName,
+      ocrTruckNo: r.ocrTruckNo,
+      ocrCarrierName: r.ocrCarrierName,
+      ocrGrossWeightLbs:
+        r.ocrGrossWeightLbs != null ? Number(r.ocrGrossWeightLbs) : null,
+      ocrTareWeightLbs:
+        r.ocrTareWeightLbs != null ? Number(r.ocrTareWeightLbs) : null,
+      ocrNotes: r.ocrNotes,
+      ocrOverallConfidence:
+        r.ocrOverallConfidence != null
+          ? Number(r.ocrOverallConfidence)
+          : null,
+    });
+    const score = scoreMatch(features);
+
+    return {
+      assignmentId: r.assignmentId,
+      handlerStage: r.handlerStage,
+      currentHandlerId: r.currentHandlerId,
+      currentHandlerName: r.currentHandlerName,
+      currentHandlerColor: r.currentHandlerColor,
+      uncertainReasons,
+      stageChangedAt: r.stageChangedAt ? r.stageChangedAt.toISOString() : null,
+      enteredOn: r.enteredOn ? String(r.enteredOn) : null,
+      loadId: r.loadId!,
+      loadNo: r.loadNo!,
+      loadSource: r.loadSource ?? "manual",
+      driverName: r.driverName,
+      carrierName: r.carrierName,
+      bolNo: r.bolNo,
+      ticketNo: r.ticketNo,
+      weightTons: r.weightTons,
+      truckNo: r.truckNo,
+      deliveredOn: r.deliveredOn ? r.deliveredOn.toISOString() : null,
+      pickupState: r.pickupState,
+      deliveryState: r.deliveryState,
+      wellId: r.wellId,
+      wellName: r.wellName,
+      photoStatus: r.photoStatus,
+      photoThumbUrl: r.photoThumbUrl,
+      rate: r.rate,
+      matchScore: score.score,
+      matchTier: score.tier,
+      matchDrivers: score.drivers.map((d) => ({
+        feature: String(d.feature),
+        value: d.value,
+        weight: d.weight,
+        contribution: d.contribution,
+      })),
+    };
+  });
 
   return { rows, total: count };
 }

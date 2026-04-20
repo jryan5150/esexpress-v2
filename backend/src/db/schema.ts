@@ -673,3 +673,47 @@ export const breadcrumbs = pgTable(
     index("idx_breadcrumbs_user_id").on(table.userId),
   ],
 );
+
+// ─── MATCH DECISIONS ──────────────────────────────────────────────
+// Every human action on an assignment (confirm, route_uncertain, flag_back,
+// advance) writes one row here. This is the labeled-data stream the Phase 3
+// tuner consumes to re-weight the match scorer.
+//
+// features_snapshot captures the MatchFeatures object as it looked at decision
+// time; score_before is the scorer output pre-decision. score_after is filled
+// on transitions that re-score (e.g., a confirm that clears uncertain_reasons).
+//
+// Indexed on created_at (for the nightly tuner's time-window scan) and on
+// action (for outcome-by-action aggregates).
+export const matchDecisions = pgTable(
+  "match_decisions",
+  {
+    id: serial("id").primaryKey(),
+    assignmentId: integer("assignment_id")
+      .notNull()
+      .references(() => assignments.id, { onDelete: "cascade" }),
+    loadId: integer("load_id")
+      .notNull()
+      .references(() => loads.id, { onDelete: "cascade" }),
+    userId: integer("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    action: text("action").notNull(),
+    featuresSnapshot: jsonb("features_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    scoreBefore: numeric("score_before", { precision: 4, scale: 3 }).notNull(),
+    scoreAfter: numeric("score_after", { precision: 4, scale: 3 }),
+    tierBefore: text("tier_before").notNull(),
+    tierAfter: text("tier_after"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_match_decisions_created_at").on(table.createdAt),
+    index("idx_match_decisions_action").on(table.action),
+    index("idx_match_decisions_assignment_id").on(table.assignmentId),
+  ],
+);

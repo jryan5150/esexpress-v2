@@ -54,7 +54,11 @@ export const BOL_EXTRACTION_FIELDS = [
   "notes",
 ] as const;
 
-const DEFAULT_MODEL = "claude-sonnet-4-6";
+// Phase 6 (matching-v2, 2026-04-19): upgrade to Opus for higher precision on
+// BOL field extraction. Opus handles multi-page BOLs + handwritten annotations
+// + ambiguous layouts better than Sonnet. Override via BOL_EXTRACTION_MODEL
+// env var if we need to A/B test or roll back.
+const DEFAULT_MODEL = process.env.BOL_EXTRACTION_MODEL ?? "claude-opus-4-7";
 const MAX_TOKENS = 2_000;
 
 // ---------------------------------------------------------------------------
