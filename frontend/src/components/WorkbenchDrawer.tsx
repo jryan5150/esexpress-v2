@@ -33,7 +33,12 @@ interface OcrAcceptButtonsProps {
   onKeep: () => void;
   isSaving?: boolean;
 }
-function OcrAcceptButtons({ ocrValue, onUseOcr, onKeep, isSaving }: OcrAcceptButtonsProps) {
+function OcrAcceptButtons({
+  ocrValue,
+  onUseOcr,
+  onKeep,
+  isSaving,
+}: OcrAcceptButtonsProps) {
   return (
     <div className="mt-1 flex items-center gap-1">
       <button
@@ -108,9 +113,7 @@ function EditableField({
         <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
           {label}
         </span>
-        {isSaving && (
-          <span className="text-[10px] text-primary">saving…</span>
-        )}
+        {isSaving && <span className="text-[10px] text-primary">saving…</span>}
       </div>
       {editing ? (
         <input
@@ -195,17 +198,47 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
     update.mutate({ loadId: row.loadId, updates: { [key]: value } });
   };
 
+  const nextByStage: Record<
+    typeof row.handlerStage,
+    typeof row.handlerStage | null
+  > = {
+    uncertain: "ready_to_build",
+    ready_to_build: "building",
+    building: "entered",
+    entered: "cleared",
+    cleared: null,
+  };
+
+  // Stage-specific verb + explanation for the advance button. Generic "Advance →"
+  // didn't tell Jessica what action would happen or what state she was moving to.
+  const ADVANCE_COPY: Record<
+    typeof row.handlerStage,
+    { label: string; title: string }
+  > = {
+    uncertain: {
+      label: "Confirm → Ready to Build",
+      title:
+        "All validation checks pass — move this load to the Ready-to-Build queue for the builder.",
+    },
+    ready_to_build: {
+      label: "Start Build (→ Building)",
+      title:
+        "Begin building this load in PCS. Moves the row to the Building stage while you're copying into PCS.",
+    },
+    building: {
+      label: "Mark Entered (→ Entered)",
+      title:
+        "PCS load has been created and entered. Moves the row to the Entered stage, awaiting clearance.",
+    },
+    entered: {
+      label: "Mark Cleared",
+      title:
+        "PCS has cleared this load. Moves it out of the active workbench into Cleared history.",
+    },
+    cleared: { label: "", title: "" },
+  };
+
   const advanceToNext = () => {
-    const nextByStage: Record<
-      typeof row.handlerStage,
-      typeof row.handlerStage | null
-    > = {
-      uncertain: "ready_to_build",
-      ready_to_build: "building",
-      building: "entered",
-      entered: "cleared",
-      cleared: null,
-    };
     const next = nextByStage[row.handlerStage];
     if (next) {
       advance.mutate({ id: row.assignmentId, stage: next });
@@ -214,8 +247,7 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
 
   const flagBack = () => {
     const reason = prompt("Why flag back to uncertain?");
-    if (reason)
-      flag.mutate({ id: row.assignmentId, reason, notes: undefined });
+    if (reason) flag.mutate({ id: row.assignmentId, reason, notes: undefined });
   };
 
   return (
@@ -227,8 +259,8 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
           <div>
             <div className="font-medium">{row.loadNo}</div>
             <div className="text-xs text-on-surface-variant">
-              {row.wellName ?? "— no well"} · {row.driverName ?? "no driver"}{" "}
-              · {row.carrierName ?? ""}
+              {row.wellName ?? "— no well"} · {row.driverName ?? "no driver"} ·{" "}
+              {row.carrierName ?? ""}
             </div>
           </div>
         </div>
@@ -352,7 +384,9 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
           {ocr && (
             <div className="text-[10px] text-on-surface-variant mt-2">
               Match: {ocr.matchMethod ?? "none"} ·{" "}
-              {ocr.matchScore != null ? `${ocr.matchScore}% confidence` : "no score"}
+              {ocr.matchScore != null
+                ? `${ocr.matchScore}% confidence`
+                : "no score"}
             </div>
           )}
         </div>
@@ -362,7 +396,10 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
       <div className="flex items-center justify-between pt-2 border-t border-surface-variant">
         <div className="text-xs text-on-surface-variant">
           Handler:{" "}
-          <span className="font-medium" style={{ color: row.currentHandlerColor ?? undefined }}>
+          <span
+            className="font-medium"
+            style={{ color: row.currentHandlerColor ?? undefined }}
+          >
             {row.currentHandlerName ?? "unclaimed"}
           </span>
         </div>
@@ -372,6 +409,7 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
               type="button"
               onClick={flagBack}
               disabled={flag.isPending}
+              title="Send this load back to the Uncertain queue for re-review. Requires a reason you'll type next."
               className="px-3 py-1.5 text-sm rounded border border-amber-500 text-amber-900 bg-amber-50 hover:bg-amber-100 disabled:opacity-50"
             >
               Flag back to Uncertain
@@ -382,9 +420,12 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
               type="button"
               onClick={advanceToNext}
               disabled={advance.isPending}
+              title={ADVANCE_COPY[row.handlerStage].title}
               className="px-3 py-1.5 text-sm rounded bg-primary text-on-primary disabled:opacity-50"
             >
-              {advance.isPending ? "Advancing…" : "Advance →"}
+              {advance.isPending
+                ? "Advancing…"
+                : ADVANCE_COPY[row.handlerStage].label}
             </button>
           )}
         </div>

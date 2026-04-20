@@ -47,27 +47,57 @@ function SourceBadge({ source }: { source: LoadSource }) {
   );
 }
 
-// Returns the CTA label + variant for the current stage. Keep text short —
-// the button has to fit next to the other columns.
-// Clean uncertain (no reasons) gets the fast-path "Confirm → Yellow" button
-// in green; triggered uncertain (reasons present) shows "Resolve" in primary.
+// Returns the CTA label, hover-explanation, and variant for the current stage.
+// Short label for column fit; tooltip carries the explanation Jessica needs
+// when she's first learning the surface.
+// Clean uncertain (no reasons) gets the fast-path "Confirm" button in green;
+// triggered uncertain (reasons present) shows "Resolve" in primary.
 function primaryAction(
   stage: HandlerStage,
   clean: boolean,
-): { label: string; variant: "confirm" | "primary" | "ghost" } {
+): {
+  label: string;
+  title: string;
+  variant: "confirm" | "primary" | "ghost";
+} {
   switch (stage) {
     case "uncertain":
       return clean
-        ? { label: "Confirm → Yellow", variant: "confirm" }
-        : { label: "Resolve", variant: "primary" };
+        ? {
+            label: "Confirm",
+            title:
+              "All validation checks pass on this load — move it to Ready-to-Build for the builder.",
+            variant: "confirm",
+          }
+        : {
+            label: "Resolve",
+            title:
+              "This load has one or more open validation reasons. Click to review and either fix them or flag with a note.",
+            variant: "primary",
+          };
     case "ready_to_build":
-      return { label: "Build + Duplicate", variant: "primary" };
+      return {
+        label: "Build in PCS",
+        title:
+          "Start building this load in PCS. Moves the row to Building and (for ready-to-build batches) creates follow-up assignments for duplicate shipments.",
+        variant: "primary",
+      };
     case "building":
-      return { label: "Mark Entered", variant: "primary" };
+      return {
+        label: "Mark Entered",
+        title:
+          "PCS load created — moves this row to Entered, awaiting PCS to clear it.",
+        variant: "primary",
+      };
     case "entered":
-      return { label: "Mark Cleared", variant: "primary" };
+      return {
+        label: "Mark Cleared",
+        title:
+          "PCS has cleared this load. Moves it out of the active workbench into the Cleared archive.",
+        variant: "primary",
+      };
     case "cleared":
-      return { label: "", variant: "ghost" };
+      return { label: "", title: "", variant: "ghost" };
   }
 }
 
@@ -181,9 +211,7 @@ export const WorkbenchRow = memo(function WorkbenchRow({
             <span className="text-[9px] uppercase tracking-wider text-on-surface-variant w-10 shrink-0">
               BOL
             </span>
-            <span className="font-mono text-xs">
-              {row.bolNo ?? "--"}
-            </span>
+            <span className="font-mono text-xs">{row.bolNo ?? "--"}</span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-[9px] uppercase tracking-wider text-on-surface-variant w-10 shrink-0">
@@ -257,6 +285,7 @@ export const WorkbenchRow = memo(function WorkbenchRow({
                 e.stopPropagation();
                 onPrimaryAction();
               }}
+              title={action.title}
               className={
                 "px-3 py-1 text-xs font-medium rounded disabled:opacity-50 " +
                 (action.variant === "confirm"

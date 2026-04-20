@@ -413,20 +413,22 @@ export function Workbench() {
                   });
                   setSelected(new Set());
                 }}
+                title="Move the selected Uncertain loads (with no open validation reasons) to Ready-to-Build. This is the bulk version of the drawer's Confirm action."
                 className="px-3 py-1 text-sm rounded bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50"
               >
                 {bulkConfirm.isPending
                   ? "Confirming…"
-                  : `Confirm ${selectedCleanUncertainIds.length} → Yellow`}
+                  : `Confirm ${selectedCleanUncertainIds.length} → Ready to Build`}
               </button>
             )}
             {selectedReadyToBuildIds.length > 0 && (
               <button
                 type="button"
                 onClick={() => setBuildModalOpen(true)}
+                title="Batch-build the selected Ready-to-Build loads in PCS and auto-create follow-up assignments for any duplicate/repeat shipments. Opens a review modal before committing."
                 className="px-3 py-1 text-sm rounded bg-primary text-on-primary"
               >
-                Build + Duplicate batch
+                Build in PCS + Copy Duplicates
               </button>
             )}
             <button
