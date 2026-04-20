@@ -1,11 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { qk } from "../lib/query-client";
-import type {
-  WorkbenchFilter,
-  WorkbenchRow,
-  HandlerStage,
-} from "../types/api";
+import type { WorkbenchFilter, WorkbenchRow, HandlerStage } from "../types/api";
 
 export interface WorkbenchQueryOpts {
   search?: string;
@@ -30,10 +26,11 @@ export function useWorkbench(
   opts: WorkbenchQueryOpts = {},
 ) {
   const { search, dateFrom, dateTo, truckNo, wellId, wellName } = opts;
-  const pageSize: PageSize =
-    (PAGE_SIZE_OPTIONS as readonly number[]).includes(opts.pageSize ?? 50)
-      ? (opts.pageSize as PageSize)
-      : 50;
+  const pageSize: PageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(
+    opts.pageSize ?? 50,
+  )
+    ? (opts.pageSize as PageSize)
+    : 50;
   const page = Math.max(0, opts.page ?? 0);
   const params = new URLSearchParams({ filter });
   params.set("limit", String(pageSize));
@@ -164,6 +161,23 @@ export function useUpdateLoadField() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.workbench.all });
       qc.invalidateQueries({ queryKey: qk.loads.all });
+    },
+  });
+}
+
+/**
+ * PATCH the PCS load number on an assignment. Manual entry lane while
+ * bidirectional PCS OAuth isn't live — Jodi's payroll report joins on this.
+ */
+export function useUpdatePcsNumber() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (p: { assignmentId: number; pcsNumber: string | null }) =>
+      api.patch(`/dispatch/workbench/${p.assignmentId}/pcs-number`, {
+        pcsNumber: p.pcsNumber,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.workbench.all });
     },
   });
 }

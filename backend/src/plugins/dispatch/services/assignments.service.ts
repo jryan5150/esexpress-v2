@@ -30,6 +30,48 @@ export async function createAssignment(
     input.assignedByName,
     "Assignment created",
   );
+
+  // Compute uncertain_reasons from the load's current state at creation time.
+  // Previously reasons were only populated on JotForm reconciliation, which
+  // meant loads without a BOL submission showed up on Uncertain with no
+  // explanation AND the Missing Ticket / Missing Driver / Needs Rate smart
+  // filters silently returned zero. Jessica's PCS-issues workflow requires
+  // these filters. See workbench.service.ts::computeUncertainReasons.
+  const [load] = await db
+    .select({
+      bolNo: loads.bolNo,
+      ticketNo: loads.ticketNo,
+      driverName: loads.driverName,
+      rate: loads.rate,
+      weightLbs: loads.weightLbs,
+      weightTons: loads.weightTons,
+      deliveredOn: loads.deliveredOn,
+    })
+    .from(loads)
+    .where(eq(loads.id, input.loadId))
+    .limit(1);
+
+  const { computeUncertainReasons } = await import("./workbench.service.js");
+  const reasons = load
+    ? computeUncertainReasons({
+        wellId: input.wellId,
+        photoStatus: null,
+        autoMapTier: input.autoMapTier ?? null,
+        bolNo: load.bolNo,
+        ocrBolNo: null,
+        loadWeightLbs: load.weightLbs
+          ? parseFloat(load.weightLbs as unknown as string)
+          : load.weightTons
+            ? parseFloat(load.weightTons as unknown as string) * 2000
+            : null,
+        ocrWeightLbs: null,
+        rate: load.rate as string | null,
+        deliveredOn: load.deliveredOn,
+        driverName: load.driverName,
+        ticketNo: load.ticketNo,
+      })
+    : [];
+
   const [assignment] = await db
     .insert(assignments)
     .values({
@@ -41,6 +83,7 @@ export async function createAssignment(
       autoMapScore: input.autoMapScore,
       matchAudit: input.matchAudit as Record<string, unknown> | undefined,
       statusHistory: [entry],
+      uncertainReasons: reasons,
     })
     .returning();
   return assignment;

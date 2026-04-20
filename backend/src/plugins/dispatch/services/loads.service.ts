@@ -109,7 +109,62 @@ export async function updateLoad(
     .where(eq(loads.id, id))
     .returning();
 
-  return updated ?? null;
+  if (!updated) return null;
+
+  // Refresh uncertain_reasons on any assignment(s) tied to this load. The
+  // Missing Ticket / Missing Driver / Needs Rate smart filters depend on
+  // these tags being current — if a dispatcher fixes a missing ticket via
+  // inline edit, the row should immediately leave the Missing Ticket tab.
+  // Failure here is non-fatal: the edit still committed. See
+  // workbench.service.ts::computeUncertainReasons for the rule set.
+  try {
+    const { assignments } = await import("../../../db/schema.js");
+    const { computeUncertainReasons } = await import("./workbench.service.js");
+    const rows = await db
+      .select({
+        id: assignments.id,
+        wellId: assignments.wellId,
+        photoStatus: assignments.photoStatus,
+        autoMapTier: assignments.autoMapTier,
+        handlerStage: assignments.handlerStage,
+      })
+      .from(assignments)
+      .where(eq(assignments.loadId, id));
+
+    const weightLbs = updated.weightLbs
+      ? parseFloat(updated.weightLbs as unknown as string)
+      : updated.weightTons
+        ? parseFloat(updated.weightTons as unknown as string) * 2000
+        : null;
+
+    for (const a of rows) {
+      const reasons = computeUncertainReasons({
+        wellId: a.wellId ?? null,
+        photoStatus: a.photoStatus,
+        autoMapTier: a.autoMapTier,
+        bolNo: updated.bolNo,
+        ocrBolNo: null,
+        loadWeightLbs: weightLbs,
+        ocrWeightLbs: null,
+        rate: updated.rate as string | null,
+        deliveredOn: updated.deliveredOn,
+        driverName: updated.driverName,
+        ticketNo: updated.ticketNo,
+      });
+      await db
+        .update(assignments)
+        .set({ uncertainReasons: reasons })
+        .where(eq(assignments.id, a.id));
+    }
+  } catch (err) {
+    console.warn(
+      `[updateLoad] Failed to refresh uncertain_reasons for load ${id}: ${
+        err instanceof Error ? err.message : err
+      }`,
+    );
+  }
+
+  return updated;
 }
 
 // ─── LOAD CREATION ─────────────────────────────────────────────────

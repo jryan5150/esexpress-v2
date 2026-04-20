@@ -263,6 +263,11 @@ export const assignments = pgTable(
       withTimezone: true,
     }).defaultNow(),
     enteredOn: date("entered_on"),
+    // PCS load number — manually entered by dispatcher after building the
+    // load in PCS (interim path while OAuth isn't live). Jodi's payroll
+    // report joins on this. Once bidirectional OAuth lands this becomes
+    // auto-populated and read-only.
+    pcsNumber: text("pcs_number"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
@@ -277,6 +282,7 @@ export const assignments = pgTable(
     index("idx_assignments_handler_stage").on(table.handlerStage),
     index("idx_assignments_current_handler").on(table.currentHandlerId),
     index("idx_assignments_entered_on").on(table.enteredOn),
+    index("idx_assignments_pcs_number").on(table.pcsNumber),
   ],
 );
 

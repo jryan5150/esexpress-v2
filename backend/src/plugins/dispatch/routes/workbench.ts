@@ -217,6 +217,57 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // PATCH /:id/pcs-number — set PCS load number (manual entry while OAuth
+  // isn't live). Jodi's payroll report joins on this. Replaces blank input
+  // with null so the column correctly treats absence vs "". Once bi-di
+  // OAuth lands this endpoint stays but the UI field becomes read-only.
+  fastify.patch(
+    "/:id/pcs-number",
+    {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" } },
+        },
+        body: {
+          type: "object",
+          required: ["pcsNumber"],
+          properties: {
+            pcsNumber: { type: ["string", "null"] },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
+      const { id } = request.params as { id: number };
+      const { pcsNumber } = request.body as { pcsNumber: string | null };
+      const { assignments } = await import("../../../db/schema.js");
+      const { eq } = await import("drizzle-orm");
+      const clean =
+        pcsNumber && pcsNumber.trim().length > 0 ? pcsNumber.trim() : null;
+      const [updated] = await db
+        .update(assignments)
+        .set({ pcsNumber: clean, updatedAt: new Date() })
+        .where(eq(assignments.id, id))
+        .returning({ id: assignments.id, pcsNumber: assignments.pcsNumber });
+      if (!updated) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: `Assignment ${id} not found` },
+        });
+      }
+      return { success: true, data: updated };
+    },
+  );
+
   // POST /:id/flag — flag back to uncertain
   fastify.post(
     "/:id/flag",
@@ -438,10 +489,7 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
               featuresBefore: snapshot.features,
               scoreBefore: snapshot.score,
             }).catch((err) =>
-              request.log.warn(
-                { err },
-                "recordDecision failed (bulk_confirm)",
-              ),
+              request.log.warn({ err }, "recordDecision failed (bulk_confirm)"),
             );
           }
         } catch (err) {

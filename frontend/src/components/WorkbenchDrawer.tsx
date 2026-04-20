@@ -4,6 +4,7 @@ import {
   useBolReconciliation,
   useAdvanceStage,
   useFlagToUncertain,
+  useUpdatePcsNumber,
 } from "../hooks/use-workbench";
 import { StagePill } from "./StagePill";
 import { PhotoLightbox } from "./PhotoLightbox";
@@ -189,6 +190,7 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
   const bol = useBolReconciliation(row.loadId);
   const advance = useAdvanceStage();
   const flag = useFlagToUncertain();
+  const pcsUpdate = useUpdatePcsNumber();
   const [lightbox, setLightbox] = useState(false);
 
   const ocr = bol.data;
@@ -196,6 +198,11 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
   const saveField = (key: string) => (next: string) => {
     const value = next.trim() === "" ? null : next.trim();
     update.mutate({ loadId: row.loadId, updates: { [key]: value } });
+  };
+
+  const savePcsNumber = (next: string) => {
+    const value = next.trim() === "" ? null : next.trim();
+    pcsUpdate.mutate({ assignmentId: row.assignmentId, pcsNumber: value });
   };
 
   const nextByStage: Record<
@@ -339,6 +346,13 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
             isSaving={update.isPending}
             type="number"
             placeholder="$/ton"
+          />
+          <EditableField
+            label="PCS #"
+            value={row.pcsNumber}
+            onSave={savePcsNumber}
+            isSaving={pcsUpdate.isPending}
+            placeholder="Enter after build"
           />
         </div>
       </div>

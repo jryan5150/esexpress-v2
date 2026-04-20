@@ -226,6 +226,8 @@ export interface WorkbenchRow {
   photoStatus: string | null;
   photoThumbUrl: string | null;
   rate: string | null;
+  /** PCS load number — manually entered by dispatcher post-build. */
+  pcsNumber: string | null;
   /** Match confidence score in [0, 1]. Computed per-request in Phase 1. */
   matchScore: number;
   /** Coarse tier for backward-compat UI bucketing. */
@@ -286,10 +288,16 @@ export async function listWorkbenchRows(
           sql`${assignments.uncertainReasons} @> '["rate_missing"]'::jsonb`,
         );
       case "built_today":
-        // Anything advanced through the build pipeline today.
+        // Loads a dispatcher moved through the build pipeline today. Excludes
+        // historical_complete auto-clears and the 'cancelled' status — both
+        // move through handler_stage without being actual build work. Without
+        // this exclusion the tab would show ~28K rows on days when the
+        // historical classifier mass-advances pre-cutoff loads.
         return and(
           inArray(assignments.handlerStage, ["building", "entered", "cleared"]),
           sql`${assignments.stageChangedAt}::date = CURRENT_DATE`,
+          sql`COALESCE(${loads.historicalComplete}, false) = false`,
+          sql`COALESCE(${loads.status}, '') NOT IN ('Canceled','Cancelled')`,
         );
       case "all":
       default:
@@ -366,6 +374,7 @@ export async function listWorkbenchRows(
       uncertainReasons: assignments.uncertainReasons,
       stageChangedAt: assignments.stageChangedAt,
       enteredOn: assignments.enteredOn,
+      pcsNumber: assignments.pcsNumber,
       loadId: loads.id,
       loadNo: loads.loadNo,
       loadSource: loads.source,
@@ -520,6 +529,7 @@ export async function listWorkbenchRows(
       photoStatus: r.photoStatus,
       photoThumbUrl: r.photoThumbUrl,
       rate: r.rate,
+      pcsNumber: r.pcsNumber,
       matchScore: score.score,
       matchTier: score.tier,
       matchDrivers: score.drivers.map((d) => ({

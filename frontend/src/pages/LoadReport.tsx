@@ -18,6 +18,7 @@ const COLUMNS: Array<{ key: keyof Row | "stage"; label: string }> = [
   { key: "deliveredOn", label: "Date" },
   { key: "loadNo", label: "Load #" },
   { key: "bolNo", label: "BOL" },
+  { key: "pcsNumber", label: "PCS #" },
   { key: "driverName", label: "Driver" },
   { key: "wellName", label: "Well" },
   { key: "weightTons", label: "Tons" },
