@@ -57,6 +57,11 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
             // Well filter — exact well id or substring on wells.name.
             wellId: { type: "integer", minimum: 1 },
             wellName: { type: "string", maxLength: 200 },
+            sortBy: {
+              type: "string",
+              enum: ["stage_changed_at", "delivered_on"],
+            },
+            sortDir: { type: "string", enum: ["asc", "desc"] },
             limit: { type: "integer", minimum: 1, maximum: 500, default: 100 },
             offset: { type: "integer", minimum: 0, default: 0 },
           },
@@ -78,6 +83,8 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
         truckNo?: string;
         wellId?: number;
         wellName?: string;
+        sortBy?: "stage_changed_at" | "delivered_on";
+        sortDir?: "asc" | "desc";
         limit?: number;
         offset?: number;
       };
@@ -92,6 +99,8 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
           truckNo: query.truckNo,
           wellId: query.wellId,
           wellName: query.wellName,
+          sortBy: query.sortBy,
+          sortDir: query.sortDir,
           limit: query.limit,
           offset: query.offset,
         });

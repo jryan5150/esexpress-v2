@@ -12,6 +12,10 @@ export interface WorkbenchQueryOpts {
   wellId?: number;
   /** Substring match on wells.name. Ignored if wellId is set. */
   wellName?: string;
+  /** Sort column. Default stage_changed_at. delivered_on for date-ordered. */
+  sortBy?: "stage_changed_at" | "delivered_on";
+  /** Sort direction. Default desc. */
+  sortDir?: "asc" | "desc";
   /** Page size. Allowed: 25, 50, 75, 100. Default 50. */
   pageSize?: number;
   /** 0-indexed page number. Default 0. */
@@ -25,7 +29,16 @@ export function useWorkbench(
   filter: WorkbenchFilter,
   opts: WorkbenchQueryOpts = {},
 ) {
-  const { search, dateFrom, dateTo, truckNo, wellId, wellName } = opts;
+  const {
+    search,
+    dateFrom,
+    dateTo,
+    truckNo,
+    wellId,
+    wellName,
+    sortBy,
+    sortDir,
+  } = opts;
   const pageSize: PageSize = (PAGE_SIZE_OPTIONS as readonly number[]).includes(
     opts.pageSize ?? 50,
   )
@@ -41,6 +54,8 @@ export function useWorkbench(
   if (truckNo) params.set("truckNo", truckNo);
   if (wellId) params.set("wellId", String(wellId));
   else if (wellName) params.set("wellName", wellName);
+  if (sortBy) params.set("sortBy", sortBy);
+  if (sortDir) params.set("sortDir", sortDir);
   const key = [
     "workbench",
     "list",
@@ -51,6 +66,8 @@ export function useWorkbench(
     truckNo ?? "",
     wellId ?? "",
     wellName ?? "",
+    sortBy ?? "",
+    sortDir ?? "",
     pageSize,
     page,
   ] as const;

@@ -196,6 +196,11 @@ export interface WorkbenchListParams {
   wellId?: number;
   /** Substring match on wells.name (ilike). Ignored if wellId is set. */
   wellName?: string;
+  /** Sort column. Default "stage_changed_at" (recency). "delivered_on" gives
+   *  the date-ordered view Jessica asked for on Ready-to-Build + Mine. */
+  sortBy?: "stage_changed_at" | "delivered_on";
+  /** Sort direction. Default "desc". */
+  sortDir?: "asc" | "desc";
   limit?: number;
   offset?: number;
 }
@@ -441,8 +446,18 @@ export async function listWorkbenchRows(
 
   const query = whereClause ? baseQuery.where(whereClause) : baseQuery;
 
+  // Dispatch's default sort is stage recency — dispatcher wants to see what
+  // just changed. Jessica asked for a date-ordered view on Ready-to-Build
+  // and Mine so she can work chronologically. Both sort columns and directions
+  // are whitelisted via the type union so user input can't inject arbitrary
+  // SQL. See WorkbenchListParams.sortBy / sortDir.
+  const sortCol =
+    params.sortBy === "delivered_on"
+      ? loads.deliveredOn
+      : assignments.stageChangedAt;
+  const sortDir = params.sortDir === "asc" ? sql`ASC` : sql`DESC`;
   const rawRows = await query
-    .orderBy(sql`${assignments.stageChangedAt} DESC NULLS LAST`)
+    .orderBy(sql`${sortCol} ${sortDir} NULLS LAST`)
     .limit(limit)
     .offset(offset);
 

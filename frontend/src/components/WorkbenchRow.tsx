@@ -271,7 +271,7 @@ export const WorkbenchRow = memo(function WorkbenchRow({
                 e.stopPropagation();
                 onFlagAction();
               }}
-              title="Flag back — mark this row for review by someone else"
+              title="Flag this row — pick a reason (Missing Ticket, Missing Driver, Needs Rate, Other) and it routes to the matching sub-filter tab."
               className="px-2 py-1 text-xs font-medium rounded border border-rose-400 bg-rose-50 text-rose-800 hover:bg-rose-100 disabled:opacity-50"
             >
               Flag

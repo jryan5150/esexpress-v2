@@ -89,6 +89,12 @@ export function LoadReport() {
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
     truckNo: truckNo || undefined,
+    // Jodi's payroll view reads chronologically — sort by delivery date DESC
+    // (most recent first). Overrides the default stage-recency sort, which
+    // is right for the dispatch workbench but wrong for a payroll report.
+    sortBy: "delivered_on",
+    sortDir: "desc",
+    pageSize: 100,
   });
 
   const rows = useMemo<Row[]>(() => query.data?.rows ?? [], [query.data]);

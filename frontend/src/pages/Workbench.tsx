@@ -57,12 +57,25 @@ export function Workbench() {
   // In tabular mode, drop wellName from the query so the left-pane picker
   // reflects every well in the current filter/date/truck scope. The user then
   // narrows by clicking a well (client-side filter via tabularWell below).
+  //
+  // Sort: Jessica asked for chronological ordering on Ready-to-Build and
+  // Mine (her build queue), so she can work oldest-first if she chooses.
+  // Uncertain and the sub-filters stay on stage_changed_at DESC because
+  // recency is more useful when triaging. URL param `sort=date` overrides.
+  const sortParam = params.get("sort");
+  const defaultSortByDate = filter === "ready_to_build" || filter === "mine";
+  const sortBy: "stage_changed_at" | "delivered_on" =
+    sortParam === "date" || (sortParam !== "recent" && defaultSortByDate)
+      ? "delivered_on"
+      : "stage_changed_at";
   const workbenchQuery = useWorkbench(filter, {
     search: search || undefined,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
     truckNo: truckNo || undefined,
     wellName: view === "tabular" ? undefined : wellName || undefined,
+    sortBy,
+    sortDir: "desc",
     pageSize,
     page,
   });
@@ -425,10 +438,10 @@ export function Workbench() {
               <button
                 type="button"
                 onClick={() => setBuildModalOpen(true)}
-                title="Batch-build the selected Ready-to-Build loads in PCS and auto-create follow-up assignments for any duplicate/repeat shipments. Opens a review modal before committing."
+                title="Batch-build the selected loads in PCS. The system silently learns from your build patterns so similar shipments pre-wire next time."
                 className="px-3 py-1 text-sm rounded bg-primary text-on-primary"
               >
-                Build in PCS + Copy Duplicates
+                Build in PCS
               </button>
             )}
             <button
@@ -522,13 +535,7 @@ export function Workbench() {
                     )
                   }
                   onPrimaryAction={() => primaryActionFor(row)}
-                  onFlagAction={() =>
-                    routeUncertain.mutate({
-                      id: row.assignmentId,
-                      action: "flag_other",
-                      notes: "Flagged from row",
-                    })
-                  }
+                  onFlagAction={() => setResolveRow(row)}
                   isPending={advance.isPending || routeUncertain.isPending}
                 />
                 {expandedId === row.assignmentId && (
