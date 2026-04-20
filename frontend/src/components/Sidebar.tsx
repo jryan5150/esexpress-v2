@@ -36,7 +36,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   // lives behind this collapsible group so dispatchers see one front door.
   const isReferenceRoute =
     location.pathname === "/" ||
-    location.pathname === "/bol" ||
     location.pathname === "/admin/missed-loads" ||
     location.pathname === "/archive";
 
@@ -196,7 +195,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
           </span>
         </button>
 
-        {/* Main Nav — Workbench is the single demo-front-door */}
+        {/* Main Nav — Workbench (load-centric) + BOL Queue (photo-centric) */}
         <nav className="flex-1 py-1.5" onClick={handleNavClick}>
           <div className="space-y-px">
             <Link
@@ -206,6 +205,27 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
             >
               <span className={iconClass("/workbench")}>build</span>
               {!collapsed && "Workbench"}
+            </Link>
+            <Link
+              to="/bol"
+              className={navClass("/bol")}
+              title={
+                bolPending > 0
+                  ? `BOL Queue — ${bolPending} photo${bolPending === 1 ? "" : "s"} need matching`
+                  : "BOL Queue — photo verification surface"
+              }
+            >
+              <span className={iconClass("/bol")}>receipt_long</span>
+              {!collapsed && (
+                <>
+                  <span className="flex-1">BOL Queue</span>
+                  {bolPending > 0 && (
+                    <span className="font-label text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-full bg-error/15 text-error">
+                      {bolPending.toLocaleString()}
+                    </span>
+                  )}
+                </>
+              )}
             </Link>
           </div>
 
@@ -264,23 +284,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 >
                   <span className={iconClass("/")}>home</span>
                   Today's Objectives
-                </Link>
-                <Link
-                  to="/bol"
-                  className={`${navClass("/bol")} !pl-9`}
-                  title={
-                    bolPending > 0
-                      ? `BOL Queue — ${bolPending} photo${bolPending === 1 ? "" : "s"} need matching`
-                      : "BOL Queue — photo verification surface"
-                  }
-                >
-                  <span className={iconClass("/bol")}>receipt_long</span>
-                  <span className="flex-1">BOL Queue</span>
-                  {bolPending > 0 && (
-                    <span className="font-label text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-full bg-error/15 text-error">
-                      {bolPending.toLocaleString()}
-                    </span>
-                  )}
                 </Link>
                 <Link
                   to="/admin/missed-loads"
