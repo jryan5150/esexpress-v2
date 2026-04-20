@@ -36,9 +36,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   // lives behind this collapsible group so dispatchers see one front door.
   const isReferenceRoute =
     location.pathname === "/" ||
-    location.pathname === "/dispatch-desk" ||
-    location.pathname === "/bol" ||
-    location.pathname === "/validation" ||
     location.pathname === "/admin/missed-loads" ||
     location.pathname === "/archive";
 
@@ -259,42 +256,13 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 id="sidebar-reference-submenu"
                 className="overflow-hidden animate-slide-down space-y-px"
               >
-                <Link to="/" className={`${navClass("/")} !pl-9`} title="Today's Objectives">
+                <Link
+                  to="/"
+                  className={`${navClass("/")} !pl-9`}
+                  title="Today's Objectives"
+                >
                   <span className={iconClass("/")}>home</span>
                   Today's Objectives
-                </Link>
-                <Link
-                  to="/dispatch-desk"
-                  className={`${navClass("/dispatch-desk")} !pl-9`}
-                  title="Dispatch Desk"
-                >
-                  <span className={iconClass("/dispatch-desk")}>dashboard</span>
-                  Dispatch Desk
-                </Link>
-                <Link
-                  to="/bol"
-                  className={`${navClass("/bol")} !pl-9`}
-                  title={
-                    bolPending > 0
-                      ? `BOL Queue — ${bolPending} photo${bolPending === 1 ? "" : "s"} need matching`
-                      : "BOL Queue"
-                  }
-                >
-                  <span className={iconClass("/bol")}>receipt_long</span>
-                  <span className="flex-1">BOL Queue</span>
-                  {bolPending > 0 && (
-                    <span className="font-label text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-full bg-error/15 text-error">
-                      {bolPending.toLocaleString()}
-                    </span>
-                  )}
-                </Link>
-                <Link
-                  to="/validation"
-                  className={`${navClass("/validation")} !pl-9`}
-                  title="Validation"
-                >
-                  <span className={iconClass("/validation")}>rule</span>
-                  Validation
                 </Link>
                 <Link
                   to="/admin/missed-loads"

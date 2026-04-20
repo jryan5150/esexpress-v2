@@ -108,7 +108,7 @@ export function Login() {
     login.mutate(
       { email, password },
       {
-        onSuccess: () => navigate("/"),
+        onSuccess: () => navigate("/workbench"),
       },
     );
   }
