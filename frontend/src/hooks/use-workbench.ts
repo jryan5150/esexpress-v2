@@ -24,6 +24,11 @@ export function useWorkbench(
 ) {
   const { search, dateFrom, dateTo, truckNo, wellId, wellName } = opts;
   const params = new URLSearchParams({ filter });
+  // Pull the full filter set on a single page so the demo + dispatchers
+  // can scroll the entire queue. Backend caps at 500. Uncertain ~643,
+  // Ready to Build ~2,240 — Ready to Build still gets a 500-row sample
+  // until we build true pagination UI.
+  params.set("limit", "500");
   if (search) params.set("search", search);
   if (dateFrom) params.set("dateFrom", dateFrom);
   if (dateTo) params.set("dateTo", dateTo);
