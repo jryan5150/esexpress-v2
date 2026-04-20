@@ -6,6 +6,7 @@ import {
   useFlagToUncertain,
 } from "../hooks/use-workbench";
 import { StagePill } from "./StagePill";
+import { PhotoLightbox } from "./PhotoLightbox";
 import type { WorkbenchRow, UncertainReason } from "../types/api";
 
 interface WorkbenchDrawerProps {
@@ -21,6 +22,40 @@ interface EditableFieldProps {
   isSaving?: boolean;
   type?: "text" | "number";
   placeholder?: string;
+}
+
+/** "Use OCR" + "Keep" quick-accept buttons that surface only when the OCR
+ *  value disagrees with the load value. One-click resolves the discrepancy
+ *  without going into manual edit mode. */
+interface OcrAcceptButtonsProps {
+  ocrValue: string;
+  onUseOcr: () => void;
+  onKeep: () => void;
+  isSaving?: boolean;
+}
+function OcrAcceptButtons({ ocrValue, onUseOcr, onKeep, isSaving }: OcrAcceptButtonsProps) {
+  return (
+    <div className="mt-1 flex items-center gap-1">
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={onUseOcr}
+        title={`Replace load value with OCR value (${ocrValue})`}
+        className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-emerald-100 text-emerald-900 border border-emerald-500 hover:bg-emerald-200 disabled:opacity-50"
+      >
+        Use OCR
+      </button>
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={onKeep}
+        title="Keep current load value (acknowledge the mismatch)"
+        className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-surface-container-low text-on-surface border border-outline-variant hover:bg-surface-variant disabled:opacity-50"
+      >
+        Keep
+      </button>
+    </div>
+  );
 }
 
 /**
@@ -39,10 +74,14 @@ function EditableField({
 }: EditableFieldProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
+  // Local "acknowledged" flag so "Keep" can dismiss the mismatch warning
+  // without round-tripping the value through the API.
+  const [keepAcked, setKeepAcked] = useState(false);
 
   useEffect(() => {
     setDraft(value ?? "");
-  }, [value]);
+    setKeepAcked(false);
+  }, [value, ocrValue]);
 
   const commit = () => {
     if (draft !== (value ?? "")) onSave(draft);
@@ -55,9 +94,16 @@ function EditableField({
     String(ocrValue).trim() !== "" &&
     String(value).trim() !== "" &&
     String(ocrValue).trim() !== String(value).trim();
+  const showAcceptButtons = ocrMismatch && !keepAcked;
 
   return (
-    <div className="bg-surface-variant/40 rounded p-2 min-w-0">
+    <div
+      className={`rounded p-2 min-w-0 border ${
+        ocrMismatch && !keepAcked
+          ? "bg-amber-50 border-amber-400"
+          : "bg-surface-variant/40 border-transparent"
+      }`}
+    >
       <div className="flex items-center justify-between mb-1">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
           {label}
@@ -88,7 +134,7 @@ function EditableField({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="w-full text-left text-sm px-2 py-1 hover:bg-background/60 rounded"
+          className="w-full text-left text-sm px-2 py-1 hover:bg-background/60 rounded text-on-surface"
         >
           {value ?? <span className="text-on-surface-variant">--</span>}
         </button>
@@ -96,14 +142,29 @@ function EditableField({
       {ocrValue != null && (
         <div
           className={`mt-1 text-[10px] flex items-center gap-1 ${
-            ocrMismatch ? "text-amber-400" : "text-on-surface-variant"
+            ocrMismatch && !keepAcked
+              ? "text-amber-900 font-semibold"
+              : "text-on-surface-variant"
           }`}
           title="OCR-extracted value from the BOL photo"
         >
           <span>OCR:</span>
           <span className="font-mono truncate">{String(ocrValue)}</span>
-          {ocrMismatch && <span className="ml-auto">⚠ mismatch</span>}
+          {ocrMismatch && !keepAcked && (
+            <span className="ml-auto">⚠ mismatch</span>
+          )}
         </div>
+      )}
+      {showAcceptButtons && (
+        <OcrAcceptButtons
+          ocrValue={String(ocrValue)}
+          onUseOcr={() => {
+            onSave(String(ocrValue));
+            setKeepAcked(true);
+          }}
+          onKeep={() => setKeepAcked(true)}
+          isSaving={isSaving}
+        />
       )}
     </div>
   );
@@ -253,15 +314,15 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
       {/* Reconciliation / uncertain reasons */}
       {(row.uncertainReasons.length > 0 ||
         (ocr?.discrepancies?.length ?? 0) > 0) && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded p-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-300 mb-2">
+        <div className="bg-amber-50 border border-amber-400 rounded p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-900 mb-2">
             What matching caught
           </div>
           <ul className="text-sm space-y-1">
             {row.uncertainReasons.map((r) => (
               <li key={r} className="flex items-start gap-2">
-                <span className="text-amber-400">●</span>
-                <span>{REASON_LABEL[r]}</span>
+                <span className="text-amber-700">●</span>
+                <span className="text-on-surface">{REASON_LABEL[r]}</span>
               </li>
             ))}
             {ocr?.discrepancies.map((d, i) => (
@@ -269,7 +330,7 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
                 key={`${d.field}-${i}`}
                 className="flex items-start gap-2 text-on-surface-variant"
               >
-                <span className="text-amber-400">●</span>
+                <span className="text-amber-700">●</span>
                 <span>
                   <span className="font-mono text-xs">{d.field}</span>: load ={" "}
                   <span className="text-on-surface">
@@ -280,7 +341,7 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
                     {String(d.actual ?? "--")}
                   </span>
                   {d.severity === "critical" && (
-                    <span className="ml-2 text-xs text-red-400">
+                    <span className="ml-2 text-xs text-rose-700 font-semibold">
                       ({d.severity})
                     </span>
                   )}
@@ -311,7 +372,7 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
               type="button"
               onClick={flagBack}
               disabled={flag.isPending}
-              className="px-3 py-1.5 text-sm rounded border border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+              className="px-3 py-1.5 text-sm rounded border border-amber-500 text-amber-900 bg-amber-50 hover:bg-amber-100 disabled:opacity-50"
             >
               Flag back to Uncertain
             </button>
@@ -329,19 +390,12 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
         </div>
       </div>
 
-      {/* Lightbox */}
-      {lightbox && row.photoThumbUrl && (
-        <div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 cursor-zoom-out"
-          onClick={() => setLightbox(false)}
-        >
-          <img
-            src={row.photoThumbUrl}
-            alt="BOL"
-            className="max-h-[90vh] max-w-[90vw]"
-          />
-        </div>
-      )}
+      {/* Lightbox — shared component */}
+      <PhotoLightbox
+        url={lightbox ? row.photoThumbUrl : null}
+        alt={`Load ${row.loadNo} BOL`}
+        onClose={() => setLightbox(false)}
+      />
     </div>
   );
 }
