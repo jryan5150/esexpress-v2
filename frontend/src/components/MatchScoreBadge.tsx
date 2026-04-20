@@ -7,11 +7,14 @@ interface Props {
   drivers: WorkbenchRow["matchDrivers"];
 }
 
+// Light-theme palette: tinted background + dark text on the same hue.
+// Original text-{color}-300 was tuned for dark theme and rendered invisible
+// on the cream background.
 const TIER_COLORS: Record<Props["tier"], string> = {
-  high: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
-  medium: "bg-yellow-500/20 text-yellow-300 border-yellow-500/40",
-  low: "bg-orange-500/20 text-orange-300 border-orange-500/40",
-  uncertain: "bg-rose-500/20 text-rose-300 border-rose-500/40",
+  high: "bg-emerald-100 text-emerald-900 border-emerald-500",
+  medium: "bg-yellow-100 text-yellow-900 border-yellow-600",
+  low: "bg-orange-100 text-orange-900 border-orange-500",
+  uncertain: "bg-rose-100 text-rose-900 border-rose-500",
 };
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -63,46 +66,52 @@ export function MatchScoreBadge({ score, tier, drivers }: Props) {
       {open && (
         <div
           role="tooltip"
-          className="absolute z-30 right-0 top-full mt-1 w-64 p-2 rounded-md shadow-lg border border-surface-variant bg-surface text-xs"
+          // Remove mt-1 gap (mouse loses hover crossing it). Use pt-2 inside
+          // for visual breathing room while keeping the hover-target contiguous.
+          className="absolute z-30 right-0 top-full w-64 rounded-md shadow-lg border border-outline-variant bg-surface-container-low text-xs"
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
         >
-          <div className="flex items-center justify-between pb-1 mb-1 border-b border-surface-variant">
-            <span className="font-semibold text-on-surface">
-              Match {pct}%
-            </span>
-            <span className="text-on-surface-variant uppercase tracking-wider text-[9px]">
-              {tier}
-            </span>
-          </div>
-          <ul className="space-y-0.5">
-            {drivers
-              .filter((d) => d.contribution !== 0)
-              .slice(0, 6)
-              .map((d) => {
-                const label = FEATURE_LABELS[d.feature] ?? d.feature;
-                const neg = d.contribution < 0;
-                return (
-                  <li
-                    key={d.feature}
-                    className="flex items-center justify-between gap-2"
-                  >
-                    <span className="text-on-surface-variant truncate">
-                      {label}
-                    </span>
-                    <span
-                      className={`font-mono ${neg ? "text-rose-300" : "text-emerald-300"}`}
+          <div className="p-2">
+            <div className="flex items-center justify-between pb-1 mb-1 border-b border-outline-variant">
+              <span className="font-semibold text-on-surface">
+                Match {pct}%
+              </span>
+              <span className="text-on-surface-variant uppercase tracking-wider text-[9px]">
+                {tier}
+              </span>
+            </div>
+            <ul className="space-y-0.5">
+              {drivers
+                .filter((d) => d.contribution !== 0)
+                .slice(0, 6)
+                .map((d) => {
+                  const label = FEATURE_LABELS[d.feature] ?? d.feature;
+                  const neg = d.contribution < 0;
+                  return (
+                    <li
+                      key={d.feature}
+                      className="flex items-center justify-between gap-2"
                     >
-                      {fmtContribution(d.contribution)}
-                    </span>
-                  </li>
-                );
-              })}
-            {drivers.filter((d) => d.contribution === 0).length > 0 && (
-              <li className="text-on-surface-variant text-[10px] italic pt-1">
-                {drivers.filter((d) => d.contribution === 0).length} feature(s)
-                at zero
-              </li>
-            )}
-          </ul>
+                      <span className="text-on-surface-variant truncate">
+                        {label}
+                      </span>
+                      <span
+                        className={`font-mono font-semibold ${neg ? "text-rose-700" : "text-emerald-700"}`}
+                      >
+                        {fmtContribution(d.contribution)}
+                      </span>
+                    </li>
+                  );
+                })}
+              {drivers.filter((d) => d.contribution === 0).length > 0 && (
+                <li className="text-on-surface-variant text-[10px] italic pt-1">
+                  {drivers.filter((d) => d.contribution === 0).length} feature(s)
+                  at zero
+                </li>
+              )}
+            </ul>
+          </div>
         </div>
       )}
     </span>
