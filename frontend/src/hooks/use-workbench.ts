@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { qk } from "../lib/query-client";
+import { qk, invalidateSharedSurfaces } from "../lib/query-client";
 import type { WorkbenchFilter, WorkbenchRow, HandlerStage } from "../types/api";
 
 export interface WorkbenchQueryOpts {
@@ -82,43 +82,39 @@ export function useWorkbench(
 }
 
 export function useAdvanceStage() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (p: { id: number; stage: HandlerStage; notes?: string }) =>
       api.post(`/dispatch/workbench/${p.id}/advance`, {
         stage: p.stage,
         notes: p.notes,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workbench.all }),
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
 export function useClaim() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.post(`/dispatch/workbench/${id}/claim`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workbench.all }),
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
 export function useFlagToUncertain() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (p: { id: number; reason: string; notes?: string }) =>
       api.post(`/dispatch/workbench/${p.id}/flag`, {
         reason: p.reason,
         notes: p.notes,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workbench.all }),
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
 export function useBuildDuplicate() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (p: { assignmentIds: number[]; notes?: string }) =>
       api.post("/dispatch/workbench/build-duplicate", p),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workbench.all }),
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
@@ -140,14 +136,13 @@ export type ResolveAction =
  *                    every active queue. Audit kept in status_history.
  */
 export function useRouteUncertain() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (p: { id: number; action: ResolveAction; notes?: string }) =>
       api.post(`/dispatch/workbench/${p.id}/route`, {
         action: p.action,
         notes: p.notes,
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workbench.all }),
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
@@ -155,14 +150,13 @@ export function useRouteUncertain() {
  *  the results array (e.g. rows with open uncertain_reasons still get
  *  blocked by the state machine gate). */
 export function useBulkConfirm() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (p: { assignmentIds: number[]; notes?: string }) =>
       api.post<{ results: { id: number; ok: boolean; error?: string }[] }>(
         "/dispatch/workbench/bulk-confirm",
         p,
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workbench.all }),
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
@@ -171,13 +165,12 @@ export function useBulkConfirm() {
  * workbench drawer. Invalidates workbench so the row reflects the edit.
  */
 export function useUpdateLoadField() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (p: { loadId: number; updates: Record<string, unknown> }) =>
       api.patch(`/dispatch/loads/${p.loadId}`, p.updates),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.workbench.all });
-      qc.invalidateQueries({ queryKey: qk.loads.all });
+      invalidateSharedSurfaces();
+      
     },
   });
 }
@@ -187,14 +180,13 @@ export function useUpdateLoadField() {
  * bidirectional PCS OAuth isn't live — Jodi's payroll report joins on this.
  */
 export function useUpdatePcsNumber() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (p: { assignmentId: number; pcsNumber: string | null }) =>
       api.patch(`/dispatch/workbench/${p.assignmentId}/pcs-number`, {
         pcsNumber: p.pcsNumber,
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.workbench.all });
+      invalidateSharedSurfaces();
     },
   });
 }
@@ -204,14 +196,13 @@ export function useUpdatePcsNumber() {
  * pattern in the drawer — operator context persists for the next handler.
  */
 export function useUpdateAssignmentNotes() {
-  const qc = useQueryClient();
   return useMutation({
     mutationFn: (p: { assignmentId: number; notes: string | null }) =>
       api.patch(`/dispatch/workbench/${p.assignmentId}/notes`, {
         notes: p.notes,
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.workbench.all });
+      invalidateSharedSurfaces();
     },
   });
 }

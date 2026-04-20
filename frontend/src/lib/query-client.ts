@@ -80,3 +80,28 @@ export const qk = {
     load: (id: number) => ["archive", "load", id] as const,
   },
 } as const;
+
+/**
+ * Invalidate every surface that might be showing the same underlying load/
+ * assignment/photo row. A mutation in the Workbench drawer and a mutation
+ * in the BOL Center both hit the same data, so both views need a refetch.
+ * Single call keeps every tab "live" without each hook having to know the
+ * other's query keys.
+ *
+ * Covered surfaces:
+ *   - Workbench list (any filter/sort/page)
+ *   - BOL Center tabs: reconciliation queue, JotForm submissions,
+ *     PropX photos, missing tickets, stats, discrepancies
+ *   - Dispatch Desk (legacy but still mounted for Steph/Katie)
+ *   - Assignments endpoints (validation page)
+ *   - Load detail + readiness
+ */
+export function invalidateSharedSurfaces() {
+  queryClient.invalidateQueries({ queryKey: qk.workbench.all });
+  queryClient.invalidateQueries({ queryKey: qk.bol.all });
+  queryClient.invalidateQueries({ queryKey: qk.assignments.all });
+  queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
+  queryClient.invalidateQueries({ queryKey: qk.loads.all });
+  queryClient.invalidateQueries({ queryKey: qk.readiness.all });
+  queryClient.invalidateQueries({ queryKey: qk.validation.all });
+}

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { qk } from "../lib/query-client";
+import { qk, invalidateSharedSurfaces } from "../lib/query-client";
 import type {
   BolQueueItem,
   BolStats,
@@ -117,53 +117,39 @@ export function useMissingTickets(opts?: { page?: number; limit?: number }) {
 }
 
 export function useAutoMatch() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => api.post("/verification/bol/operations/auto-match"),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk.bol.all });
-    },
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
 export function useManualMatch() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (params: { submissionId: number; loadId: number }) =>
       api.post("/verification/bol/operations/manual-match", params),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk.bol.all });
-    },
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
 export function useReconcile() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (loadId: number) =>
       api.post(`/verification/bol/operations/reconcile/${loadId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk.bol.all });
-      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
-    },
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
 /**
  * Manually link a JotForm photo submission to a load when the auto-match
- * couldn't find one (or was wrong). Invalidates the BOL queue + dispatch
- * desk so the new attached-photo state is reflected immediately.
+ * couldn't find one (or was wrong). Uses the shared-surfaces invalidator
+ * so the workbench, BOL Center tabs, and the legacy dispatch desk all
+ * refetch together — no stale "did I just attach that?" confusion.
  */
 export function useManualMatchJotform() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (params: { importId: number; loadId: number }) =>
       api.post("/verification/jotform/manual-match", params),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk.bol.all });
-      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
-      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
-    },
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
@@ -186,17 +172,12 @@ interface JotformLoadSearchHit {
  * reflected immediately.
  */
 export function useCorrectJotformBol() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (params: { importId: number; bolNo: string }) =>
       api.post(`/verification/jotform/${params.importId}/correct-bol`, {
         bolNo: params.bolNo,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk.bol.all });
-      queryClient.invalidateQueries({ queryKey: qk.assignments.all });
-      queryClient.invalidateQueries({ queryKey: qk.dispatchDesk.all });
-    },
+    onSuccess: () => invalidateSharedSurfaces(),
   });
 }
 
