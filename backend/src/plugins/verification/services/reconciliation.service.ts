@@ -19,7 +19,8 @@
  */
 
 import { eq, or, and, between, ilike, isNull, count } from "drizzle-orm";
-import { loads, bolSubmissions } from "../../../db/schema.js";
+import { loads, bolSubmissions, assignments } from "../../../db/schema.js";
+import type { PhotoStatus } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 import type { ExtractedBolData } from "./bol-extraction.service.js";
 
@@ -481,6 +482,8 @@ async function finalizeMatch(
   _lastMatchAt = new Date();
   _totalDiscrepancies += discrepancies.length;
 
+  await refreshAssignmentUncertainReasons(db, loadRow.id, extracted);
+
   return {
     matched: true,
     loadId: loadRow.id,
@@ -489,6 +492,80 @@ async function finalizeMatch(
     discrepancies,
     reconciliationStatus,
   };
+}
+
+/**
+ * V5 Workbench: after a BOL-to-load match is persisted, recompute
+ * assignments.uncertain_reasons for any assignment that references the load.
+ * Keeps Jessica's Uncertain filter in sync with reconciliation outcomes —
+ * e.g. a BOL-vs-load mismatch surfaces as 'bol_mismatch', weight deltas as
+ * 'weight_mismatch'. Auto-advance is deliberately not done here; the stage
+ * state machine owns transitions. A later sweep can promote clean rows.
+ *
+ * Must not throw: reconciliation must complete even if the dispatch-side
+ * refresh fails. Errors are logged and swallowed.
+ */
+async function refreshAssignmentUncertainReasons(
+  db: Database,
+  loadId: number,
+  extracted: BolExtractedRow,
+): Promise<void> {
+  try {
+    const { computeUncertainReasons } = await import(
+      "../../dispatch/services/workbench.service.js"
+    );
+
+    const rows = await db
+      .select({
+        id: assignments.id,
+        wellId: assignments.wellId,
+        photoStatus: assignments.photoStatus,
+        autoMapTier: assignments.autoMapTier,
+        loadBolNo: loads.bolNo,
+        loadWeightLbs: loads.weightLbs,
+        loadWeightTons: loads.weightTons,
+        loadRate: loads.rate,
+        loadDeliveredOn: loads.deliveredOn,
+        loadDriverName: loads.driverName,
+        loadTicketNo: loads.ticketNo,
+      })
+      .from(assignments)
+      .leftJoin(loads, eq(loads.id, assignments.loadId))
+      .where(eq(assignments.loadId, loadId));
+
+    for (const r of rows) {
+      // Prefer the weight_lbs column (Round 4 M2); fallback to tons*2000.
+      const loadWeightLbs = r.loadWeightLbs
+        ? parseFloat(r.loadWeightLbs as unknown as string)
+        : r.loadWeightTons
+          ? parseFloat(r.loadWeightTons as unknown as string) * 2000
+          : null;
+
+      const reasons = computeUncertainReasons({
+        wellId: r.wellId ?? null,
+        photoStatus: r.photoStatus as PhotoStatus | null,
+        autoMapTier: r.autoMapTier,
+        bolNo: r.loadBolNo,
+        ocrBolNo: extracted.ticketNo ?? null,
+        loadWeightLbs,
+        ocrWeightLbs: extracted.weight ?? null,
+        rate: r.loadRate as string | null,
+        deliveredOn: r.loadDeliveredOn,
+        driverName: r.loadDriverName,
+        ticketNo: r.loadTicketNo,
+      });
+
+      await db
+        .update(assignments)
+        .set({ uncertainReasons: reasons })
+        .where(eq(assignments.id, r.id));
+    }
+  } catch (err) {
+    console.warn(
+      "[reconciliation] refreshAssignmentUncertainReasons failed",
+      err,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -626,6 +703,8 @@ export async function manualMatch(
 
   _totalMatches++;
   _lastMatchAt = new Date();
+
+  await refreshAssignmentUncertainReasons(db, loadId, extracted);
 }
 
 // ---------------------------------------------------------------------------

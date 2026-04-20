@@ -1,0 +1,17 @@
+{
+  "name": "esexpress-workbench-signoff-portal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shareable sign-off portal for ES Express Workbench design approvals. Static mockup + Vercel serverless function that generates a timestamped PDF and emails both parties via Microsoft Graph.",
+  "scripts": {
+    "dev": "vercel dev --listen 3939",
+    "deploy": "vercel deploy --prod --yes"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

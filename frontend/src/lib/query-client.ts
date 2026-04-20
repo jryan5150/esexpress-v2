@@ -35,6 +35,11 @@ export const qk = {
     loads: (filters?: Record<string, unknown>) =>
       [...qk.dispatchDesk.all, "loads", filters] as const,
   },
+  workbench: {
+    all: ["workbench"] as const,
+    list: (filter: string, search?: string) =>
+      ["workbench", "list", filter, search ?? ""] as const,
+  },
   readiness: {
     all: ["readiness"] as const,
   },

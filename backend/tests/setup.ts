@@ -4,3 +4,9 @@
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/esexpress_test';
 }
+
+// JWT_SECRET is required by config.ts (min 32 chars). Needed for any route
+// test that builds the full app (auth plugin registers jwt on boot).
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'test-secret-test-secret-test-secret-0123456789';
+}

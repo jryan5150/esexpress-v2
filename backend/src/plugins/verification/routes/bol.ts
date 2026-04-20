@@ -852,6 +852,69 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
       };
     },
   );
+
+  // ─── GET /bol/by-load/:loadId ──── BOL reconciliation detail for a load
+  // Used by the Workbench drawer to surface OCR-extracted values and
+  // discrepancies reconciliation caught. Returns null (not 404) when no
+  // BOL submission exists yet — the drawer renders an empty state.
+  fastify.get(
+    "/bol/by-load/:loadId",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: "object",
+          required: ["loadId"],
+          properties: { loadId: { type: "integer" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+      const { loadId } = request.params as { loadId: number };
+
+      const [sub] = await db
+        .select()
+        .from(bolSubmissions)
+        .where(eq(bolSubmissions.matchedLoadId, loadId))
+        .limit(1);
+
+      if (!sub) {
+        return { success: true, data: null };
+      }
+
+      const extracted = (sub.aiExtractedData ?? {}) as Record<string, unknown>;
+      return {
+        success: true,
+        data: {
+          bolSubmissionId: sub.id,
+          matchedLoadId: sub.matchedLoadId,
+          matchMethod: sub.matchMethod,
+          matchScore: sub.matchScore,
+          status: sub.status,
+          ocrBolNo: (extracted.ticketNo as string | null) ?? null,
+          ocrDriverName: (extracted.driverName as string | null) ?? null,
+          ocrWeightLbs: (extracted.weight as number | null) ?? null,
+          ocrDeliveryDate: (extracted.deliveryDate as string | null) ?? null,
+          discrepancies: (sub.discrepancies ?? []) as Array<{
+            field: string;
+            expected: unknown;
+            actual: unknown;
+            severity: string;
+          }>,
+        },
+      };
+    },
+  );
 };
 
 export default bolRoutes;

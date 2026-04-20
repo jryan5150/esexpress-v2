@@ -177,6 +177,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               {!collapsed && "Today's Objectives"}
             </Link>
             <Link
+              to="/workbench"
+              className={navClass("/workbench")}
+              title="Workbench"
+            >
+              <span className={iconClass("/workbench")}>build</span>
+              {!collapsed && "Workbench"}
+            </Link>
+            <Link
               to="/dispatch-desk"
               className={navClass("/dispatch-desk")}
               title="Dispatch Desk"
