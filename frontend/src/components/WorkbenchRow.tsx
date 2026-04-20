@@ -13,6 +13,7 @@ interface WorkbenchRowProps {
   onToggleSelect: () => void;
   onRowClick: () => void;
   onPrimaryAction: () => void;
+  onFlagAction?: () => void;
   isPending?: boolean;
 }
 
@@ -23,12 +24,14 @@ const SOURCE_LABEL: Record<LoadSource, string> = {
   manual: "Manual",
 };
 
-// Traffic-light palette — matches Jessica's Load Count sheet + sign-off portal
+// Traffic-light palette — matches Jessica's Load Count sheet + sign-off portal.
+// Light-theme variant (text-{color}-900 on bg-{color}-100) — was unreadable
+// with the dark-theme defaults the original WB-design used.
 const SOURCE_CLASS: Record<LoadSource, string> = {
-  propx: "bg-blue-500/15 text-blue-300 border-blue-500/40",
-  logistiq: "bg-amber-500/15 text-amber-300 border-amber-500/40",
-  jotform: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40",
-  manual: "bg-purple-500/15 text-purple-300 border-purple-500/40",
+  propx: "bg-blue-100 text-blue-900 border-blue-500",
+  logistiq: "bg-amber-100 text-amber-900 border-amber-600",
+  jotform: "bg-emerald-100 text-emerald-900 border-emerald-500",
+  manual: "bg-purple-100 text-purple-900 border-purple-500",
 };
 
 function SourceBadge({ source }: { source: LoadSource }) {
@@ -112,6 +115,7 @@ export const WorkbenchRow = memo(function WorkbenchRow({
   onToggleSelect,
   onRowClick,
   onPrimaryAction,
+  onFlagAction,
   isPending,
 }: WorkbenchRowProps) {
   const handlerColor = row.currentHandlerColor ?? "#334155";
@@ -215,7 +219,24 @@ export const WorkbenchRow = memo(function WorkbenchRow({
           </div>
         </div>
 
-        <div className="col-span-2 text-right">
+        <div className="col-span-2 text-right flex items-center justify-end gap-1.5">
+          {/* Flag back — direct one-click action on uncertain rows. Routes
+              the assignment via flag_other so dispatcher can mark "not for
+              me / not right" without opening the Resolve modal. */}
+          {row.handlerStage === "uncertain" && onFlagAction ? (
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={(e) => {
+                e.stopPropagation();
+                onFlagAction();
+              }}
+              title="Flag back — mark this row for review by someone else"
+              className="px-2 py-1 text-xs font-medium rounded border border-rose-400 bg-rose-50 text-rose-800 hover:bg-rose-100 disabled:opacity-50"
+            >
+              Flag
+            </button>
+          ) : null}
           {action.label ? (
             <button
               type="button"

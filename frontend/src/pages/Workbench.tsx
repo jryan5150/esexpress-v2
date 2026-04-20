@@ -4,6 +4,7 @@ import {
   useWorkbench,
   useAdvanceStage,
   useBulkConfirm,
+  useRouteUncertain,
 } from "../hooks/use-workbench";
 import { useCurrentUser } from "../hooks/use-auth";
 import { WorkbenchRow } from "../components/WorkbenchRow";
@@ -51,6 +52,7 @@ export function Workbench() {
   });
   const advance = useAdvanceStage();
   const bulkConfirm = useBulkConfirm();
+  const routeUncertain = useRouteUncertain();
 
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -406,7 +408,14 @@ export function Workbench() {
                     )
                   }
                   onPrimaryAction={() => primaryActionFor(row)}
-                  isPending={advance.isPending}
+                  onFlagAction={() =>
+                    routeUncertain.mutate({
+                      id: row.assignmentId,
+                      action: "flag_other",
+                      notes: "Flagged from row",
+                    })
+                  }
+                  isPending={advance.isPending || routeUncertain.isPending}
                 />
                 {expandedId === row.assignmentId && (
                   <WorkbenchDrawer
