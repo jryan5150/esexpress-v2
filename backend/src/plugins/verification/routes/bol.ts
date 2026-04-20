@@ -561,6 +561,137 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // ─── GET /bol/propx-queue -- PropX ticket photo review surface ───
+  // Mirrors the JotForm queue shape — list of photos with matched load
+  // metadata — so the BolQueue page's PropX tab can render the same card
+  // layout. The photos table already carries propx-sourced rows from the
+  // B2 backfill + sync-time inserts. Joining to loads gives the load_no,
+  // driver, delivered date, well, source_id for the proxied image URL.
+  fastify.get(
+    "/bol/propx-queue",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            status: {
+              type: "string",
+              enum: ["all", "matched", "unmatched"],
+              default: "all",
+            },
+            search: { type: "string", maxLength: 80 },
+            dateFrom: { type: "string", format: "date" },
+            dateTo: { type: "string", format: "date" },
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+
+      const { status, search, dateFrom, dateTo, page, limit } =
+        request.query as {
+          status?: "all" | "matched" | "unmatched";
+          search?: string;
+          dateFrom?: string;
+          dateTo?: string;
+          page?: number;
+          limit?: number;
+        };
+
+      const pageNum = page ?? 1;
+      const pageSize = limit ?? 50;
+      const offset = (pageNum - 1) * pageSize;
+
+      const { photos, loads, assignments } =
+        await import("../../../db/schema.js");
+      const { and, desc, sql } = await import("drizzle-orm");
+
+      const conditions: Array<ReturnType<typeof sql>> = [
+        sql`${photos.source} = 'propx'`,
+      ];
+      if (search) {
+        const pattern = `%${search}%`;
+        conditions.push(
+          sql`(${loads.loadNo} ILIKE ${pattern} OR ${loads.ticketNo} ILIKE ${pattern} OR ${loads.bolNo} ILIKE ${pattern} OR ${loads.driverName} ILIKE ${pattern} OR ${loads.truckNo} ILIKE ${pattern})`,
+        );
+      }
+      if (dateFrom) {
+        conditions.push(
+          sql`${loads.deliveredOn} >= ${`${dateFrom}T00:00:00-05:00`}::timestamptz`,
+        );
+      }
+      if (dateTo) {
+        conditions.push(
+          sql`${loads.deliveredOn} <= ${`${dateTo}T23:59:59.999-05:00`}::timestamptz`,
+        );
+      }
+      if (status === "matched") {
+        conditions.push(sql`${assignments.id} IS NOT NULL`);
+      } else if (status === "unmatched") {
+        conditions.push(sql`${assignments.id} IS NULL`);
+      }
+
+      const whereClause = and(...conditions);
+
+      const rows = await db
+        .select({
+          photoId: photos.id,
+          sourceUrl: photos.sourceUrl,
+          photoType: photos.type,
+          createdAt: photos.createdAt,
+          loadId: loads.id,
+          loadNo: loads.loadNo,
+          sourceId: loads.sourceId,
+          bolNo: loads.bolNo,
+          ticketNo: loads.ticketNo,
+          driverName: loads.driverName,
+          truckNo: loads.truckNo,
+          carrierName: loads.carrierName,
+          weightTons: loads.weightTons,
+          deliveredOn: loads.deliveredOn,
+          assignmentId: assignments.id,
+          handlerStage: assignments.handlerStage,
+          wellName: sql<string | null>`(
+            SELECT w.name FROM wells w WHERE w.id = ${assignments.wellId}
+          )`,
+        })
+        .from(photos)
+        .leftJoin(loads, sql`${loads.id} = ${photos.loadId}`)
+        .leftJoin(assignments, sql`${assignments.loadId} = ${loads.id}`)
+        .where(whereClause)
+        .orderBy(desc(loads.deliveredOn))
+        .limit(pageSize)
+        .offset(offset);
+
+      // Total count for pagination (same where clause, cheaper query)
+      const [{ total }] = await db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(photos)
+        .leftJoin(loads, sql`${loads.id} = ${photos.loadId}`)
+        .leftJoin(assignments, sql`${assignments.loadId} = ${loads.id}`)
+        .where(whereClause);
+
+      return {
+        success: true,
+        data: rows,
+        meta: { total, page: pageNum, limit: pageSize },
+      };
+    },
+  );
+
   // ─── POST /bol/operations/reconcile/:id -- Mark load reconciled ──
   fastify.post(
     "/bol/operations/reconcile/:id",

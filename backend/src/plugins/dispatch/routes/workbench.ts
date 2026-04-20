@@ -277,6 +277,52 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // PATCH /:id/notes — set free-form dispatcher notes on an assignment.
+  // Surfaced in the drawer's Notes section so Jessica can leave a reason,
+  // a follow-up hint, or context for the next handler (Steph, Katie) to see.
+  fastify.patch(
+    "/:id/notes",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" } },
+        },
+        body: {
+          type: "object",
+          required: ["notes"],
+          properties: {
+            notes: { type: ["string", "null"], maxLength: 2000 },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
+      const { id } = request.params as { id: number };
+      const { notes } = request.body as { notes: string | null };
+      const { assignments } = await import("../../../db/schema.js");
+      const { eq } = await import("drizzle-orm");
+      const clean = notes && notes.trim().length > 0 ? notes.trim() : null;
+      const [updated] = await db
+        .update(assignments)
+        .set({ notes: clean, updatedAt: new Date() })
+        .where(eq(assignments.id, id))
+        .returning({ id: assignments.id, notes: assignments.notes });
+      if (!updated) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: `Assignment ${id} not found` },
+        });
+      }
+      return { success: true, data: updated };
+    },
+  );
+
   // POST /:id/flag — flag back to uncertain
   fastify.post(
     "/:id/flag",

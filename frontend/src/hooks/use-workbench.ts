@@ -200,6 +200,23 @@ export function useUpdatePcsNumber() {
 }
 
 /**
+ * PATCH the free-form dispatcher notes on an assignment. Save-on-blur
+ * pattern in the drawer — operator context persists for the next handler.
+ */
+export function useUpdateAssignmentNotes() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (p: { assignmentId: number; notes: string | null }) =>
+      api.patch(`/dispatch/workbench/${p.assignmentId}/notes`, {
+        notes: p.notes,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.workbench.all });
+    },
+  });
+}
+
+/**
  * BOL reconciliation detail for a load — surfaces the OCR-extracted values
  * and the discrepancies reconciliation caught. Used by the drawer to show
  * "what matching found" next to editable load fields.

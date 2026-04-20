@@ -312,6 +312,14 @@ export interface WorkbenchRow {
   photoThumbUrl: string | null;
   rate: string | null;
   pcsNumber: string | null;
+  notes: string | null;
+  statusHistory: Array<{
+    status: string;
+    changedAt: string;
+    changedBy?: number;
+    changedByName?: string;
+    notes?: string;
+  }>;
   matchScore: number;
   matchTier: "high" | "medium" | "low" | "uncertain";
   matchDrivers: Array<{

@@ -233,6 +233,16 @@ export interface WorkbenchRow {
   rate: string | null;
   /** PCS load number — manually entered by dispatcher post-build. */
   pcsNumber: string | null;
+  /** Free-form dispatcher notes, persisted per assignment. */
+  notes: string | null;
+  /** Stage-transition history for the timeline view in the drawer. */
+  statusHistory: Array<{
+    status: string;
+    changedAt: string;
+    changedBy?: number;
+    changedByName?: string;
+    notes?: string;
+  }>;
   /** Match confidence score in [0, 1]. Computed per-request in Phase 1. */
   matchScore: number;
   /** Coarse tier for backward-compat UI bucketing. */
@@ -380,6 +390,8 @@ export async function listWorkbenchRows(
       stageChangedAt: assignments.stageChangedAt,
       enteredOn: assignments.enteredOn,
       pcsNumber: assignments.pcsNumber,
+      notes: assignments.notes,
+      statusHistory: assignments.statusHistory,
       loadId: loads.id,
       loadNo: loads.loadNo,
       loadSource: loads.source,
@@ -545,6 +557,8 @@ export async function listWorkbenchRows(
       photoThumbUrl: r.photoThumbUrl,
       rate: r.rate,
       pcsNumber: r.pcsNumber,
+      notes: r.notes,
+      statusHistory: (r.statusHistory ?? []) as WorkbenchRow["statusHistory"],
       matchScore: score.score,
       matchTier: score.tier,
       matchDrivers: score.drivers.map((d) => ({

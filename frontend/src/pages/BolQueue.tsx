@@ -6,6 +6,7 @@ import {
   useManualMatchJotform,
   useJotformLoadSearch,
   useCorrectJotformBol,
+  usePropxQueue,
 } from "../hooks/use-bol";
 import { Pagination } from "../components/Pagination";
 import { useToast } from "../components/Toast";
@@ -58,7 +59,7 @@ function formatDate(d: string | null): string {
   }
 }
 
-type Tab = "reconciliation" | "submissions" | "missing";
+type Tab = "reconciliation" | "submissions" | "propx" | "missing";
 
 /**
  * Inline-editable BOL number for the reconciliation queue. Click to edit,
@@ -166,6 +167,16 @@ export function BolQueue() {
   const statsQuery = useBolStats();
   const queueQuery = useBolQueue({ page, limit: pageSize });
   const missingQuery = useMissingTickets({ page, limit: pageSize });
+  const propxQuery = usePropxQueue({
+    page,
+    limit: pageSize,
+    status:
+      filter === "pending"
+        ? "unmatched"
+        : filter === "matched"
+          ? "matched"
+          : "all",
+  });
 
   const stats = statsQuery.data as Record<string, unknown> | undefined;
   const total = Number(stats?.total ?? 0);
@@ -190,12 +201,23 @@ export function BolQueue() {
   const missingLoads: any[] = missingResponse?.data ?? [];
   const missingTotal = missingResponse?.meta?.total ?? missingLoads.length;
 
+  const propxResponse = propxQuery.data as any;
+  const propxItems: any[] = Array.isArray(propxResponse)
+    ? propxResponse
+    : (propxResponse?.data ?? []);
+  const propxTotal = propxResponse?.meta?.total ?? propxItems.length;
+
   const tabs: { id: Tab; label: string; count: number; color?: string }[] = [
     { id: "reconciliation", label: "Reconciliation", count: queueTotal },
     {
       id: "submissions",
       label: "JotForm Submissions",
       count: total,
+    },
+    {
+      id: "propx",
+      label: "PropX Photos",
+      count: propxTotal,
     },
     {
       id: "missing",
@@ -702,6 +724,133 @@ export function BolQueue() {
               </>
             )}
           </>
+        )}
+
+        {/* ─── TAB: PropX Ticket Photos ─── */}
+        {activeTab === "propx" && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] px-4 py-3">
+              <span className="material-symbols-outlined text-primary text-lg">
+                image_search
+              </span>
+              <div className="text-sm text-on-surface">
+                <span className="font-semibold">PropX ticket photos</span> —
+                scroll-audit surface for scale-ticket images PropX returns for
+                each load. Use this to verify what the system matched and spot
+                loads whose photo doesn't look right.
+              </div>
+              <div className="ml-auto flex items-center gap-1 bg-surface-container-high rounded-lg p-0.5 border border-outline-variant/30">
+                {(["all", "matched", "pending"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md transition-all ${
+                      filter === f
+                        ? "bg-primary-container text-on-primary-container shadow-sm"
+                        : "text-outline hover:text-on-surface"
+                    }`}
+                  >
+                    {f === "pending" ? "unmatched" : f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {propxQuery.isLoading ? (
+              <div className="text-center py-10 text-outline text-sm">
+                Loading PropX photos…
+              </div>
+            ) : propxItems.length === 0 ? (
+              <div className="text-center py-10 bg-surface-container-lowest rounded-[10px] border border-outline-variant/40">
+                <span className="material-symbols-outlined text-outline/30 text-4xl">
+                  no_photography
+                </span>
+                <p className="mt-2 text-sm text-outline">
+                  No PropX photos in this filter.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                {propxItems.map((item: any) => {
+                  const proxiedUrl = item.sourceUrl
+                    ? `${API_BASE}/api/v1/verification/photos/proxy?url=${encodeURIComponent(item.sourceUrl)}`
+                    : null;
+                  const matched = item.assignmentId != null;
+                  return (
+                    <div
+                      key={item.photoId}
+                      className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] overflow-hidden hover:border-primary/50 transition-all"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => proxiedUrl && setPhotoModal(proxiedUrl)}
+                        className="block w-full aspect-[4/3] bg-surface-container-high cursor-zoom-in hover:opacity-90 transition-opacity"
+                      >
+                        {proxiedUrl ? (
+                          <img
+                            src={proxiedUrl}
+                            alt={`Load ${item.loadNo ?? item.loadId}`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display =
+                                "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center h-full">
+                            <span className="material-symbols-outlined text-outline/30 text-3xl">
+                              broken_image
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                      <div className="p-3 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-data font-bold text-sm text-on-surface">
+                            Load {item.loadNo ?? `#${item.loadId ?? "?"}`}
+                          </span>
+                          <span
+                            className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                              matched
+                                ? "bg-[#d1fae5] text-[#065f46]"
+                                : "bg-[#fef3c7] text-[#92400e]"
+                            }`}
+                          >
+                            {matched
+                              ? (item.handlerStage ?? "matched")
+                              : "no assignment"}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-outline flex flex-wrap gap-x-3 gap-y-0.5">
+                          <span>Ticket {item.ticketNo ?? "--"}</span>
+                          <span>{item.driverName ?? "no driver"}</span>
+                          <span>Truck {item.truckNo ?? "--"}</span>
+                        </div>
+                        {item.wellName && (
+                          <div className="text-[11px] text-primary-container truncate">
+                            {item.wellName}
+                          </div>
+                        )}
+                        <div className="text-[10px] text-outline/60">
+                          {formatDate(item.deliveredOn)} ·{" "}
+                          {item.weightTons ? `${item.weightTons} tons` : "--"}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={propxTotal}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         )}
 
         {/* ─── TAB: Missing Tickets ─── */}

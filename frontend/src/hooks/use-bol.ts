@@ -42,6 +42,53 @@ export function useBolStats() {
   });
 }
 
+/** PropX ticket-image queue — second verification surface for scroll-audit
+ *  of PropX-sourced photos and their matched load metadata. Shape mirrors
+ *  the JotForm queue at the UI level: photo URL, matched load info, stage. */
+export interface PropxQueueItem {
+  photoId: number;
+  sourceUrl: string | null;
+  photoType: string | null;
+  createdAt: string | null;
+  loadId: number | null;
+  loadNo: string | null;
+  sourceId: string | null;
+  bolNo: string | null;
+  ticketNo: string | null;
+  driverName: string | null;
+  truckNo: string | null;
+  carrierName: string | null;
+  weightTons: string | null;
+  deliveredOn: string | null;
+  assignmentId: number | null;
+  handlerStage: string | null;
+  wellName: string | null;
+}
+
+export function usePropxQueue(opts?: {
+  page?: number;
+  limit?: number;
+  status?: "all" | "matched" | "unmatched";
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  const params = new URLSearchParams();
+  if (opts?.page) params.set("page", String(opts.page));
+  if (opts?.limit) params.set("limit", String(opts.limit));
+  if (opts?.status) params.set("status", opts.status);
+  if (opts?.search) params.set("search", opts.search);
+  if (opts?.dateFrom) params.set("dateFrom", opts.dateFrom);
+  if (opts?.dateTo) params.set("dateTo", opts.dateTo);
+  const qs = params.toString() ? `?${params}` : "";
+  return useQuery({
+    queryKey: ["bol", "propx-queue", opts] as const,
+    queryFn: () =>
+      api.get<PropxQueueItem[]>(`/verification/bol/propx-queue${qs}`),
+    refetchInterval: 60_000,
+  });
+}
+
 export function useBolDiscrepancies() {
   return useQuery({
     queryKey: qk.bol.discrepancies(),

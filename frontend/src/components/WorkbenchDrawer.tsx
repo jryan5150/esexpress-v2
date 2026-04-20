@@ -5,6 +5,7 @@ import {
   useAdvanceStage,
   useFlagToUncertain,
   useUpdatePcsNumber,
+  useUpdateAssignmentNotes,
 } from "../hooks/use-workbench";
 import { StagePill } from "./StagePill";
 import { PhotoLightbox } from "./PhotoLightbox";
@@ -191,7 +192,14 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
   const advance = useAdvanceStage();
   const flag = useFlagToUncertain();
   const pcsUpdate = useUpdatePcsNumber();
+  const notesUpdate = useUpdateAssignmentNotes();
   const [lightbox, setLightbox] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(row.notes ?? "");
+  const [notesDirty, setNotesDirty] = useState(false);
+  useEffect(() => {
+    setNotesDraft(row.notes ?? "");
+    setNotesDirty(false);
+  }, [row.assignmentId, row.notes]);
 
   const ocr = bol.data;
 
@@ -403,6 +411,95 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
                 : "no score"}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Dispatcher notes — free-form persistent note. Save on blur. */}
+      <div className="bg-surface-variant/20 border border-surface-variant rounded p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+            Dispatcher Notes
+          </span>
+          {notesDirty && (
+            <span className="text-[10px] font-bold text-primary uppercase tracking-wide">
+              {notesUpdate.isPending ? "saving…" : "unsaved"}
+            </span>
+          )}
+        </div>
+        <textarea
+          value={notesDraft}
+          rows={2}
+          placeholder="Context for the next handler: follow-up needed, rate pending, held for driver callback…"
+          disabled={notesUpdate.isPending}
+          onChange={(e) => {
+            setNotesDraft(e.target.value);
+            setNotesDirty(e.target.value !== (row.notes ?? ""));
+          }}
+          onBlur={() => {
+            if (!notesDirty) return;
+            const next = notesDraft.trim() === "" ? null : notesDraft.trim();
+            notesUpdate.mutate(
+              { assignmentId: row.assignmentId, notes: next },
+              {
+                onSuccess: () => setNotesDirty(false),
+              },
+            );
+          }}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              (e.target as HTMLTextAreaElement).blur();
+            }
+          }}
+          className="w-full text-sm text-on-surface bg-background/60 border border-outline-variant/40 rounded px-2 py-1.5 focus:outline-none focus:border-primary/60 resize-y disabled:opacity-60"
+          aria-label="Dispatcher notes"
+        />
+      </div>
+
+      {/* Stage transition timeline — audit trail of how this row moved
+          through the pipeline. Shows the last 6 transitions (newest first). */}
+      {row.statusHistory && row.statusHistory.length > 0 && (
+        <div className="bg-surface-variant/20 border border-surface-variant rounded p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant mb-2">
+            Timeline
+          </div>
+          <ul className="space-y-1.5">
+            {[...row.statusHistory]
+              .reverse()
+              .slice(0, 6)
+              .map((h, i) => {
+                const when = h.changedAt
+                  ? new Date(h.changedAt).toLocaleString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })
+                  : "--";
+                return (
+                  <li
+                    key={`${h.changedAt}-${i}`}
+                    className="flex items-start gap-2 text-xs"
+                  >
+                    <span className="text-outline-variant mt-1">●</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-on-surface">
+                        <span className="font-medium">{h.status}</span>
+                        <span className="text-on-surface-variant">
+                          {" "}
+                          — {h.changedByName ?? "system"} · {when}
+                        </span>
+                      </div>
+                      {h.notes && (
+                        <div className="text-[11px] text-on-surface-variant mt-0.5 italic">
+                          “{h.notes}”
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+          </ul>
         </div>
       )}
 
