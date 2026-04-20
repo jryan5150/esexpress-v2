@@ -258,10 +258,10 @@ export function Workbench() {
             type="button"
             data-filter={f.value}
             onClick={() => setFilter(f.value)}
-            className={`px-3 py-1 text-sm rounded-full border ${
+            className={`px-3 py-1 text-sm font-medium rounded-full border transition-colors ${
               filter === f.value
                 ? "bg-primary text-on-primary border-primary"
-                : "border-surface-variant hover:border-primary/40"
+                : "bg-surface-container-low text-on-surface border-outline-variant hover:border-primary/60 hover:text-primary"
             }`}
           >
             {f.label}

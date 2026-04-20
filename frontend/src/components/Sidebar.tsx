@@ -31,6 +31,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   const isActive = (path: string) => location.pathname === path;
   const isAdminRoute =
     location.pathname.startsWith("/admin") || location.pathname === "/finance";
+  // Reference group: legacy workspace pages + archive surfaces. The demo
+  // surfaces Workbench as the only always-visible main item; everything else
+  // lives behind this collapsible group so dispatchers see one front door.
+  const isReferenceRoute =
+    location.pathname === "/" ||
+    location.pathname === "/dispatch-desk" ||
+    location.pathname === "/bol" ||
+    location.pathname === "/validation" ||
+    location.pathname === "/admin/missed-loads" ||
+    location.pathname === "/archive";
 
   // Collapse state — persisted
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -42,15 +52,24 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   }, [collapsed]);
 
   const [adminOpen, setAdminOpen] = useState(isAdminRoute);
+  const [referenceOpen, setReferenceOpen] = useState(isReferenceRoute);
 
   // Auto-open admin group when navigating into an admin/finance route
   useEffect(() => {
     if (isAdminRoute && !collapsed) setAdminOpen(true);
   }, [isAdminRoute, collapsed]);
 
-  // Close admin submenu whenever sidebar collapses
+  // Auto-open reference group when navigating into one of those pages
   useEffect(() => {
-    if (collapsed) setAdminOpen(false);
+    if (isReferenceRoute && !collapsed) setReferenceOpen(true);
+  }, [isReferenceRoute, collapsed]);
+
+  // Close submenus whenever sidebar collapses
+  useEffect(() => {
+    if (collapsed) {
+      setAdminOpen(false);
+      setReferenceOpen(false);
+    }
   }, [collapsed]);
 
   // Close mobile menu on Escape
@@ -94,6 +113,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
       return;
     }
     setAdminOpen((v) => !v);
+  };
+
+  // Same pattern for the Reference group toggle.
+  const handleReferenceClick = () => {
+    if (collapsed) {
+      setCollapsed(false);
+      setReferenceOpen(true);
+      return;
+    }
+    setReferenceOpen((v) => !v);
   };
 
   return (
@@ -169,13 +198,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
           </span>
         </button>
 
-        {/* Main Nav */}
+        {/* Main Nav — Workbench is the single demo-front-door */}
         <nav className="flex-1 py-1.5" onClick={handleNavClick}>
           <div className="space-y-px">
-            <Link to="/" className={navClass("/")} title="Today's Objectives">
-              <span className={iconClass("/")}>home</span>
-              {!collapsed && "Today's Objectives"}
-            </Link>
             <Link
               to="/workbench"
               className={navClass("/workbench")}
@@ -184,75 +209,113 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               <span className={iconClass("/workbench")}>build</span>
               {!collapsed && "Workbench"}
             </Link>
-            <Link
-              to="/dispatch-desk"
-              className={navClass("/dispatch-desk")}
-              title="Dispatch Desk"
+          </div>
+
+          {/* Reference — collapsible group containing all legacy workspace pages */}
+          <div className={`mt-3 ${collapsed ? "mx-0" : ""}`}>
+            <button
+              type="button"
+              onClick={handleReferenceClick}
+              aria-expanded={referenceOpen}
+              aria-controls="sidebar-reference-submenu"
+              title="Reference"
+              className={`w-full ${
+                isReferenceRoute
+                  ? "bg-[#ede9f8] text-primary font-semibold border-l-primary"
+                  : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface font-medium border-l-transparent"
+              } flex items-center ${
+                collapsed
+                  ? "justify-center px-0 py-2 mx-2"
+                  : "gap-2.5 px-3.5 py-2 mx-1.5"
+              } rounded-md transition-all duration-150 text-[13px] nav-smooth press-scale cursor-pointer border-l-2`}
             >
-              <span className={iconClass("/dispatch-desk")}>dashboard</span>
-              {!collapsed && "Dispatch Desk"}
-            </Link>
-            <Link
-              to="/bol"
-              className={navClass("/bol")}
-              title={
-                bolPending > 0
-                  ? `BOL Queue — ${bolPending} photo${bolPending === 1 ? "" : "s"} need matching`
-                  : "BOL Queue"
-              }
-            >
-              <span className={iconClass("/bol")}>receipt_long</span>
+              <span
+                className={
+                  isReferenceRoute
+                    ? "material-symbols-outlined icon-filled text-lg shrink-0"
+                    : "material-symbols-outlined text-lg shrink-0"
+                }
+              >
+                folder_open
+              </span>
               {!collapsed && (
                 <>
+                  <span className="flex-1 text-left">Reference</span>
+                  <span
+                    className="material-symbols-outlined text-base shrink-0 transition-transform duration-200"
+                    style={{
+                      transform: referenceOpen
+                        ? "rotate(90deg)"
+                        : "rotate(0deg)",
+                    }}
+                  >
+                    chevron_right
+                  </span>
+                </>
+              )}
+            </button>
+            {referenceOpen && !collapsed && (
+              <div
+                id="sidebar-reference-submenu"
+                className="overflow-hidden animate-slide-down space-y-px"
+              >
+                <Link to="/" className={`${navClass("/")} !pl-9`} title="Today's Objectives">
+                  <span className={iconClass("/")}>home</span>
+                  Today's Objectives
+                </Link>
+                <Link
+                  to="/dispatch-desk"
+                  className={`${navClass("/dispatch-desk")} !pl-9`}
+                  title="Dispatch Desk"
+                >
+                  <span className={iconClass("/dispatch-desk")}>dashboard</span>
+                  Dispatch Desk
+                </Link>
+                <Link
+                  to="/bol"
+                  className={`${navClass("/bol")} !pl-9`}
+                  title={
+                    bolPending > 0
+                      ? `BOL Queue — ${bolPending} photo${bolPending === 1 ? "" : "s"} need matching`
+                      : "BOL Queue"
+                  }
+                >
+                  <span className={iconClass("/bol")}>receipt_long</span>
                   <span className="flex-1">BOL Queue</span>
                   {bolPending > 0 && (
                     <span className="font-label text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-full bg-error/15 text-error">
                       {bolPending.toLocaleString()}
                     </span>
                   )}
-                </>
-              )}
-            </Link>
-            <Link
-              to="/validation"
-              className={navClass("/validation")}
-              title="Validation"
-            >
-              <span className={iconClass("/validation")}>rule</span>
-              {!collapsed && "Validation"}
-            </Link>
-          </div>
-
-          <div
-            className={`mt-3 pt-2 border-t border-outline-variant/25 ${collapsed ? "mx-2" : "mx-3"}`}
-          >
-            {!collapsed && (
-              <div className="px-2 py-1.5">
-                <span className="text-[9px] font-label font-bold text-outline/60 tracking-[0.15em] uppercase">
-                  Reference
-                </span>
+                </Link>
+                <Link
+                  to="/validation"
+                  className={`${navClass("/validation")} !pl-9`}
+                  title="Validation"
+                >
+                  <span className={iconClass("/validation")}>rule</span>
+                  Validation
+                </Link>
+                <Link
+                  to="/admin/missed-loads"
+                  className={`${navClass("/admin/missed-loads")} !pl-9`}
+                  title="Missed Loads"
+                >
+                  <span className={iconClass("/admin/missed-loads")}>
+                    fact_check
+                  </span>
+                  Missed Loads
+                </Link>
+                <Link
+                  to="/archive"
+                  className={`${navClass("/archive")} !pl-9`}
+                  title="Archive"
+                >
+                  <span className={iconClass("/archive")}>inventory_2</span>
+                  Archive
+                </Link>
               </div>
             )}
-            <div className={`space-y-px ${collapsed ? "pt-1" : ""}`}>
-              <Link
-                to="/admin/missed-loads"
-                className={navClass("/admin/missed-loads")}
-                title="Missed Loads"
-              >
-                <span className={iconClass("/admin/missed-loads")}>
-                  fact_check
-                </span>
-                {!collapsed && "Missed Loads"}
-              </Link>
-              <Link
-                to="/archive"
-                className={navClass("/archive")}
-                title="Archive"
-              >
-                <span className={iconClass("/archive")}>inventory_2</span>
-                {!collapsed && "Archive"}
-              </Link>
-            </div>
           </div>
         </nav>
 
