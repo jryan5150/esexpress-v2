@@ -351,14 +351,20 @@ export function BolQueue() {
               ))}
             </div>
 
-            {/* Queue List */}
+            {/* Queue cards */}
             {queueQuery.isLoading ? (
-              <div className="space-y-1.5">
-                {[1, 2, 3, 4].map((i) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
-                    className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] h-16 animate-pulse"
-                  />
+                    className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] overflow-hidden"
+                  >
+                    <div className="aspect-[4/3] bg-surface-container-high animate-pulse" />
+                    <div className="p-3 space-y-2">
+                      <div className="h-4 bg-surface-container-high rounded animate-pulse" />
+                      <div className="h-3 bg-surface-container-high/70 rounded w-3/4 animate-pulse" />
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : filtered.length === 0 ? (
@@ -373,181 +379,181 @@ export function BolQueue() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-px bg-outline-variant/20 rounded-[10px] overflow-hidden border border-outline-variant/40">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
                 {filtered.map((item) => {
                   const sub = item.submission;
                   const load = item.matchedLoad;
                   const isExpanded = expandedId === sub.id;
                   const hasPhoto = sub.photoUrls && sub.photoUrls.length > 0;
+                  const firstPhoto = hasPhoto
+                    ? resolveUrl(sub.photoUrls[0])
+                    : null;
+                  const matched = sub.status === "matched";
+                  const hasCritical = item.discrepancies.some(
+                    (d) => d.severity === "critical",
+                  );
 
                   return (
-                    <div key={sub.id}>
+                    <div
+                      key={sub.id}
+                      className={`bg-surface-container-lowest border rounded-[10px] overflow-hidden transition-all ${
+                        isExpanded
+                          ? "col-span-full border-primary/60 shadow-md"
+                          : "border-outline-variant/40 hover:border-primary/50 hover:shadow-md"
+                      }`}
+                    >
                       <div
-                        onClick={() =>
-                          setExpandedId(isExpanded ? null : sub.id)
+                        className={
+                          isExpanded ? "grid grid-cols-1 md:grid-cols-3" : ""
                         }
-                        className="bg-surface-container-lowest hover:bg-surface-container-high transition-all px-5 py-3.5 flex items-center gap-5 cursor-pointer"
                       >
-                        {/* Photo thumbnail */}
-                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-surface-container-high shrink-0 border border-outline-variant/30">
-                          {hasPhoto ? (
-                            <img
-                              src={resolveUrl(sub.photoUrls[0])}
-                              alt="Weight ticket"
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display =
-                                  "none";
-                              }}
-                            />
+                        {/* Photo — on top when collapsed, on left when expanded */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (firstPhoto) setPhotoModal(firstPhoto);
+                          }}
+                          className={`block w-full bg-surface-container-high cursor-zoom-in hover:opacity-90 transition-opacity relative ${
+                            isExpanded
+                              ? "aspect-[4/3] md:aspect-auto"
+                              : "aspect-[4/3]"
+                          }`}
+                        >
+                          {firstPhoto ? (
+                            <>
+                              <img
+                                src={firstPhoto}
+                                alt={`Ticket ${sub.bolNumber ?? sub.id}`}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display =
+                                    "none";
+                                }}
+                              />
+                              {sub.photoUrls && sub.photoUrls.length > 1 && (
+                                <span className="absolute top-2 right-2 inline-flex items-center gap-1 bg-black/60 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-md">
+                                  <span className="material-symbols-outlined text-[12px]">
+                                    collections
+                                  </span>
+                                  {sub.photoUrls.length}
+                                </span>
+                              )}
+                            </>
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="material-symbols-outlined text-outline/30 text-sm">
+                            <div className="flex items-center justify-center h-full">
+                              <span className="material-symbols-outlined text-outline/30 text-3xl">
                                 no_photography
                               </span>
                             </div>
                           )}
-                        </div>
+                        </button>
 
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <EditableBol
-                              importId={sub.id}
-                              value={sub.bolNumber}
-                            />
-                            <span
-                              className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                                sub.status === "matched"
-                                  ? "bg-[#d1fae5] text-[#065f46]"
-                                  : "bg-[#fee2e2] text-[#991b1b]"
-                              }`}
-                            >
-                              {sub.status}
-                            </span>
-                          </div>
-                          <div className="text-[11px] text-outline mt-0.5 flex gap-3">
-                            <span>{sub.driverName || "Unknown driver"}</span>
-                            <span>Truck {sub.truckNo || "--"}</span>
-                            <span>{formatDate(sub.submittedAt)}</span>
-                          </div>
-                        </div>
-
-                        {/* Discrepancy badge */}
-                        {item.discrepancies.length > 0 && (
-                          <span
-                            className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                              item.discrepancies.some(
-                                (d) => d.severity === "critical",
-                              )
-                                ? "bg-error/15 text-error"
-                                : item.discrepancies.some(
-                                      (d) => d.severity === "warning",
-                                    )
-                                  ? "bg-[#fef3c7] text-[#92400e]"
-                                  : "bg-surface-container-high text-outline"
-                            }`}
-                            title={item.discrepancies
-                              .map((d) => `${d.field}: ${d.message}`)
-                              .join("\n")}
-                          >
-                            <span className="material-symbols-outlined text-[12px]">
-                              warning
-                            </span>
-                            {item.discrepancies.length} mismatch
-                            {item.discrepancies.length > 1 ? "es" : ""}
-                          </span>
-                        )}
-
-                        {/* Matched load */}
-                        {load && (
-                          <div className="text-right">
-                            <span className="text-[10px] text-outline uppercase tracking-wider">
-                              Matched to
-                            </span>
-                            <p className="font-label text-sm font-bold text-on-surface">
-                              Load {load.loadNo || `#${load.id}`}
-                            </p>
-                          </div>
-                        )}
-
-                        <span
-                          className={`material-symbols-outlined text-sm text-outline/40 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                        {/* Meta + expand body */}
+                        <div
+                          className={isExpanded ? "md:col-span-2" : ""}
+                          onClick={() =>
+                            setExpandedId(isExpanded ? null : sub.id)
+                          }
                         >
-                          chevron_right
-                        </span>
-                      </div>
+                          <div className="p-3 space-y-1 cursor-pointer">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 min-w-0">
+                                <EditableBol
+                                  importId={sub.id}
+                                  value={sub.bolNumber}
+                                />
+                              </div>
+                              <span
+                                className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0 ${
+                                  matched
+                                    ? "bg-[#d1fae5] text-[#065f46]"
+                                    : "bg-[#fee2e2] text-[#991b1b]"
+                                }`}
+                              >
+                                {sub.status}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-outline flex flex-wrap gap-x-3 gap-y-0.5">
+                              <span>{sub.driverName || "no driver"}</span>
+                              <span>Truck {sub.truckNo || "--"}</span>
+                              <span className="tabular-nums">
+                                {sub.weight
+                                  ? `${parseFloat(sub.weight).toFixed(1)}t`
+                                  : "--"}
+                              </span>
+                            </div>
+                            {load && (
+                              <div className="text-[11px] text-primary-container truncate">
+                                Matched → Load {load.loadNo || `#${load.id}`}
+                                {load.destinationName
+                                  ? ` · ${load.destinationName}`
+                                  : ""}
+                              </div>
+                            )}
+                            {item.discrepancies.length > 0 && (
+                              <div
+                                className={`text-[10px] font-semibold inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${
+                                  hasCritical
+                                    ? "bg-error/15 text-error"
+                                    : "bg-[#fef3c7] text-[#92400e]"
+                                }`}
+                                title={item.discrepancies
+                                  .map((d) => `${d.field}: ${d.message}`)
+                                  .join("\n")}
+                              >
+                                <span className="material-symbols-outlined text-[11px]">
+                                  warning
+                                </span>
+                                {item.discrepancies.length} mismatch
+                                {item.discrepancies.length > 1 ? "es" : ""}
+                              </div>
+                            )}
+                            <div className="text-[10px] text-outline/60">
+                              {formatDate(sub.submittedAt)}
+                            </div>
+                          </div>
 
-                      {/* Expanded Detail */}
-                      {isExpanded && (
-                        <div className="bg-background px-5 py-4 border-t border-outline-variant/30 space-y-3">
-                          {hasPhoto && (
-                            <div className="flex gap-2 overflow-x-auto pb-1">
-                              {sub.photoUrls.map((url, i) => (
-                                <button
-                                  key={i}
-                                  onClick={() => setPhotoModal(resolveUrl(url))}
-                                  className="w-28 h-36 rounded-lg overflow-hidden bg-surface-container-high border border-outline-variant/30 shrink-0 hover:ring-2 hover:ring-primary transition-all cursor-pointer"
-                                >
-                                  <img
-                                    src={resolveUrl(url)}
-                                    alt={`Ticket photo ${i + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </button>
-                              ))}
+                          {/* Expanded detail — manual match or discrepancy resolution */}
+                          {isExpanded && (
+                            <div className="border-t border-outline-variant/30 px-3 py-3 space-y-3 bg-background/30">
+                              {hasPhoto && sub.photoUrls.length > 1 && (
+                                <div className="flex gap-2 overflow-x-auto pb-1">
+                                  {sub.photoUrls.slice(1).map((url, i) => (
+                                    <button
+                                      key={i}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPhotoModal(resolveUrl(url));
+                                      }}
+                                      className="w-20 h-20 rounded-md overflow-hidden bg-surface-container-high border border-outline-variant/30 shrink-0 hover:ring-2 hover:ring-primary transition-all cursor-zoom-in"
+                                    >
+                                      <img
+                                        src={resolveUrl(url)}
+                                        alt={`Photo ${i + 2}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              {!load && <ManualMatchPanel importId={sub.id} />}
+                              {load && item.discrepancies.length > 0 && (
+                                <DiscrepancyPanel
+                                  discrepancies={item.discrepancies}
+                                  importId={sub.id}
+                                />
+                              )}
+                              {load && item.discrepancies.length === 0 && (
+                                <div className="text-xs text-on-surface-variant">
+                                  Matched cleanly — no discrepancies flagged.
+                                </div>
+                              )}
                             </div>
                           )}
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            {[
-                              { label: "BOL / Ticket #", value: sub.bolNumber },
-                              { label: "Driver", value: sub.driverName },
-                              { label: "Truck #", value: sub.truckNo },
-                              { label: "Weight", value: sub.weight },
-                              {
-                                label: "Submitted",
-                                value: formatDate(sub.submittedAt),
-                              },
-                              { label: "Status", value: sub.status },
-                              ...(load
-                                ? [
-                                    {
-                                      label: "Matched Load",
-                                      value: load.loadNo || `#${load.id}`,
-                                    },
-                                    {
-                                      label: "Well / Destination",
-                                      value: load.destinationName,
-                                    },
-                                  ]
-                                : [
-                                    {
-                                      label: "Matched Load",
-                                      value: "-- UNMATCHED --",
-                                    },
-                                  ]),
-                            ].map((f) => (
-                              <div key={f.label} className="space-y-0.5">
-                                <span className="text-[10px] uppercase tracking-[0.06em] font-bold text-outline">
-                                  {f.label}
-                                </span>
-                                <p className="text-[13px] text-on-surface font-label">
-                                  {f.value || (
-                                    <span className="text-outline/40">--</span>
-                                  )}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                          {!load && <ManualMatchPanel importId={sub.id} />}
-                          {load && item.discrepancies.length > 0 && (
-                            <DiscrepancyPanel
-                              discrepancies={item.discrepancies}
-                              importId={sub.id}
-                            />
-                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
@@ -572,19 +578,32 @@ export function BolQueue() {
 
         {/* ─── TAB: JotForm Submissions ─── */}
         {activeTab === "submissions" && (
-          <>
-            <p className="text-xs text-outline">
-              Raw JotForm weight ticket submissions — {total} total, {matchRate}{" "}
-              match rate
-            </p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] px-4 py-3">
+              <span className="material-symbols-outlined text-primary text-lg">
+                receipt_long
+              </span>
+              <div className="text-sm text-on-surface">
+                <span className="font-semibold">JotForm submissions</span> —
+                driver-uploaded weight tickets. {total} total ·{" "}
+                <span className="font-medium text-tertiary">{matchRate}</span>{" "}
+                match rate.
+              </div>
+            </div>
 
             {queueQuery.isLoading ? (
-              <div className="space-y-1.5">
-                {[1, 2, 3].map((i) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div
                     key={i}
-                    className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] h-12 animate-pulse"
-                  />
+                    className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] overflow-hidden"
+                  >
+                    <div className="aspect-[4/3] bg-surface-container-high animate-pulse" />
+                    <div className="p-3 space-y-2">
+                      <div className="h-4 bg-surface-container-high rounded animate-pulse" />
+                      <div className="h-3 bg-surface-container-high/70 rounded w-3/4 animate-pulse" />
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : rawItems.length === 0 ? (
@@ -598,113 +617,113 @@ export function BolQueue() {
               </div>
             ) : (
               <>
-                {/* Column headers */}
-                <div
-                  className="grid items-center gap-3 px-3.5 pb-1"
-                  style={{
-                    gridTemplateColumns: "40px 1fr 120px 100px 80px 100px 80px",
-                  }}
-                >
-                  <div />
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
-                    Driver / BOL
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
-                    Truck
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
-                    Weight
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-center">
-                    Status
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline">
-                    Matched To
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-outline text-right">
-                    Date
-                  </span>
-                </div>
-
-                <div className="space-y-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
                   {rawItems.map((item) => {
                     const sub = item.submission;
                     const load = item.matchedLoad;
-                    const hasPhoto = sub.photoUrls?.length > 0;
+                    const hasPhoto = sub.photoUrls && sub.photoUrls.length > 0;
+                    const firstPhoto = hasPhoto
+                      ? resolveUrl(sub.photoUrls[0])
+                      : null;
+                    const matched = sub.status === "matched";
 
                     return (
                       <div
                         key={sub.id}
-                        className="grid items-center gap-3 bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] px-3.5 py-2.5 shadow-sm hover:border-primary/20 hover:shadow-md transition-all cursor-pointer"
-                        style={{
-                          gridTemplateColumns:
-                            "40px 1fr 120px 100px 80px 100px 80px",
-                        }}
-                        onClick={() =>
-                          setExpandedId(expandedId === sub.id ? null : sub.id)
-                        }
+                        className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] overflow-hidden hover:border-primary/50 hover:shadow-md transition-all"
                       >
-                        {/* Photo thumb */}
-                        <div className="w-8 h-8 rounded-md overflow-hidden bg-surface-container-high border border-outline-variant/30 shrink-0">
-                          {hasPhoto ? (
-                            <img
-                              src={resolveUrl(sub.photoUrls[0])}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            firstPhoto && setPhotoModal(firstPhoto)
+                          }
+                          className="block w-full aspect-[4/3] bg-surface-container-high cursor-zoom-in hover:opacity-90 transition-opacity relative"
+                        >
+                          {firstPhoto ? (
+                            <>
+                              <img
+                                src={firstPhoto}
+                                alt={`Ticket ${sub.bolNumber ?? sub.id}`}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display =
+                                    "none";
+                                }}
+                              />
+                              {sub.photoUrls && sub.photoUrls.length > 1 && (
+                                <span className="absolute top-2 right-2 inline-flex items-center gap-1 bg-black/60 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-md">
+                                  <span className="material-symbols-outlined text-[12px]">
+                                    collections
+                                  </span>
+                                  {sub.photoUrls.length}
+                                </span>
+                              )}
+                            </>
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="material-symbols-outlined text-xs text-outline/30">
+                            <div className="flex items-center justify-center h-full">
+                              <span className="material-symbols-outlined text-outline/30 text-3xl">
                                 no_photography
                               </span>
                             </div>
                           )}
-                        </div>
-
-                        {/* Driver / BOL */}
-                        <div className="min-w-0">
-                          <div className="font-semibold text-[13px] text-on-surface truncate">
-                            {sub.driverName || "--"}
+                        </button>
+                        <div className="p-3 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-data font-bold text-sm text-on-surface truncate">
+                              {sub.bolNumber || "— no BOL"}
+                            </span>
+                            <span
+                              className={`ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0 ${
+                                matched
+                                  ? "bg-[#d1fae5] text-[#065f46]"
+                                  : "bg-[#fee2e2] text-[#991b1b]"
+                              }`}
+                            >
+                              {sub.status}
+                            </span>
                           </div>
-                          <div className="font-label text-[11px] text-outline truncate">
-                            {sub.bolNumber || "--"}
+                          <div className="text-[11px] text-outline flex flex-wrap gap-x-3 gap-y-0.5">
+                            <span>{sub.driverName || "no driver"}</span>
+                            <span>Truck {sub.truckNo || "--"}</span>
+                            <span className="tabular-nums">
+                              {sub.weight
+                                ? `${parseFloat(sub.weight).toFixed(1)}t`
+                                : "--"}
+                            </span>
+                          </div>
+                          {load && (
+                            <div className="text-[11px] text-primary-container truncate">
+                              Matched → Load {load.loadNo}
+                              {load.destinationName
+                                ? ` · ${load.destinationName}`
+                                : ""}
+                            </div>
+                          )}
+                          {item.discrepancies.length > 0 && (
+                            <div
+                              className={`text-[10px] font-semibold inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${
+                                item.discrepancies.some(
+                                  (d) => d.severity === "critical",
+                                )
+                                  ? "bg-error/15 text-error"
+                                  : "bg-[#fef3c7] text-[#92400e]"
+                              }`}
+                              title={item.discrepancies
+                                .map((d) => `${d.field}: ${d.message}`)
+                                .join("\n")}
+                            >
+                              <span className="material-symbols-outlined text-[11px]">
+                                warning
+                              </span>
+                              {item.discrepancies.length} mismatch
+                              {item.discrepancies.length > 1 ? "es" : ""}
+                            </div>
+                          )}
+                          <div className="text-[10px] text-outline/60">
+                            {formatDate(sub.submittedAt)}
                           </div>
                         </div>
-
-                        {/* Truck */}
-                        <span className="font-label text-[11px] text-on-surface-variant">
-                          {sub.truckNo || "--"}
-                        </span>
-
-                        {/* Weight */}
-                        <span className="font-label text-[13px] font-medium text-on-surface-variant text-right tabular-nums">
-                          {sub.weight
-                            ? `${parseFloat(sub.weight).toFixed(1)}t`
-                            : "--"}
-                        </span>
-
-                        {/* Status */}
-                        <div className="text-center">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                              sub.status === "matched"
-                                ? "bg-[#d1fae5] text-[#065f46]"
-                                : "bg-[#fee2e2] text-[#991b1b]"
-                            }`}
-                          >
-                            {sub.status}
-                          </span>
-                        </div>
-
-                        {/* Matched To */}
-                        <span className="font-label text-[11px] text-on-surface-variant truncate">
-                          {load ? `Load ${load.loadNo}` : "--"}
-                        </span>
-
-                        {/* Date */}
-                        <span className="text-[11px] text-outline text-right whitespace-nowrap">
-                          {formatDate(sub.submittedAt)}
-                        </span>
                       </div>
                     );
                   })}
@@ -723,7 +742,7 @@ export function BolQueue() {
                 />
               </>
             )}
-          </>
+          </div>
         )}
 
         {/* ─── TAB: PropX Ticket Photos ─── */}
