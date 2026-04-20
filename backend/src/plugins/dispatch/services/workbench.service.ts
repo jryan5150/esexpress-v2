@@ -664,7 +664,7 @@ export type ResolveAction =
   | "reject";
 
 const ACTION_TO_REASON: Record<
-  Exclude<ResolveAction, "confirm" | "flag_other">,
+  Exclude<ResolveAction, "confirm" | "flag_other" | "reject">,
   string
 > = {
   needs_rate: "rate_missing",
