@@ -18,9 +18,19 @@
  */
 
 import { eq, or, and, between, ilike } from "drizzle-orm";
-import { loads, jotformImports, assignments } from "../../../db/schema.js";
+import {
+  loads,
+  jotformImports,
+  assignments,
+  bolSubmissions,
+} from "../../../db/schema.js";
 import { validateTicketNumber } from "../lib/field-validators.js";
 import type { Database } from "../../../db/client.js";
+import {
+  extractFromPhotos,
+  validateExtraction,
+  type ExtractedBolData,
+} from "./bol-extraction.service.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -100,6 +110,12 @@ export interface SyncResult {
   matched: number;
   skippedDuplicate: number;
   errors: Array<{ submissionId: string; error: string }>;
+  /** Number of submissions where Vision extraction was attempted. */
+  visionAttempted: number;
+  /** Extractions that passed post-extraction validation. */
+  visionSucceeded: number;
+  /** Matches where Vision-extracted fields drove the match (not driver-typed). */
+  visionDrovenMatches: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -110,6 +126,15 @@ let _lastSyncAt: Date | null = null;
 let _lastSyncResult: SyncResult | null = null;
 let _totalSyncs = 0;
 let _totalErrors = 0;
+
+// Vision-extraction counters. Populated by the live JotForm path below.
+// Tracked separately from _totalErrors because Vision failures are
+// non-fatal — the sync falls back to driver-typed fields and still stores
+// the submission.
+let _visionAttempts = 0;
+let _visionSuccesses = 0;
+let _visionFailures = 0;
+let _visionFieldsUsed = 0; // count of matches that used Vision fields (vs typed)
 
 // ---------------------------------------------------------------------------
 // URL Filtering
@@ -536,6 +561,158 @@ async function matchFromFeedbackHistory(
 }
 
 // ---------------------------------------------------------------------------
+// Vision extraction integration (live pivot, 2026-04-20)
+// ---------------------------------------------------------------------------
+
+/**
+ * Result of the Vision extraction attempt for a single JotForm submission.
+ * `visionFields` is null when Vision wasn't attempted, failed, or produced
+ * output that didn't pass validation — callers fall back to driver-typed
+ * fields in that case.
+ */
+interface VisionEnhancement {
+  bolSubmissionId: number | null;
+  visionFields: Partial<ExtractedFields> | null;
+  visionSucceeded: boolean;
+}
+
+/**
+ * Runs Claude Vision on a submission's photos, persists the extraction to
+ * `bol_submissions` (for workbench OCR surfacing + training-data durability),
+ * and returns fields ready to merge into the matcher's input.
+ *
+ * Never throws: any failure resolves to `{ bolSubmissionId, visionFields: null,
+ * visionSucceeded: false }` so the sync falls back to driver-typed fields.
+ *
+ * Tier 0 gate: the Vision-extracted ticket number must pass
+ * `validateTicketNumber` before we trust it. Same gate the JotForm path uses
+ * against driver-typed input. Prevents OCR junk (dates, addresses, stray
+ * digits) from driving false-positive matches.
+ */
+async function enhanceWithVision(
+  db: Database,
+  fields: ExtractedFields,
+): Promise<VisionEnhancement> {
+  const empty: VisionEnhancement = {
+    bolSubmissionId: null,
+    visionFields: null,
+    visionSucceeded: false,
+  };
+
+  if (!process.env.ANTHROPIC_API_KEY) return empty;
+  if (fields.imageUrls.length === 0) return empty;
+
+  _visionAttempts++;
+
+  // Insert bol_submissions row first so the Vision output has a durable home
+  // even if the extract call itself fails mid-flight. `photos` carries the
+  // JotForm CDN URLs; cloudinaryId/filename are empty (not a Cloudinary pipeline).
+  let bolSubmissionId: number | null = null;
+  try {
+    const [inserted] = await db
+      .insert(bolSubmissions)
+      .values({
+        driverName: fields.driverName,
+        photos: fields.imageUrls.map((url) => ({
+          url,
+          cloudinaryId: "",
+          filename: "",
+        })),
+        status: "pending",
+      })
+      .returning({ id: bolSubmissions.id });
+    bolSubmissionId = inserted?.id ?? null;
+  } catch (err) {
+    console.warn(
+      `[JotForm+Vision] Failed to create bol_submissions row: ${
+        err instanceof Error ? err.message : err
+      }`,
+    );
+    // Fall through — Vision can still run and merge fields without persistence.
+  }
+
+  let extraction: ExtractedBolData;
+  try {
+    extraction = await extractFromPhotos(fields.imageUrls);
+  } catch (err) {
+    _visionFailures++;
+    console.warn(
+      `[JotForm+Vision] Extraction failed: ${
+        err instanceof Error ? err.message : err
+      }`,
+    );
+    if (bolSubmissionId != null) {
+      await db
+        .update(bolSubmissions)
+        .set({
+          status: "failed",
+          lastError: err instanceof Error ? err.message : String(err),
+        })
+        .where(eq(bolSubmissions.id, bolSubmissionId))
+        .catch(() => undefined);
+    }
+    return { ...empty, bolSubmissionId };
+  }
+
+  const validation = validateExtraction(extraction);
+
+  if (bolSubmissionId != null) {
+    await db
+      .update(bolSubmissions)
+      .set({
+        aiExtractedData: extraction as unknown as Record<string, unknown>,
+        aiConfidence: extraction.overallConfidence,
+        aiMetadata: {
+          extractedAt: new Date().toISOString(),
+          photoCount: fields.imageUrls.length,
+          fieldConfidences: extraction.fieldConfidences,
+          validationErrors: validation.errors.length,
+          validationWarnings: validation.warnings.length,
+        },
+        status: validation.isValid ? "extracted" : "failed",
+        lastError: validation.isValid
+          ? null
+          : validation.errors.map((e) => e.message).join("; "),
+      })
+      .where(eq(bolSubmissions.id, bolSubmissionId))
+      .catch((err) => {
+        console.warn(
+          `[JotForm+Vision] Failed to persist extraction: ${
+            err instanceof Error ? err.message : err
+          }`,
+        );
+      });
+  }
+
+  if (!validation.isValid) {
+    // Critical errors from validator (no identifier, no weight) — Vision
+    // output isn't usable for matching. Fall back to driver-typed.
+    return { bolSubmissionId, visionFields: null, visionSucceeded: false };
+  }
+
+  _visionSuccesses++;
+
+  // Tier 0 gate on the Vision-extracted ticket number. Matches JotForm path.
+  const ticketValid = extraction.ticketNo
+    ? validateTicketNumber(extraction.ticketNo).valid
+    : false;
+
+  // Build merge candidates. Every field prefers Vision when present + the
+  // Tier 0 gate passed for the ticket. Weight and driver info come through
+  // unconditionally when Vision produced them — they aren't under Tier 0's
+  // jurisdiction.
+  const visionFields: Partial<ExtractedFields> = {
+    bolNo: ticketValid ? extraction.ticketNo : fields.bolNo,
+    loadNo: extraction.loadNumber ?? fields.loadNo,
+    weight: extraction.weight ?? fields.weight,
+    driverName: extraction.driverName ?? fields.driverName,
+    truckNo: extraction.truckNo ?? fields.truckNo,
+  };
+
+  return { bolSubmissionId, visionFields, visionSucceeded: true };
+}
+
+// ---------------------------------------------------------------------------
 // Sync Pipeline
 // ---------------------------------------------------------------------------
 
@@ -556,6 +733,9 @@ export async function syncWeightTickets(
     matched: 0,
     skippedDuplicate: 0,
     errors: [],
+    visionAttempted: 0,
+    visionSucceeded: 0,
+    visionDrovenMatches: 0,
   };
 
   // Fetch from JotForm API
@@ -587,16 +767,38 @@ export async function syncWeightTickets(
         continue;
       }
 
-      // Attempt match before insert
-      const match = await matchSubmissionToLoad(db, fields);
+      // Claude Vision extraction on the photo. Source of truth for fields
+      // when it succeeds — driver-typed values are the fallback, not the
+      // lead. Persists a `bol_submissions` row as a durable training-data
+      // artifact regardless of match outcome.
+      const vision = await enhanceWithVision(db, fields);
+      if (vision.visionFields) result.visionAttempted++;
+      if (vision.visionSucceeded) result.visionSucceeded++;
 
-      // Insert into jotform_imports
+      const matchFields: ExtractedFields = vision.visionFields
+        ? { ...fields, ...vision.visionFields }
+        : fields;
+
+      // Attempt match using the merged field set (Vision where available,
+      // driver-typed where not).
+      const match = await matchSubmissionToLoad(db, matchFields);
+
+      if (match.matched && vision.visionFields) {
+        result.visionDrovenMatches++;
+        _visionFieldsUsed++;
+      }
+
+      // Insert into jotform_imports. `bolNo`, `weight`, `driverName`,
+      // `truckNo` reflect what drove the match — Vision-extracted when
+      // Vision was authoritative, driver-typed otherwise. Preserving both
+      // is valuable: `original_ocr_bol_no` will capture any later operator
+      // correction for retraining.
       await db.insert(jotformImports).values({
         jotformSubmissionId: String(submission.id),
-        driverName: fields.driverName,
-        truckNo: fields.truckNo,
-        bolNo: fields.bolNo,
-        weight: fields.weight != null ? String(fields.weight) : null,
+        driverName: matchFields.driverName,
+        truckNo: matchFields.truckNo,
+        bolNo: matchFields.bolNo,
+        weight: matchFields.weight != null ? String(matchFields.weight) : null,
         photoUrl: fields.photoUrl,
         imageUrls: fields.imageUrls,
         submittedAt: fields.submittedAt,
@@ -605,6 +807,23 @@ export async function syncWeightTickets(
         matchedAt: match.matched ? new Date() : null,
         status: match.matched ? "matched" : "pending",
       });
+
+      // Link Vision extraction row to the matched load so the workbench's
+      // OCR-derived columns (ocrBolNo, ocrWeightLbs, etc.) surface the
+      // extraction data immediately. Also flips bol_submissions.status
+      // from 'extracted' to 'matched' for accurate pipeline diagnostics.
+      if (vision.bolSubmissionId != null && match.matched && match.loadId) {
+        await db
+          .update(bolSubmissions)
+          .set({
+            matchedLoadId: match.loadId,
+            matchMethod: match.matchMethod ?? null,
+            matchScore: match.confidence,
+            status: "matched",
+          })
+          .where(eq(bolSubmissions.id, vision.bolSubmissionId))
+          .catch(() => undefined);
+      }
 
       // 2026-04-14: Bridge JotForm match → assignment.photo_status. Without
       // this, a matched submission would still leave the assignment showing
@@ -656,6 +875,12 @@ export function diagnostics(): {
   checks: Array<{ name: string; ok: boolean; detail?: string | number }>;
 } {
   const hasApiKey = !!process.env.JOTFORM_API_KEY;
+  const hasAnthropicKey = !!process.env.ANTHROPIC_API_KEY;
+  const visionEnabled = hasAnthropicKey;
+  const visionSuccessRate =
+    _visionAttempts > 0
+      ? Math.round((_visionSuccesses / _visionAttempts) * 1000) / 10
+      : null;
 
   return {
     name: "jotform",
@@ -670,10 +895,21 @@ export function diagnostics(): {
             stored: _lastSyncResult.stored,
             matched: _lastSyncResult.matched,
             errors: _lastSyncResult.errors.length,
+            visionAttempted: _lastSyncResult.visionAttempted,
+            visionSucceeded: _lastSyncResult.visionSucceeded,
+            visionDrovenMatches: _lastSyncResult.visionDrovenMatches,
           }
         : null,
       formId: DEFAULT_FORM_ID,
       allowedPhotoDomains: [...ALLOWED_PHOTO_DOMAINS],
+      vision: {
+        enabled: visionEnabled,
+        totalAttempts: _visionAttempts,
+        totalSuccesses: _visionSuccesses,
+        totalFailures: _visionFailures,
+        totalFieldsUsed: _visionFieldsUsed,
+        successRatePct: visionSuccessRate,
+      },
     },
     checks: [
       {
@@ -685,6 +921,13 @@ export function diagnostics(): {
         name: "last-sync",
         ok: _lastSyncResult ? _lastSyncResult.errors.length === 0 : true,
         detail: _lastSyncAt?.toISOString() ?? "never",
+      },
+      {
+        name: "vision-extraction",
+        ok: visionEnabled,
+        detail: visionEnabled
+          ? `ANTHROPIC_API_KEY configured (success=${visionSuccessRate ?? "n/a"}%)`
+          : "ANTHROPIC_API_KEY missing — falling back to driver-typed fields",
       },
     ],
   };
