@@ -176,6 +176,10 @@ export type WorkbenchFilter =
   | "mine"
   | "ready_to_clear"
   | "entered_today"
+  | "missing_ticket"
+  | "missing_driver"
+  | "needs_rate"
+  | "built_today"
   | "all";
 
 export interface WorkbenchListParams {
@@ -262,6 +266,27 @@ export async function listWorkbenchRows(
         return and(
           inArray(assignments.handlerStage, ["entered", "cleared"]),
           sql`${assignments.enteredOn} = CURRENT_DATE`,
+        );
+      case "missing_ticket":
+        return and(
+          eq(assignments.handlerStage, "uncertain"),
+          sql`${assignments.uncertainReasons} @> '["missing_tickets"]'::jsonb`,
+        );
+      case "missing_driver":
+        return and(
+          eq(assignments.handlerStage, "uncertain"),
+          sql`${assignments.uncertainReasons} @> '["missing_driver"]'::jsonb`,
+        );
+      case "needs_rate":
+        return and(
+          eq(assignments.handlerStage, "uncertain"),
+          sql`${assignments.uncertainReasons} @> '["rate_missing"]'::jsonb`,
+        );
+      case "built_today":
+        // Anything advanced through the build pipeline today.
+        return and(
+          inArray(assignments.handlerStage, ["building", "entered", "cleared"]),
+          sql`${assignments.stageChangedAt}::date = CURRENT_DATE`,
         );
       case "all":
       default:
@@ -623,7 +648,9 @@ export async function flagToUncertain(
  * - missing_ticket   — tag with missing_tickets
  * - missing_driver   — tag with missing_driver
  * - flag_other       — tag with an open-ended note (no reason tag; reason held in notes)
- * - reject           — (not implemented in MVP; frontend exposes it but routing skips)
+ * - reject           — bad row: status='cancelled', handler_stage='cleared',
+ *                      assignment drops out of every active queue. Audit
+ *                      trail preserved in status_history.
  *
  * All writes go through a transaction with FOR UPDATE to avoid races with
  * the reconciliation refresher.
@@ -633,7 +660,8 @@ export type ResolveAction =
   | "needs_rate"
   | "missing_ticket"
   | "missing_driver"
-  | "flag_other";
+  | "flag_other"
+  | "reject";
 
 const ACTION_TO_REASON: Record<
   Exclude<ResolveAction, "confirm" | "flag_other">,
@@ -691,6 +719,41 @@ export async function routeUncertain(
         notes: ctx.notes ?? "confirmed via resolve modal",
       }),
     );
+  }
+
+  // Reject path: cancel + clear. Drops the assignment from every active
+  // queue. Audit kept in statusHistory.
+  if (action === "reject") {
+    return db.transaction(async (tx) => {
+      const [row] = await tx
+        .select({ id: assignments.id })
+        .from(assignments)
+        .where(eq(assignments.id, assignmentId))
+        .limit(1)
+        .for("update");
+      if (!row) throw new NotFoundError(`Assignment ${assignmentId} not found`);
+
+      const now = new Date();
+      const historyEntry = {
+        status: "reject",
+        changedAt: now.toISOString(),
+        changedBy: ctx.userId,
+        changedByName: ctx.userName,
+        notes: ctx.notes ?? "rejected via resolve modal",
+      };
+
+      await tx
+        .update(assignments)
+        .set({
+          status: "cancelled",
+          handlerStage: "cleared",
+          uncertainReasons: [],
+          stageChangedAt: now,
+          statusHistory: sql`coalesce(${assignments.statusHistory}, '[]'::jsonb) || ${JSON.stringify([historyEntry])}::jsonb`,
+          updatedAt: now,
+        })
+        .where(eq(assignments.id, assignmentId));
+    });
   }
 
   // Re-tag path: replace uncertain_reasons with a single specific reason

@@ -87,6 +87,13 @@ const ACTIONS: ActionDef[] = [
     desc: "Not one of the above — add a note.",
     bg: "bg-slate-600",
   },
+  {
+    action: "reject",
+    icon: "🗑",
+    title: "Reject load",
+    desc: "Bad row — drops out of every queue. Audit trail kept.",
+    bg: "bg-rose-700",
+  },
 ];
 
 export function ResolveModal({

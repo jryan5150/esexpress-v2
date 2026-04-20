@@ -277,6 +277,10 @@ export type WorkbenchFilter =
   | "mine"
   | "ready_to_clear"
   | "entered_today"
+  | "missing_ticket"
+  | "missing_driver"
+  | "needs_rate"
+  | "built_today"
   | "all";
 
 export type LoadSource = "propx" | "logistiq" | "jotform" | "manual";

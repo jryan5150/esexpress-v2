@@ -102,7 +102,8 @@ export type ResolveAction =
   | "needs_rate"
   | "missing_ticket"
   | "missing_driver"
-  | "flag_other";
+  | "flag_other"
+  | "reject";
 
 /** Granular Resolve action on an uncertain row.
  *  confirm         → clears reasons + advances to ready_to_build
@@ -110,6 +111,8 @@ export type ResolveAction =
  *  missing_ticket  → re-tags with missing_tickets
  *  missing_driver  → re-tags with missing_driver
  *  flag_other      → clears reason tags, keeps row in uncertain with note
+ *  reject          → status='cancelled', handler_stage='cleared'; row leaves
+ *                    every active queue. Audit kept in status_history.
  */
 export function useRouteUncertain() {
   const qc = useQueryClient();
