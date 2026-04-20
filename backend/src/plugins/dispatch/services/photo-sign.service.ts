@@ -26,6 +26,9 @@ const ALLOWED_HOST_PREFIXES = [
   "https://hairpintrucking.jotform.com/",
   "https://www.jotform.com/",
   "https://files.propx.com/",
+  // PropX authenticated ticket-image endpoint. Proxy injects PROPX_API_KEY
+  // server-side (see photo.service.ts proxyPhoto).
+  "https://publicapis.propx.com/",
 ];
 
 function wrapIfAllowed(url: string | null): string | null {
@@ -38,5 +41,8 @@ function wrapIfAllowed(url: string | null): string | null {
 export async function signPhotoUrls<T extends { photoThumbUrl: string | null }>(
   rows: T[],
 ): Promise<T[]> {
-  return rows.map((r) => ({ ...r, photoThumbUrl: wrapIfAllowed(r.photoThumbUrl) }));
+  return rows.map((r) => ({
+    ...r,
+    photoThumbUrl: wrapIfAllowed(r.photoThumbUrl),
+  }));
 }

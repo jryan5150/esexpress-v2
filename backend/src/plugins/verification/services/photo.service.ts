@@ -56,6 +56,10 @@ const MAX_PHOTO_SIZE = 25 * 1024 * 1024; // 25 MB per photo
  */
 const ALLOWED_PHOTO_HOSTS = new Set([
   "files.propx.com",
+  // PropX authenticated API host for ticket images. The proxy injects the
+  // PROPX_API_KEY as an `authorization` header for requests on this host —
+  // the key never reaches the browser. Matches v1's auth-proxy pattern.
+  "publicapis.propx.com",
   "hairpintrucking.jotform.com",
   "www.jotform.com",
   "storage.googleapis.com",
@@ -246,6 +250,14 @@ export async function proxyPhoto(
     }
   }
 
+  // PropX API host requires the tenant API key. Injected server-side so it
+  // never reaches the browser. Returns 401 without it.
+  const isPropxApi = parsed.hostname === "publicapis.propx.com";
+  const propxApiKey = isPropxApi ? process.env.PROPX_API_KEY : null;
+  if (isPropxApi && !propxApiKey) {
+    throw new Error("PROPX_API_KEY not configured for PropX photo proxy");
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROXY_TIMEOUT_MS);
 
@@ -257,6 +269,7 @@ export async function proxyPhoto(
         // UA with a 302 to a JS-redirect page.
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+        ...(propxApiKey ? { authorization: propxApiKey } : {}),
       },
       // Follow redirects: JotForm chains 302 → CDN. The SSRF guard is the
       // initial allowlist check above; once the destination is decided to

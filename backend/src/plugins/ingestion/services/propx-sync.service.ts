@@ -1,5 +1,5 @@
 import { eq, and, inArray } from "drizzle-orm";
-import { loads } from "../../../db/schema.js";
+import { loads, photos } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
 import type { PropxClient } from "./propx.service.js";
 import { classifyHistoricalLoad } from "../../dispatch/lib/historical-classifier.js";
@@ -616,6 +616,12 @@ export async function syncPropxLoads(
       .map((row) => row.sourceId),
   );
 
+  // Captures the DB id + sourceId for every upserted load that carries a
+  // ticket number. Used below to materialize a `photos` row pointing at the
+  // PropX `/loads/{id}/ticket_image` endpoint so the image is viewable in
+  // the workbench without a per-view API round-trip at render time.
+  const photoCandidates: Array<{ loadId: number; sourceId: string }> = [];
+
   // 5. Upsert each load (skip finalized)
   for (const load of normalized) {
     if (finalizedSet.has(load.sourceId)) {
@@ -702,6 +708,13 @@ export async function syncPropxLoads(
         // Without a separate existence check, we approximate.
         result.inserted++;
       }
+
+      // Gate: only loads with a ticket number have a corresponding ticket
+      // image at PropX. 98.4% of PropX loads satisfy this in prod data
+      // (checked 2026-04-20). Matches v1's `extractAttachmentsFromLoad` gate.
+      if (row?.id && load.ticketNo) {
+        photoCandidates.push({ loadId: row.id, sourceId: load.sourceId });
+      }
     } catch (err: unknown) {
       result.errors.push({
         sourceId: load.sourceId,
@@ -736,6 +749,40 @@ export async function syncPropxLoads(
   }
   result.inserted = insertCount;
   result.updated = updateCount;
+
+  // 6. Materialize PropX ticket-image photo rows. One row per load whose
+  // load carries a ticket_no. The source_url points at PropX's authenticated
+  // `/loads/{id}/ticket_image` endpoint; the photo proxy injects the API key
+  // server-side at view time. Idempotent: skips loads that already have any
+  // propx-source photo row.
+  if (photoCandidates.length > 0) {
+    const candidateLoadIds = photoCandidates.map((c) => c.loadId);
+    const existingPhotoRows = await db
+      .select({ loadId: photos.loadId })
+      .from(photos)
+      .where(
+        and(
+          eq(photos.source, "propx"),
+          inArray(photos.loadId, candidateLoadIds),
+        ),
+      );
+    const existingPhotoLoadIds = new Set(
+      existingPhotoRows.map((r) => r.loadId),
+    );
+
+    const photoValues = photoCandidates
+      .filter((c) => !existingPhotoLoadIds.has(c.loadId))
+      .map((c) => ({
+        loadId: c.loadId,
+        source: "propx" as const,
+        sourceUrl: propxClient.getTicketImageUrl(c.sourceId),
+        type: "weight_ticket" as const,
+      }));
+
+    if (photoValues.length > 0) {
+      await db.insert(photos).values(photoValues);
+    }
+  }
 
   return result;
 }

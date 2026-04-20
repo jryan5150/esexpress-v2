@@ -315,18 +315,69 @@ export class PropxClient {
     return this.requestAllPages<PropxLoad>(`/jobs/${jobId}/loads`);
   }
 
-  async getLoadTicketImage(loadId: string): Promise<Buffer | null> {
-    try {
-      const data = await this.request<{ image?: string }>(
-        `/loads/${loadId}/ticket-image`,
-      );
-      if (!data.image) return null;
-      return Buffer.from(data.image, "base64");
-    } catch (err: unknown) {
-      // 404 = no ticket image available — not an error condition
-      if (err instanceof HttpError && err.status === 404) return null;
-      throw err;
-    }
+  /**
+   * Canonical URL for a load's ticket image. Stored in `photos.source_url` at
+   * sync time and served to the browser via the SSRF-safe proxy, which injects
+   * the PropX authorization header server-side. Matches v1's working pattern
+   * (`propxService.js:1102`).
+   */
+  getTicketImageUrl(loadId: string): string {
+    const base = this.baseUrl.endsWith("/")
+      ? this.baseUrl.slice(0, -1)
+      : this.baseUrl;
+    return `${base}/loads/${loadId}/ticket_image`;
+  }
+
+  /**
+   * Fetch the raw ticket image for a load. PropX returns binary JPEG (not
+   * JSON + base64 as a sibling endpoint suggests). The endpoint path uses an
+   * underscore — `ticket_image`, not `ticket-image`.
+   *
+   * Returns `null` when PropX has no image for the load (404). Throws for
+   * other upstream failures.
+   */
+  async getLoadTicketImage(
+    loadId: string,
+  ): Promise<{ buffer: Buffer; contentType: string } | null> {
+    const url = this.getTicketImageUrl(loadId);
+
+    return this.queue.add(
+      () =>
+        this.policy.execute(async () => {
+          let response: Response;
+          try {
+            response = await fetch(url, {
+              method: "GET",
+              headers: { authorization: this.apiKey },
+              signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+            });
+          } catch (err: unknown) {
+            if (err instanceof Error && err.name === "TimeoutError") {
+              throw new NetworkError(
+                "TIMEOUT",
+                `Request to ticket_image timed out after ${REQUEST_TIMEOUT_MS}ms`,
+              );
+            }
+            const code = (err as NodeJS.ErrnoException).code ?? "UNKNOWN";
+            throw new NetworkError(
+              code,
+              `Request to ticket_image failed: ${(err as Error).message}`,
+            );
+          }
+
+          if (response.status === 404) return null;
+          if (!response.ok) {
+            const body = await response.text().catch(() => "");
+            throw new HttpError(response.status, body);
+          }
+
+          const contentType =
+            response.headers.get("content-type") ?? "image/jpeg";
+          const buffer = Buffer.from(await response.arrayBuffer());
+          return { buffer, contentType };
+        }),
+      { throwOnTimeout: true },
+    ) as Promise<{ buffer: Buffer; contentType: string } | null>;
   }
 
   // -------------------------------------------------------------------------
