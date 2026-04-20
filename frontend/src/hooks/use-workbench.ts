@@ -16,19 +16,28 @@ export interface WorkbenchQueryOpts {
   wellId?: number;
   /** Substring match on wells.name. Ignored if wellId is set. */
   wellName?: string;
+  /** Page size. Allowed: 25, 50, 75, 100. Default 50. */
+  pageSize?: number;
+  /** 0-indexed page number. Default 0. */
+  page?: number;
 }
+
+export const PAGE_SIZE_OPTIONS = [25, 50, 75, 100] as const;
+export type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
 
 export function useWorkbench(
   filter: WorkbenchFilter,
   opts: WorkbenchQueryOpts = {},
 ) {
   const { search, dateFrom, dateTo, truckNo, wellId, wellName } = opts;
+  const pageSize: PageSize =
+    (PAGE_SIZE_OPTIONS as readonly number[]).includes(opts.pageSize ?? 50)
+      ? (opts.pageSize as PageSize)
+      : 50;
+  const page = Math.max(0, opts.page ?? 0);
   const params = new URLSearchParams({ filter });
-  // Pull the full filter set on a single page so the demo + dispatchers
-  // can scroll the entire queue. Backend caps at 500. Uncertain ~643,
-  // Ready to Build ~2,240 — Ready to Build still gets a 500-row sample
-  // until we build true pagination UI.
-  params.set("limit", "500");
+  params.set("limit", String(pageSize));
+  params.set("offset", String(page * pageSize));
   if (search) params.set("search", search);
   if (dateFrom) params.set("dateFrom", dateFrom);
   if (dateTo) params.set("dateTo", dateTo);
@@ -45,6 +54,8 @@ export function useWorkbench(
     truckNo ?? "",
     wellId ?? "",
     wellName ?? "",
+    pageSize,
+    page,
   ] as const;
   return useQuery({
     queryKey: key,

@@ -5,6 +5,8 @@ import {
   useAdvanceStage,
   useBulkConfirm,
   useRouteUncertain,
+  PAGE_SIZE_OPTIONS,
+  type PageSize,
 } from "../hooks/use-workbench";
 import { useCurrentUser } from "../hooks/use-auth";
 import { WorkbenchRow } from "../components/WorkbenchRow";
@@ -40,6 +42,14 @@ export function Workbench() {
   const wellName = params.get("wellName") ?? "";
   const view: WorkbenchView =
     params.get("view") === "tabular" ? "tabular" : "list";
+  // Pagination state lives in URL so reload + sharable links keep place.
+  const pageSize: PageSize = (() => {
+    const raw = parseInt(params.get("pageSize") ?? "50", 10);
+    return (PAGE_SIZE_OPTIONS as readonly number[]).includes(raw)
+      ? (raw as PageSize)
+      : 50;
+  })();
+  const page = Math.max(0, parseInt(params.get("page") ?? "0", 10) || 0);
 
   const userQuery = useCurrentUser();
   const user = userQuery.data;
@@ -53,6 +63,8 @@ export function Workbench() {
     dateTo: dateTo || undefined,
     truckNo: truckNo || undefined,
     wellName: view === "tabular" ? undefined : wellName || undefined,
+    pageSize,
+    page,
   });
   const advance = useAdvanceStage();
   const bulkConfirm = useBulkConfirm();
@@ -101,8 +113,27 @@ export function Workbench() {
   const setFilter = (f: WorkbenchFilter) => {
     const next = new URLSearchParams(params);
     next.set("filter", f);
+    next.delete("page");
     setParams(next);
   };
+
+  const setPageSize = (n: PageSize) => {
+    const next = new URLSearchParams(params);
+    next.set("pageSize", String(n));
+    next.delete("page");
+    setParams(next);
+  };
+
+  const setPage = (p: number) => {
+    const next = new URLSearchParams(params);
+    if (p <= 0) next.delete("page");
+    else next.set("page", String(p));
+    setParams(next);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const pageStart = total === 0 ? 0 : page * pageSize + 1;
+  const pageEnd = Math.min(total, (page + 1) * pageSize);
 
   const setSearch = (s: string) => {
     const next = new URLSearchParams(params);
@@ -307,10 +338,48 @@ export function Workbench() {
             Tabular
           </button>
         </div>
-        <div className="ml-auto text-xs text-on-surface-variant self-center">
-          {view === "tabular" && tabularWell !== null
-            ? `${displayedRows.length} of ${total}`
-            : `${total} ${total === 1 ? "load" : "loads"}`}
+        <div className="ml-auto flex items-center gap-3 text-xs text-on-surface-variant self-center">
+          <label className="flex items-center gap-1">
+            <span className="font-medium uppercase tracking-wider text-[10px]">
+              Per page
+            </span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value) as PageSize)}
+              className="bg-surface-variant rounded px-1.5 py-0.5 text-xs"
+            >
+              {PAGE_SIZE_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage(page - 1)}
+              disabled={page <= 0}
+              className="px-2 py-0.5 rounded border border-outline-variant text-on-surface hover:bg-surface-variant disabled:opacity-30"
+            >
+              ‹ Prev
+            </button>
+            <span className="px-1 tabular-nums">
+              {pageStart.toLocaleString()}-{pageEnd.toLocaleString()} of{" "}
+              {total.toLocaleString()}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage(page + 1)}
+              disabled={page >= totalPages - 1}
+              className="px-2 py-0.5 rounded border border-outline-variant text-on-surface hover:bg-surface-variant disabled:opacity-30"
+            >
+              Next ›
+            </button>
+          </div>
+          {view === "tabular" && tabularWell !== null && (
+            <span>{displayedRows.length} shown</span>
+          )}
         </div>
       </div>
 

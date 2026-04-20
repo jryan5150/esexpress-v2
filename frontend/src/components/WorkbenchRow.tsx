@@ -1,6 +1,7 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { StagePill } from "./StagePill";
 import { MatchScoreBadge } from "./MatchScoreBadge";
+import { PhotoLightbox } from "./PhotoLightbox";
 import type {
   WorkbenchRow as Row,
   HandlerStage,
@@ -122,6 +123,7 @@ export const WorkbenchRow = memo(function WorkbenchRow({
   const isCleanUncertain =
     row.handlerStage === "uncertain" && row.uncertainReasons.length === 0;
   const action = primaryAction(row.handlerStage, isCleanUncertain);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   return (
     <div
@@ -198,13 +200,23 @@ export const WorkbenchRow = memo(function WorkbenchRow({
 
         <div className="col-span-1">
           {row.photoThumbUrl ? (
-            <img
-              src={row.photoThumbUrl}
-              alt=""
-              className="h-8 w-8 object-cover rounded"
-            />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxOpen(true);
+              }}
+              title="Click to enlarge"
+              className="cursor-zoom-in"
+            >
+              <img
+                src={row.photoThumbUrl}
+                alt={`Load ${row.loadNo} ticket photo`}
+                className="h-8 w-8 object-cover rounded ring-1 ring-outline-variant hover:ring-primary"
+              />
+            </button>
           ) : row.photoStatus === "missing" ? (
-            <span className="text-xs text-red-400">no photo</span>
+            <span className="text-xs text-red-700">no photo</span>
           ) : (
             <span className="text-xs text-on-surface-variant">
               {row.photoStatus ?? "--"}
@@ -259,6 +271,11 @@ export const WorkbenchRow = memo(function WorkbenchRow({
           ) : null}
         </div>
       </div>
+      <PhotoLightbox
+        url={lightboxOpen ? row.photoThumbUrl : null}
+        alt={`Load ${row.loadNo} ticket photo`}
+        onClose={() => setLightboxOpen(false)}
+      />
     </div>
   );
 });

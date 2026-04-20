@@ -246,7 +246,10 @@ export async function listWorkbenchRows(
   db: Database,
   params: WorkbenchListParams,
 ): Promise<{ rows: WorkbenchRow[]; total: number }> {
-  const limit = Math.min(params.limit ?? 100, 500);
+  // Pagination: frontend picks page-size from {25,50,75,100}. 200 is the
+  // hard ceiling — beyond that the score-compute + photo-sign per-row gets
+  // expensive and the dispatcher loses track anyway.
+  const limit = Math.min(params.limit ?? 50, 200);
   const offset = params.offset ?? 0;
 
   const filterCondition = (() => {
@@ -349,7 +352,9 @@ export async function listWorkbenchRows(
       ? undefined
       : allConditions.length === 1
         ? allConditions[0]
-        : and(...(allConditions as NonNullable<typeof allConditions[number]>[]));
+        : and(
+            ...(allConditions as NonNullable<(typeof allConditions)[number]>[]),
+          );
 
   const baseQuery = db
     .select({
@@ -378,13 +383,14 @@ export async function listWorkbenchRows(
       autoMapTier: assignments.autoMapTier,
       photoStatus: assignments.photoStatus,
       // Correlated subquery avoids row-multiplication when multiple photos
-      // exist per assignment. Orders by id ascending (first submitted wins).
-      // Falls back to the corpus-backfilled bol_submissions.photos URL when
-      // the photos table has no row for this assignment — covers the
-      // historical corpus where photos live in bol_submissions, not photos.
+      // exist per assignment. Ordering: first try assignment-scoped photos
+      // (JotForm driver uploads), then load-scoped photos (PropX ticket
+      // images attached at sync time — no assignment link yet), then the
+      // historical bol_submissions corpus.
       photoThumbUrl: sql<string | null>`
         COALESCE(
           (SELECT ${photos.sourceUrl} FROM ${photos} WHERE ${photos.assignmentId} = ${assignments.id} ORDER BY ${photos.id} ASC LIMIT 1),
+          (SELECT ${photos.sourceUrl} FROM ${photos} WHERE ${photos.loadId} = ${loads.id} ORDER BY ${photos.id} ASC LIMIT 1),
           (SELECT ${bolSubmissions.photos}->0->>'url' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)
         )
       `,
@@ -470,10 +476,8 @@ export async function listWorkbenchRows(
       autoMapTier: r.autoMapTier,
       uncertainReasons,
       ocrBolNo: r.ocrBolNo,
-      ocrWeightLbs:
-        r.ocrWeightLbs != null ? Number(r.ocrWeightLbs) : null,
-      loadWeightLbs:
-        r.loadWeightLbs != null ? Number(r.loadWeightLbs) : null,
+      ocrWeightLbs: r.ocrWeightLbs != null ? Number(r.ocrWeightLbs) : null,
+      loadWeightLbs: r.loadWeightLbs != null ? Number(r.loadWeightLbs) : null,
       driverRoster,
       // Phase 6
       loadTruckNo: r.truckNo,
@@ -486,9 +490,7 @@ export async function listWorkbenchRows(
         r.ocrTareWeightLbs != null ? Number(r.ocrTareWeightLbs) : null,
       ocrNotes: r.ocrNotes,
       ocrOverallConfidence:
-        r.ocrOverallConfidence != null
-          ? Number(r.ocrOverallConfidence)
-          : null,
+        r.ocrOverallConfidence != null ? Number(r.ocrOverallConfidence) : null,
     });
     const score = scoreMatch(features);
 
@@ -682,43 +684,46 @@ export async function routeUncertain(
     // Human override path: clear open reasons, then advance through the
     // normal state machine. Clearing reasons BEFORE advanceStage lets
     // allowedTransition's gate succeed (reasons.length === 0 required).
-    return db.transaction(async (tx) => {
-      const [row] = await tx
-        .select()
-        .from(assignments)
-        .where(eq(assignments.id, assignmentId))
-        .limit(1)
-        .for("update");
-      if (!row) throw new NotFoundError(`Assignment ${assignmentId} not found`);
-      if (row.handlerStage !== "uncertain") {
-        throw new ValidationError(
-          `Cannot confirm: assignment is in stage ${row.handlerStage}, not uncertain`,
-        );
-      }
+    return db
+      .transaction(async (tx) => {
+        const [row] = await tx
+          .select()
+          .from(assignments)
+          .where(eq(assignments.id, assignmentId))
+          .limit(1)
+          .for("update");
+        if (!row)
+          throw new NotFoundError(`Assignment ${assignmentId} not found`);
+        if (row.handlerStage !== "uncertain") {
+          throw new ValidationError(
+            `Cannot confirm: assignment is in stage ${row.handlerStage}, not uncertain`,
+          );
+        }
 
-      const now = new Date();
-      const historyEntry = {
-        status: "confirm-override",
-        changedAt: now.toISOString(),
-        changedBy: ctx.userId,
-        changedByName: ctx.userName,
-        notes: ctx.notes ?? "confirmed via resolve modal (override)",
-      };
+        const now = new Date();
+        const historyEntry = {
+          status: "confirm-override",
+          changedAt: now.toISOString(),
+          changedBy: ctx.userId,
+          changedByName: ctx.userName,
+          notes: ctx.notes ?? "confirmed via resolve modal (override)",
+        };
 
-      await tx
-        .update(assignments)
-        .set({
-          uncertainReasons: [],
-          statusHistory: sql`coalesce(${assignments.statusHistory}, '[]'::jsonb) || ${JSON.stringify([historyEntry])}::jsonb`,
-          updatedAt: now,
-        })
-        .where(eq(assignments.id, assignmentId));
-    }).then(() =>
-      advanceStage(db, assignmentId, "ready_to_build", {
-        ...ctx,
-        notes: ctx.notes ?? "confirmed via resolve modal",
-      }),
-    );
+        await tx
+          .update(assignments)
+          .set({
+            uncertainReasons: [],
+            statusHistory: sql`coalesce(${assignments.statusHistory}, '[]'::jsonb) || ${JSON.stringify([historyEntry])}::jsonb`,
+            updatedAt: now,
+          })
+          .where(eq(assignments.id, assignmentId));
+      })
+      .then(() =>
+        advanceStage(db, assignmentId, "ready_to_build", {
+          ...ctx,
+          notes: ctx.notes ?? "confirmed via resolve modal",
+        }),
+      );
   }
 
   // Reject path: cancel + clear. Drops the assignment from every active
