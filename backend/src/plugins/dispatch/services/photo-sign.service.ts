@@ -1,65 +1,35 @@
-import { Storage } from "@google-cloud/storage";
+/**
+ * Photo URL wrapper — routes raw photo URLs through the SSRF-safe proxy.
+ *
+ * Original intent was V4-signed GCS URLs, but the existing
+ * /api/v1/verification/photos/proxy route already handles GCS + JotForm +
+ * PropX with an allowlist, and browsers <img src> can hit it directly
+ * (same origin, no auth header needed). Routing through the proxy is a
+ * strictly-better choice: no service-account signing dependency, one code
+ * path for all photo sources, and the allowlist is already well-tested.
+ *
+ * File name kept as `photo-sign.service` to avoid rename churn — the
+ * public symbol is what callers import.
+ */
 
-// Photos in the esexpress-weight-tickets bucket are private (org policy
-// blocks making the bucket public). The workbench renders thumbnails via
-// plain <img src>, so we need the URL to be directly fetchable by the
-// browser. Signed V4 URLs solve this: the bucket stays private, but the
-// URL carries a short-lived signature (1h TTL) that GCS honors without
-// auth headers.
-//
-// getSignedUrl() is a pure-local operation against the service-account
-// private key — no RPC — so signing ~2000 URLs per workbench list is
-// effectively free in wall time. If signing fails we return the raw URL;
-// the browser will render a broken image (same as pre-fix), no crash.
+const PROXY_PATH = "/api/v1/verification/photos/proxy";
 
-let storage: Storage | null = null;
+const ALLOWED_HOST_PREFIXES = [
+  "https://storage.googleapis.com/esexpress-weight-tickets/",
+  "https://hairpintrucking.jotform.com/",
+  "https://www.jotform.com/",
+  "https://files.propx.com/",
+];
 
-const GCS_BUCKET_PREFIX = "https://storage.googleapis.com/esexpress-weight-tickets/";
-
-function getStorage(): Storage {
-  if (storage) return storage;
-
-  const keyJson = process.env.GCS_SERVICE_ACCOUNT_KEY;
-  if (keyJson) {
-    const decoded = keyJson.trimStart().startsWith("{")
-      ? keyJson
-      : Buffer.from(keyJson, "base64").toString();
-    storage = new Storage({ credentials: JSON.parse(decoded) });
-  } else {
-    storage = new Storage();
-  }
-  return storage;
-}
-
-export async function signPhotoUrlIfGcs(
-  url: string | null,
-): Promise<string | null> {
+function wrapIfAllowed(url: string | null): string | null {
   if (!url) return null;
-  if (!url.startsWith(GCS_BUCKET_PREFIX)) return url;
-
-  const objectPath = url.slice(GCS_BUCKET_PREFIX.length);
-  try {
-    const [signedUrl] = await getStorage()
-      .bucket("esexpress-weight-tickets")
-      .file(objectPath)
-      .getSignedUrl({
-        version: "v4",
-        action: "read",
-        expires: Date.now() + 60 * 60 * 1000,
-      });
-    return signedUrl;
-  } catch {
-    return url;
-  }
+  const allowed = ALLOWED_HOST_PREFIXES.some((p) => url.startsWith(p));
+  if (!allowed) return url;
+  return `${PROXY_PATH}?url=${encodeURIComponent(url)}`;
 }
 
 export async function signPhotoUrls<T extends { photoThumbUrl: string | null }>(
   rows: T[],
 ): Promise<T[]> {
-  return Promise.all(
-    rows.map(async (r) => ({
-      ...r,
-      photoThumbUrl: await signPhotoUrlIfGcs(r.photoThumbUrl),
-    })),
-  );
+  return rows.map((r) => ({ ...r, photoThumbUrl: wrapIfAllowed(r.photoThumbUrl) }));
 }
