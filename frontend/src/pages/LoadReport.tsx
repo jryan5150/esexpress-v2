@@ -115,12 +115,14 @@ export function LoadReport() {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-4 gap-3">
+    <div className="flex-1 min-h-0 flex flex-col p-4 gap-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-xl font-headline">Load Report</h1>
         <div className="flex items-center gap-2 flex-wrap">
           <label className="flex items-center gap-1 text-xs text-on-surface-variant">
-            <span className="font-medium uppercase tracking-wider text-[10px]">From</span>
+            <span className="font-medium uppercase tracking-wider text-[10px]">
+              From
+            </span>
             <input
               type="date"
               className="bg-surface-variant rounded px-2 py-1 text-sm"
@@ -129,7 +131,9 @@ export function LoadReport() {
             />
           </label>
           <label className="flex items-center gap-1 text-xs text-on-surface-variant">
-            <span className="font-medium uppercase tracking-wider text-[10px]">To</span>
+            <span className="font-medium uppercase tracking-wider text-[10px]">
+              To
+            </span>
             <input
               type="date"
               className="bg-surface-variant rounded px-2 py-1 text-sm"
@@ -138,7 +142,9 @@ export function LoadReport() {
             />
           </label>
           <label className="flex items-center gap-1 text-xs text-on-surface-variant">
-            <span className="font-medium uppercase tracking-wider text-[10px]">Truck</span>
+            <span className="font-medium uppercase tracking-wider text-[10px]">
+              Truck
+            </span>
             <input
               type="text"
               className="bg-surface-variant rounded px-2 py-1 text-sm w-24"
@@ -206,7 +212,10 @@ function Table({ rows }: { rows: Row[] }) {
       <thead className="bg-surface-container-low text-on-surface-variant">
         <tr>
           {COLUMNS.map((c) => (
-            <th key={String(c.key)} className="text-left px-3 py-1.5 font-medium uppercase tracking-wider">
+            <th
+              key={String(c.key)}
+              className="text-left px-3 py-1.5 font-medium uppercase tracking-wider"
+            >
               {c.label}
             </th>
           ))}
@@ -214,7 +223,10 @@ function Table({ rows }: { rows: Row[] }) {
       </thead>
       <tbody>
         {rows.map((r) => (
-          <tr key={r.assignmentId} className="border-b border-outline-variant/30 hover:bg-surface-container-low/40">
+          <tr
+            key={r.assignmentId}
+            className="border-b border-outline-variant/30 hover:bg-surface-container-low/40"
+          >
             {COLUMNS.map((c) => (
               <td key={String(c.key)} className="px-3 py-1.5 text-on-surface">
                 {getValue(r, c.key)}

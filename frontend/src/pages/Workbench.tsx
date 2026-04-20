@@ -431,6 +431,45 @@ export function Workbench() {
             )}
             <button
               type="button"
+              onClick={async () => {
+                const ids = Array.from(selected);
+                if (ids.length === 0) return;
+                try {
+                  const res = await fetch(
+                    `${import.meta.env.VITE_API_URL || ""}/api/v1/verification/photos/zip`,
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${localStorage.getItem("esexpress-token") ?? ""}`,
+                      },
+                      body: JSON.stringify({ assignmentIds: ids }),
+                    },
+                  );
+                  if (!res.ok)
+                    throw new Error(`ZIP failed: HTTP ${res.status}`);
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `esexpress_photos_${ids.length}.zip`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  alert(
+                    `Photo download failed: ${err instanceof Error ? err.message : String(err)}`,
+                  );
+                }
+              }}
+              className="px-3 py-1 text-sm rounded border border-surface-variant hover:bg-surface-variant"
+              title="Download all photos for the selected loads as a ZIP (for manual PCS attach while OAuth isn't live)"
+            >
+              Download Photos
+            </button>
+            <button
+              type="button"
               onClick={() => setSelected(new Set())}
               className="px-3 py-1 text-sm rounded border border-surface-variant"
             >
