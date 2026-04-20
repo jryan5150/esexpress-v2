@@ -353,9 +353,15 @@ export async function listWorkbenchRows(
       photoStatus: assignments.photoStatus,
       // Correlated subquery avoids row-multiplication when multiple photos
       // exist per assignment. Orders by id ascending (first submitted wins).
-      photoThumbUrl: sql<
-        string | null
-      >`(SELECT ${photos.sourceUrl} FROM ${photos} WHERE ${photos.assignmentId} = ${assignments.id} ORDER BY ${photos.id} ASC LIMIT 1)`,
+      // Falls back to the corpus-backfilled bol_submissions.photos URL when
+      // the photos table has no row for this assignment — covers the
+      // historical corpus where photos live in bol_submissions, not photos.
+      photoThumbUrl: sql<string | null>`
+        COALESCE(
+          (SELECT ${photos.sourceUrl} FROM ${photos} WHERE ${photos.assignmentId} = ${assignments.id} ORDER BY ${photos.id} ASC LIMIT 1),
+          (SELECT ${bolSubmissions.photos}->0->>'url' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)
+        )
+      `,
       rate: loads.rate,
       // Phase 5+6: OCR-extracted fields from the most-recent bol_submission
       // matched to this load. Correlated subqueries avoid row multiplication
