@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   useBolQueue,
   useBolStats,
@@ -235,7 +236,7 @@ export function BolQueue() {
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div>
             <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
-              BOL Queue
+              BOL Center
             </h1>
             <p className="text-[11px] font-medium text-outline tracking-[0.08em] uppercase mt-0.5">
               Weight Ticket Reconciliation // JotForm Pipeline
@@ -851,9 +852,24 @@ export function BolQueue() {
                             {item.wellName}
                           </div>
                         )}
-                        <div className="text-[10px] text-outline/60">
-                          {formatDate(item.deliveredOn)} ·{" "}
-                          {item.weightTons ? `${item.weightTons} tons` : "--"}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[10px] text-outline/60">
+                            {formatDate(item.deliveredOn)} ·{" "}
+                            {item.weightTons ? `${item.weightTons} tons` : "--"}
+                          </div>
+                          {matched && item.loadNo && (
+                            <Link
+                              to={`/workbench?search=${encodeURIComponent(item.loadNo)}`}
+                              className="text-[10px] font-semibold text-primary hover:underline inline-flex items-center gap-0.5 whitespace-nowrap"
+                              title="Open this load in the Workbench"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Workbench
+                              <span className="material-symbols-outlined text-[12px]">
+                                arrow_forward
+                              </span>
+                            </Link>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -212,14 +212,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               className={navClass("/bol")}
               title={
                 bolPending > 0
-                  ? `BOL Queue — ${bolPending} photo${bolPending === 1 ? "" : "s"} need matching`
-                  : "BOL Queue — photo verification surface"
+                  ? `BOL Center — ${bolPending} photo${bolPending === 1 ? "" : "s"} need matching`
+                  : "BOL Center — photo verification, OCR corrections, and PropX ticket audit"
               }
             >
               <span className={iconClass("/bol")}>receipt_long</span>
               {!collapsed && (
                 <>
-                  <span className="flex-1">BOL Queue</span>
+                  <span className="flex-1">BOL Center</span>
                   {bolPending > 0 && (
                     <span className="font-label text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-full bg-error/15 text-error">
                       {bolPending.toLocaleString()}

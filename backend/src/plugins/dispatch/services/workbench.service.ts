@@ -7,6 +7,7 @@ import {
   photos,
   bolSubmissions,
   driverCrossrefs,
+  jotformImports,
 } from "../../../db/schema.js";
 import type {
   PhotoStatus,
@@ -425,9 +426,25 @@ export async function listWorkbenchRows(
       // matched to this load. Correlated subqueries avoid row multiplication
       // when a load has multiple submissions over time. The same latest row
       // feeds every OCR-derived feature (keeps the snapshot consistent).
-      ocrBolNo: sql<
-        string | null
-      >`(SELECT ${bolSubmissions.aiExtractedData}->>'bolNo' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,
+      //
+      // Fluidity: the BOL Center's "correct BOL" action writes to
+      // jotform_imports.bolNo (with original_ocr_bol_no preserved for the
+      // retraining corpus). Prefer that value here so a correction made on
+      // one surface is immediately visible as the OCR override on the other.
+      // Falls back to the raw Vision extraction when no JotForm correction
+      // exists for the load.
+      ocrBolNo: sql<string | null>`
+        COALESCE(
+          (SELECT ${jotformImports.bolNo} FROM ${jotformImports}
+            WHERE ${jotformImports.matchedLoadId} = ${loads.id}
+            ORDER BY ${jotformImports.bolCorrectedAt} DESC NULLS LAST,
+                     ${jotformImports.id} DESC
+            LIMIT 1),
+          (SELECT ${bolSubmissions.aiExtractedData}->>'bolNo' FROM ${bolSubmissions}
+            WHERE ${bolSubmissions.matchedLoadId} = ${loads.id}
+            ORDER BY ${bolSubmissions.id} DESC LIMIT 1)
+        )
+      `,
       ocrWeightLbs: sql<
         number | null
       >`(SELECT (${bolSubmissions.aiExtractedData}->>'weight')::numeric FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)`,

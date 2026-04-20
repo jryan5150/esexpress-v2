@@ -1,4 +1,5 @@
 import { useState, useEffect, Component, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import {
   useUpdateLoadField,
   useBolReconciliation,
@@ -343,14 +344,27 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-sm text-on-surface-variant hover:text-on-surface"
-          aria-label="Close detail"
-        >
-          ✕ Close
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/bol?search=${encodeURIComponent(row.loadNo ?? "")}`}
+            className="text-xs text-on-surface-variant hover:text-on-surface inline-flex items-center gap-1 px-2 py-1 rounded border border-outline-variant/40 hover:border-primary/50"
+            title="Open this load's BOL submissions in the BOL Center for deeper photo review / OCR correction"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="material-symbols-outlined text-[14px]">
+              receipt_long
+            </span>
+            BOL Center
+          </Link>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-sm text-on-surface-variant hover:text-on-surface"
+            aria-label="Close detail"
+          >
+            ✕ Close
+          </button>
+        </div>
       </div>
 
       {/* Photo + fields layout */}
