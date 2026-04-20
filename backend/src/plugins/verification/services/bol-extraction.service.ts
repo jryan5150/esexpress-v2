@@ -323,6 +323,68 @@ function toExtractedBolData(
  *
  * Rate-limited via PQueue (concurrency=2, 2 requests/5s).
  */
+/**
+ * Fetches an image URL server-side and returns a base64 data URL. Necessary
+ * because Anthropic's image-by-URL path respects robots.txt, and JotForm's
+ * CDN (hairpintrucking.jotform.com) disallows Anthropic's bot in robots.txt.
+ * Discovered 2026-04-20 after credits were restored — extraction failed with
+ * "This URL is disallowed by the website's robots.txt file."
+ *
+ * Sending base64 bypasses the robots.txt fetch entirely — we're the one
+ * fetching, Anthropic just reads the bytes from our request.
+ *
+ * Injects JOTFORM_API_KEY query param for JotForm URLs (required for
+ * JotForm Enterprise photo downloads).
+ */
+async function fetchImageAsBase64(url: string): Promise<string> {
+  if (url.startsWith("data:")) return url;
+
+  let fetchUrl = url;
+  try {
+    const parsed = new URL(url);
+    const isJotForm =
+      parsed.hostname === "hairpintrucking.jotform.com" ||
+      parsed.hostname === "www.jotform.com";
+    if (isJotForm && !parsed.searchParams.has("apiKey")) {
+      const jotformKey = process.env.JOTFORM_API_KEY;
+      if (jotformKey) {
+        parsed.searchParams.set("apiKey", jotformKey);
+        fetchUrl = parsed.href;
+      }
+    }
+  } catch {
+    // fall through — use URL as-is
+  }
+
+  const res = await fetch(fetchUrl, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+        "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+    },
+    redirect: "follow",
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Failed to fetch image for Vision extraction: HTTP ${res.status}`,
+    );
+  }
+  let contentType = res.headers.get("content-type") ?? "image/jpeg";
+  if (
+    contentType === "application/octet-stream" ||
+    !contentType.startsWith("image/")
+  ) {
+    // JotForm CDN sometimes returns octet-stream; infer from URL extension
+    const path = new URL(fetchUrl).pathname.toLowerCase();
+    if (path.endsWith(".png")) contentType = "image/png";
+    else if (path.endsWith(".webp")) contentType = "image/webp";
+    else if (path.endsWith(".gif")) contentType = "image/gif";
+    else contentType = "image/jpeg";
+  }
+  const buffer = Buffer.from(await res.arrayBuffer());
+  return `data:${contentType};base64,${buffer.toString("base64")}`;
+}
+
 export async function extractFromPhotos(
   photoUrls: string[],
   config?: { model?: string },
@@ -340,6 +402,10 @@ export async function extractFromPhotos(
 
   const model =
     config?.model ?? process.env.BOL_EXTRACTION_MODEL ?? DEFAULT_MODEL;
+
+  // Resolve all URLs to base64 data URLs server-side before calling Anthropic.
+  // See fetchImageAsBase64 for the robots.txt / JotForm auth rationale.
+  const resolvedUrls = await Promise.all(photoUrls.map(fetchImageAsBase64));
 
   return queue.add(async () => {
     const clientOpts: ConstructorParameters<typeof Anthropic>[0] = {
@@ -359,7 +425,7 @@ export async function extractFromPhotos(
 
     const userContent: Array<{ type: "text"; text: string } | ImageBlock> = [
       { type: "text", text: buildExtractionPrompt() },
-      ...photoUrls.map(buildImageContent),
+      ...resolvedUrls.map(buildImageContent),
     ];
 
     const response = await anthropic.messages.create({
