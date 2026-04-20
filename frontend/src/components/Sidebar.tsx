@@ -36,6 +36,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   // lives behind this collapsible group so dispatchers see one front door.
   const isReferenceRoute =
     location.pathname === "/" ||
+    location.pathname === "/load-report" ||
     location.pathname === "/admin/missed-loads" ||
     location.pathname === "/archive";
 
@@ -284,6 +285,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 >
                   <span className={iconClass("/")}>home</span>
                   Today's Objectives
+                </Link>
+                <Link
+                  to="/load-report"
+                  className={`${navClass("/load-report")} !pl-9`}
+                  title="Load Report — payroll-friendly truck/date export"
+                >
+                  <span className={iconClass("/load-report")}>summarize</span>
+                  Load Report
                 </Link>
                 <Link
                   to="/admin/missed-loads"

@@ -50,6 +50,9 @@ const MissedLoadsReport = lazy(() =>
     default: m.MissedLoadsReport,
   })),
 );
+const LoadReport = lazy(() =>
+  import("./pages/LoadReport").then((m) => ({ default: m.LoadReport })),
+);
 const Settings = lazy(() =>
   import("./pages/Settings").then((m) => ({ default: m.Settings })),
 );
@@ -103,6 +106,7 @@ export function App() {
                     path="admin/missed-loads"
                     element={<MissedLoadsReport />}
                   />
+                  <Route path="load-report" element={<LoadReport />} />
                   <Route path="settings" element={<Settings />} />
                   <Route
                     path="archive"
