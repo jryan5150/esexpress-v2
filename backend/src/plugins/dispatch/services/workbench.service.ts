@@ -17,6 +17,7 @@ import type { Database } from "../../../db/client.js";
 import { ValidationError, NotFoundError } from "../../../lib/errors.js";
 import { scoreMatch } from "./match-scorer.service.js";
 import { extractMatchFeatures } from "./match-features.service.js";
+import { signPhotoUrls } from "./photo-sign.service.js";
 
 export interface UncertainReasonInput {
   wellId: number | null;
@@ -503,7 +504,11 @@ export async function listWorkbenchRows(
     };
   });
 
-  return { rows, total: count };
+  // Sign GCS URLs so the private bucket's photos load in the browser.
+  // No-op for JotForm/PropX URLs (returned as-is).
+  const signedRows = await signPhotoUrls(rows);
+
+  return { rows: signedRows, total: count };
 }
 
 export interface TransitionContext {
