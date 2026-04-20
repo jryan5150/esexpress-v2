@@ -16,16 +16,19 @@ const STAGE_LABELS: Record<HandlerStage, string> = {
 // The `uncertain` stage defaults to amber; the <StagePill clean> variant
 // renders the same stage in green for rows with no open reasons — the
 // "one click Confirm → Yellow" fast path Jessica asked for.
+// Light-theme palette: tinted background + high-contrast dark text on the
+// matching hue family. Original values used text-{color}-300 which were tuned
+// for a dark theme and rendered nearly invisible on the cream background.
 const STAGE_CLASSES: Record<HandlerStage, string> = {
-  uncertain: "bg-amber-500/15 text-amber-300 border-amber-500/40",
-  ready_to_build: "bg-yellow-500/15 text-yellow-300 border-yellow-500/40",
-  building: "bg-yellow-600/20 text-yellow-200 border-yellow-600/50",
-  entered: "bg-pink-500/15 text-pink-300 border-pink-500/40",
-  cleared: "bg-pink-500/10 text-pink-300/80 border-pink-500/30",
+  uncertain: "bg-amber-100 text-amber-900 border-amber-400",
+  ready_to_build: "bg-yellow-100 text-yellow-900 border-yellow-500",
+  building: "bg-yellow-200 text-yellow-900 border-yellow-600",
+  entered: "bg-pink-100 text-pink-900 border-pink-400",
+  cleared: "bg-pink-50 text-pink-800 border-pink-300",
 };
 
 const UNCERTAIN_CLEAN_CLASS =
-  "bg-emerald-500/15 text-emerald-300 border-emerald-500/40";
+  "bg-emerald-100 text-emerald-900 border-emerald-500";
 const UNCERTAIN_CLEAN_LABEL = "Pending Confirm";
 
 interface StagePillProps {
