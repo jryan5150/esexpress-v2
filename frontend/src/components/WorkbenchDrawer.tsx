@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Component, type ReactNode } from "react";
 import {
   useUpdateLoadField,
   useBolReconciliation,
@@ -7,6 +7,54 @@ import {
   useUpdatePcsNumber,
   useUpdateAssignmentNotes,
 } from "../hooks/use-workbench";
+
+/**
+ * Isolated error boundary for the expand-drawer content. Prevents a render
+ * error in the drawer from blanking the whole workbench surface (the
+ * "loads then goes blank" bug reported 2026-04-20). Fallback shows the
+ * actual error message so the row stays auditable — the user can still
+ * see what's going on even when a single assignment's data trips a render.
+ */
+class DrawerErrorBoundary extends Component<
+  { children: ReactNode; onReset: () => void },
+  { error: Error | null }
+> {
+  constructor(props: { children: ReactNode; onReset: () => void }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[WorkbenchDrawer] render error", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="bg-rose-50 border border-rose-400 rounded-md mt-1 mb-2 p-4 space-y-2">
+          <div className="text-sm font-semibold text-rose-900">
+            Couldn't render this row's detail view.
+          </div>
+          <div className="text-xs text-rose-800 font-mono break-all">
+            {this.state.error.message || String(this.state.error)}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              this.setState({ error: null });
+              this.props.onReset();
+            }}
+            className="px-3 py-1 text-xs rounded border border-rose-400 text-rose-900 bg-white hover:bg-rose-100"
+          >
+            Close
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { StagePill } from "./StagePill";
 import { PhotoLightbox } from "./PhotoLightbox";
 import type { WorkbenchRow, UncertainReason } from "../types/api";
@@ -186,7 +234,15 @@ const REASON_LABEL: Record<UncertainReason, string> = {
   missing_tickets: "Ticket missing / not arrived",
 };
 
-export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
+export function WorkbenchDrawer(props: WorkbenchDrawerProps) {
+  return (
+    <DrawerErrorBoundary onReset={props.onClose}>
+      <WorkbenchDrawerBody {...props} />
+    </DrawerErrorBoundary>
+  );
+}
+
+function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
   const update = useUpdateLoadField();
   const bol = useBolReconciliation(row.loadId);
   const advance = useAdvanceStage();
@@ -373,54 +429,66 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
         </div>
       </div>
 
-      {/* Reconciliation / uncertain reasons */}
-      {(row.uncertainReasons.length > 0 ||
-        (ocr?.discrepancies?.length ?? 0) > 0) && (
-        <div className="bg-amber-50 border border-amber-400 rounded p-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-900 mb-2">
-            What matching caught
-          </div>
-          <ul className="text-sm space-y-1">
-            {row.uncertainReasons.map((r) => (
-              <li key={r} className="flex items-start gap-2">
-                <span className="text-amber-700">●</span>
-                <span className="text-on-surface">{REASON_LABEL[r]}</span>
-              </li>
-            ))}
-            {ocr?.discrepancies.map((d, i) => (
-              <li
-                key={`${d.field}-${i}`}
-                className="flex items-start gap-2 text-on-surface-variant"
-              >
-                <span className="text-amber-700">●</span>
-                <span>
-                  <span className="font-mono text-xs">{d.field}</span>: load ={" "}
-                  <span className="text-on-surface">
-                    {String(d.expected ?? "--")}
-                  </span>{" "}
-                  · OCR ={" "}
-                  <span className="text-on-surface">
-                    {String(d.actual ?? "--")}
-                  </span>
-                  {d.severity === "critical" && (
-                    <span className="ml-2 text-xs text-rose-700 font-semibold">
-                      ({d.severity})
-                    </span>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {ocr && (
-            <div className="text-[10px] text-on-surface-variant mt-2">
-              Match: {ocr.matchMethod ?? "none"} ·{" "}
-              {ocr.matchScore != null
-                ? `${ocr.matchScore}% confidence`
-                : "no score"}
+      {/* Reconciliation / uncertain reasons — defensive: old responses may
+          omit uncertainReasons or discrepancies entirely, so coerce before
+          length/map. Without these guards a single shape-drifted row would
+          blank the whole drawer. */}
+      {(() => {
+        const reasons = Array.isArray(row.uncertainReasons)
+          ? row.uncertainReasons
+          : [];
+        const discrepancies = Array.isArray(ocr?.discrepancies)
+          ? ocr!.discrepancies
+          : [];
+        return reasons.length > 0 || discrepancies.length > 0 ? (
+          <div className="bg-amber-50 border border-amber-400 rounded p-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-900 mb-2">
+              What matching caught
             </div>
-          )}
-        </div>
-      )}
+            <ul className="text-sm space-y-1">
+              {reasons.map((r) => (
+                <li key={r} className="flex items-start gap-2">
+                  <span className="text-amber-700">●</span>
+                  <span className="text-on-surface">
+                    {REASON_LABEL[r] ?? r}
+                  </span>
+                </li>
+              ))}
+              {discrepancies.map((d, i) => (
+                <li
+                  key={`${d.field}-${i}`}
+                  className="flex items-start gap-2 text-on-surface-variant"
+                >
+                  <span className="text-amber-700">●</span>
+                  <span>
+                    <span className="font-mono text-xs">{d.field}</span>: load ={" "}
+                    <span className="text-on-surface">
+                      {String(d.expected ?? "--")}
+                    </span>{" "}
+                    · OCR ={" "}
+                    <span className="text-on-surface">
+                      {String(d.actual ?? "--")}
+                    </span>
+                    {d.severity === "critical" && (
+                      <span className="ml-2 text-xs text-rose-700 font-semibold">
+                        ({d.severity})
+                      </span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {ocr && (
+              <div className="text-[10px] text-on-surface-variant mt-2">
+                Match: {ocr.matchMethod ?? "none"} ·{" "}
+                {ocr.matchScore != null
+                  ? `${ocr.matchScore}% confidence`
+                  : "no score"}
+              </div>
+            )}
+          </div>
+        ) : null;
+      })()}
 
       {/* Dispatcher notes — free-form persistent note. Save on blur. */}
       <div className="bg-surface-variant/20 border border-surface-variant rounded p-3">
