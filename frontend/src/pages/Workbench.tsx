@@ -197,7 +197,7 @@ export function Workbench() {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-4 gap-3">
+    <div className="flex-1 min-h-0 flex flex-col p-4 gap-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-xl font-headline">Workbench</h1>
         <div className="flex items-center gap-2 flex-wrap">
