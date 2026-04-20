@@ -194,12 +194,20 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
   const pcsUpdate = useUpdatePcsNumber();
   const notesUpdate = useUpdateAssignmentNotes();
   const [lightbox, setLightbox] = useState(false);
-  const [notesDraft, setNotesDraft] = useState(row.notes ?? "");
+  // Notes state — defensive coerce: old workbench responses may not include
+  // the `notes` field at all; old ones may have null. Either way map to "".
+  const initialNotes = typeof row.notes === "string" ? row.notes : "";
+  const [notesDraft, setNotesDraft] = useState(initialNotes);
   const [notesDirty, setNotesDirty] = useState(false);
   useEffect(() => {
-    setNotesDraft(row.notes ?? "");
+    const next = typeof row.notes === "string" ? row.notes : "";
+    setNotesDraft(next);
     setNotesDirty(false);
-  }, [row.assignmentId, row.notes]);
+    // Only re-sync when the row actually changes. Tracking row.notes as a
+    // dep was correct but if the value stays the same across refetches the
+    // effect is a no-op anyway — assignmentId alone is sufficient.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.assignmentId]);
 
   const ocr = bol.data;
 
@@ -457,8 +465,10 @@ export function WorkbenchDrawer({ row, onClose }: WorkbenchDrawerProps) {
       </div>
 
       {/* Stage transition timeline — audit trail of how this row moved
-          through the pipeline. Shows the last 6 transitions (newest first). */}
-      {row.statusHistory && row.statusHistory.length > 0 && (
+          through the pipeline. Shows the last 6 transitions (newest first).
+          Defensive: old backend responses may not include status_history yet,
+          so guard Array.isArray explicitly rather than relying on the type. */}
+      {Array.isArray(row.statusHistory) && row.statusHistory.length > 0 && (
         <div className="bg-surface-variant/20 border border-surface-variant rounded p-3">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant mb-2">
             Timeline
