@@ -85,10 +85,7 @@ export function App() {
                 <Route element={<Layout />}>
                   <Route index element={<ExceptionFeed />} />
                   <Route path="workbench" element={<Workbench />} />
-                  <Route
-                    path="bol"
-                    element={<Navigate to="/workbench?filter=uncertain" replace />}
-                  />
+                  <Route path="bol" element={<BolQueue />} />
                   <Route
                     path="dispatch-desk"
                     element={<Navigate to="/workbench" replace />}
