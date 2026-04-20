@@ -12,6 +12,13 @@
  * public symbol is what callers import.
  */
 
+// Frontend lives at app.esexpressllc.com (Vercel) and backend lives at a
+// Railway URL — different origins. Image src URLs must be ABSOLUTE so the
+// browser hits the backend, not the Vercel-hosted SPA. Prefer
+// PUBLIC_BACKEND_URL env if set, fall back to the production Railway URL.
+const BACKEND_URL =
+  process.env.PUBLIC_BACKEND_URL ??
+  "https://backend-production-7960.up.railway.app";
 const PROXY_PATH = "/api/v1/verification/photos/proxy";
 
 const ALLOWED_HOST_PREFIXES = [
@@ -25,7 +32,7 @@ function wrapIfAllowed(url: string | null): string | null {
   if (!url) return null;
   const allowed = ALLOWED_HOST_PREFIXES.some((p) => url.startsWith(p));
   if (!allowed) return url;
-  return `${PROXY_PATH}?url=${encodeURIComponent(url)}`;
+  return `${BACKEND_URL}${PROXY_PATH}?url=${encodeURIComponent(url)}`;
 }
 
 export async function signPhotoUrls<T extends { photoThumbUrl: string | null }>(
