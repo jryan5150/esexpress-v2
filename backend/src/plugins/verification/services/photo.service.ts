@@ -14,6 +14,33 @@
 
 import { resolve4 } from "node:dns/promises";
 import { zipSync, type Zippable } from "fflate";
+import { Storage } from "@google-cloud/storage";
+
+// GCS storage client — lazy-init from GCS_SERVICE_ACCOUNT_KEY env var.
+// Reused across proxy fetches so we only parse the key once per process.
+let gcsStorage: Storage | null = null;
+function getGcsStorage(): Storage {
+  if (gcsStorage) return gcsStorage;
+  const keyJson = process.env.GCS_SERVICE_ACCOUNT_KEY;
+  if (keyJson) {
+    const decoded = keyJson.trimStart().startsWith("{")
+      ? keyJson
+      : Buffer.from(keyJson, "base64").toString();
+    gcsStorage = new Storage({ credentials: JSON.parse(decoded) });
+  } else {
+    gcsStorage = new Storage();
+  }
+  return gcsStorage;
+}
+
+/** Decode `https://storage.googleapis.com/<bucket>/<object/path>` → { bucket, object }. */
+function parseGcsUrl(url: URL): { bucket: string; object: string } | null {
+  if (url.hostname !== "storage.googleapis.com") return null;
+  const path = url.pathname.replace(/^\/+/, "");
+  const slash = path.indexOf("/");
+  if (slash < 0) return null;
+  return { bucket: path.slice(0, slash), object: path.slice(slash + 1) };
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -186,6 +213,23 @@ export async function proxyPhoto(
   url: string,
 ): Promise<{ buffer: Buffer; contentType: string }> {
   const parsed = await validateUrlSafe(url);
+
+  // GCS path: bucket is private (org policy blocks public). Use the storage
+  // SDK + service-account creds to download — no signed URL round-trip, no
+  // bucket-public exposure. Returns the raw object bytes + an inferred
+  // content-type from the object extension.
+  const gcs = parseGcsUrl(parsed);
+  if (gcs) {
+    const [buffer] = await getGcsStorage()
+      .bucket(gcs.bucket)
+      .file(gcs.object)
+      .download();
+    if (buffer.byteLength > MAX_PHOTO_SIZE) {
+      throw new Error(`Photo exceeds maximum size (${MAX_PHOTO_SIZE} bytes)`);
+    }
+    const contentType = contentTypeFromUrlExtension(gcs.object) ?? "image/jpeg";
+    return { buffer, contentType };
+  }
 
   // JotForm Enterprise gates uploads behind auth. We inject the API key as
   // a query param server-side so it never reaches the browser. Without this,
