@@ -2,6 +2,7 @@ import { memo, useState } from "react";
 import { StagePill } from "./StagePill";
 import { MatchScoreBadge } from "./MatchScoreBadge";
 import { PhotoLightbox } from "./PhotoLightbox";
+import { useWeightUnit } from "../hooks/use-weight-unit";
 import type {
   WorkbenchRow as Row,
   HandlerStage,
@@ -154,6 +155,7 @@ export const WorkbenchRow = memo(function WorkbenchRow({
     row.handlerStage === "uncertain" && row.uncertainReasons.length === 0;
   const action = primaryAction(row.handlerStage, isCleanUncertain);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const { format: formatWeight } = useWeightUnit();
 
   return (
     <div
@@ -222,7 +224,7 @@ export const WorkbenchRow = memo(function WorkbenchRow({
             </span>
           </div>
           <div className="text-[11px] text-on-surface-variant mt-0.5">
-            {row.weightTons ? `${row.weightTons} t` : "--"}
+            {formatWeight(row.weightTons)}
           </div>
         </div>
 

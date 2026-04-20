@@ -11,6 +11,7 @@ import {
 } from "../hooks/use-bol";
 import { Pagination } from "../components/Pagination";
 import { useToast } from "../components/Toast";
+import { useWeightUnit } from "../hooks/use-weight-unit";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 const resolveUrl = (url: string) =>
@@ -144,10 +145,14 @@ function EditableBol({
 }
 
 export function BolQueue() {
+  const { format: formatWeight } = useWeightUnit();
   const [activeTab, setActiveTab] = useState<Tab>("reconciliation");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [filter, setFilter] = useState<"all" | "matched" | "pending">("all");
+  const [propxSearch, setPropxSearch] = useState("");
+  const [propxDateFrom, setPropxDateFrom] = useState("");
+  const [propxDateTo, setPropxDateTo] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [photoModal, setPhotoModal] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -177,6 +182,9 @@ export function BolQueue() {
         : filter === "matched"
           ? "matched"
           : "all",
+    search: propxSearch || undefined,
+    dateFrom: propxDateFrom || undefined,
+    dateTo: propxDateTo || undefined,
   });
 
   const stats = statsQuery.data as Record<string, unknown> | undefined;
@@ -208,6 +216,14 @@ export function BolQueue() {
     : (propxResponse?.data ?? []);
   const propxTotal = propxResponse?.meta?.total ?? propxItems.length;
 
+  // Separate tiny query for the global PropX count so the tab label always
+  // shows the full library total (e.g. 46,195), not the filter-narrowed
+  // subset. The filter inside the tab shows its own narrowed count in the
+  // body info banner. limit=1 keeps the payload trivial.
+  const propxGlobalQuery = usePropxQueue({ status: "all", limit: 1, page: 1 });
+  const propxGlobalResp = propxGlobalQuery.data as any;
+  const propxGlobalTotal = propxGlobalResp?.meta?.total ?? propxTotal;
+
   const tabs: { id: Tab; label: string; count: number; color?: string }[] = [
     { id: "reconciliation", label: "Reconciliation", count: queueTotal },
     {
@@ -218,7 +234,7 @@ export function BolQueue() {
     {
       id: "propx",
       label: "PropX Photos",
-      count: propxTotal,
+      count: propxGlobalTotal,
     },
     {
       id: "missing",
@@ -688,9 +704,7 @@ export function BolQueue() {
                             <span>{sub.driverName || "no driver"}</span>
                             <span>Truck {sub.truckNo || "--"}</span>
                             <span className="tabular-nums">
-                              {sub.weight
-                                ? `${parseFloat(sub.weight).toFixed(1)}t`
-                                : "--"}
+                              {formatWeight(sub.weight)}
                             </span>
                           </div>
                           {load && (
@@ -763,7 +777,10 @@ export function BolQueue() {
                 {(["all", "matched", "pending"] as const).map((f) => (
                   <button
                     key={f}
-                    onClick={() => setFilter(f)}
+                    onClick={() => {
+                      setFilter(f);
+                      setPage(1);
+                    }}
                     className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md transition-all ${
                       filter === f
                         ? "bg-primary-container text-on-primary-container shadow-sm"
@@ -774,6 +791,78 @@ export function BolQueue() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Search + date range */}
+            <div className="flex items-center gap-2 flex-wrap bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] px-3 py-2">
+              <label className="flex items-center gap-1.5 flex-1 min-w-[220px]">
+                <span className="material-symbols-outlined text-outline text-[16px]">
+                  search
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search load #, ticket, BOL, driver, truck…"
+                  defaultValue={propxSearch}
+                  onBlur={(e) => {
+                    setPropxSearch(e.target.value.trim());
+                    setPage(1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setPropxSearch(
+                        (e.target as HTMLInputElement).value.trim(),
+                      );
+                      setPage(1);
+                    }
+                  }}
+                  className="flex-1 bg-surface-variant/30 rounded px-2 py-1 text-sm"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-xs text-on-surface-variant">
+                <span className="font-medium uppercase tracking-wider text-[10px]">
+                  From
+                </span>
+                <input
+                  type="date"
+                  className="bg-surface-variant/30 rounded px-2 py-1 text-sm"
+                  value={propxDateFrom}
+                  onChange={(e) => {
+                    setPropxDateFrom(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </label>
+              <label className="flex items-center gap-1 text-xs text-on-surface-variant">
+                <span className="font-medium uppercase tracking-wider text-[10px]">
+                  To
+                </span>
+                <input
+                  type="date"
+                  className="bg-surface-variant/30 rounded px-2 py-1 text-sm"
+                  value={propxDateTo}
+                  onChange={(e) => {
+                    setPropxDateTo(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </label>
+              {(propxSearch || propxDateFrom || propxDateTo) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPropxSearch("");
+                    setPropxDateFrom("");
+                    setPropxDateTo("");
+                    setPage(1);
+                  }}
+                  className="text-xs text-on-surface-variant hover:text-on-surface underline"
+                >
+                  Clear
+                </button>
+              )}
+              <span className="ml-auto text-xs text-outline">
+                {propxTotal} of {propxGlobalTotal}
+              </span>
             </div>
 
             {propxQuery.isLoading ? (
@@ -855,7 +944,7 @@ export function BolQueue() {
                         <div className="flex items-center justify-between gap-2">
                           <div className="text-[10px] text-outline/60">
                             {formatDate(item.deliveredOn)} ·{" "}
-                            {item.weightTons ? `${item.weightTons} tons` : "--"}
+                            {formatWeight(item.weightTons)}
                           </div>
                           {matched && item.loadNo && (
                             <Link
@@ -993,9 +1082,7 @@ export function BolQueue() {
                         {load.bolNo || "--"}
                       </span>
                       <span className="font-label text-[11px] text-on-surface-variant text-right tabular-nums">
-                        {load.weightTons
-                          ? `${parseFloat(load.weightTons).toFixed(1)}t`
-                          : "--"}
+                        {formatWeight(load.weightTons)}
                       </span>
                       <span className="text-[11px] text-outline text-right whitespace-nowrap">
                         {formatDate(load.deliveredOn)}

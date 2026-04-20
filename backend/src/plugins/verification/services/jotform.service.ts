@@ -573,6 +573,9 @@ async function matchFromFeedbackHistory(
 interface VisionEnhancement {
   bolSubmissionId: number | null;
   visionFields: Partial<ExtractedFields> | null;
+  /** True if an Anthropic call was made (success OR failure). Drives the
+   *  visionAttempted counter separately from success. */
+  visionAttempted: boolean;
   visionSucceeded: boolean;
 }
 
@@ -596,6 +599,7 @@ async function enhanceWithVision(
   const empty: VisionEnhancement = {
     bolSubmissionId: null,
     visionFields: null,
+    visionAttempted: false,
     visionSucceeded: false,
   };
 
@@ -651,7 +655,8 @@ async function enhanceWithVision(
         .where(eq(bolSubmissions.id, bolSubmissionId))
         .catch(() => undefined);
     }
-    return { ...empty, bolSubmissionId };
+    // Attempt counts even though the extract threw — Anthropic was called.
+    return { ...empty, bolSubmissionId, visionAttempted: true };
   }
 
   const validation = validateExtraction(extraction);
@@ -686,8 +691,14 @@ async function enhanceWithVision(
 
   if (!validation.isValid) {
     // Critical errors from validator (no identifier, no weight) — Vision
-    // output isn't usable for matching. Fall back to driver-typed.
-    return { bolSubmissionId, visionFields: null, visionSucceeded: false };
+    // output isn't usable for matching. Fall back to driver-typed. Still
+    // counts as an attempt since Anthropic was called.
+    return {
+      bolSubmissionId,
+      visionFields: null,
+      visionAttempted: true,
+      visionSucceeded: false,
+    };
   }
 
   _visionSuccesses++;
@@ -709,7 +720,12 @@ async function enhanceWithVision(
     truckNo: extraction.truckNo ?? fields.truckNo,
   };
 
-  return { bolSubmissionId, visionFields, visionSucceeded: true };
+  return {
+    bolSubmissionId,
+    visionFields,
+    visionAttempted: true,
+    visionSucceeded: true,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -772,7 +788,11 @@ export async function syncWeightTickets(
       // lead. Persists a `bol_submissions` row as a durable training-data
       // artifact regardless of match outcome.
       const vision = await enhanceWithVision(db, fields);
-      if (vision.visionFields) result.visionAttempted++;
+      // Count every Anthropic call (success OR failure) toward attempts so
+      // the metadata accurately reflects API hit rate. Success bucket stays
+      // tied to extraction + validation passing, drivenMatches to the match
+      // actually landing on Vision-extracted fields.
+      if (vision.visionAttempted) result.visionAttempted++;
       if (vision.visionSucceeded) result.visionSucceeded++;
 
       const matchFields: ExtractedFields = vision.visionFields

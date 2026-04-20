@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useWorkbench } from "../hooks/use-workbench";
+import { useWeightUnit } from "../hooks/use-weight-unit";
 import type { WorkbenchRow as Row } from "../types/api";
 
 /**
@@ -12,6 +13,15 @@ import type { WorkbenchRow as Row } from "../types/api";
  * export is also client-side. Caps at the workbench API limit (500/page);
  * widen via dedicated payroll endpoint when needed.
  */
+
+type GroupBy = "none" | "truck" | "day" | "well";
+
+const GROUP_OPTIONS: Array<{ value: GroupBy; label: string }> = [
+  { value: "none", label: "No grouping" },
+  { value: "truck", label: "By Truck" },
+  { value: "day", label: "By Day" },
+  { value: "well", label: "By Well" },
+];
 
 const COLUMNS: Array<{ key: keyof Row | "stage"; label: string }> = [
   { key: "truckNo", label: "Truck #" },
@@ -39,19 +49,33 @@ function fmtDate(d: string | null): string {
   }
 }
 
-function getValue(row: Row, key: keyof Row | "stage"): string {
+function getValue(
+  row: Row,
+  key: keyof Row | "stage",
+  formatWeight: (v: string | number | null | undefined) => string,
+): string {
   if (key === "stage") return row.handlerStage ?? "";
   if (key === "deliveredOn") return fmtDate(row.deliveredOn);
+  if (key === "weightTons") return formatWeight(row.weightTons);
   const v = (row as unknown as Record<string, unknown>)[key];
   if (v == null) return "";
   return String(v);
 }
 
-function rowsToCsv(rows: Row[]): string {
-  const header = COLUMNS.map((c) => c.label).join(",");
+function rowsToCsv(
+  rows: Row[],
+  unitLabel: string,
+  formatWeight: (v: string | number | null | undefined) => string,
+): string {
+  // Header reflects the user's current unit — "Tons" or "Lbs" — so the CSV
+  // is self-describing when opened in a spreadsheet. Weight column values
+  // are formatted through the same helper that drives the UI.
+  const header = COLUMNS.map((c) =>
+    c.key === "weightTons" ? unitLabel : c.label,
+  ).join(",");
   const lines = rows.map((r) =>
     COLUMNS.map((c) => {
-      const v = getValue(r, c.key);
+      const v = getValue(r, c.key, formatWeight);
       // CSV-escape: wrap in quotes if it contains comma, quote, or newline
       return /[,"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
     }).join(","),
@@ -72,11 +96,15 @@ function downloadCsv(filename: string, content: string) {
 }
 
 export function LoadReport() {
+  const { unit, format: formatWeight } = useWeightUnit();
+  const unitLabel = unit === "tons" ? "Tons" : "Lbs";
   const [params, setParams] = useSearchParams();
   const dateFrom = params.get("dateFrom") ?? "";
   const dateTo = params.get("dateTo") ?? "";
   const truckNo = params.get("truckNo") ?? "";
-  const [groupByTruck, setGroupByTruck] = useState(true);
+  // Group pivot — "none" renders the flat table, others group by that field.
+  // URL-persisted so sharing/bookmarking a grouped view works.
+  const groupBy = (params.get("groupBy") as GroupBy) || "truck";
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -100,23 +128,49 @@ export function LoadReport() {
   const rows = useMemo<Row[]>(() => query.data?.rows ?? [], [query.data]);
   const total = query.data?.total ?? 0;
 
-  // Group by truck for visual grouping
+  // Group rows by the selected pivot. Each pivot defines a key extractor and
+  // a sort so the rendered groups read predictably:
+  //   truck — numeric-aware ascending (1, 2, 12, 101), "(no truck)" last
+  //   day   — most recent day first, newest deliveries on top of the report
+  //   well  — alphabetical, "(no well)" last
   const grouped = useMemo(() => {
-    if (!groupByTruck) return null;
+    if (groupBy === "none") return null;
+    const keyFor = (r: Row): string => {
+      if (groupBy === "truck") return r.truckNo ?? "(no truck)";
+      if (groupBy === "well") return r.wellName ?? "(no well)";
+      // day
+      if (!r.deliveredOn) return "(no date)";
+      try {
+        const d = new Date(r.deliveredOn);
+        if (isNaN(d.getTime())) return "(no date)";
+        return d.toISOString().slice(0, 10); // YYYY-MM-DD for stable sort
+      } catch {
+        return "(no date)";
+      }
+    };
+
     const map = new Map<string, Row[]>();
     for (const r of rows) {
-      const key = r.truckNo ?? "(no truck)";
+      const key = keyFor(r);
       const arr = map.get(key) ?? [];
       arr.push(r);
       map.set(key, arr);
     }
-    return Array.from(map.entries()).sort((a, b) =>
-      a[0].localeCompare(b[0], undefined, { numeric: true }),
-    );
-  }, [rows, groupByTruck]);
+
+    const entries = Array.from(map.entries());
+    entries.sort((a, b) => {
+      // Placeholder groups always last
+      const isPlaceholder = (k: string) => k.startsWith("(no ");
+      if (isPlaceholder(a[0]) && !isPlaceholder(b[0])) return 1;
+      if (!isPlaceholder(a[0]) && isPlaceholder(b[0])) return -1;
+      if (groupBy === "day") return b[0].localeCompare(a[0]); // newest first
+      return a[0].localeCompare(b[0], undefined, { numeric: true });
+    });
+    return entries;
+  }, [rows, groupBy]);
 
   const handleExport = () => {
-    const csv = rowsToCsv(rows);
+    const csv = rowsToCsv(rows, unitLabel, formatWeight);
     const today = new Date().toISOString().slice(0, 10);
     downloadCsv(`load-report-${today}.csv`, csv);
   };
@@ -164,13 +218,21 @@ export function LoadReport() {
               onBlur={(e) => setParam("truckNo", e.target.value)}
             />
           </label>
-          <label className="flex items-center gap-1 text-xs">
-            <input
-              type="checkbox"
-              checked={groupByTruck}
-              onChange={(e) => setGroupByTruck(e.target.checked)}
-            />
-            Group by truck
+          <label className="flex items-center gap-1 text-xs text-on-surface-variant">
+            <span className="font-medium uppercase tracking-wider text-[10px]">
+              Group
+            </span>
+            <select
+              value={groupBy}
+              onChange={(e) => setParam("groupBy", e.target.value)}
+              className="bg-surface-variant rounded px-2 py-1 text-sm"
+            >
+              {GROUP_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
           </label>
           <button
             type="button"
@@ -193,18 +255,42 @@ export function LoadReport() {
           <div className="text-sm text-on-surface-variant p-4">
             No loads in this filter window.
           </div>
-        ) : groupByTruck && grouped ? (
-          grouped.map(([truck, truckRows]) => (
-            <div key={truck} className="mb-4">
-              <div className="sticky top-0 bg-surface-container-low px-3 py-1.5 text-sm font-semibold border-b border-outline-variant">
-                Truck {truck}
-                <span className="ml-2 text-xs text-on-surface-variant font-normal">
-                  {truckRows.length} {truckRows.length === 1 ? "load" : "loads"}
-                </span>
+        ) : grouped ? (
+          grouped.map(([groupKey, groupRows]) => {
+            const headerLabel =
+              groupBy === "truck"
+                ? `Truck ${groupKey}`
+                : groupBy === "well"
+                  ? groupKey
+                  : groupBy === "day"
+                    ? (() => {
+                        try {
+                          return new Date(
+                            groupKey + "T00:00:00",
+                          ).toLocaleDateString("en-US", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          });
+                        } catch {
+                          return groupKey;
+                        }
+                      })()
+                    : groupKey;
+            return (
+              <div key={groupKey} className="mb-4">
+                <div className="sticky top-0 bg-surface-container-low px-3 py-1.5 text-sm font-semibold border-b border-outline-variant">
+                  {headerLabel}
+                  <span className="ml-2 text-xs text-on-surface-variant font-normal">
+                    {groupRows.length}{" "}
+                    {groupRows.length === 1 ? "load" : "loads"}
+                  </span>
+                </div>
+                <Table rows={groupRows} />
               </div>
-              <Table rows={truckRows} />
-            </div>
-          ))
+            );
+          })
         ) : (
           <Table rows={rows} />
         )}
@@ -214,6 +300,7 @@ export function LoadReport() {
 }
 
 function Table({ rows }: { rows: Row[] }) {
+  const { unit, format: formatWeight } = useWeightUnit();
   return (
     <table className="w-full text-xs">
       <thead className="bg-surface-container-low text-on-surface-variant">
@@ -223,7 +310,11 @@ function Table({ rows }: { rows: Row[] }) {
               key={String(c.key)}
               className="text-left px-3 py-1.5 font-medium uppercase tracking-wider"
             >
-              {c.label}
+              {c.key === "weightTons"
+                ? unit === "tons"
+                  ? "Tons"
+                  : "Lbs"
+                : c.label}
             </th>
           ))}
         </tr>
@@ -236,7 +327,7 @@ function Table({ rows }: { rows: Row[] }) {
           >
             {COLUMNS.map((c) => (
               <td key={String(c.key)} className="px-3 py-1.5 text-on-surface">
-                {getValue(r, c.key)}
+                {getValue(r, c.key, formatWeight)}
               </td>
             ))}
           </tr>

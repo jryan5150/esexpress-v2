@@ -256,10 +256,12 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
   const initialNotes = typeof row.notes === "string" ? row.notes : "";
   const [notesDraft, setNotesDraft] = useState(initialNotes);
   const [notesDirty, setNotesDirty] = useState(false);
+  const [timelineExpanded, setTimelineExpanded] = useState(false);
   useEffect(() => {
     const next = typeof row.notes === "string" ? row.notes : "";
     setNotesDraft(next);
     setNotesDirty(false);
+    setTimelineExpanded(false);
     // Only re-sync when the row actually changes. Tracking row.notes as a
     // dep was correct but if the value stays the same across refetches the
     // effect is a no-op anyway — assignmentId alone is sufficient.
@@ -547,18 +549,37 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
       </div>
 
       {/* Stage transition timeline — audit trail of how this row moved
-          through the pipeline. Shows the last 6 transitions (newest first).
-          Defensive: old backend responses may not include status_history yet,
-          so guard Array.isArray explicitly rather than relying on the type. */}
+          through the pipeline. Shows the last 6 transitions by default,
+          with a "Show all" toggle for audit sessions where the full
+          history matters.
+          Defensive: old backend responses may not include status_history
+          yet, so guard Array.isArray explicitly rather than rely on types. */}
       {Array.isArray(row.statusHistory) && row.statusHistory.length > 0 && (
         <div className="bg-surface-variant/20 border border-surface-variant rounded p-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant mb-2">
-            Timeline
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+              Timeline
+              <span className="ml-1 text-on-surface-variant/60 normal-case tracking-normal">
+                ({row.statusHistory.length} transition
+                {row.statusHistory.length === 1 ? "" : "s"})
+              </span>
+            </span>
+            {row.statusHistory.length > 6 && (
+              <button
+                type="button"
+                onClick={() => setTimelineExpanded((v) => !v)}
+                className="text-[10px] font-semibold text-primary hover:underline uppercase tracking-wider"
+              >
+                {timelineExpanded
+                  ? "Show last 6"
+                  : `Show all (${row.statusHistory.length})`}
+              </button>
+            )}
           </div>
           <ul className="space-y-1.5">
             {[...row.statusHistory]
               .reverse()
-              .slice(0, 6)
+              .slice(0, timelineExpanded ? row.statusHistory.length : 6)
               .map((h, i) => {
                 const when = h.changedAt
                   ? new Date(h.changedAt).toLocaleString("en-US", {

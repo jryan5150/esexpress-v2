@@ -304,16 +304,24 @@ export async function listWorkbenchRows(
           sql`${assignments.uncertainReasons} @> '["rate_missing"]'::jsonb`,
         );
       case "built_today":
-        // Loads a dispatcher moved through the build pipeline today. Excludes
-        // historical_complete auto-clears and the 'cancelled' status — both
-        // move through handler_stage without being actual build work. Without
-        // this exclusion the tab would show ~28K rows on days when the
-        // historical classifier mass-advances pre-cutoff loads.
+        // Loads a real dispatcher moved through the build pipeline today.
+        // Three exclusions, each catching a distinct class of system noise:
+        //   1. historical_complete auto-clears (pre-cutoff classifier batch)
+        //   2. Canceled PropX loads (never actually built, status flips)
+        //   3. Auto-Mapper system advances (the big one — ~2,300/day; those
+        //      are map-time assignment creates, not dispatch actions)
+        // The name-match check reads the last status_history entry's
+        // changedByName; NULL or system-ish names get filtered out while
+        // real operator names pass through.
         return and(
           inArray(assignments.handlerStage, ["building", "entered", "cleared"]),
           sql`${assignments.stageChangedAt}::date = CURRENT_DATE`,
           sql`COALESCE(${loads.historicalComplete}, false) = false`,
           sql`COALESCE(${loads.status}, '') NOT IN ('Canceled','Cancelled')`,
+          sql`COALESCE(
+            ${assignments.statusHistory}->-1->>'changedByName',
+            ''
+          ) NOT IN ('Auto-Mapper', 'system', '', 'Reconciliation')`,
         );
       case "all":
       default:

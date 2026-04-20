@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useCurrentUser, useLogoutFn } from "../hooks/use-auth";
 import { usePresence } from "../hooks/use-presence";
 import { useBolStats } from "../hooks/use-bol";
+import { useWeightUnit } from "../hooks/use-weight-unit";
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -412,6 +413,8 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
             </div>
           )}
 
+          <WeightUnitToggle collapsed={collapsed} />
+
           <Link
             to="/settings"
             className={navClass("/settings")}
@@ -437,5 +440,54 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
         </div>
       </aside>
     </>
+  );
+}
+
+/**
+ * Compact lbs ↔ tons segmented toggle in the sidebar footer. Writes to
+ * localStorage via the shared useWeightUnit hook so every weight display
+ * sitewide flips in sync (workbench rows, drawer, BOL Center, LoadReport,
+ * CSV export).
+ */
+function WeightUnitToggle({ collapsed }: { collapsed: boolean }) {
+  const { unit, setUnit } = useWeightUnit();
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setUnit(unit === "tons" ? "lbs" : "tons")}
+        title={`Units: ${unit} — click to toggle`}
+        className="w-full text-on-surface-variant flex items-center justify-center px-0 py-2 rounded-md hover:bg-surface-container-high/60 transition-all text-[11px] font-bold tabular-nums"
+      >
+        {unit === "tons" ? "t" : "lb"}
+      </button>
+    );
+  }
+  return (
+    <div className="px-3.5 py-1.5">
+      <div
+        className="flex items-center gap-1 bg-surface-container-high rounded-md p-0.5 border border-outline-variant/30"
+        role="group"
+        aria-label="Weight unit"
+      >
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-outline px-1.5">
+          Units
+        </span>
+        {(["tons", "lbs"] as const).map((u) => (
+          <button
+            key={u}
+            type="button"
+            onClick={() => setUnit(u)}
+            className={`flex-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded transition-all ${
+              unit === u
+                ? "bg-primary-container text-on-primary-container shadow-sm"
+                : "text-outline hover:text-on-surface"
+            }`}
+          >
+            {u}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
