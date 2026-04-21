@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@sentry/react": "10.49.0",
     "@tanstack/react-query": "^5.64.0",
     "html2canvas": "1.4.1",
     "react": "^19.0.0",

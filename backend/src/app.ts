@@ -8,6 +8,7 @@ import rateLimit from "@fastify/rate-limit";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { AppError } from "./lib/errors.js";
+import { reportError } from "./lib/sentry.js";
 import diagnosticsPlugin from "./plugins/diagnostics/index.js";
 import { perfBuffer } from "./lib/perf-buffer.js";
 import jwtPlugin from "./plugins/auth/jwt.js";
@@ -39,8 +40,14 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     crossOriginResourcePolicy: { policy: "cross-origin" }, // allow photo proxy responses
   });
 
-  // Rate limiting (global: 100 req/min, tighter on auth)
-  app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+  // Rate limiting (global: 100 req/min, tighter on auth).
+  // Photo proxy is exempt — it's effectively a CDN (browsers lazy-load many
+  // thumbs per page) and SSRF allowlist in photo.service.ts is the real guard.
+  app.register(rateLimit, {
+    max: 100,
+    timeWindow: "1 minute",
+    allowList: (req) => req.url.startsWith("/api/v1/verification/photos/proxy"),
+  });
 
   // Performance tracking hook
   app.addHook("onResponse", (request, reply, done) => {
@@ -177,6 +184,11 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     const statusCode = e.statusCode ?? 500;
     if (statusCode === 500) {
       console.error("[500 ERROR]", e.message, e.stack);
+      reportError(error, {
+        method: _request.method,
+        url: _request.url,
+        code: e.code,
+      });
     }
     return reply.status(statusCode).send({
       success: false,

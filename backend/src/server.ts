@@ -2,8 +2,12 @@ import { buildApp } from "./app.js";
 import { loadConfig } from "./lib/config.js";
 import { getLoggerConfig } from "./lib/logger.js";
 import { startScheduler } from "./scheduler.js";
+import { initSentry } from "./lib/sentry.js";
 
 async function start() {
+  const sentryOn = initSentry();
+  if (sentryOn) console.log("[sentry] backend error tracking enabled");
+
   const config = loadConfig();
   const app = buildApp({
     logger: getLoggerConfig(config.NODE_ENV),

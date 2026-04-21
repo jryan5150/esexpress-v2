@@ -3,17 +3,23 @@ import { perfBuffer } from "../../../lib/perf-buffer.js";
 
 const diagRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /health — overall system status (public)
+  // Only 5xx counts as a server error — 4xx (esp. 401/403) is client-side
+  // (bad token, missing auth) and shouldn't trip the banner. Minimum sample
+  // size of 20 prevents a single error from flipping status after restart
+  // while the perf buffer is still filling.
   fastify.get("/health", async () => {
     const stats = perfBuffer.computeStats(Date.now() - 24 * 60 * 60 * 1000);
-    const errorRate =
-      stats.count > 0
-        ? Object.values(stats.errorsByStatus).reduce((a, b) => a + b, 0) /
-          stats.count
-        : 0;
+    const serverErrors = Object.entries(stats.errorsByStatus)
+      .filter(([code]) => Number(code) >= 500)
+      .reduce((sum, [, count]) => sum + count, 0);
+    const errorRate = stats.count > 0 ? serverErrors / stats.count : 0;
+    const sampleTooSmall = stats.count < 20;
 
     let status: "green" | "yellow" | "red" = "green";
-    if (errorRate > 0.1 || stats.p95 > 5000) status = "red";
-    else if (errorRate > 0.02 || stats.p95 > 2000) status = "yellow";
+    if (!sampleTooSmall) {
+      if (errorRate > 0.1 || stats.p95 > 5000) status = "red";
+      else if (errorRate > 0.02 || stats.p95 > 2000) status = "yellow";
+    }
 
     return {
       success: true,

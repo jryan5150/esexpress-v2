@@ -8,6 +8,7 @@ import {
   useUpdatePcsNumber,
   useUpdateAssignmentNotes,
 } from "../hooks/use-workbench";
+import { reportError } from "../lib/sentry";
 
 /**
  * Isolated error boundary for the expand-drawer content. Prevents a render
@@ -29,6 +30,10 @@ class DrawerErrorBoundary extends Component<
   }
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("[WorkbenchDrawer] render error", error, info);
+    reportError(error, {
+      boundary: "workbench-drawer",
+      componentStack: info.componentStack,
+    });
   }
   render() {
     if (this.state.error) {

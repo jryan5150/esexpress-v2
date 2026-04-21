@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { FeedbackWidget } from "./FeedbackWidget";
+import { StatusBanner } from "./StatusBanner";
 import { useCurrentUser } from "../hooks/use-auth";
 import { SearchOverlay } from "../search/SearchOverlay";
 
@@ -43,6 +44,7 @@ export function Layout() {
                 Live
               </span>
             </div>
+            <StatusBanner />
             <button
               aria-label="Notifications"
               className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer text-on-surface/40 hover:text-on-surface/70 icon-hover"

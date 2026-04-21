@@ -2,6 +2,10 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "../tailwind.css";
 import { App } from "./app";
+import { initSentry } from "./lib/sentry";
+
+const sentryOn = initSentry();
+if (sentryOn) console.log("[ESX] Sentry enabled");
 
 console.log("[ESX] main.tsx loaded, mounting React...");
 
