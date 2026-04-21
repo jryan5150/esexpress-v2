@@ -1,5 +1,11 @@
-import { eq, inArray } from "drizzle-orm";
-import { loads, wells } from "../../../db/schema.js";
+import { eq, inArray, sql } from "drizzle-orm";
+import {
+  assignments,
+  bolSubmissions,
+  loads,
+  photos,
+  wells,
+} from "../../../db/schema.js";
 import {
   scoreSuggestions,
   type SuggestionResult,
@@ -45,6 +51,129 @@ export function classifyTier(suggestion: {
     return 2;
   }
   return 3;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Auto-promotion (Tier 1 + photo attached + not cleared upstream)
+// ────────────────────────────────────────────────────────────────────
+//
+// Scope: move high-confidence Tier 1 assignments out of 'uncertain' into
+// 'ready_to_build' at creation time so dispatchers (Scout/Steph) don't have
+// to manually confirm obvious matches. Per Jessica's 2026-04-17 workflow
+// spec email, this is the biggest lever for getting dispatch off the sheets.
+//
+// Gate (ALL must hold; bypasses the workbench uncertain_reasons gate
+// intentionally — the tighter (photo + not cleared upstream) conditions
+// are sufficient protection for a Tier 1 confirmed_mapping match):
+//   1. autoMapTier === 1
+//   2. A photo exists for the load (photos table or matched bol_submissions)
+//   3. Load is NOT already terminal upstream (PropX raw_data.cleared_at,
+//      loads.status in cleared variants).
+//
+// Failure mode: any error is SWALLOWED — the primary assignment has already
+// been committed, and a human can always advance the stage manually via
+// advanceStage(). A failed auto-promotion is strictly less bad than a failed
+// assignment, and must never regress the production matching path.
+
+/**
+ * Pure decision function. Returns true iff the auto-promotion gate is
+ * satisfied. Extracted for unit-testability without a DB.
+ */
+export function shouldAutoPromote(input: {
+  autoMapTier: number | null | undefined;
+  hasPhoto: boolean;
+  loadStatus: string | null | undefined;
+  rawDataClearedAt: unknown;
+}): boolean {
+  if (input.autoMapTier !== 1) return false;
+  if (!input.hasPhoto) return false;
+  // Upstream-cleared defense: PropX signals clearing via raw_data.cleared_at.
+  if (input.rawDataClearedAt != null && input.rawDataClearedAt !== "")
+    return false;
+  // Observed values are 'Delivered' / 'Completed'; treat 'cleared' variants
+  // as terminal defensively even though they aren't in the current vocab.
+  const s = (input.loadStatus ?? "").toLowerCase();
+  if (s === "cleared") return false;
+  return true;
+}
+
+/**
+ * Check whether a load has a photo attached via either the photos table or
+ * a matched bol_submission with at least one photo URL.
+ */
+async function loadHasPhoto(db: Database, loadId: number): Promise<boolean> {
+  // Any row in photos keyed to this load counts. LIMIT 1 keeps the query cheap.
+  const photoRow = await db
+    .select({ id: photos.id })
+    .from(photos)
+    .where(eq(photos.loadId, loadId))
+    .limit(1);
+  if (photoRow.length > 0) return true;
+
+  // Fall back to matched bol_submissions with a non-empty photos array.
+  const submissionRow = await db
+    .select({ id: bolSubmissions.id, photos: bolSubmissions.photos })
+    .from(bolSubmissions)
+    .where(eq(bolSubmissions.matchedLoadId, loadId))
+    .limit(5);
+  for (const r of submissionRow) {
+    const ps = (r.photos ?? []) as Array<{ url?: string }>;
+    if (ps.length > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * If the gate passes, promote a just-created assignment from 'uncertain' to
+ * 'ready_to_build' and append a status_history entry. Wrapped in its own
+ * try/catch at the call site — any failure leaves the assignment as-is.
+ */
+async function tryAutoPromote(
+  db: Database,
+  params: {
+    assignmentId: number;
+    loadId: number;
+    loadStatus: string | null;
+    rawData: unknown;
+    systemUserId: number;
+  },
+): Promise<boolean> {
+  const rawData = params.rawData as Record<string, unknown> | null;
+  const clearedAt = rawData?.["cleared_at"];
+
+  const hasPhoto = await loadHasPhoto(db, params.loadId);
+
+  const gate = shouldAutoPromote({
+    autoMapTier: 1,
+    hasPhoto,
+    loadStatus: params.loadStatus,
+    rawDataClearedAt: clearedAt,
+  });
+  if (!gate) return false;
+
+  const now = new Date();
+  const historyEntry = {
+    status: "stage:ready_to_build",
+    changedAt: now.toISOString(),
+    changedBy: params.systemUserId,
+    changedByName: "Auto-Mapper",
+    notes: "Auto-promoted: Tier 1 + photo attached + not terminal upstream",
+  };
+
+  // Guarded update: only promote if still 'uncertain' (defensive against
+  // a concurrent human action between createAssignment and this update).
+  await db
+    .update(assignments)
+    .set({
+      handlerStage: "ready_to_build",
+      stageChangedAt: now,
+      statusHistory: sql`coalesce(${assignments.statusHistory}, '[]'::jsonb) || ${JSON.stringify([historyEntry])}::jsonb`,
+      updatedAt: now,
+    })
+    .where(
+      sql`${assignments.id} = ${params.assignmentId} AND ${assignments.handlerStage} = 'uncertain'`,
+    );
+  return true;
 }
 
 export async function processLoadBatch(
@@ -135,6 +264,21 @@ export async function processLoadBatch(
                 autoMapScore: "1.000",
                 matchAudit: confirmedAudit,
               });
+              // Auto-promote to ready_to_build if gate passes.
+              // Isolated in its own try/catch — any failure here leaves the
+              // assignment as 'uncertain' (safe fallback, never regresses the
+              // primary matching path).
+              try {
+                await tryAutoPromote(db, {
+                  assignmentId: assignment.id,
+                  loadId,
+                  loadStatus: load.status,
+                  rawData: load.rawData,
+                  systemUserId,
+                });
+              } catch {
+                // Swallow — human can still advance manually.
+              }
               results.push({
                 loadId,
                 loadNo: load.loadNo,
@@ -275,6 +419,23 @@ export async function processLoadBatch(
               confidence: topSuggestion.score.toString(),
               confirmed: tier === 1,
             });
+          }
+
+          // Auto-promote Tier 1 only. Tier 2 stays 'uncertain' — the
+          // tier==2 case is specifically the fuzzy / lower-confidence
+          // cohort that still needs dispatcher eyes.
+          if (tier === 1) {
+            try {
+              await tryAutoPromote(db, {
+                assignmentId: assignment.id,
+                loadId,
+                loadStatus: load.status,
+                rawData: load.rawData,
+                systemUserId,
+              });
+            } catch {
+              // Swallow — human can still advance manually.
+            }
           }
 
           results.push({
