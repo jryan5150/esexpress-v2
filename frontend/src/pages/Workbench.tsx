@@ -71,7 +71,7 @@ const FILTER_EMPTY_COPY: Record<
   },
   all: {
     title: "No loads in the system.",
-    body: "The workbench is completely empty. If this looks wrong, the ingest sync may be paused — check with Jace or the admin dashboard.",
+    body: "Load Center is completely empty. If this looks wrong, the ingest sync may be paused — check with Jace or the admin dashboard.",
   },
 };
 
@@ -369,7 +369,7 @@ export function Workbench() {
   return (
     <div className="flex-1 min-h-0 flex flex-col p-4 gap-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-xl font-headline">Workbench</h1>
+        <h1 className="text-xl font-headline">Load Center</h1>
         <div className="flex items-center gap-2 flex-wrap">
           <input
             type="search"

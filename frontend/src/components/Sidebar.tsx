@@ -202,10 +202,10 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
             <Link
               to="/workbench"
               className={navClass("/workbench")}
-              title="Workbench"
+              title="Load Center"
             >
               <span className={iconClass("/workbench")}>build</span>
-              {!collapsed && "Workbench"}
+              {!collapsed && "Load Center"}
             </Link>
             <Link
               to="/bol"

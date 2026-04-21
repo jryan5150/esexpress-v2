@@ -103,8 +103,11 @@ export function LoadReport() {
   const dateTo = params.get("dateTo") ?? "";
   const truckNo = params.get("truckNo") ?? "";
   // Group pivot — "none" renders the flat table, others group by that field.
-  // URL-persisted so sharing/bookmarking a grouped view works.
-  const groupBy = (params.get("groupBy") as GroupBy) || "truck";
+  // URL-persisted so sharing/bookmarking a grouped view works. Defaults to
+  // "day" — payroll reviewers mostly ask "what happened yesterday?" not
+  // "what has this truck been doing this week?"; truck grouping becomes a
+  // one-click switch when they do need it.
+  const groupBy = (params.get("groupBy") as GroupBy) || "day";
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -338,7 +341,7 @@ function Table({ rows }: { rows: Row[] }) {
                     <Link
                       to={`/workbench?filter=all&search=${encodeURIComponent(r.loadNo)}`}
                       className="text-primary hover:underline font-medium"
-                      title={`Open load ${r.loadNo} in Workbench`}
+                      title={`Open load ${r.loadNo} in Load Center`}
                     >
                       {r.loadNo}
                     </Link>

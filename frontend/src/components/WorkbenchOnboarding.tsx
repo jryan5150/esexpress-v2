@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-const STORAGE_KEY = "workbench_onboarding_v7_seen";
+const STORAGE_KEY = "workbench_onboarding_v8_seen";
 
 type Role = "jess" | "builder" | "keli" | "clearer" | "other";
 
@@ -21,7 +21,7 @@ interface Step {
 const STEPS: Record<Role, Step[]> = {
   jess: [
     {
-      title: "Welcome to Workbench",
+      title: "Welcome to Load Center",
       body: "One screen for your whole day. 30-second tour — you can skip any time.",
     },
     {
@@ -63,7 +63,7 @@ const STEPS: Record<Role, Step[]> = {
     {
       target: "[data-sidebar-load-report]",
       title: "Load Report — now up top",
-      body: "Payroll-friendly truck/date view. Load # and BOL # cells are clickable — click a Load # to jump back to Workbench, or a BOL # to find the ticket photo in BOL Center.",
+      body: "Payroll-friendly truck/date view. Load # and BOL # cells are clickable — click a Load # to jump back to Load Center, or a BOL # to find the ticket photo in BOL Center.",
       hint: "Cross-surface shortcut",
     },
     {
@@ -105,7 +105,7 @@ const STEPS: Record<Role, Step[]> = {
     {
       target: "[data-sidebar-load-report]",
       title: "Load Report — now up top",
-      body: "Numbers are clickable — Load # jumps to Workbench, BOL # jumps to BOL Center.",
+      body: "Numbers are clickable — Load # jumps to Load Center, BOL # jumps to BOL Center.",
       hint: "Cross-surface shortcut",
     },
     {
@@ -147,7 +147,7 @@ const STEPS: Record<Role, Step[]> = {
     {
       target: "[data-sidebar-load-report]",
       title: "Load Report — now up top",
-      body: "Numbers are clickable — Load # jumps to Workbench, BOL # jumps to BOL Center.",
+      body: "Numbers are clickable — Load # jumps to Load Center, BOL # jumps to BOL Center.",
       hint: "Cross-surface shortcut",
     },
     {
@@ -201,7 +201,7 @@ const STEPS: Record<Role, Step[]> = {
   ],
   other: [
     {
-      title: "Welcome to Workbench",
+      title: "Welcome to Load Center",
       body: "One screen for the whole dispatch flow.",
     },
     {
@@ -219,7 +219,7 @@ const STEPS: Record<Role, Step[]> = {
     {
       target: "[data-sidebar-load-report]",
       title: "Load Report — now up top",
-      body: "Numbers are clickable — Load # jumps to Workbench, BOL # jumps to BOL Center.",
+      body: "Numbers are clickable — Load # jumps to Load Center, BOL # jumps to BOL Center.",
       hint: "Cross-surface shortcut",
     },
     {

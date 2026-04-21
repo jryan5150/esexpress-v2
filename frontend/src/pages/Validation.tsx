@@ -594,7 +594,7 @@ export function Validation() {
                                 <span
                                   className="absolute -top-1 -right-1 bg-primary text-on-primary text-[9px] font-bold leading-none rounded-full px-1 py-0.5 tabular-nums ring-1 ring-surface shadow"
                                   aria-label={`${a.photoUrls.length} photos`}
-                                  title={`${a.photoUrls.length} photos — open in Workbench drawer to cycle`}
+                                  title={`${a.photoUrls.length} photos — open in Load Center drawer to cycle`}
                                 >
                                   {a.photoUrls.length}
                                 </span>

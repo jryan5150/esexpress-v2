@@ -1165,7 +1165,7 @@ export function BolQueue() {
                             <Link
                               to={`/workbench?search=${encodeURIComponent(item.loadNo)}`}
                               className="text-[10px] font-semibold text-primary hover:underline inline-flex items-center gap-0.5 whitespace-nowrap"
-                              title="Open this load in the Workbench"
+                              title="Open this load in Load Center"
                               onClick={(e) => e.stopPropagation()}
                             >
                               Workbench
