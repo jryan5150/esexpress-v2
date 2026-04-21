@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-const STORAGE_KEY = "workbench_onboarding_v6_seen";
+const STORAGE_KEY = "workbench_onboarding_v7_seen";
 
 type Role = "jess" | "builder" | "keli" | "clearer" | "other";
 
@@ -61,6 +61,12 @@ const STEPS: Record<Role, Step[]> = {
       hint: "Blue button",
     },
     {
+      target: "[data-sidebar-load-report]",
+      title: "Load Report — now up top",
+      body: "Payroll-friendly truck/date view. Load # and BOL # cells are clickable — click a Load # to jump back to Workbench, or a BOL # to find the ticket photo in BOL Center.",
+      hint: "Cross-surface shortcut",
+    },
+    {
       target: "[data-show-walkthrough]",
       title: "Replay any time",
       body: "This link re-runs the tour. You're set — check Uncertain and work the list.",
@@ -95,6 +101,12 @@ const STEPS: Record<Role, Step[]> = {
       title: "Paste PCS # after build",
       body: "Once PCS gives you a load number, paste it here. That's how it links back.",
       hint: "Click to enter",
+    },
+    {
+      target: "[data-sidebar-load-report]",
+      title: "Load Report — now up top",
+      body: "Numbers are clickable — Load # jumps to Workbench, BOL # jumps to BOL Center.",
+      hint: "Cross-surface shortcut",
     },
     {
       target: "[data-show-walkthrough]",
@@ -133,6 +145,12 @@ const STEPS: Record<Role, Step[]> = {
       hint: "Click to enter",
     },
     {
+      target: "[data-sidebar-load-report]",
+      title: "Load Report — now up top",
+      body: "Numbers are clickable — Load # jumps to Workbench, BOL # jumps to BOL Center.",
+      hint: "Cross-surface shortcut",
+    },
+    {
       target: "[data-show-walkthrough]",
       title: "Replay any time",
       body: "You're set. Work the list.",
@@ -169,6 +187,12 @@ const STEPS: Record<Role, Step[]> = {
       hint: "Escape hatch",
     },
     {
+      target: "[data-sidebar-load-report]",
+      title: "Load Report — now up top",
+      body: "Payroll/truck view. Click any BOL # there to jump straight to that ticket's photo in BOL Center — handy when verifying a load's paperwork before clearing.",
+      hint: "Cross-surface shortcut",
+    },
+    {
       target: "[data-show-walkthrough]",
       title: "Replay any time",
       body: "You're set. Clear the list top-down.",
@@ -191,6 +215,12 @@ const STEPS: Record<Role, Step[]> = {
       title: "Click a row to open it",
       body: "Detail panel opens below the row. Edit in place.",
       hint: "Click a load row",
+    },
+    {
+      target: "[data-sidebar-load-report]",
+      title: "Load Report — now up top",
+      body: "Numbers are clickable — Load # jumps to Workbench, BOL # jumps to BOL Center.",
+      hint: "Cross-surface shortcut",
     },
     {
       target: "[data-show-walkthrough]",

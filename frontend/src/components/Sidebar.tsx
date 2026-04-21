@@ -230,6 +230,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
             </Link>
             <Link
               to="/load-report"
+              data-sidebar-load-report
               className={navClass("/load-report")}
               title="Load Report — payroll-friendly truck/date export"
             >
