@@ -413,7 +413,7 @@ export function BolQueue() {
               </div>
             ) : filtered.length === 0 ? (
               <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-12 text-center">
-                <span className="material-symbols-outlined text-4xl text-outline/30 mb-2">
+                <span className="material-symbols-outlined text-4xl text-outline mb-2">
                   inbox
                 </span>
                 <p className="text-outline text-sm">
@@ -487,7 +487,7 @@ export function BolQueue() {
                             </>
                           ) : (
                             <div className="flex items-center justify-center h-full">
-                              <span className="material-symbols-outlined text-outline/30 text-3xl">
+                              <span className="material-symbols-outlined text-outline text-3xl">
                                 no_photography
                               </span>
                             </div>
@@ -742,7 +742,7 @@ export function BolQueue() {
               </div>
             ) : rawItems.length === 0 ? (
               <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-12 text-center">
-                <span className="material-symbols-outlined text-4xl text-outline/30">
+                <span className="material-symbols-outlined text-4xl text-outline">
                   receipt_long
                 </span>
                 <p className="text-outline text-sm mt-2">
@@ -796,7 +796,7 @@ export function BolQueue() {
                             </>
                           ) : (
                             <div className="flex items-center justify-center h-full">
-                              <span className="material-symbols-outlined text-outline/30 text-3xl">
+                              <span className="material-symbols-outlined text-outline text-3xl">
                                 no_photography
                               </span>
                             </div>
@@ -988,7 +988,7 @@ export function BolQueue() {
               </div>
             ) : propxItems.length === 0 ? (
               <div className="text-center py-10 bg-surface-container-lowest rounded-[10px] border border-outline-variant/40">
-                <span className="material-symbols-outlined text-outline/30 text-4xl">
+                <span className="material-symbols-outlined text-outline text-4xl">
                   no_photography
                 </span>
                 <p className="mt-2 text-sm text-outline">
@@ -1025,7 +1025,7 @@ export function BolQueue() {
                           />
                         ) : (
                           <div className="flex items-center justify-center h-full">
-                            <span className="material-symbols-outlined text-outline/30 text-3xl">
+                            <span className="material-symbols-outlined text-outline text-3xl">
                               broken_image
                             </span>
                           </div>

@@ -224,7 +224,7 @@ export const LoadRow = memo(function LoadRow({
                 e.stopPropagation();
                 onClaim();
               }}
-              className="text-[9px] font-bold text-outline/40 hover:text-primary-container px-1 cursor-pointer transition-colors"
+              className="text-[9px] font-bold text-outline hover:text-primary-container px-1 cursor-pointer transition-colors"
             >
               Claim
             </button>

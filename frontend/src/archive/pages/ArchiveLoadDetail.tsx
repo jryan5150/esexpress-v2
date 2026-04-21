@@ -19,7 +19,7 @@ export function ArchiveLoadDetail() {
   if (!load) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8">
-        <span className="material-symbols-outlined text-4xl text-on-surface-variant/40">
+        <span className="material-symbols-outlined text-4xl text-on-surface-variant">
           search_off
         </span>
         <p className="text-on-surface font-headline text-lg">Load not found</p>
@@ -70,7 +70,7 @@ export function ArchiveLoadDetail() {
         >
           Archive
         </Link>
-        <span className="text-on-surface-variant/40">/</span>
+        <span className="text-on-surface-variant">/</span>
         <span className="text-on-surface font-medium">Load #{load.loadNo}</span>
       </div>
 
@@ -93,7 +93,7 @@ export function ArchiveLoadDetail() {
                 {label}
               </dt>
               <dd className="text-sm text-on-surface font-label">
-                {value ?? <span className="text-on-surface-variant/40">—</span>}
+                {value ?? <span className="text-on-surface-variant">—</span>}
               </dd>
             </div>
           ))}

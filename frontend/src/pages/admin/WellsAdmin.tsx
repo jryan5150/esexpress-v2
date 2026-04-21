@@ -112,7 +112,7 @@ export function WellsAdmin() {
               className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 filter === btn.value
                   ? "bg-primary-container/12 text-primary-container shadow-sm"
-                  : "text-on-surface/40 hover:bg-surface-container-high/60 hover:text-on-surface/70"
+                  : "text-on-surface-variant hover:bg-surface-container-high/60 hover:text-on-surface"
               }`}
             >
               {btn.label}
@@ -166,13 +166,13 @@ export function WellsAdmin() {
           !wellsQuery.isError &&
           filtered.length === 0 && (
             <div className="bg-surface-container-low rounded-xl p-12 border border-on-surface/5 flex flex-col items-center justify-center text-center space-y-4">
-              <span className="material-symbols-outlined text-5xl text-on-surface/20">
+              <span className="material-symbols-outlined text-5xl text-on-surface-variant">
                 oil_barrel
               </span>
               <h2 className="text-lg font-bold font-headline text-on-surface/60">
                 {filter === "all" ? "No Wells Found" : `No ${filter} wells`}
               </h2>
-              <p className="text-sm text-on-surface/40 font-body max-w-md">
+              <p className="text-sm text-on-surface-variant font-body max-w-md">
                 {filter === "all"
                   ? "Wells will appear here once synced from PropX."
                   : `No wells with "${filter}" status. Try a different filter.`}
@@ -184,7 +184,7 @@ export function WellsAdmin() {
         {!wellsQuery.isLoading && filtered.length > 0 && (
           <div className="space-y-[1px] bg-on-surface/5 rounded-[12px] overflow-hidden border border-outline-variant/40 card-rest">
             {/* Header Row */}
-            <div className="bg-surface-container-lowest/50 px-6 py-3 flex items-center gap-6 text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+            <div className="bg-surface-container-lowest/50 px-6 py-3 flex items-center gap-6 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
               <div className="flex-1 min-w-[180px]">Name</div>
               <div className="w-24 text-center">Status</div>
               <div className="w-36">PropX Job ID</div>
@@ -210,7 +210,7 @@ export function WellsAdmin() {
                     {well.name}
                   </span>
                   {well.aliases.length > 0 && (
-                    <span className="ml-2 font-label text-[10px] text-on-surface/30">
+                    <span className="ml-2 font-label text-[10px] text-on-surface-variant">
                       +{well.aliases.length} alias
                       {well.aliases.length > 1 ? "es" : ""}
                     </span>
@@ -256,7 +256,7 @@ export function WellsAdmin() {
                       <span className="font-label text-sm font-bold text-on-surface tabular-nums">
                         {well.dailyTargetLoads}
                       </span>
-                      <span className="font-label text-xs text-on-surface/30 ml-1">
+                      <span className="font-label text-xs text-on-surface-variant ml-1">
                         loads
                       </span>
                     </>
@@ -313,7 +313,7 @@ export function WellsAdmin() {
                     onClick={() => startEdit(well)}
                     disabled={editingId === well.id}
                     aria-label={`Edit daily target for ${well.name}`}
-                    className="p-2 hover:bg-surface-container-highest rounded-lg transition-colors cursor-pointer text-on-surface/30 hover:text-primary-container disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-2 hover:bg-surface-container-highest rounded-lg transition-colors cursor-pointer text-on-surface-variant hover:text-primary-container disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <span className="material-symbols-outlined text-lg">
                       edit

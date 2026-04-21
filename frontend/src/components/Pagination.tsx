@@ -22,8 +22,8 @@ export function Pagination({
   const end = Math.min(page * pageSize, total);
 
   return (
-    <div className="flex items-center justify-between px-2 py-4 text-xs text-on-surface/40">
-      <span className="font-label text-on-surface/30">
+    <div className="flex items-center justify-between px-2 py-4 text-xs text-on-surface-variant">
+      <span className="font-label text-on-surface-variant">
         {total === 0 ? "No results" : `${start}--${end} of ${total}`}
       </span>
       <div className="flex items-center gap-1">
@@ -52,7 +52,7 @@ export function Pagination({
         </button>
       </div>
       <div className="flex items-center gap-2">
-        <span className="font-label text-on-surface/20 text-[10px] uppercase tracking-wider">
+        <span className="font-label text-on-surface-variant text-[10px] uppercase tracking-wider">
           Rows
         </span>
         <div className="flex gap-0.5 rounded-lg bg-surface-container-high/50 p-0.5">
@@ -64,7 +64,7 @@ export function Pagination({
               className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                 pageSize === size
                   ? "bg-primary-container/15 text-primary-container shadow-sm"
-                  : "text-on-surface/30 hover:text-on-surface/50"
+                  : "text-on-surface-variant hover:text-on-surface"
               }`}
             >
               {size}

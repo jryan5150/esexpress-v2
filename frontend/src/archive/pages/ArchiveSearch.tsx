@@ -181,7 +181,7 @@ export function ArchiveSearch() {
           </div>
         ) : loads.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 gap-2">
-            <span className="material-symbols-outlined text-3xl text-on-surface-variant/40">
+            <span className="material-symbols-outlined text-3xl text-on-surface-variant">
               inventory_2
             </span>
             <p className="text-sm text-on-surface-variant">
@@ -228,29 +228,29 @@ export function ArchiveSearch() {
                   </td>
                   <td className="px-4 py-3 text-on-surface">
                     {load.driverName ?? (
-                      <span className="text-on-surface-variant/40">—</span>
+                      <span className="text-on-surface-variant">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-on-surface">
                     {load.carrierName ?? (
-                      <span className="text-on-surface-variant/40">—</span>
+                      <span className="text-on-surface-variant">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-on-surface">
                     {load.wellName ?? (
-                      <span className="text-on-surface-variant/40">—</span>
+                      <span className="text-on-surface-variant">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 font-label text-on-surface-variant">
                     {load.bolNo ?? (
-                      <span className="text-on-surface-variant/40">—</span>
+                      <span className="text-on-surface-variant">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-on-surface-variant">
                     {load.deliveredOn ? (
                       new Date(load.deliveredOn).toLocaleDateString()
                     ) : (
-                      <span className="text-on-surface-variant/40">—</span>
+                      <span className="text-on-surface-variant">—</span>
                     )}
                   </td>
                 </tr>

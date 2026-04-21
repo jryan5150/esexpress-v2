@@ -40,14 +40,14 @@ export function Layout() {
               <span className="material-symbols-outlined icon-filled text-tertiary text-sm">
                 cloud_done
               </span>
-              <span className="font-label text-[10px] text-on-surface/30 tracking-wider uppercase">
+              <span className="font-label text-[10px] text-on-surface-variant tracking-wider uppercase">
                 Live
               </span>
             </div>
             <StatusBanner />
             <button
               aria-label="Notifications"
-              className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer text-on-surface/40 hover:text-on-surface/70 icon-hover"
+              className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer text-on-surface-variant hover:text-on-surface icon-hover"
             >
               <span className="material-symbols-outlined text-xl">
                 notifications

@@ -61,7 +61,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
       onClick={handleCopy}
     >
       <div className="min-w-0">
-        <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface/30 block leading-tight">
+        <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface-variant block leading-tight">
           {label}
         </span>
         <span
@@ -72,7 +72,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
       </div>
       {value && (
         <span
-          className={`text-[9px] font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity ${copied ? "text-tertiary" : "text-on-surface/30"}`}
+          className={`text-[9px] font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity ${copied ? "text-tertiary" : "text-on-surface-variant"}`}
         >
           {copied ? "Copied" : "Copy"}
         </span>
@@ -151,7 +151,7 @@ export const DispatchCard = memo(function DispatchCard({
                 >
                   {photoIcon}
                 </span>
-                <span className="font-label text-[10px] font-medium text-on-surface/40 uppercase tracking-[0.1em]">
+                <span className="font-label text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.1em]">
                   {photoStatus || "missing"}
                 </span>
               </div>
@@ -226,7 +226,7 @@ export const DispatchCard = memo(function DispatchCard({
           <div className="w-52 bg-surface-container-low/30 p-2.5 flex flex-col gap-2">
             {/* Weight summary */}
             <div className="bg-surface-container-high/50 rounded-lg p-3 space-y-2">
-              <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface/30">
+              <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface-variant">
                 Weight
               </span>
               <div className="font-label text-lg font-bold text-on-surface tabular-nums">
@@ -235,7 +235,7 @@ export const DispatchCard = memo(function DispatchCard({
                   : "--"}
               </div>
               {(grossWeightLbs || netWeightLbs) && (
-                <div className="text-[10px] font-label text-on-surface/40 space-y-0.5 tabular-nums">
+                <div className="text-[10px] font-label text-on-surface-variant space-y-0.5 tabular-nums">
                   {grossWeightLbs && (
                     <div>
                       Gross: {Number(grossWeightLbs).toLocaleString()} lbs
@@ -251,7 +251,7 @@ export const DispatchCard = memo(function DispatchCard({
             {/* Terminal / Origin */}
             {terminalName && (
               <div className="px-1">
-                <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface/30 block">
+                <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface-variant block">
                   Origin
                 </span>
                 <span className="text-xs text-on-surface/70 font-label">
@@ -263,7 +263,7 @@ export const DispatchCard = memo(function DispatchCard({
             {/* Photo / ticket */}
             {hasPhotos ? (
               <div className="space-y-2">
-                <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface/30 px-1">
+                <span className="text-[9px] font-label font-medium uppercase tracking-[0.15em] text-on-surface-variant px-1">
                   Weight Ticket
                 </span>
                 {photoUrls.map((url, i) => {
@@ -295,7 +295,7 @@ export const DispatchCard = memo(function DispatchCard({
                 <span className="material-symbols-outlined text-2xl text-on-surface/10">
                   no_photography
                 </span>
-                <span className="text-[10px] text-on-surface/20 font-label uppercase">
+                <span className="text-[10px] text-on-surface-variant font-label uppercase">
                   No ticket
                 </span>
               </div>

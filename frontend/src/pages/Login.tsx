@@ -177,7 +177,7 @@ export function Login() {
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface/20 text-lg">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface-variant text-lg">
                 mail
               </span>
               <input
@@ -192,7 +192,7 @@ export function Login() {
             </div>
 
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface/20 text-lg">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined icon-filled text-on-surface-variant text-lg">
                 lock
               </span>
               <input

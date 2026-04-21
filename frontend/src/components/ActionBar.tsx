@@ -34,7 +34,7 @@ export function ActionBar({ selectedCount, actions, onClear }: ActionBarProps) {
       ))}
       <button
         onClick={onClear}
-        className="ml-auto text-on-surface/40 hover:text-on-surface text-xs font-headline font-bold uppercase tracking-wider transition-colors"
+        className="ml-auto text-on-surface-variant hover:text-on-surface text-xs font-headline font-bold uppercase tracking-wider transition-colors"
       >
         Clear
       </button>

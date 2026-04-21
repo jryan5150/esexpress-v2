@@ -62,7 +62,7 @@ function InlineEdit({
 
   return (
     <div className="space-y-1">
-      <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+      <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
         {label}
       </span>
       {editing ? (
@@ -91,8 +91,10 @@ function InlineEdit({
           title={`Click to edit ${label.toLowerCase()}`}
           aria-label={`Edit ${label}`}
         >
-          <span>{value || <span className="text-on-surface/20">--</span>}</span>
-          <span className="material-symbols-outlined text-[12px] text-on-surface/20 group-hover:text-primary transition-colors">
+          <span>
+            {value || <span className="text-on-surface-variant">--</span>}
+          </span>
+          <span className="material-symbols-outlined text-[12px] text-on-surface-variant group-hover:text-primary transition-colors">
             edit
           </span>
         </button>
@@ -379,7 +381,7 @@ export function Validation() {
                 <p className="text-on-surface font-bold text-lg">
                   {tierCounts[1]} high-confidence matches ready
                 </p>
-                <p className="text-on-surface/40 text-xs font-label">
+                <p className="text-on-surface-variant text-xs font-label">
                   Job ID matched -- bulk approve to move to dispatch
                 </p>
               </div>
@@ -416,14 +418,14 @@ export function Validation() {
                       {meta.icon}
                     </span>
                     <span
-                      className="text-xs font-bold uppercase tracking-widest text-on-surface/40"
+                      className="text-xs font-bold uppercase tracking-widest text-on-surface-variant"
                       title={`${meta.label} — ${meta.description.replace(/--/g, "—")}`}
                     >
                       {meta.label}
                     </span>
                   </div>
                   <span
-                    className={`material-symbols-outlined text-sm text-on-surface/30 transition-transform ${expandedTiers.has(tier) ? "rotate-180" : ""}`}
+                    className={`material-symbols-outlined text-sm text-on-surface-variant transition-transform ${expandedTiers.has(tier) ? "rotate-180" : ""}`}
                   >
                     expand_more
                   </span>
@@ -433,7 +435,7 @@ export function Validation() {
                 >
                   {summaryQuery.isLoading ? "..." : count}
                 </div>
-                <p className="text-[10px] text-on-surface/40 uppercase tracking-wider mt-1">
+                <p className="text-[10px] text-on-surface-variant uppercase tracking-wider mt-1">
                   {meta.description}
                 </p>
               </button>
@@ -443,7 +445,7 @@ export function Validation() {
 
         {/* Total */}
         <div className="flex items-center gap-4 px-2">
-          <span className="text-xs text-on-surface/30 uppercase tracking-widest font-bold">
+          <span className="text-xs text-on-surface-variant uppercase tracking-widest font-bold">
             Total Pending
           </span>
           <span className="font-data text-lg font-bold text-on-surface">
@@ -494,7 +496,7 @@ export function Validation() {
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-3">
                   <div className={`w-2 h-2 rounded-full ${meta.bgClass}`} />
-                  <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface/40">
+                  <h3 className="text-xs uppercase tracking-[0.2em] font-black text-on-surface-variant">
                     {meta.label}{" "}
                     <span className={meta.textClass}>{meta.description}</span>
                   </h3>
@@ -538,7 +540,7 @@ export function Validation() {
                   <span className="material-symbols-outlined text-3xl text-on-surface/15 mb-2">
                     inbox
                   </span>
-                  <p className="text-on-surface/30 font-label text-sm">
+                  <p className="text-on-surface-variant font-label text-sm">
                     No {meta.label.toLowerCase()} assignments pending
                   </p>
                 </div>
@@ -548,7 +550,7 @@ export function Validation() {
               {assignments.length > 0 && (
                 <div className="space-y-[1px] bg-on-surface/5 rounded-xl overflow-hidden border border-on-surface/5">
                   {/* Table Header */}
-                  <div className="bg-surface-container-lowest/50 px-6 py-3 flex items-center gap-6 text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                  <div className="bg-surface-container-lowest/50 px-6 py-3 flex items-center gap-6 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
                     <div className="w-28">Load #</div>
                     <div className="w-36">Driver</div>
                     <div className="flex-1">Destination &rarr; Well</div>
@@ -567,7 +569,7 @@ export function Validation() {
                       >
                         {/* Expand indicator */}
                         <span
-                          className={`material-symbols-outlined text-sm text-on-surface/30 transition-transform ${expandedId === a.id ? "rotate-90" : ""}`}
+                          className={`material-symbols-outlined text-sm text-on-surface-variant transition-transform ${expandedId === a.id ? "rotate-90" : ""}`}
                         >
                           chevron_right
                         </span>
@@ -596,7 +598,7 @@ export function Validation() {
                                   : "Awaiting photo — JotForm sync runs every 30 min"
                               }
                             >
-                              <span className="material-symbols-outlined text-sm text-outline/40">
+                              <span className="material-symbols-outlined text-sm text-outline">
                                 {a.photoStatus === "missing"
                                   ? "no_photography"
                                   : "schedule"}
@@ -624,7 +626,7 @@ export function Validation() {
                           <span className="font-label text-xs text-on-surface/50 truncate max-w-[140px]">
                             {a.destinationName ?? "Unknown"}
                           </span>
-                          <span className="material-symbols-outlined text-xs text-on-surface/20">
+                          <span className="material-symbols-outlined text-xs text-on-surface-variant">
                             arrow_forward
                           </span>
                           <WellPicker
@@ -677,7 +679,7 @@ export function Validation() {
                                     setRejectingId(null);
                                     setRejectReason("");
                                   }}
-                                  className="text-on-surface/30 text-xs cursor-pointer hover:text-on-surface/60"
+                                  className="text-on-surface-variant text-xs cursor-pointer hover:text-on-surface/60"
                                 >
                                   Cancel
                                 </button>
@@ -719,7 +721,7 @@ export function Validation() {
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {/* Read-only fields */}
                             <div className="space-y-1">
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
                                 Load #
                               </span>
                               <p className="text-sm text-on-surface font-label">
@@ -727,7 +729,7 @@ export function Validation() {
                               </p>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
                                 Well
                               </span>
                               <p className="text-sm text-on-surface font-label">
@@ -735,7 +737,7 @@ export function Validation() {
                               </p>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
                                 Tier
                               </span>
                               <p className="text-sm text-on-surface font-label">
@@ -743,7 +745,7 @@ export function Validation() {
                               </p>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
                                 Score
                               </span>
                               <p className="text-sm text-on-surface font-label">
@@ -807,17 +809,19 @@ export function Validation() {
                               inputType="date"
                             />
                             <div className="space-y-1">
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
                                 Destination
                               </span>
                               <p className="text-sm text-on-surface font-label">
                                 {a.destinationName || (
-                                  <span className="text-on-surface/20">--</span>
+                                  <span className="text-on-surface-variant">
+                                    --
+                                  </span>
                                 )}
                               </p>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
                                 Photo Status
                               </span>
                               <p className="text-sm text-on-surface font-label">
@@ -825,7 +829,7 @@ export function Validation() {
                               </p>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface/30">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">
                                 Assignment
                               </span>
                               <p className="text-sm text-on-surface font-label">

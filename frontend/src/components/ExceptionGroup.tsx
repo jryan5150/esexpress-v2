@@ -61,7 +61,7 @@ export function ExceptionGroup({
       >
         <div className="flex items-center gap-3">
           <span
-            className="material-symbols-outlined text-sm text-on-surface/40"
+            className="material-symbols-outlined text-sm text-on-surface-variant"
             style={{
               transform: expanded ? "rotate(0)" : "rotate(-90deg)",
               transition: "transform 200ms",

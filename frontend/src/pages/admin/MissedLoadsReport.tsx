@@ -104,7 +104,7 @@ export function MissedLoadsReport() {
 
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-6">
         {reportQuery.isLoading && (
-          <div className="text-on-surface/40 text-sm">Loading report…</div>
+          <div className="text-on-surface-variant text-sm">Loading report…</div>
         )}
 
         {reportQuery.isError && (
@@ -287,7 +287,7 @@ function Section({
         {title}
       </h2>
       {empty ? (
-        <div className="bg-surface-container-low rounded-md p-4 text-xs text-on-surface/40">
+        <div className="bg-surface-container-low rounded-md p-4 text-xs text-on-surface-variant">
           {emptyText}
         </div>
       ) : (
@@ -323,7 +323,7 @@ function Table({
               {cols.map((c) => (
                 <th
                   key={c}
-                  className="px-3 py-2 text-left font-bold uppercase tracking-wide text-[10px] text-on-surface/40"
+                  className="px-3 py-2 text-left font-bold uppercase tracking-wide text-[10px] text-on-surface-variant"
                 >
                   {c}
                 </th>

@@ -37,7 +37,7 @@ const MOCK_CYCLES = [
     bols: 8,
     amount: "$21,000.00",
     status: "Completed",
-    statusColor: "bg-on-surface/5 text-on-surface/40 border-on-surface/10",
+    statusColor: "bg-on-surface/5 text-on-surface-variant border-on-surface/10",
   },
 ];
 
@@ -57,7 +57,7 @@ const STATUS_COLOR_MAP: Record<string, string> = {
   pending: "bg-primary/10 text-primary border-primary/20",
   processing:
     "bg-primary-container/10 text-primary-container border-primary-container/20",
-  completed: "bg-on-surface/5 text-on-surface/40 border-on-surface/10",
+  completed: "bg-on-surface/5 text-on-surface-variant border-on-surface/10",
 };
 
 function formatAmount(cents: number): { dollars: string; decimal: string } {
@@ -178,7 +178,7 @@ export function Finance() {
           status: status.charAt(0).toUpperCase() + status.slice(1),
           statusColor:
             STATUS_COLOR_MAP[status] ||
-            "bg-on-surface/5 text-on-surface/40 border-on-surface/10",
+            "bg-on-surface/5 text-on-surface-variant border-on-surface/10",
         };
       })
     : MOCK_CYCLES;
@@ -248,7 +248,7 @@ export function Finance() {
                 {isLoading ? "..." : totalPendingDollars}
               </span>
               {!isLoading && totalPendingCents && (
-                <span className="font-data text-lg font-bold text-on-surface/40 mb-0.5">
+                <span className="font-data text-lg font-bold text-on-surface-variant mb-0.5">
                   {totalPendingCents}
                 </span>
               )}
@@ -272,7 +272,7 @@ export function Finance() {
               </span>
             </div>
             <div className="mt-3 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-on-surface/30 text-sm">
+              <span className="material-symbols-outlined text-on-surface-variant text-sm">
                 check_circle
               </span>
               <span className="text-xs text-on-surface/50 font-medium">
@@ -288,7 +288,7 @@ export function Finance() {
               <span className="font-data text-4xl font-black text-primary-container">
                 {isLoading ? "..." : processingCount}
               </span>
-              <span className="font-data text-lg font-bold text-on-surface/40 mb-0.5">
+              <span className="font-data text-lg font-bold text-on-surface-variant mb-0.5">
                 BOL
               </span>
             </div>
@@ -358,7 +358,7 @@ export function Finance() {
                 </>
               ) : cycles.length === 0 ? (
                 <div className="px-4 py-8 text-center">
-                  <p className="text-on-surface/40 font-label text-sm">
+                  <p className="text-on-surface-variant font-label text-sm">
                     No active payment cycles
                   </p>
                 </div>

@@ -79,7 +79,7 @@ function EditableField({
           className={`text-right text-[13px] font-semibold text-on-surface hover:text-primary cursor-pointer transition-colors ${mono ? "font-label tabular-nums" : ""}`}
           title="Click to edit"
         >
-          {value || <span className="text-outline/40">--</span>}
+          {value || <span className="text-outline">--</span>}
         </button>
       )}
     </div>

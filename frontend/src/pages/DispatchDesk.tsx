@@ -949,13 +949,13 @@ export function DispatchDesk() {
                                 <span className="material-symbols-outlined text-primary text-base">
                                   target
                                 </span>
-                                <span className="text-[10px] uppercase tracking-[0.15em] font-black text-on-surface/40">
+                                <span className="text-[10px] uppercase tracking-[0.15em] font-black text-on-surface-variant">
                                   Today's Objectives
                                 </span>
                               </div>
                               <span className="font-label text-sm font-bold text-on-surface tabular-nums">
                                 {totalActual}/{totalTarget} loads
-                                <span className="text-on-surface/30 ml-1.5">
+                                <span className="text-on-surface-variant ml-1.5">
                                   ({overallPct}%)
                                 </span>
                               </span>
@@ -998,7 +998,7 @@ export function DispatchDesk() {
                                     </span>
                                     {pct !== null && (
                                       <span
-                                        className={`font-label text-[10px] font-bold tabular-nums ${pct >= 100 ? "text-tertiary" : pct >= 60 ? "text-primary" : "text-on-surface/40"}`}
+                                        className={`font-label text-[10px] font-bold tabular-nums ${pct >= 100 ? "text-tertiary" : pct >= 60 ? "text-primary" : "text-on-surface-variant"}`}
                                       >
                                         ({pct}%)
                                       </span>
@@ -1052,7 +1052,7 @@ export function DispatchDesk() {
                       <span className="material-symbols-outlined text-4xl text-on-surface/10 mb-2">
                         oil_barrel
                       </span>
-                      <p className="text-on-surface/30 font-label text-sm">
+                      <p className="text-on-surface-variant font-label text-sm">
                         No wells with loads found
                       </p>
                     </div>
@@ -1066,7 +1066,7 @@ export function DispatchDesk() {
                 <span className="material-symbols-outlined text-4xl text-on-surface/10 mb-2">
                   calendar_month
                 </span>
-                <p className="text-on-surface/30 font-label text-sm">
+                <p className="text-on-surface-variant font-label text-sm">
                   Set a date above to view loads across all wells
                 </p>
               </div>
@@ -1315,7 +1315,7 @@ export function DispatchDesk() {
                     <span className="material-symbols-outlined text-4xl text-on-surface/10 mb-2">
                       check_circle
                     </span>
-                    <p className="text-on-surface/30 font-label text-sm">
+                    <p className="text-on-surface-variant font-label text-sm">
                       No loads found for this date
                     </p>
                   </div>
@@ -1332,10 +1332,10 @@ export function DispatchDesk() {
               <span className="material-symbols-outlined text-5xl text-on-surface/10">
                 check_circle
               </span>
-              <p className="text-sm text-on-surface/30 font-headline font-bold uppercase tracking-widest">
+              <p className="text-sm text-on-surface-variant font-headline font-bold uppercase tracking-widest">
                 No loads for this well
               </p>
-              <p className="text-xs text-on-surface/20 font-label">
+              <p className="text-xs text-on-surface-variant font-label">
                 Loads need to be validated first. Check the Validation page.
               </p>
             </div>

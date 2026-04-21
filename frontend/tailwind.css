@@ -79,10 +79,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Focus ring utility for keyboard navigation */
+/* Focus ring for keyboard navigation (WCAG 2.4.7). Uses !important so it
+   survives Tailwind's per-element `focus:outline-none` utilities that are
+   used throughout the app for visual polish. */
 :focus-visible {
-  outline: 2px solid var(--color-primary-container);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-primary-container) !important;
+  outline-offset: 2px !important;
   border-radius: 4px;
 }
 

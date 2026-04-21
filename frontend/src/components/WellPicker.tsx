@@ -161,7 +161,7 @@ export function WellPicker({
         {/* Suggestions section */}
         {suggestions.length > 0 && (
           <>
-            <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold text-on-surface/30 border-b border-on-surface/5">
+            <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant border-b border-on-surface/5">
               Suggested
             </div>
             {suggestions.slice(0, 5).map((s) => (
@@ -180,7 +180,7 @@ export function WellPicker({
                       ? "text-tertiary bg-tertiary/10"
                       : s.score >= 0.7
                         ? "text-primary-container bg-primary-container/10"
-                        : "text-on-surface/40 bg-on-surface/5"
+                        : "text-on-surface-variant bg-on-surface/5"
                   }`}
                 >
                   {Math.round(s.score * 100)}%
@@ -191,7 +191,7 @@ export function WellPicker({
         )}
 
         {/* All wells section */}
-        <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold text-on-surface/30 border-b border-on-surface/5">
+        <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant border-b border-on-surface/5">
           {search ? `Results` : "All Wells"} ({filteredWells.length})
         </div>
         {filteredWells.slice(0, 20).map((w) => (
@@ -200,14 +200,16 @@ export function WellPicker({
             onClick={() => handleSelect(w.id)}
             disabled={isPending || w.id === currentWellId}
             className={`w-full text-left px-3 py-2 hover:bg-surface-container-high transition-colors cursor-pointer text-sm font-label disabled:opacity-30 ${
-              w.id === currentWellId ? "text-on-surface/30" : "text-on-surface"
+              w.id === currentWellId
+                ? "text-on-surface-variant"
+                : "text-on-surface"
             }`}
           >
             {w.name}
           </button>
         ))}
         {filteredWells.length > 20 && (
-          <div className="px-3 py-2 text-[10px] text-on-surface/30 text-center">
+          <div className="px-3 py-2 text-[10px] text-on-surface-variant text-center">
             Type to narrow results...
           </div>
         )}
@@ -255,7 +257,7 @@ export function WellPicker({
         {/* Loading indicator */}
         {isPending && (
           <div className="px-3 py-2 text-center">
-            <span className="text-[10px] text-on-surface/40 animate-pulse">
+            <span className="text-[10px] text-on-surface-variant animate-pulse">
               Assigning...
             </span>
           </div>

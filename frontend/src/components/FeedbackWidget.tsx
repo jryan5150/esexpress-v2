@@ -148,7 +148,7 @@ export function FeedbackWidget() {
             </button>
           </div>
 
-          <p className="mb-1.5 font-label text-[10px] font-bold uppercase tracking-widest text-on-surface/30">
+          <p className="mb-1.5 font-label text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
             What type of feedback?
           </p>
           <div className="mb-4 flex gap-1.5">
@@ -181,14 +181,14 @@ export function FeedbackWidget() {
 
           <div className="mb-4">
             <div className="mb-1 flex items-center justify-between">
-              <span className="font-label text-[10px] font-bold uppercase tracking-widest text-on-surface/30">
+              <span className="font-label text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
                 Screenshot
               </span>
               <button
                 onClick={captureScreenshot}
                 disabled={capturing}
                 aria-label="Retake screenshot"
-                className="text-on-surface/40 hover:text-on-surface/70"
+                className="text-on-surface-variant hover:text-on-surface"
               >
                 <span className="material-symbols-outlined text-sm">
                   {capturing ? "hourglass_empty" : "refresh"}
@@ -204,7 +204,7 @@ export function FeedbackWidget() {
             ) : (
               <div
                 onClick={captureScreenshot}
-                className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed border-on-surface/20 py-4 text-on-surface/30 hover:border-on-surface/40"
+                className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed border-on-surface/20 py-4 text-on-surface-variant hover:border-on-surface/40"
               >
                 <span className="material-symbols-outlined">photo_camera</span>
                 <span className="text-xs">

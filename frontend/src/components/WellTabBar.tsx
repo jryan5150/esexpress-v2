@@ -80,7 +80,7 @@ export function WellTabBar({
                 e.stopPropagation();
                 onUnpinWell(wId);
               }}
-              className="ml-0.5 text-outline/40 hover:text-error transition-colors"
+              className="ml-0.5 text-outline hover:text-error transition-colors"
             >
               <span className="material-symbols-outlined text-xs">close</span>
             </span>

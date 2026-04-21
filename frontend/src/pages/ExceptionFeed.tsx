@@ -206,10 +206,10 @@ export function ExceptionFeed() {
               ))
             ) : wells.length === 0 ? (
               <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] p-8 text-center">
-                <span className="material-symbols-outlined text-on-surface/20 text-4xl mb-2">
+                <span className="material-symbols-outlined text-on-surface-variant text-4xl mb-2">
                   inbox
                 </span>
-                <p className="text-on-surface/40 font-label text-sm">
+                <p className="text-on-surface-variant font-label text-sm">
                   No wells with assignments yet.
                 </p>
               </div>
@@ -233,12 +233,12 @@ export function ExceptionFeed() {
                     {well.validated}/{well.totalLoads}
                   </span>
                   <span
-                    className={`font-label text-[13px] font-medium text-center tabular-nums ${well.review > 0 ? "text-outline" : "text-outline/40"}`}
+                    className={`font-label text-[13px] font-medium text-center tabular-nums ${well.review > 0 ? "text-outline" : "text-outline"}`}
                   >
                     {well.review}
                   </span>
                   <span
-                    className={`font-label text-[13px] font-medium text-center tabular-nums ${well.missing > 0 ? "text-error" : "text-outline/40"}`}
+                    className={`font-label text-[13px] font-medium text-center tabular-nums ${well.missing > 0 ? "text-error" : "text-outline"}`}
                   >
                     {well.missing}
                   </span>

@@ -108,7 +108,7 @@ export function UsersAdmin() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <span className="font-label text-xs text-on-surface/40">
+                      <span className="font-label text-xs text-on-surface-variant">
                         {user.createdAt
                           ? new Date(user.createdAt).toLocaleDateString()
                           : "—"}

@@ -219,7 +219,7 @@ function CopyBtn({ text }: { text: string | null }) {
         setCopied(true);
         setTimeout(() => setCopied(false), 1200);
       }}
-      className="text-outline/30 hover:text-primary cursor-pointer transition-colors"
+      className="text-outline hover:text-primary cursor-pointer transition-colors"
       title="Copy"
       aria-label="Copy value"
     >
@@ -292,7 +292,7 @@ function EditField({
           className={`block text-[13px] font-medium text-on-surface hover:text-primary cursor-pointer transition-colors ${mono ? "font-label tabular-nums" : ""}`}
           title="Click to edit"
         >
-          {value || <span className="text-outline/40">--</span>}
+          {value || <span className="text-outline">--</span>}
         </button>
       )}
     </div>
@@ -468,7 +468,7 @@ export function ExpandDrawer({
           ) : (
             <div className="w-full h-36 bg-surface-container-high/50 rounded-lg flex items-center justify-center">
               <div className="text-center">
-                <span className="material-symbols-outlined text-3xl text-outline/30">
+                <span className="material-symbols-outlined text-3xl text-outline">
                   no_photography
                 </span>
                 <p className="text-[10px] text-outline/50 mt-1">No photos</p>

@@ -95,9 +95,9 @@ export function SearchOverlay() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search loads, BOLs, drivers..."
-              className="flex-1 bg-transparent text-on-surface placeholder:text-on-surface-variant/40 text-sm outline-none"
+              className="flex-1 bg-transparent text-on-surface placeholder:text-on-surface-variant text-sm outline-none"
             />
-            <kbd className="text-[10px] text-on-surface-variant/40 bg-surface-container-low px-1.5 py-0.5 rounded border border-outline-variant/20">
+            <kbd className="text-[10px] text-on-surface-variant bg-surface-container-low px-1.5 py-0.5 rounded border border-outline-variant/20">
               ESC
             </kbd>
           </div>
@@ -167,7 +167,7 @@ export function SearchOverlay() {
 
           {/* Footer hint */}
           {query.length < 2 && (
-            <div className="px-4 py-2.5 text-xs text-on-surface-variant/40 border-t border-outline-variant/10">
+            <div className="px-4 py-2.5 text-xs text-on-surface-variant border-t border-outline-variant/10">
               Type at least 2 characters to search
             </div>
           )}
