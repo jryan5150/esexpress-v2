@@ -218,6 +218,24 @@ export function BolQueue() {
     setPage(1);
     if (activeTab === "propx") patchUrl({ search: term });
   };
+
+  // Reset page + scroll to top whenever the URL search param changes — either
+  // from an external deep-link ("Find matches in BOL Center" button) or from an
+  // in-page card click that rewrites the search. Without this, a search that
+  // matches a record on page 2+ leaves the user staring at an empty page 1
+  // render of the OLD result set until they manually paginate.
+  useEffect(() => {
+    setPage(1);
+    if (activeTab === "propx" && urlSearch !== propxSearch) {
+      setPropxSearch(urlSearch);
+    }
+    if (activeTab === "submissions" && urlSearch !== jotformSearch) {
+      setJotformSearch(urlSearch);
+    }
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [urlSearch, activeTab]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   // Photo modal now carries the full array of photo URLs + a current index
   // so multi-photo JotForm submissions (drivers often upload 2-3 angles of

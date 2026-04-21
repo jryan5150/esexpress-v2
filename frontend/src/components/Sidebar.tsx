@@ -35,10 +35,10 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   // Reference group: legacy workspace pages + archive surfaces. Top-level
   // nav surfaces Workbench, BOL Center, and Load Report — everything else
   // lives behind this collapsible group so dispatchers see one front door.
+  // Missed-Loads-Report moved into Admin group (it's a diagnostic, not a
+  // dispatcher workflow) per 2026-04-21 call prep.
   const isReferenceRoute =
-    location.pathname === "/" ||
-    location.pathname === "/admin/missed-loads" ||
-    location.pathname === "/archive";
+    location.pathname === "/" || location.pathname === "/archive";
 
   // Collapse state — persisted
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -296,16 +296,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                   Today's Objectives
                 </Link>
                 <Link
-                  to="/admin/missed-loads"
-                  className={`${navClass("/admin/missed-loads")} !pl-9`}
-                  title="Missed Loads"
-                >
-                  <span className={iconClass("/admin/missed-loads")}>
-                    fact_check
-                  </span>
-                  Missed Loads
-                </Link>
-                <Link
                   to="/archive"
                   className={`${navClass("/archive")} !pl-9`}
                   title="Archive"
@@ -409,6 +399,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               <Link to="/finance" className={`${navClass("/finance")} !pl-9`}>
                 <span className={iconClass("/finance")}>payments</span>
                 Finance
+              </Link>
+              <Link
+                to="/admin/missed-loads"
+                className={`${navClass("/admin/missed-loads")} !pl-9`}
+                title="Diagnostic load report — loads that may have been missed by the pipeline."
+              >
+                <span className={iconClass("/admin/missed-loads")}>
+                  fact_check
+                </span>
+                Load Diagnostics
               </Link>
             </div>
           )}

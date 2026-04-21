@@ -21,6 +21,11 @@ export function WellsAdmin() {
   const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  // Inline alias editor: which well row is expanded + the in-progress draft.
+  // Aliases are the bridge between dispatcher vocabulary and PropX/Logistiq
+  // destination strings — adding one unblocks orphan loads auto-mapping.
+  const [aliasWellId, setAliasWellId] = useState<number | null>(null);
+  const [aliasInput, setAliasInput] = useState<string>("");
   const { toast } = useToast();
   const wellsQuery = useWells();
   const updateWell = useUpdateWell();
@@ -63,6 +68,47 @@ export function WellsAdmin() {
     setEditingId(null);
     setEditValue("");
   };
+  const openAliasEditor = (well: Well) => {
+    setAliasWellId(well.id);
+    setAliasInput("");
+  };
+  const closeAliasEditor = () => {
+    setAliasWellId(null);
+    setAliasInput("");
+  };
+  const addAlias = (well: Well) => {
+    const clean = aliasInput.trim();
+    if (!clean) return;
+    const current = (well.aliases ?? []) as string[];
+    if (current.map((a) => a.toLowerCase()).includes(clean.toLowerCase())) {
+      toast("That alias is already on this well", "info");
+      return;
+    }
+    updateWell.mutate(
+      { id: well.id, patch: { aliases: [...current, clean] } },
+      {
+        onSuccess: () => {
+          toast(`Added alias "${clean}" → ${well.name}`, "success");
+          setAliasInput("");
+        },
+        onError: (err) =>
+          toast(`Add alias failed: ${(err as Error).message}`, "error"),
+      },
+    );
+  };
+  const removeAlias = (well: Well, target: string) => {
+    const current = (well.aliases ?? []) as string[];
+    const next = current.filter((a) => a !== target);
+    updateWell.mutate(
+      { id: well.id, patch: { aliases: next } },
+      {
+        onSuccess: () => toast(`Removed alias "${target}"`, "success"),
+        onError: (err) =>
+          toast(`Remove alias failed: ${(err as Error).message}`, "error"),
+      },
+    );
+  };
+
   const saveEdit = (well: Well) => {
     const parsed = parseInt(editValue, 10);
     if (!Number.isFinite(parsed) || parsed < 0) {
@@ -200,126 +246,204 @@ export function WellsAdmin() {
 
             {/* Data Rows */}
             {pageWells.map((well) => (
-              <div
-                key={well.id}
-                className="bg-surface-container-low hover:bg-surface-container-high transition-all px-6 py-4 flex items-center gap-6"
-              >
-                {/* Name */}
-                <div className="flex-1 min-w-[180px]">
-                  <span className="font-bold text-sm text-on-surface">
-                    {well.name}
-                  </span>
-                  {well.aliases.length > 0 && (
-                    <span className="ml-2 font-label text-[10px] text-on-surface-variant">
-                      +{well.aliases.length} alias
-                      {well.aliases.length > 1 ? "es" : ""}
+              <div key={well.id} className="group">
+                <div className="bg-surface-container-low hover:bg-surface-container-high transition-all px-6 py-4 flex items-center gap-6">
+                  {/* Name */}
+                  <div className="flex-1 min-w-[180px]">
+                    <span className="font-bold text-sm text-on-surface">
+                      {well.name}
                     </span>
-                  )}
-                </div>
+                    <button
+                      onClick={() =>
+                        aliasWellId === well.id
+                          ? closeAliasEditor()
+                          : openAliasEditor(well)
+                      }
+                      className="ml-2 font-label text-[10px] text-on-surface-variant hover:text-primary underline decoration-dotted underline-offset-2 cursor-pointer"
+                      title="Click to manage aliases — use to bridge dispatcher vocabulary with PropX/Logistiq destination names."
+                    >
+                      {well.aliases.length === 0
+                        ? "+ add alias"
+                        : `${well.aliases.length} alias${well.aliases.length > 1 ? "es" : ""} — edit`}
+                    </button>
+                  </div>
 
-                {/* Status */}
-                <div className="w-24 text-center">
-                  <span
-                    className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${STATUS_COLORS[well.status] ?? "bg-on-surface/10 text-on-surface/60"}`}
-                  >
-                    {well.status}
-                  </span>
-                </div>
-
-                {/* PropX Job ID */}
-                <div className="w-36">
-                  <span className="font-label text-xs text-on-surface/50 truncate block max-w-[130px]">
-                    {well.propxJobId ?? "--"}
-                  </span>
-                </div>
-
-                {/* Daily Target — inline editable */}
-                <div className="w-28 text-center">
-                  {editingId === well.id ? (
-                    <input
-                      type="number"
-                      min={0}
-                      autoFocus
-                      value={editValue}
-                      disabled={updateWell.isPending}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => saveEdit(well)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveEdit(well);
-                        if (e.key === "Escape") cancelEdit();
-                      }}
-                      className="w-16 text-center px-1.5 py-0.5 text-sm font-bold rounded border border-primary/40 focus:border-primary focus:outline-none bg-background tabular-nums"
-                      aria-label={`Daily target for ${well.name}`}
-                    />
-                  ) : (
-                    <>
-                      <span className="font-label text-sm font-bold text-on-surface tabular-nums">
-                        {well.dailyTargetLoads}
-                      </span>
-                      <span className="font-label text-xs text-on-surface-variant ml-1">
-                        loads
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* Needs Rate Info toggle (O-23) */}
-                <div className="w-24 text-center">
-                  <label
-                    className="inline-flex items-center justify-center cursor-pointer"
-                    title={
-                      well.needsRateInfo
-                        ? "Loads to this well show as 'Need Well Rate Info' on the dispatch desk. Uncheck once the rate is confirmed."
-                        : "Flag this well as needing rate info — its loads will surface in burnt-orange on the dispatch desk."
-                    }
-                  >
-                    <input
-                      type="checkbox"
-                      checked={!!well.needsRateInfo}
-                      disabled={updateWell.isPending}
-                      onChange={(e) => {
-                        updateWell.mutate(
-                          {
-                            id: well.id,
-                            patch: { needsRateInfo: e.target.checked },
-                          },
-                          {
-                            onSuccess: () =>
-                              toast(
-                                `${well.name} ${
-                                  e.target.checked
-                                    ? "flagged as needing rate"
-                                    : "rate-flag cleared"
-                                }`,
-                                "success",
-                              ),
-                            onError: (err) =>
-                              toast(
-                                `Update failed: ${(err as Error).message}`,
-                                "error",
-                              ),
-                          },
-                        );
-                      }}
-                      className="w-4 h-4 rounded accent-primary-container cursor-pointer disabled:opacity-40"
-                      aria-label={`Toggle needs-rate-info for ${well.name}`}
-                    />
-                  </label>
-                </div>
-
-                {/* Actions */}
-                <div className="w-16 text-center">
-                  <button
-                    onClick={() => startEdit(well)}
-                    disabled={editingId === well.id}
-                    aria-label={`Edit daily target for ${well.name}`}
-                    className="p-2 hover:bg-surface-container-highest rounded-lg transition-colors cursor-pointer text-on-surface-variant hover:text-primary-container disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
-                    <span className="material-symbols-outlined text-lg">
-                      edit
+                  {/* Status */}
+                  <div className="w-24 text-center">
+                    <span
+                      className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${STATUS_COLORS[well.status] ?? "bg-on-surface/10 text-on-surface/60"}`}
+                    >
+                      {well.status}
                     </span>
-                  </button>
+                  </div>
+
+                  {/* PropX Job ID */}
+                  <div className="w-36">
+                    <span className="font-label text-xs text-on-surface/50 truncate block max-w-[130px]">
+                      {well.propxJobId ?? "--"}
+                    </span>
+                  </div>
+
+                  {/* Daily Target — inline editable */}
+                  <div className="w-28 text-center">
+                    {editingId === well.id ? (
+                      <input
+                        type="number"
+                        min={0}
+                        autoFocus
+                        value={editValue}
+                        disabled={updateWell.isPending}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={() => saveEdit(well)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEdit(well);
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                        className="w-16 text-center px-1.5 py-0.5 text-sm font-bold rounded border border-primary/40 focus:border-primary focus:outline-none bg-background tabular-nums"
+                        aria-label={`Daily target for ${well.name}`}
+                      />
+                    ) : (
+                      <>
+                        <span className="font-label text-sm font-bold text-on-surface tabular-nums">
+                          {well.dailyTargetLoads}
+                        </span>
+                        <span className="font-label text-xs text-on-surface-variant ml-1">
+                          loads
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Needs Rate Info toggle (O-23) */}
+                  <div className="w-24 text-center">
+                    <label
+                      className="inline-flex items-center justify-center cursor-pointer"
+                      title={
+                        well.needsRateInfo
+                          ? "Loads to this well show as 'Need Well Rate Info' on the dispatch desk. Uncheck once the rate is confirmed."
+                          : "Flag this well as needing rate info — its loads will surface in burnt-orange on the dispatch desk."
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!well.needsRateInfo}
+                        disabled={updateWell.isPending}
+                        onChange={(e) => {
+                          updateWell.mutate(
+                            {
+                              id: well.id,
+                              patch: { needsRateInfo: e.target.checked },
+                            },
+                            {
+                              onSuccess: () =>
+                                toast(
+                                  `${well.name} ${
+                                    e.target.checked
+                                      ? "flagged as needing rate"
+                                      : "rate-flag cleared"
+                                  }`,
+                                  "success",
+                                ),
+                              onError: (err) =>
+                                toast(
+                                  `Update failed: ${(err as Error).message}`,
+                                  "error",
+                                ),
+                            },
+                          );
+                        }}
+                        className="w-4 h-4 rounded accent-primary-container cursor-pointer disabled:opacity-40"
+                        aria-label={`Toggle needs-rate-info for ${well.name}`}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="w-16 text-center">
+                    <button
+                      onClick={() => startEdit(well)}
+                      disabled={editingId === well.id}
+                      aria-label={`Edit daily target for ${well.name}`}
+                      className="p-2 hover:bg-surface-container-highest rounded-lg transition-colors cursor-pointer text-on-surface-variant hover:text-primary-container disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <span className="material-symbols-outlined text-lg">
+                        edit
+                      </span>
+                    </button>
+                  </div>
                 </div>
+                {/* Alias editor panel — expands under the row when the Aliases
+                  link is clicked. Directly patches wells.aliases so the
+                  auto-mapper picks up new destination strings on the next
+                  run. Intentionally compact — no modal, no separate page. */}
+                {aliasWellId === well.id && (
+                  <div className="bg-surface-container-high px-6 py-3 border-l-2 border-primary">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-[11px] uppercase tracking-wider font-bold text-on-surface-variant">
+                        Aliases for {well.name}
+                      </span>
+                      <button
+                        onClick={closeAliasEditor}
+                        className="text-[11px] text-on-surface-variant hover:text-on-surface ml-auto"
+                      >
+                        close
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {(well.aliases ?? []).map((alias) => (
+                        <span
+                          key={alias}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs border border-primary/30"
+                        >
+                          {alias}
+                          <button
+                            onClick={() => removeAlias(well, alias)}
+                            disabled={updateWell.isPending}
+                            className="hover:bg-primary/20 rounded-full w-4 h-4 flex items-center justify-center text-[10px] disabled:opacity-40"
+                            aria-label={`Remove alias ${alias}`}
+                            title={`Remove "${alias}"`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                      {(well.aliases ?? []).length === 0 && (
+                        <span className="text-[11px] italic text-on-surface-variant">
+                          No aliases yet — add one below.
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={aliasInput}
+                        onChange={(e) => setAliasInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") addAlias(well);
+                          if (e.key === "Escape") closeAliasEditor();
+                        }}
+                        placeholder="Exact PropX or Logistiq destination string (e.g. DNR - Chili 117X)"
+                        className="flex-1 px-2 py-1 text-xs border border-outline-variant rounded focus:border-primary focus:outline-none bg-background"
+                        disabled={updateWell.isPending}
+                        aria-label="New alias"
+                      />
+                      <button
+                        onClick={() => addAlias(well)}
+                        disabled={updateWell.isPending || !aliasInput.trim()}
+                        className="px-3 py-1 text-xs font-bold rounded bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div className="text-[10px] text-on-surface-variant mt-1.5">
+                      Tip: aliases let the auto-mapper match orphan loads whose
+                      destination string doesn't match the well name exactly.
+                      Paste what PropX / Logistiq writes in the destination
+                      field — e.g. <code>Wells 1/2/3</code> or{" "}
+                      <code>ASJ 4&amp;16-11-11 HC East</code>.
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

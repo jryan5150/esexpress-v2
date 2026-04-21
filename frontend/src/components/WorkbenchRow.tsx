@@ -210,13 +210,16 @@ export const WorkbenchRow = memo(function WorkbenchRow({
 
         <div className="col-span-2 truncate">
           <div className="flex items-baseline gap-2">
-            <span className="text-[9px] uppercase tracking-wider text-on-surface-variant w-10 shrink-0">
-              BOL
+            <span
+              className="text-[9px] uppercase tracking-wider text-on-surface-variant w-16 shrink-0"
+              title={`BOL pulled from ${SOURCE_LABEL[row.loadSource] ?? row.loadSource}`}
+            >
+              {SOURCE_LABEL[row.loadSource] ?? "BOL"} BOL
             </span>
             <span className="font-mono text-xs">{row.bolNo ?? "--"}</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-[9px] uppercase tracking-wider text-on-surface-variant w-10 shrink-0">
+            <span className="text-[9px] uppercase tracking-wider text-on-surface-variant w-16 shrink-0">
               Ticket
             </span>
             <span className="font-mono text-[11px] text-on-surface-variant">

@@ -450,25 +450,51 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
                   driver, if no BOL) pre-searched across JotForm + matched
                   PropX. Critical during historical back-mapping where the
                   matcher can't auto-attach but evidence may still exist. */}
-              {(row.bolNo || row.driverName) && (
-                <Link
-                  to={`/bol?tab=submissions&search=${encodeURIComponent(
-                    row.bolNo ?? row.driverName ?? "",
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-primary/40 bg-primary/5 text-primary text-xs font-semibold hover:bg-primary/10 transition-colors"
-                  title={`Search BOL Center for "${row.bolNo ?? row.driverName}"`}
-                >
-                  <span className="material-symbols-outlined text-sm">
-                    search
-                  </span>
-                  Find matches in BOL Center
-                  <span className="material-symbols-outlined text-sm">
-                    open_in_new
-                  </span>
-                </Link>
-              )}
+              {(row.bolNo || row.driverName || row.ticketNo) &&
+                (() => {
+                  // Pass the richest matching term we have so BOL Center's
+                  // server-side ILIKE has multiple chances to hit a submission.
+                  // Order: bol → ticket → driver. Additional context (date,
+                  // weight, destination) piggybacks as URL params so a future
+                  // BOL Center enhancement can rank candidates by full-load
+                  // context instead of single-field search.
+                  const primary =
+                    row.bolNo || row.ticketNo || row.driverName || "";
+                  const params = new URLSearchParams({
+                    tab: "submissions",
+                    search: primary,
+                  });
+                  if (row.driverName && primary !== row.driverName) {
+                    params.set("ctx_driver", row.driverName);
+                  }
+                  if (row.deliveredOn)
+                    params.set("ctx_date", row.deliveredOn.slice(0, 10));
+                  if (row.wellName) params.set("ctx_well", row.wellName);
+                  const allCandidates = [
+                    row.bolNo,
+                    row.ticketNo,
+                    row.driverName,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ");
+                  return (
+                    <Link
+                      to={`/bol?${params.toString()}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-primary/40 bg-primary/5 text-primary text-xs font-semibold hover:bg-primary/10 transition-colors"
+                      title={`Search BOL Center for: ${allCandidates}`}
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        search
+                      </span>
+                      Find matches in BOL Center
+                      <span className="material-symbols-outlined text-sm">
+                        open_in_new
+                      </span>
+                    </Link>
+                  );
+                })()}
             </>
           )}
         </div>
