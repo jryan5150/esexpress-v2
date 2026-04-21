@@ -15,6 +15,7 @@ import { BuildDuplicateModal } from "../components/BuildDuplicateModal";
 import { ResolveModal } from "../components/ResolveModal";
 import { WorkbenchOnboarding } from "../components/WorkbenchOnboarding";
 import { WorkbenchWellPicker } from "../components/WorkbenchWellPicker";
+import { useWells } from "../hooks/use-wells";
 import type { WorkbenchFilter, WorkbenchRow as Row } from "../types/api";
 
 type WorkbenchView = "list" | "tabular";
@@ -246,6 +247,10 @@ export function Workbench() {
   const [resolveRow, setResolveRow] = useState<Row | null>(null);
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
   const [tabularWell, setTabularWell] = useState<string | null>(null);
+
+  // Fetched once per mount — wells list is small (<200) and tabular view
+  // needs the FULL active-well set so filter changes never hide wells.
+  const wellsQuery = useWells();
 
   const rows = useMemo<Row[]>(
     () => workbenchQuery.data?.rows ?? [],
@@ -659,6 +664,7 @@ export function Workbench() {
         {view === "tabular" && !workbenchQuery.isLoading && (
           <WorkbenchWellPicker
             rows={rows}
+            allWells={wellsQuery.data ?? []}
             selectedWell={tabularWell}
             onSelect={(name) => {
               setTabularWell(name);

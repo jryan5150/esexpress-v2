@@ -368,12 +368,12 @@ function Table({ rows }: { rows: Row[] }) {
                     className="px-3 py-1.5 text-on-surface"
                   >
                     <Link
-                      to={`/bol?tab=submissions&search=${encodeURIComponent(r.bolNo)}`}
+                      to={`/workbench?search=${encodeURIComponent(r.bolNo)}`}
                       className="text-primary hover:underline font-medium"
                       title={
                         bolVsTicketDiffer
-                          ? `System BOL ${r.bolNo}. Ticket # on paper: ${r.ticketNo}.`
-                          : `Find BOL ${r.bolNo} in BOL Center`
+                          ? `System BOL ${r.bolNo}. Ticket # on paper: ${r.ticketNo}. Click to open in Load Center.`
+                          : `Open BOL ${r.bolNo} in Load Center`
                       }
                     >
                       {r.bolNo}

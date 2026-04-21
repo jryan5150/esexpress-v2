@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { FeedbackWidget } from "./FeedbackWidget";
-import { StatusBanner } from "./StatusBanner";
+import { SystemStatusCluster } from "./SystemStatusCluster";
 import { useCurrentUser } from "../hooks/use-auth";
 import { SearchOverlay } from "../search/SearchOverlay";
 
@@ -36,15 +36,7 @@ export function Layout() {
             <span className="material-symbols-outlined text-xl">menu</span>
           </button>
           <div className="flex items-center gap-4 ml-auto">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-low/50 shadow-[0_0_0_1px_rgba(13,150,104,0.1)]">
-              <span className="material-symbols-outlined icon-filled text-tertiary text-sm">
-                cloud_done
-              </span>
-              <span className="font-label text-[10px] text-on-surface-variant tracking-wider uppercase">
-                Live
-              </span>
-            </div>
-            <StatusBanner />
+            <SystemStatusCluster />
             <button
               aria-label="Notifications"
               className="p-1.5 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer text-on-surface-variant hover:text-on-surface icon-hover"

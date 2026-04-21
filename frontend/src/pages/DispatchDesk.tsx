@@ -1169,22 +1169,6 @@ export function DispatchDesk() {
                               )
                             : null
                         }
-                        photoStatus={
-                          load.photoStatus as
-                            | "attached"
-                            | "pending"
-                            | "missing"
-                            | null
-                        }
-                        deliveryAgeHours={
-                          load.deliveredOn
-                            ? Math.floor(
-                                (Date.now() -
-                                  new Date(load.deliveredOn).getTime()) /
-                                  3600000,
-                              )
-                            : null
-                        }
                         assignedToName={load.assignedToName ?? null}
                         assignedToColor={load.assignedToColor ?? null}
                         bolMatchStatus={compareBolToJotform(load)}
