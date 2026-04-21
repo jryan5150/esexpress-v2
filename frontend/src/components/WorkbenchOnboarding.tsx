@@ -435,6 +435,7 @@ export function WorkbenchOnboarding({
       {/* Pulse ring around target */}
       {rect && (
         <div
+          data-wb-onboard-ring
           className="absolute pointer-events-none rounded-lg"
           style={{
             top: rect.top - RING_PAD,
@@ -447,11 +448,15 @@ export function WorkbenchOnboarding({
         />
       )}
 
-      {/* Pulse keyframes injected inline */}
+      {/* Pulse keyframes injected inline. Respects prefers-reduced-motion
+          per WCAG 2.3.3 — static ring if the user has motion reduction on. */}
       <style>{`
         @keyframes wb-onboard-pulse {
           0%, 100% { box-shadow: 0 0 0 3px #ff6b2c, 0 0 0 0 rgba(255,107,44,0.45); }
           50% { box-shadow: 0 0 0 3px #ff6b2c, 0 0 32px 8px rgba(255,107,44,0.55); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-wb-onboard-ring] { animation: none !important; }
         }
       `}</style>
 
