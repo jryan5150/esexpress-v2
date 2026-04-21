@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useWorkbench } from "../hooks/use-workbench";
 import { useWeightUnit } from "../hooks/use-weight-unit";
 import type { WorkbenchRow as Row } from "../types/api";
@@ -325,11 +325,32 @@ function Table({ rows }: { rows: Row[] }) {
             key={r.assignmentId}
             className="border-b border-outline-variant/30 hover:bg-surface-container-low/40"
           >
-            {COLUMNS.map((c) => (
-              <td key={String(c.key)} className="px-3 py-1.5 text-on-surface">
-                {getValue(r, c.key, formatWeight)}
-              </td>
-            ))}
+            {COLUMNS.map((c) => {
+              // Load # deep-links into Workbench (filter=all so cleared loads
+              // still appear; search= pins the row at the top). ctrl/cmd-click
+              // opens in a new tab for payroll reviewers who want to stay put.
+              if (c.key === "loadNo" && r.loadNo) {
+                return (
+                  <td
+                    key={String(c.key)}
+                    className="px-3 py-1.5 text-on-surface"
+                  >
+                    <Link
+                      to={`/workbench?filter=all&search=${encodeURIComponent(r.loadNo)}`}
+                      className="text-primary hover:underline font-medium"
+                      title={`Open load ${r.loadNo} in Workbench`}
+                    >
+                      {r.loadNo}
+                    </Link>
+                  </td>
+                );
+              }
+              return (
+                <td key={String(c.key)} className="px-3 py-1.5 text-on-surface">
+                  {getValue(r, c.key, formatWeight)}
+                </td>
+              );
+            })}
           </tr>
         ))}
       </tbody>
