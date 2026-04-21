@@ -32,13 +32,15 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   const isActive = (path: string) => location.pathname === path;
   const isAdminRoute =
     location.pathname.startsWith("/admin") || location.pathname === "/finance";
-  // Reference group: legacy workspace pages + archive surfaces. Top-level
-  // nav surfaces Workbench, BOL Center, and Load Report — everything else
-  // lives behind this collapsible group so dispatchers see one front door.
-  // Missed-Loads-Report moved into Admin group (it's a diagnostic, not a
-  // dispatcher workflow) per 2026-04-21 call prep.
+  // Reference group: legacy workspace pages + archive surfaces + wells
+  // registry. Top-level nav surfaces Load Center, BOL Center, and Load
+  // Report — everything else lives behind this collapsible group so
+  // dispatchers see one front door. Wells lives here (not Admin) because
+  // the team needs frequent access for alias/rate maintenance.
   const isReferenceRoute =
-    location.pathname === "/" || location.pathname === "/archive";
+    location.pathname === "/" ||
+    location.pathname === "/archive" ||
+    location.pathname === "/admin/wells";
 
   // Collapse state — persisted
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -296,6 +298,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                   Today's Objectives
                 </Link>
                 <Link
+                  to="/admin/wells"
+                  className={`${navClass("/admin/wells")} !pl-9`}
+                  title="Wells registry — manage well names, aliases, and daily targets."
+                >
+                  <span className={iconClass("/admin/wells")}>oil_barrel</span>
+                  Wells
+                </Link>
+                <Link
                   to="/archive"
                   className={`${navClass("/archive")} !pl-9`}
                   title="Archive"
@@ -382,13 +392,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               id="sidebar-admin-submenu"
               className="overflow-hidden animate-slide-down"
             >
-              <Link
-                to="/admin/wells"
-                className={`${navClass("/admin/wells")} !pl-9`}
-              >
-                <span className={iconClass("/admin/wells")}>oil_barrel</span>
-                Wells
-              </Link>
               <Link
                 to="/admin/users"
                 className={`${navClass("/admin/users")} !pl-9`}
