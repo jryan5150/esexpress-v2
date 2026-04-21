@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
-  "id": "3238b7c3-be76-4f0c-a5cc-7cae2ee3a69a",
-=======
   "id": "7b326f7a-66fa-476c-acc8-cb4ba12bb0af",
->>>>>>> 574a4bc (feat(comments): add load_comments table + CRUD API for drawer UI)
   "prevId": "a234e5c9-a2d0-4285-87b7-e77789e4ebee",
   "version": "7",
   "dialect": "postgresql",
@@ -468,120 +464,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
-    "public.breadcrumbs": {
-      "name": "breadcrumbs",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "event_type": {
-          "name": "event_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "event_data": {
-          "name": "event_data",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
-        },
-        "zone": {
-          "name": "zone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "idx_breadcrumbs_event_type": {
-          "name": "idx_breadcrumbs_event_type",
-          "columns": [
-            {
-              "expression": "event_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_breadcrumbs_created_at": {
-          "name": "idx_breadcrumbs_created_at",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_breadcrumbs_user_id": {
-          "name": "idx_breadcrumbs_user_id",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "breadcrumbs_user_id_users_id_fk": {
-          "name": "breadcrumbs_user_id_users_id_fk",
-          "tableFrom": "breadcrumbs",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-=======
->>>>>>> 574a4bc (feat(comments): add load_comments table + CRUD API for drawer UI)
     "public.customer_mappings": {
       "name": "customer_mappings",
       "schema": "",
@@ -1253,8 +1135,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
-=======
     "public.load_comments": {
       "name": "load_comments",
       "schema": "",
@@ -1361,7 +1241,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
->>>>>>> 574a4bc (feat(comments): add load_comments table + CRUD API for drawer UI)
     "public.loads": {
       "name": "loads",
       "schema": "",

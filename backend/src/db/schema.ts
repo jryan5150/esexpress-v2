@@ -166,6 +166,30 @@ export const loads = pgTable(
   ],
 );
 
+export const loadComments = pgTable(
+  "load_comments",
+  {
+    id: serial("id").primaryKey(),
+    loadId: integer("load_id")
+      .notNull()
+      .references(() => loads.id, { onDelete: "cascade" }),
+    authorUserId: integer("author_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    authorName: text("author_name").notNull(),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_load_comments_load_id").on(table.loadId, table.createdAt),
+  ],
+);
+
 export const ASSIGNMENT_STATUSES = [
   "pending",
   "assigned",
