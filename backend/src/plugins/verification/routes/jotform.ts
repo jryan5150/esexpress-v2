@@ -588,7 +588,7 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
       if (search) {
         const pattern = `%${search}%`;
         conditions.push(
-          sql`(${jotformImports.bolNo} ILIKE ${pattern} OR ${jotformImports.driverName} ILIKE ${pattern} OR ${jotformImports.truckNo} ILIKE ${pattern} OR ${loads.loadNo} ILIKE ${pattern} OR ${loads.ticketNo} ILIKE ${pattern})`,
+          sql`(${jotformImports.bolNo} ILIKE ${pattern} OR ${jotformImports.driverName} ILIKE ${pattern} OR ${jotformImports.truckNo} ILIKE ${pattern} OR ${loads.loadNo} ILIKE ${pattern} OR ${loads.ticketNo} ILIKE ${pattern} OR ${loads.bolNo} ILIKE ${pattern})`,
         );
       }
       if (dateFrom) {

@@ -219,7 +219,31 @@ export function BolQueue() {
     if (activeTab === "propx") patchUrl({ search: term });
   };
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [photoModal, setPhotoModal] = useState<string | null>(null);
+  // Photo modal now carries the full array of photo URLs + a current index
+  // so multi-photo JotForm submissions (drivers often upload 2-3 angles of
+  // the same ticket) can cycle through every image, not just the first.
+  const [photoModal, setPhotoModal] = useState<{
+    urls: string[];
+    index: number;
+  } | null>(null);
+  const photoModalUrl =
+    photoModal && photoModal.urls.length > 0
+      ? photoModal.urls[
+          Math.max(0, Math.min(photoModal.index, photoModal.urls.length - 1))
+        ]
+      : null;
+  const photoModalCount = photoModal?.urls.length ?? 0;
+  const openPhotoModal = (urls: Array<string | null | undefined>) => {
+    const clean = urls.filter((u): u is string => Boolean(u));
+    if (clean.length > 0) setPhotoModal({ urls: clean, index: 0 });
+  };
+  const stepPhoto = (delta: number) => {
+    setPhotoModal((prev) => {
+      if (!prev || prev.urls.length < 2) return prev;
+      const n = prev.urls.length;
+      return { ...prev, index: (prev.index + delta + n) % n };
+    });
+  };
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragRef = useRef<{
@@ -228,11 +252,28 @@ export function BolQueue() {
     px: number;
     py: number;
   } | null>(null);
+  // Reset zoom + pan on open AND on index change so each image starts fresh.
   useEffect(() => {
     if (photoModal) {
       setZoom(1);
       setPan({ x: 0, y: 0 });
     }
+  }, [photoModal]);
+
+  // Keyboard: left/right cycle photos, Escape closes the modal.
+  useEffect(() => {
+    if (!photoModal) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPhotoModal(null);
+      } else if (e.key === "ArrowLeft") {
+        stepPhoto(-1);
+      } else if (e.key === "ArrowRight") {
+        stepPhoto(1);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [photoModal]);
 
   const statsQuery = useBolStats();
@@ -509,7 +550,9 @@ export function BolQueue() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (firstPhoto) setPhotoModal(firstPhoto);
+                            openPhotoModal(
+                              (sub.photoUrls ?? []).map((u) => resolveUrl(u)),
+                            );
                           }}
                           className={`block w-full bg-surface-container-high cursor-zoom-in hover:opacity-90 transition-opacity relative ${
                             isExpanded
@@ -622,7 +665,15 @@ export function BolQueue() {
                                       key={i}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setPhotoModal(resolveUrl(url));
+                                        // Open at this specific photo (i+1
+                                        // because slice(1) strips the first).
+                                        const urls = sub.photoUrls.map((u) =>
+                                          resolveUrl(u),
+                                        );
+                                        setPhotoModal({
+                                          urls,
+                                          index: i + 1,
+                                        });
                                       }}
                                       className="w-20 h-20 rounded-md overflow-hidden bg-surface-container-high border border-outline-variant/30 shrink-0 hover:ring-2 hover:ring-primary transition-all cursor-zoom-in"
                                     >
@@ -817,7 +868,9 @@ export function BolQueue() {
                         <button
                           type="button"
                           onClick={() =>
-                            firstPhoto && setPhotoModal(firstPhoto)
+                            openPhotoModal(
+                              (sub.photoUrls ?? []).map((u) => resolveUrl(u)),
+                            )
                           }
                           className="block w-full aspect-[4/3] bg-surface-container-high cursor-zoom-in hover:opacity-90 transition-opacity relative"
                         >
@@ -1052,7 +1105,9 @@ export function BolQueue() {
                     >
                       <button
                         type="button"
-                        onClick={() => proxiedUrl && setPhotoModal(proxiedUrl)}
+                        onClick={() =>
+                          proxiedUrl && openPhotoModal([proxiedUrl])
+                        }
                         className="block w-full aspect-[4/3] bg-surface-container-high cursor-zoom-in hover:opacity-90 transition-opacity"
                       >
                         {proxiedUrl ? (
@@ -1283,6 +1338,38 @@ export function BolQueue() {
             >
               <span className="material-symbols-outlined">close</span>
             </button>
+            {/* Prev / Next buttons + counter, only when submission has >1 photo */}
+            {photoModalCount > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    stepPhoto(-1);
+                  }}
+                  aria-label="Previous photo"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-surface-container-lowest/90 text-on-surface flex items-center justify-center hover:bg-surface-container-high transition-colors z-10"
+                >
+                  <span className="material-symbols-outlined">
+                    chevron_left
+                  </span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    stepPhoto(1);
+                  }}
+                  aria-label="Next photo"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-surface-container-lowest/90 text-on-surface flex items-center justify-center hover:bg-surface-container-high transition-colors z-10"
+                >
+                  <span className="material-symbols-outlined">
+                    chevron_right
+                  </span>
+                </button>
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-surface-container-lowest/95 text-on-surface text-xs font-semibold px-3 py-1 rounded-full shadow-lg z-10 tabular-nums">
+                  {(photoModal?.index ?? 0) + 1} / {photoModalCount}
+                </div>
+              </>
+            )}
             <div
               className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-surface-container-lowest/95 rounded-full px-2 py-1 shadow-lg z-10"
               onClick={(e) => e.stopPropagation()}
@@ -1354,7 +1441,7 @@ export function BolQueue() {
               }}
             >
               <img
-                src={photoModal}
+                src={photoModalUrl ?? ""}
                 alt="Weight ticket"
                 draggable={false}
                 onDoubleClick={() => {

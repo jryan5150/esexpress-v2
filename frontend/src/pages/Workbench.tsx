@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   useWorkbench,
   useAdvanceStage,
@@ -18,6 +18,163 @@ import { WorkbenchWellPicker } from "../components/WorkbenchWellPicker";
 import type { WorkbenchFilter, WorkbenchRow as Row } from "../types/api";
 
 type WorkbenchView = "list" | "tabular";
+
+/** Per-filter empty-state copy — tells the user what this filter means and
+ *  where to go instead of showing a blank. If the user arrived via a deep
+ *  link with an active search/date/truck/well filter and nothing matched,
+ *  surface that explicitly so they understand why the list is empty. */
+const FILTER_EMPTY_COPY: Record<
+  WorkbenchFilter,
+  { title: string; body: string; cta?: { to: string; label: string } }
+> = {
+  uncertain: {
+    title: "Nothing needs you right now.",
+    body: "The Uncertain queue is clear. Check Ready to Build to see what the team is working on, or Built Today for the day's progress.",
+    cta: { to: "?filter=ready_to_build", label: "Ready to Build →" },
+  },
+  ready_to_build: {
+    title: "Nothing to build.",
+    body: "No loads have been released to the build queue yet. Start with Uncertain — that's where loads come from.",
+    cta: { to: "?filter=uncertain", label: "Uncertain →" },
+  },
+  mine: {
+    title: "Nothing on your plate.",
+    body: "No loads are currently assigned to you. Check All to see what's in the system.",
+    cta: { to: "?filter=all", label: "All →" },
+  },
+  missing_ticket: {
+    title: "No missing tickets.",
+    body: "Every load in the system has a ticket number. Nothing to chase.",
+  },
+  missing_driver: {
+    title: "No loads missing a driver.",
+    body: "Every load has a driver assigned. Nothing to fix here.",
+  },
+  needs_rate: {
+    title: "No rate gaps.",
+    body: "Every load has a rate. Payroll is unblocked.",
+  },
+  built_today: {
+    title: "Nothing built today yet.",
+    body: "The build queue hasn't moved any loads to PCS today. Check Ready to Build to see what's waiting.",
+    cta: { to: "?filter=ready_to_build", label: "Ready to Build →" },
+  },
+  ready_to_clear: {
+    title: "Nothing ready to clear.",
+    body: "No built loads are waiting for verification. Check Built Today to see what's recent.",
+    cta: { to: "?filter=built_today", label: "Built Today →" },
+  },
+  entered_today: {
+    title: "Nothing entered today yet.",
+    body: "No loads have been typed into PCS today. Check Ready to Build for what's queued.",
+    cta: { to: "?filter=ready_to_build", label: "Ready to Build →" },
+  },
+  all: {
+    title: "No loads in the system.",
+    body: "The workbench is completely empty. If this looks wrong, the ingest sync may be paused — check with Jace or the admin dashboard.",
+  },
+};
+
+function WorkbenchEmptyState({
+  filter,
+  search,
+  hasDateFilter,
+  hasTruckFilter,
+  hasWellFilter,
+  tabularWell,
+  onClearAll,
+}: {
+  filter: WorkbenchFilter;
+  search: string;
+  hasDateFilter: boolean;
+  hasTruckFilter: boolean;
+  hasWellFilter: boolean;
+  tabularWell: string | null;
+  onClearAll: () => void;
+}) {
+  const hasActiveFilters =
+    Boolean(search) || hasDateFilter || hasTruckFilter || hasWellFilter;
+
+  // Tabular well narrowing is client-side; separate empty message.
+  if (tabularWell !== null) {
+    return (
+      <div className="text-center py-16 px-8 text-on-surface-variant">
+        <p className="text-sm">No loads for this well in the current filter.</p>
+      </div>
+    );
+  }
+
+  // When a deep link arrived with a search that matched nothing, pitch
+  // Archive as the likely home of older/cleared loads. This catches the
+  // "click Load # on a cleared row from Load Report → dead end" scenario.
+  if (search) {
+    return (
+      <div className="text-center py-16 px-8 max-w-lg mx-auto space-y-3">
+        <div className="text-3xl">🔍</div>
+        <h3 className="font-headline text-lg text-on-surface">
+          No matches for "{search}"
+        </h3>
+        <p className="text-sm text-on-surface-variant">
+          Nothing in the current filter matches that search. If the load is old
+          it may have moved to the archive.
+        </p>
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClearAll}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md border border-outline-variant hover:bg-surface-container-high"
+          >
+            Clear filters
+          </button>
+          <Link
+            to={`/archive?q=${encodeURIComponent(search)}`}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-on-primary hover:opacity-90"
+          >
+            Search Archive →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Other non-search narrowing filters active but no search term.
+  if (hasActiveFilters) {
+    return (
+      <div className="text-center py-16 px-8 max-w-lg mx-auto space-y-3">
+        <h3 className="font-headline text-lg text-on-surface">
+          Nothing matches your current filters.
+        </h3>
+        <p className="text-sm text-on-surface-variant">
+          Date, truck, or well narrowing returned no rows. Widen the filters or
+          clear them to see the full list.
+        </p>
+        <button
+          type="button"
+          onClick={onClearAll}
+          className="px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-on-primary hover:opacity-90"
+        >
+          Clear filters
+        </button>
+      </div>
+    );
+  }
+
+  const copy = FILTER_EMPTY_COPY[filter];
+  return (
+    <div className="text-center py-16 px-8 max-w-lg mx-auto space-y-3">
+      <h3 className="font-headline text-lg text-on-surface">{copy.title}</h3>
+      <p className="text-sm text-on-surface-variant">{copy.body}</p>
+      {copy.cta && (
+        <Link
+          to={copy.cta.to}
+          className="inline-block mt-1 px-3 py-1.5 text-xs font-semibold rounded-md bg-primary text-on-primary hover:opacity-90"
+        >
+          {copy.cta.label}
+        </Link>
+      )}
+    </div>
+  );
+}
 
 const FILTERS: { value: WorkbenchFilter; label: string }[] = [
   { value: "uncertain", label: "Uncertain" },
@@ -518,11 +675,21 @@ export function Workbench() {
           {workbenchQuery.isLoading ? (
             <div className="text-sm text-on-surface-variant p-4">Loading…</div>
           ) : displayedRows.length === 0 ? (
-            <div className="text-sm text-on-surface-variant p-4">
-              {view === "tabular" && tabularWell !== null
-                ? "No loads for this well in the current filter."
-                : "Nothing on this filter."}
-            </div>
+            <WorkbenchEmptyState
+              filter={filter}
+              search={search}
+              hasDateFilter={Boolean(dateFrom || dateTo)}
+              hasTruckFilter={Boolean(truckNo)}
+              hasWellFilter={Boolean(wellName)}
+              tabularWell={view === "tabular" ? tabularWell : null}
+              onClearAll={() => {
+                const next = new URLSearchParams(params);
+                ["search", "dateFrom", "dateTo", "truckNo", "wellName"].forEach(
+                  (k) => next.delete(k),
+                );
+                setParams(next);
+              }}
+            />
           ) : (
             displayedRows.map((row) => (
               <div key={row.assignmentId} data-workbench-row>

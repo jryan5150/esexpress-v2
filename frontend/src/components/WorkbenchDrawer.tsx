@@ -377,7 +377,7 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
       {/* Photo + fields layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* BOL Photo */}
-        <div className="bg-black/20 rounded flex items-center justify-center min-h-[280px]">
+        <div className="bg-black/20 rounded flex flex-col items-center justify-center min-h-[280px] p-4 gap-3">
           {row.photoThumbUrl ? (
             <img
               src={row.photoThumbUrl}
@@ -386,9 +386,35 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
               onClick={() => setLightbox(true)}
             />
           ) : (
-            <div className="text-on-surface-variant text-sm">
-              No photo attached
-            </div>
+            <>
+              <div className="text-on-surface-variant text-sm">
+                No photo attached
+              </div>
+              {/* Manual hunt — when a row is missing a photo, give the user
+                  a one-click path into BOL Center with the load's BOL (or
+                  driver, if no BOL) pre-searched across JotForm + matched
+                  PropX. Critical during historical back-mapping where the
+                  matcher can't auto-attach but evidence may still exist. */}
+              {(row.bolNo || row.driverName) && (
+                <Link
+                  to={`/bol?tab=submissions&search=${encodeURIComponent(
+                    row.bolNo ?? row.driverName ?? "",
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-primary/40 bg-primary/5 text-primary text-xs font-semibold hover:bg-primary/10 transition-colors"
+                  title={`Search BOL Center for "${row.bolNo ?? row.driverName}"`}
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    search
+                  </span>
+                  Find matches in BOL Center
+                  <span className="material-symbols-outlined text-sm">
+                    open_in_new
+                  </span>
+                </Link>
+              )}
+            </>
           )}
         </div>
 

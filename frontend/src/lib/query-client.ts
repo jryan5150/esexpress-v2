@@ -1,6 +1,23 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, MutationCache } from "@tanstack/react-query";
+import { notify } from "../components/Toast";
+
+// Global mutation error surface — every failed save/advance/flag/etc.
+// emits a toast even when the caller didn't wire its own onError. Prevents
+// silent failures where an optimistic UI reverts without telling the user
+// their change didn't persist. Per-mutation onError handlers still run on
+// top of this; this is additive, not a replacement.
+const mutationCache = new MutationCache({
+  onError: (error) => {
+    const msg =
+      error instanceof Error && error.message
+        ? error.message
+        : "Couldn't save — your change may not have persisted. Try again.";
+    notify(msg, "error");
+  },
+});
 
 export const queryClient = new QueryClient({
+  mutationCache,
   defaultOptions: {
     queries: {
       staleTime: 30_000,

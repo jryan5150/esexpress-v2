@@ -30,6 +30,24 @@ const VARIANT_STYLES: Record<string, string> = {
 
 let nextId = 0;
 
+// Module-level ref so non-React code (e.g. React Query's MutationCache) can
+// surface errors through the toast system. ToastProvider registers its
+// toast() fn on mount; callers fall through to console if no provider is
+// mounted yet (rare — provider wraps the whole app).
+type ToastFn = (
+  message: string,
+  variant?: "success" | "error" | "info",
+) => void;
+let globalToastFn: ToastFn | null = null;
+
+export function notify(
+  message: string,
+  variant: "success" | "error" | "info" = "info",
+): void {
+  if (globalToastFn) globalToastFn(message, variant);
+  else console.log(`[toast:${variant}]`, message);
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ToastMessage[]>([]);
 
@@ -47,6 +65,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  // Register this toast fn on mount; clear on unmount so stale refs can't
+  // fire into an unmounted tree.
+  globalToastFn = toast;
   const dismiss = useCallback((id: number) => {
     setMessages((prev) => prev.filter((m) => m.id !== id));
   }, []);
