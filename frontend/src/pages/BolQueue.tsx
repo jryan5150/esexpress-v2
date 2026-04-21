@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   useBolQueue,
   useBolStats,
@@ -146,11 +146,27 @@ function EditableBol({
 
 export function BolQueue() {
   const { format: formatWeight } = useWeightUnit();
-  const [activeTab, setActiveTab] = useState<Tab>("reconciliation");
+  // URL params drive the initial tab + search so cross-surface deep links
+  // (Load Report → BOL #) land on the right tab with the search applied.
+  const [urlParams, setUrlParams] = useSearchParams();
+  const urlTab = urlParams.get("tab") as Tab | null;
+  const urlSearch = urlParams.get("search") ?? "";
+  const validTabs: Tab[] = [
+    "reconciliation",
+    "submissions",
+    "propx",
+    "missing",
+  ];
+  const initialTab: Tab =
+    urlTab && validTabs.includes(urlTab) ? urlTab : "reconciliation";
+
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [filter, setFilter] = useState<"all" | "matched" | "pending">("all");
-  const [propxSearch, setPropxSearch] = useState("");
+  const [propxSearch, setPropxSearch] = useState(
+    initialTab === "propx" ? urlSearch : "",
+  );
   const [propxDateFrom, setPropxDateFrom] = useState("");
   const [propxDateTo, setPropxDateTo] = useState("");
   // JotForm Submissions tab state — mirrors PropX so the two surfaces look
@@ -159,9 +175,21 @@ export function BolQueue() {
   const [jotformFilter, setJotformFilter] = useState<
     "all" | "matched" | "pending"
   >("all");
-  const [jotformSearch, setJotformSearch] = useState("");
+  const [jotformSearch, setJotformSearch] = useState(
+    initialTab === "submissions" ? urlSearch : "",
+  );
   const [jotformDateFrom, setJotformDateFrom] = useState("");
   const [jotformDateTo, setJotformDateTo] = useState("");
+
+  // Keep the URL in sync with tab changes so Back and reload preserve state,
+  // and so a user pinning the URL shares exactly what they're seeing.
+  const switchTab = (tab: Tab) => {
+    setActiveTab(tab);
+    setPage(1);
+    const next = new URLSearchParams(urlParams);
+    next.set("tab", tab);
+    setUrlParams(next, { replace: true });
+  };
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [photoModal, setPhotoModal] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -345,10 +373,7 @@ export function BolQueue() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id);
-                setPage(1);
-              }}
+              onClick={() => switchTab(tab.id)}
               className={`px-3.5 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 activeTab === tab.id
                   ? "bg-primary-container/12 text-primary-container shadow-sm"

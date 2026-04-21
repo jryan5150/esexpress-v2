@@ -345,6 +345,27 @@ function Table({ rows }: { rows: Row[] }) {
                   </td>
                 );
               }
+              // BOL # deep-links into BOL Center's JotForm tab with the BOL
+              // pre-searched. That's the tab where driver-submitted ticket
+              // photos live, which is what a payroll reviewer is looking for
+              // when a row looks off. Server-side search spans jotform BOL +
+              // joined load BOL, so matched rows surface too.
+              if (c.key === "bolNo" && r.bolNo) {
+                return (
+                  <td
+                    key={String(c.key)}
+                    className="px-3 py-1.5 text-on-surface"
+                  >
+                    <Link
+                      to={`/bol?tab=submissions&search=${encodeURIComponent(r.bolNo)}`}
+                      className="text-primary hover:underline font-medium"
+                      title={`Find BOL ${r.bolNo} in BOL Center`}
+                    >
+                      {r.bolNo}
+                    </Link>
+                  </td>
+                );
+              }
               return (
                 <td key={String(c.key)} className="px-3 py-1.5 text-on-surface">
                   {getValue(r, c.key, formatWeight)}
