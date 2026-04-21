@@ -32,12 +32,11 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   const isActive = (path: string) => location.pathname === path;
   const isAdminRoute =
     location.pathname.startsWith("/admin") || location.pathname === "/finance";
-  // Reference group: legacy workspace pages + archive surfaces. The demo
-  // surfaces Workbench as the only always-visible main item; everything else
+  // Reference group: legacy workspace pages + archive surfaces. Top-level
+  // nav surfaces Workbench, BOL Center, and Load Report — everything else
   // lives behind this collapsible group so dispatchers see one front door.
   const isReferenceRoute =
     location.pathname === "/" ||
-    location.pathname === "/load-report" ||
     location.pathname === "/admin/missed-loads" ||
     location.pathname === "/archive";
 
@@ -229,6 +228,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 </>
               )}
             </Link>
+            <Link
+              to="/load-report"
+              className={navClass("/load-report")}
+              title="Load Report — payroll-friendly truck/date export"
+            >
+              <span className={iconClass("/load-report")}>summarize</span>
+              {!collapsed && "Load Report"}
+            </Link>
           </div>
 
           {/* Reference — collapsible group containing all legacy workspace pages */}
@@ -286,14 +293,6 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 >
                   <span className={iconClass("/")}>home</span>
                   Today's Objectives
-                </Link>
-                <Link
-                  to="/load-report"
-                  className={`${navClass("/load-report")} !pl-9`}
-                  title="Load Report — payroll-friendly truck/date export"
-                >
-                  <span className={iconClass("/load-report")}>summarize</span>
-                  Load Report
                 </Link>
                 <Link
                   to="/admin/missed-loads"
