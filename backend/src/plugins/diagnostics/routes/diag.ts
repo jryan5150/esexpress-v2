@@ -1,24 +1,47 @@
 import { type FastifyPluginAsync } from "fastify";
 import { perfBuffer } from "../../../lib/perf-buffer.js";
 
+/** Paths whose latency is bottlenecked by upstream third parties, not our
+ *  code. Excluded from p95 health signal so a slow PropX / JotForm API
+ *  doesn't trip our status red when the app itself is fine. The proxied
+ *  photo endpoints fetch server-side from `publicapis.propx.com` (6-7s
+ *  response times are routine) and JotForm's CDN. Their slowness is real
+ *  user-visible latency but it's an external signal, not ours. */
+const EXTERNAL_LATENCY_PATHS = ["/api/v1/verification/photos/proxy"];
+
 const diagRoutes: FastifyPluginAsync = async (fastify) => {
   // GET /health — overall system status (public)
   // Only 5xx counts as a server error — 4xx (esp. 401/403) is client-side
   // (bad token, missing auth) and shouldn't trip the banner. Minimum sample
   // size of 20 prevents a single error from flipping status after restart
-  // while the perf buffer is still filling.
+  // while the perf buffer is still filling. External-proxy latency is
+  // excluded from the p95 calc per EXTERNAL_LATENCY_PATHS above.
   fastify.get("/health", async () => {
-    const stats = perfBuffer.computeStats(Date.now() - 24 * 60 * 60 * 1000);
-    const serverErrors = Object.entries(stats.errorsByStatus)
-      .filter(([code]) => Number(code) >= 500)
-      .reduce((sum, [, count]) => sum + count, 0);
-    const errorRate = stats.count > 0 ? serverErrors / stats.count : 0;
-    const sampleTooSmall = stats.count < 20;
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    const raw = perfBuffer.getEntries(since);
+    const entries = raw.filter(
+      (e) => !EXTERNAL_LATENCY_PATHS.some((p) => e.path.startsWith(p)),
+    );
+
+    const count = entries.length;
+    const sampleTooSmall = count < 20;
+
+    let serverErrors = 0;
+    for (const e of entries) if (e.statusCode >= 500) serverErrors++;
+    const errorRate = count > 0 ? serverErrors / count : 0;
+
+    const sortedRt = entries.map((e) => e.responseTimeMs).sort((a, b) => a - b);
+    const p95 =
+      sortedRt.length > 0
+        ? sortedRt[
+            Math.min(sortedRt.length - 1, Math.ceil(sortedRt.length * 0.95) - 1)
+          ]
+        : 0;
 
     let status: "green" | "yellow" | "red" = "green";
     if (!sampleTooSmall) {
-      if (errorRate > 0.1 || stats.p95 > 5000) status = "red";
-      else if (errorRate > 0.02 || stats.p95 > 2000) status = "yellow";
+      if (errorRate > 0.1 || p95 > 5000) status = "red";
+      else if (errorRate > 0.02 || p95 > 2000) status = "yellow";
     }
 
     return {

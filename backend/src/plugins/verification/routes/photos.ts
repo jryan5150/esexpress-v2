@@ -231,12 +231,17 @@ const photosRoutes: FastifyPluginAsync = async (fastify) => {
                 ? "pdf"
                 : "jpg";
 
-        return reply
-          .header("Content-Type", contentType)
-          .header("Content-Disposition", `inline; filename="ticket.${ext}"`)
-          .header("Cache-Control", "public, max-age=3600")
-          .header("X-Proxy-Source", "esexpress-photo-proxy")
-          .send(buffer);
+        return (
+          reply
+            .header("Content-Type", contentType)
+            .header("Content-Disposition", `inline; filename="ticket.${ext}"`)
+            // 24h + immutable — scale tickets never change. PropX's upstream
+            // fetch is 6-7s per image, so longer browser cache = huge UX win
+            // on second visit to the PropX Photos tab.
+            .header("Cache-Control", "public, max-age=86400, immutable")
+            .header("X-Proxy-Source", "esexpress-photo-proxy")
+            .send(buffer)
+        );
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Proxy fetch failed";
