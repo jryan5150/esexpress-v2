@@ -354,6 +354,14 @@ function Table({ rows }: { rows: Row[] }) {
               // when a row looks off. Server-side search spans jotform BOL +
               // joined load BOL, so matched rows surface too.
               if (c.key === "bolNo" && r.bolNo) {
+                // When the system's BOL (often Logistiq's internal code)
+                // differs from the paper ticket number, surface both inline
+                // so payroll sees the mapping at a glance instead of
+                // discovering the mismatch after-the-fact.
+                const bolVsTicketDiffer =
+                  r.ticketNo != null &&
+                  r.ticketNo.trim() !== "" &&
+                  r.ticketNo.trim() !== r.bolNo.trim();
                 return (
                   <td
                     key={String(c.key)}
@@ -362,10 +370,22 @@ function Table({ rows }: { rows: Row[] }) {
                     <Link
                       to={`/bol?tab=submissions&search=${encodeURIComponent(r.bolNo)}`}
                       className="text-primary hover:underline font-medium"
-                      title={`Find BOL ${r.bolNo} in BOL Center`}
+                      title={
+                        bolVsTicketDiffer
+                          ? `System BOL ${r.bolNo}. Ticket # on paper: ${r.ticketNo}.`
+                          : `Find BOL ${r.bolNo} in BOL Center`
+                      }
                     >
                       {r.bolNo}
                     </Link>
+                    {bolVsTicketDiffer && (
+                      <span
+                        className="ml-1 text-[10px] text-on-surface-variant tabular-nums"
+                        title="Ticket number printed on the driver's paper"
+                      >
+                        · #{r.ticketNo}
+                      </span>
+                    )}
                   </td>
                 );
               }

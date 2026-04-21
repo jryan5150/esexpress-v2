@@ -669,6 +669,11 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
               driverName: r.loadDriverName,
               destinationName: r.destinationName,
               ticketNo: r.loadTicketNo,
+              // Surface the load's BOL on the matched object so the UI can
+              // show a vocabulary-disambiguation chip when it differs from
+              // the submission's OCR-extracted BOL (Logistiq AU... code vs
+              // the ticket number the driver wrote on the JotForm).
+              bolNo: r.loadBolNo,
             }
           : null,
         discrepancies: r.matchedLoadId

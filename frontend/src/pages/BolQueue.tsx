@@ -933,6 +933,30 @@ export function BolQueue() {
                                 : ""}
                             </div>
                           )}
+                          {/* Cross-ref chip — when the submission's BOL (what
+                              the driver wrote / Vision OCR'd) differs from
+                              the matched load's BOL (often Logistiq's AU...
+                              code), surface the mapping so the user knows
+                              both names point to the same load. Silent
+                              otherwise. */}
+                          {load &&
+                            sub.bolNumber &&
+                            (load as { bolNo?: string | null }).bolNo &&
+                            sub.bolNumber.trim() !==
+                              String(
+                                (load as { bolNo?: string | null }).bolNo ?? "",
+                              ).trim() && (
+                              <div
+                                className="inline-flex items-center gap-1 text-[10px] text-on-surface-variant bg-primary/5 border border-primary/20 rounded px-1.5 py-0.5"
+                                title="The driver's submission BOL and the system's BOL for this load differ. Both are the same load under two names."
+                              >
+                                <span className="material-symbols-outlined text-[10px]">
+                                  swap_horiz
+                                </span>
+                                system BOL:{" "}
+                                {(load as { bolNo?: string | null }).bolNo}
+                              </div>
+                            )}
                           {item.discrepancies.length > 0 && (
                             <div
                               className={`text-[10px] font-semibold inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${

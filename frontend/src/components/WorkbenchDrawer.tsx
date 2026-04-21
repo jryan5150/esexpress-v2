@@ -476,7 +476,7 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
         {/* Editable fields */}
         <div className="grid grid-cols-2 gap-2">
           <EditableField
-            label="BOL #"
+            label={row.loadSource === "logistiq" ? "BOL # (Logistiq)" : "BOL #"}
             value={row.bolNo}
             ocrValue={ocr?.ocrBolNo}
             onSave={saveField("bolNo")}
@@ -488,6 +488,21 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
             onSave={saveField("ticketNo")}
             isSaving={update.isPending}
           />
+          {/* Vocabulary disambiguation — Logistiq-sourced loads carry an
+              internal code (e.g. AU26...) as their "BOL," but the dispatch
+              team calls the scale-ticket number the BOL in everyday speech.
+              Surface the mapping only when the two differ so Jessica sees
+              both identifiers for the same load without hunting. */}
+          {row.bolNo &&
+            row.ticketNo &&
+            row.bolNo.trim() !== row.ticketNo.trim() && (
+              <div className="col-span-2 -mt-1 text-[11px] text-on-surface-variant bg-primary/5 border border-primary/15 rounded px-2 py-1.5 leading-snug">
+                <span className="font-semibold text-primary">Heads up —</span>{" "}
+                {row.loadSource === "logistiq"
+                  ? `Logistiq calls this load BOL ${row.bolNo}. The paper ticket the driver handed over is #${row.ticketNo}. Same load, two numbers.`
+                  : `System BOL ${row.bolNo} differs from the ticket number ${row.ticketNo} on the paper. Both point to this load.`}
+              </div>
+            )}
           <EditableField
             label="Driver"
             value={row.driverName}
