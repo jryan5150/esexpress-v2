@@ -5,6 +5,7 @@ import {
   useDispatchReadiness,
   useValidationSummary,
   usePipelineStatus,
+  useMatchAccuracy,
 } from "../hooks/use-wells";
 import { useHeartbeat } from "../hooks/use-presence";
 
@@ -15,6 +16,7 @@ export function ExceptionFeed() {
   const readinessQuery = useDispatchReadiness();
   const validationQuery = useValidationSummary();
   const pipelineQuery = usePipelineStatus();
+  const matchAccuracyQuery = useMatchAccuracy();
 
   const isLoading = wellsQuery.isLoading || readinessQuery.isLoading;
 
@@ -75,6 +77,25 @@ export function ExceptionFeed() {
             </p>
           </div>
           <div className="flex-1" />
+          {/* Matcher pill — visible learning signal. Clicks through to the
+              Load Diagnostics page where the full sparkline + tier
+              breakdown lives. Only renders once we have a reading; a
+              loading pill on a header feels noisier than helpful. */}
+          {matchAccuracyQuery.data &&
+            matchAccuracyQuery.data.overall.decisionsCount > 0 && (
+              <button
+                type="button"
+                onClick={() => navigate("/admin/missed-loads")}
+                title={`Matcher accept rate over the last ${matchAccuracyQuery.data.windowDays} days (${matchAccuracyQuery.data.overall.decisionsCount} decisions). Click for diagnostics.`}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-tertiary/10 border border-tertiary/20 text-[10px] font-semibold uppercase tracking-wide text-tertiary hover:bg-tertiary/15 transition-colors cursor-pointer tabular-nums"
+              >
+                <span className="material-symbols-outlined text-xs">
+                  insights
+                </span>
+                Matcher{" "}
+                {Math.round(matchAccuracyQuery.data.overall.acceptRate * 100)}%
+              </button>
+            )}
           {wellsQuery.dataUpdatedAt > 0 && (
             <span
               className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-surface-container-highest text-[10px] font-semibold uppercase tracking-wide text-outline tabular-nums"

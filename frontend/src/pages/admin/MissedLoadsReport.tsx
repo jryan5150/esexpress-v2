@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { useHeartbeat } from "../../hooks/use-presence";
+import { useMatchAccuracy } from "../../hooks/use-wells";
 
 interface DupBol {
   bolNo: string | null;
@@ -71,8 +72,10 @@ export function MissedLoadsReport() {
     queryFn: () => api.get<MissedLoadsReport>("/diag/missed-loads"),
     staleTime: 30_000,
   });
+  const matchAccuracyQuery = useMatchAccuracy();
 
   const data = reportQuery.data;
+  const matchData = matchAccuracyQuery.data;
 
   return (
     <div className="flex flex-col h-full">
@@ -159,6 +162,87 @@ export function MissedLoadsReport() {
               Generated {fmtDate(data.generatedAt)} — pull-style report, no
               scheduled notifications. Re-run anytime.
             </div>
+
+            {/* Matcher accuracy — small trust-signal surface. Hidden until
+                we have data so an empty pill doesn't mislead. */}
+            {matchData && matchData.overall.decisionsCount > 0 && (
+              <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-headline text-[13px] font-bold text-on-surface uppercase tracking-[0.08em]">
+                    Matcher accuracy — last {matchData.windowDays} days
+                  </h3>
+                  <span className="text-[10px] text-outline tabular-nums">
+                    {matchData.overall.decisionsCount} decisions
+                  </span>
+                </div>
+                <div className="flex items-end gap-6 flex-wrap">
+                  <div>
+                    <div className="font-data text-3xl font-extrabold text-tertiary tabular-nums leading-none">
+                      {Math.round(matchData.overall.acceptRate * 100)}%
+                    </div>
+                    <div className="text-[11px] text-on-surface-variant mt-1">
+                      accept rate
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-data text-2xl font-bold text-on-surface-variant tabular-nums leading-none">
+                      {Math.round(matchData.overall.overrideRate * 100)}%
+                    </div>
+                    <div className="text-[11px] text-on-surface-variant mt-1">
+                      override rate
+                    </div>
+                  </div>
+                  {/* Sparkline — 7 thin bars, heights proportional to
+                      daily accept rate. Days with no decisions render as
+                      a muted 2px baseline. */}
+                  <div className="flex items-end gap-1 h-12">
+                    {matchData.daily.map((d) => {
+                      const pct = d.acceptRate ?? 0;
+                      const hasData = d.acceptRate !== null;
+                      return (
+                        <div
+                          key={d.date}
+                          title={`${d.date}: ${
+                            hasData
+                              ? `${Math.round(pct * 100)}% (${d.decisionsCount})`
+                              : "no decisions"
+                          }`}
+                          className={`w-3 rounded-sm ${
+                            hasData ? "bg-tertiary" : "bg-outline/30"
+                          }`}
+                          style={{
+                            height: hasData
+                              ? `${Math.max(pct * 48, 4)}px`
+                              : "2px",
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="text-[11px] text-on-surface-variant">
+                    <div className="tabular-nums">
+                      <strong className="text-on-surface">
+                        {matchData.autoPromotion.withPhotoCount}
+                      </strong>{" "}
+                      of {matchData.autoPromotion.tier1Count} Tier 1 assignments
+                      have photos{" "}
+                      <span className="text-outline">
+                        (
+                        {Math.round(
+                          matchData.autoPromotion.withPhotoPctOfTier1 * 100,
+                        )}
+                        %)
+                      </span>
+                    </div>
+                    <div className="text-outline mt-1">
+                      {matchData.autoPromotion.tier1Count} of{" "}
+                      {matchData.autoPromotion.totalAssignments} assignments
+                      auto-promoted to Tier 1
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Duplicate BOLs */}
             <Section

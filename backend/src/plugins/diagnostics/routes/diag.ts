@@ -217,6 +217,219 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // GET /match-accuracy — visible matcher-learning signal for dispatchers
+  // ----------------------------------------------------------------------
+  // Every human action on an assignment writes a row to `match_decisions`
+  // with a canonical `action` label. The tuner reads those rows to re-weight
+  // the scorer, but dispatchers deserve a visible version too — a 7-day
+  // accept-rate pill on the Home page so they can see the matcher getting
+  // smarter (or not).
+  //
+  // Action-label mapping:
+  //   accept   = bulk_confirm | advance:* | route:confirm
+  //              (human agreed with the matcher and moved the load forward)
+  //   override = route:* (except route:confirm) | flag_back
+  //              (human disagreed and re-routed / demoted)
+  //
+  // Auto-promotion stats come from `assignments.auto_map_tier` (1/2/3) and
+  // `photo_status` so the UI can show "X of Y Tier 1 have photos (Z%)",
+  // which is the photo-gate rule made visible.
+  fastify.get(
+    "/match-accuracy",
+    {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
+    },
+    async (_request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+
+      const { matchDecisions, assignments } =
+        await import("../../../db/schema.js");
+      const { sql, gte } = await import("drizzle-orm");
+
+      const windowDays = 7;
+      const windowStart = new Date(
+        Date.now() - windowDays * 24 * 60 * 60 * 1000,
+      );
+
+      // Shared SQL fragments so "accept" / "override" are defined in one
+      // place. Kept in a constant so if the decision vocabulary grows we
+      // update it once.
+      const isAccept = sql`(
+        ${matchDecisions.action} = 'bulk_confirm'
+        OR ${matchDecisions.action} LIKE 'advance:%'
+        OR ${matchDecisions.action} = 'route:confirm'
+      )`;
+      const isOverride = sql`(
+        ${matchDecisions.action} = 'flag_back'
+        OR (
+          ${matchDecisions.action} LIKE 'route:%'
+          AND ${matchDecisions.action} <> 'route:confirm'
+        )
+      )`;
+
+      const [overallRow, tierRows, assignmentTotalsRow, dailyRows] =
+        await Promise.all([
+          // Overall 7-day counts
+          db
+            .select({
+              decisionsCount: sql<number>`cast(count(*) as int)`,
+              acceptCount: sql<number>`cast(count(*) filter (where ${isAccept}) as int)`,
+              overrideCount: sql<number>`cast(count(*) filter (where ${isOverride}) as int)`,
+            })
+            .from(matchDecisions)
+            .where(gte(matchDecisions.createdAt, windowStart)),
+
+          // Per-tier breakdown via tier_before (what the scorer said when
+          // the human decided)
+          db
+            .select({
+              tierBefore: matchDecisions.tierBefore,
+              decisionsCount: sql<number>`cast(count(*) as int)`,
+              acceptCount: sql<number>`cast(count(*) filter (where ${isAccept}) as int)`,
+            })
+            .from(matchDecisions)
+            .where(gte(matchDecisions.createdAt, windowStart))
+            .groupBy(matchDecisions.tierBefore),
+
+          // Auto-promotion snapshot from the assignments table
+          db
+            .select({
+              totalAssignments: sql<number>`cast(count(*) as int)`,
+              tier1Count: sql<number>`cast(count(*) filter (where ${assignments.autoMapTier} = 1) as int)`,
+              withPhotoCount: sql<number>`cast(count(*) filter (where ${assignments.autoMapTier} = 1 and ${assignments.photoStatus} = 'attached') as int)`,
+            })
+            .from(assignments),
+
+          // Daily buckets, oldest-first — use to_char so timezone stays
+          // stable (server-local is fine for an MSP tool)
+          db
+            .select({
+              date: sql<string>`to_char(${matchDecisions.createdAt}, 'YYYY-MM-DD')`,
+              decisionsCount: sql<number>`cast(count(*) as int)`,
+              acceptCount: sql<number>`cast(count(*) filter (where ${isAccept}) as int)`,
+            })
+            .from(matchDecisions)
+            .where(gte(matchDecisions.createdAt, windowStart))
+            .groupBy(sql`to_char(${matchDecisions.createdAt}, 'YYYY-MM-DD')`)
+            .orderBy(sql`to_char(${matchDecisions.createdAt}, 'YYYY-MM-DD')`),
+        ]);
+
+      const overall = overallRow[0] ?? {
+        decisionsCount: 0,
+        acceptCount: 0,
+        overrideCount: 0,
+      };
+
+      const rateOrZero = (num: number, denom: number) =>
+        denom > 0 ? num / denom : 0;
+
+      // Tier buckets — make sure all 3 slots are present even when the
+      // window has no decisions for a given tier. Scorer emits 'tier1'/
+      // 'tier2'/'tier3' as lowercase strings in match-scorer.service.ts.
+      const tierBuckets: Record<
+        "tier1" | "tier2" | "tier3",
+        { count: number; acceptRate: number }
+      > = {
+        tier1: { count: 0, acceptRate: 0 },
+        tier2: { count: 0, acceptRate: 0 },
+        tier3: { count: 0, acceptRate: 0 },
+      };
+      for (const row of tierRows) {
+        const key = row.tierBefore as "tier1" | "tier2" | "tier3";
+        if (key === "tier1" || key === "tier2" || key === "tier3") {
+          tierBuckets[key] = {
+            count: row.decisionsCount,
+            acceptRate: rateOrZero(row.acceptCount, row.decisionsCount),
+          };
+        }
+      }
+
+      // Build a full 7-day array oldest→newest so the UI can render a
+      // fixed-width sparkline without having to pad client-side. Missing
+      // days get acceptRate: null so the UI can show a muted/empty slot.
+      const dailyByDate = new Map<
+        string,
+        { acceptCount: number; decisionsCount: number }
+      >();
+      for (const row of dailyRows) {
+        dailyByDate.set(row.date, {
+          acceptCount: row.acceptCount,
+          decisionsCount: row.decisionsCount,
+        });
+      }
+      const daily: Array<{
+        date: string;
+        acceptRate: number | null;
+        decisionsCount: number;
+      }> = [];
+      const today = new Date();
+      for (let i = windowDays - 1; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        const key = `${yyyy}-${mm}-${dd}`;
+        const found = dailyByDate.get(key);
+        daily.push({
+          date: key,
+          decisionsCount: found?.decisionsCount ?? 0,
+          acceptRate:
+            found && found.decisionsCount > 0
+              ? found.acceptCount / found.decisionsCount
+              : null,
+        });
+      }
+
+      const autoPromotion = assignmentTotalsRow[0] ?? {
+        totalAssignments: 0,
+        tier1Count: 0,
+        withPhotoCount: 0,
+      };
+
+      return {
+        success: true,
+        data: {
+          windowDays,
+          overall: {
+            decisionsCount: overall.decisionsCount,
+            acceptRate: rateOrZero(overall.acceptCount, overall.decisionsCount),
+            overrideRate: rateOrZero(
+              overall.overrideCount,
+              overall.decisionsCount,
+            ),
+          },
+          byTier: tierBuckets,
+          autoPromotion: {
+            totalAssignments: autoPromotion.totalAssignments,
+            tier1Count: autoPromotion.tier1Count,
+            tier1PctOfTotal: rateOrZero(
+              autoPromotion.tier1Count,
+              autoPromotion.totalAssignments,
+            ),
+            withPhotoCount: autoPromotion.withPhotoCount,
+            withPhotoPctOfTier1: rateOrZero(
+              autoPromotion.withPhotoCount,
+              autoPromotion.tier1Count,
+            ),
+          },
+          daily,
+        },
+      };
+    },
+  );
+
   // GET /presence — active users
   fastify.get("/presence", async () => {
     return {

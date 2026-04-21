@@ -100,6 +100,50 @@ export function usePipelineStatus() {
   });
 }
 
+/**
+ * Matcher-accuracy diagnostics over a rolling 7-day window.
+ *
+ * Visible-learning signal for dispatchers — feeds the small "Matcher: NN%"
+ * pill on the Home page and the sparkline row at the top of the Load
+ * Diagnostics page. See /backend diag.ts `/match-accuracy` for the source
+ * of truth on the action-label mapping (accept vs override).
+ */
+export interface MatchAccuracyData {
+  windowDays: number;
+  overall: {
+    decisionsCount: number;
+    acceptRate: number;
+    overrideRate: number;
+  };
+  byTier: {
+    tier1: { count: number; acceptRate: number };
+    tier2: { count: number; acceptRate: number };
+    tier3: { count: number; acceptRate: number };
+  };
+  autoPromotion: {
+    totalAssignments: number;
+    tier1Count: number;
+    tier1PctOfTotal: number;
+    withPhotoCount: number;
+    withPhotoPctOfTier1: number;
+  };
+  daily: Array<{
+    date: string;
+    acceptRate: number | null;
+    decisionsCount: number;
+  }>;
+}
+
+export function useMatchAccuracy() {
+  return useQuery({
+    queryKey: ["diag", "match-accuracy"],
+    queryFn: () => api.get<MatchAccuracyData>("/diag/match-accuracy"),
+    // Refresh every 2 minutes — this is a trend, not a live counter
+    refetchInterval: 120_000,
+    staleTime: 60_000,
+  });
+}
+
 export function useDispatchReadiness() {
   return useQuery({
     queryKey: qk.readiness.all,
