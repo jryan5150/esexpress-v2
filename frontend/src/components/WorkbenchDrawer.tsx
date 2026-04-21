@@ -681,69 +681,162 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
           through the pipeline. Shows the last 6 transitions by default,
           with a "Show all" toggle for audit sessions where the full
           history matters.
-          Defensive: old backend responses may not include status_history
-          yet, so guard Array.isArray explicitly rather than rely on types. */}
-      {Array.isArray(row.statusHistory) && row.statusHistory.length > 0 && (
-        <div className="bg-surface-variant/20 border border-surface-variant rounded p-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
-              Timeline
-              <span className="ml-1 text-on-surface-variant/60 normal-case tracking-normal">
-                ({row.statusHistory.length} transition
-                {row.statusHistory.length === 1 ? "" : "s"})
+
+          Build #2 (2026-04-21) — enhanced to distinguish system/auto
+          actions from dispatcher-initiated ones. Jessica's Apr 21 email
+          flagged: "loads showing cleared from the 20th — I haven't
+          cleared anything." The distinction now surfaces directly in
+          the drawer: Auto-Mapper / system entries render in muted with
+          a gear icon; named dispatcher actions render with a person
+          icon in primary color.
+
+          Fallback: when statusHistory is empty/null but the row is
+          already in a terminal stage (`cleared`), synthesize an entry
+          explaining the Apr 20 backfill so the row isn't unexplained. */}
+      {(() => {
+        const history = Array.isArray(row.statusHistory)
+          ? row.statusHistory
+          : [];
+        // Synthetic entry for the mass-clear backfill case: cleared rows
+        // with no recorded history came from migration 0011 or the Apr
+        // 20 re-run. stageChangedAt is the only timestamp we have.
+        const needsBackfillSynth =
+          history.length === 0 && row.handlerStage === "cleared";
+        const entries = needsBackfillSynth
+          ? [
+              {
+                status: "stage:cleared",
+                changedAt: row.stageChangedAt ?? null,
+                changedBy: undefined as number | undefined,
+                changedByName: "Auto-Mapper (historical backfill)",
+                notes:
+                  "Cleared by system backfill on 2026-04-20 — load was already terminal upstream (Delivered or Completed in PropX/Logistiq). Not a dispatcher action.",
+              },
+            ]
+          : history;
+        if (entries.length === 0) return null;
+
+        const isSystemActor = (name: string | undefined | null): boolean => {
+          if (!name) return true;
+          const n = name.toLowerCase();
+          return (
+            n.includes("auto-mapper") ||
+            n.includes("automapper") ||
+            n === "system" ||
+            n.includes("reconciliation") ||
+            n.includes("backfill")
+          );
+        };
+
+        return (
+          <div className="bg-surface-variant/20 border border-surface-variant rounded p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                Audit Log
+                <span className="ml-1 text-on-surface-variant/60 normal-case tracking-normal">
+                  ({entries.length} {entries.length === 1 ? "entry" : "entries"}
+                  )
+                </span>
               </span>
-            </span>
-            {row.statusHistory.length > 6 && (
-              <button
-                type="button"
-                onClick={() => setTimelineExpanded((v) => !v)}
-                className="text-[10px] font-semibold text-primary hover:underline uppercase tracking-wider"
-              >
-                {timelineExpanded
-                  ? "Show last 6"
-                  : `Show all (${row.statusHistory.length})`}
-              </button>
+              {entries.length > 6 && (
+                <button
+                  type="button"
+                  onClick={() => setTimelineExpanded((v) => !v)}
+                  className="text-[10px] font-semibold text-primary hover:underline uppercase tracking-wider"
+                >
+                  {timelineExpanded
+                    ? "Show last 6"
+                    : `Show all (${entries.length})`}
+                </button>
+              )}
+            </div>
+            <ul className="space-y-1.5">
+              {[...entries]
+                .reverse()
+                .slice(0, timelineExpanded ? entries.length : 6)
+                .map((h, i) => {
+                  const when = h.changedAt
+                    ? new Date(h.changedAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })
+                    : "--";
+                  const actor = h.changedByName ?? "system";
+                  const isSystem = isSystemActor(h.changedByName);
+                  return (
+                    <li
+                      key={`${h.changedAt ?? "none"}-${i}`}
+                      className="flex items-start gap-2 text-xs"
+                    >
+                      <span
+                        className={`material-symbols-outlined text-[14px] mt-0.5 shrink-0 ${
+                          isSystem
+                            ? "text-on-surface-variant/70"
+                            : "text-primary"
+                        }`}
+                        title={
+                          isSystem
+                            ? "System / Auto-Mapper action — not initiated by a dispatcher"
+                            : "Dispatcher action"
+                        }
+                      >
+                        {isSystem ? "settings" : "person"}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div
+                          className={
+                            isSystem
+                              ? "text-on-surface-variant"
+                              : "text-on-surface"
+                          }
+                        >
+                          <span className="font-medium">{h.status}</span>
+                          <span
+                            className={
+                              isSystem
+                                ? "text-on-surface-variant/70"
+                                : "text-on-surface-variant"
+                            }
+                          >
+                            {" "}
+                            —{" "}
+                            <span
+                              className={isSystem ? "italic" : "font-medium"}
+                            >
+                              {actor}
+                            </span>
+                            {" · "}
+                            {when}
+                          </span>
+                        </div>
+                        {h.notes && (
+                          <div
+                            className={`text-[11px] mt-0.5 italic ${
+                              isSystem
+                                ? "text-on-surface-variant/60"
+                                : "text-on-surface-variant"
+                            }`}
+                          >
+                            &ldquo;{h.notes}&rdquo;
+                          </div>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+            </ul>
+            {needsBackfillSynth && (
+              <div className="mt-2 pt-2 border-t border-surface-variant/60 text-[10px] text-on-surface-variant/70 italic">
+                Heads up — this entry is inferred from the stage timestamp. The
+                Apr 20 backfill ran without per-row audit entries, so future
+                clearing actions will be attributed explicitly.
+              </div>
             )}
           </div>
-          <ul className="space-y-1.5">
-            {[...row.statusHistory]
-              .reverse()
-              .slice(0, timelineExpanded ? row.statusHistory.length : 6)
-              .map((h, i) => {
-                const when = h.changedAt
-                  ? new Date(h.changedAt).toLocaleString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })
-                  : "--";
-                return (
-                  <li
-                    key={`${h.changedAt}-${i}`}
-                    className="flex items-start gap-2 text-xs"
-                  >
-                    <span className="text-outline-variant mt-1">●</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-on-surface">
-                        <span className="font-medium">{h.status}</span>
-                        <span className="text-on-surface-variant">
-                          {" "}
-                          — {h.changedByName ?? "system"} · {when}
-                        </span>
-                      </div>
-                      {h.notes && (
-                        <div className="text-[11px] text-on-surface-variant mt-0.5 italic">
-                          “{h.notes}”
-                        </div>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-          </ul>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Actions */}
       <div className="flex items-center justify-between pt-2 border-t border-surface-variant">
