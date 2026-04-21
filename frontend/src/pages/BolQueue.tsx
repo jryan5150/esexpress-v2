@@ -181,14 +181,42 @@ export function BolQueue() {
   const [jotformDateFrom, setJotformDateFrom] = useState("");
   const [jotformDateTo, setJotformDateTo] = useState("");
 
-  // Keep the URL in sync with tab changes so Back and reload preserve state,
-  // and so a user pinning the URL shares exactly what they're seeing.
+  // Keep the URL in sync with tab + search state so Back, reload, and sharing
+  // a URL all preserve exactly what the user is seeing. Helper patches the
+  // current URLSearchParams without blowing away unrelated params.
+  const patchUrl = (patch: Record<string, string>) => {
+    const next = new URLSearchParams(urlParams);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) next.set(k, v);
+      else next.delete(k);
+    }
+    setUrlParams(next, { replace: true });
+  };
+
   const switchTab = (tab: Tab) => {
     setActiveTab(tab);
     setPage(1);
-    const next = new URLSearchParams(urlParams);
-    next.set("tab", tab);
-    setUrlParams(next, { replace: true });
+    // URL search reflects the destination tab's current search state so
+    // switching tabs never silently carries a stale query forward.
+    const nextSearch =
+      tab === "submissions"
+        ? jotformSearch
+        : tab === "propx"
+          ? propxSearch
+          : "";
+    patchUrl({ tab, search: nextSearch });
+  };
+
+  const applyJotformSearch = (term: string) => {
+    setJotformSearch(term);
+    setPage(1);
+    if (activeTab === "submissions") patchUrl({ search: term });
+  };
+
+  const applyPropxSearch = (term: string) => {
+    setPropxSearch(term);
+    setPage(1);
+    if (activeTab === "propx") patchUrl({ search: term });
   };
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [photoModal, setPhotoModal] = useState<string | null>(null);
@@ -688,16 +716,12 @@ export function BolQueue() {
                   type="text"
                   placeholder="Search BOL, driver, truck, load #, ticket…"
                   defaultValue={jotformSearch}
-                  onBlur={(e) => {
-                    setJotformSearch(e.target.value.trim());
-                    setPage(1);
-                  }}
+                  onBlur={(e) => applyJotformSearch(e.target.value.trim())}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      setJotformSearch(
+                      applyJotformSearch(
                         (e.target as HTMLInputElement).value.trim(),
                       );
-                      setPage(1);
                     }
                   }}
                   className="flex-1 bg-surface-variant/30 rounded px-2 py-1 text-sm"
@@ -735,10 +759,9 @@ export function BolQueue() {
                 <button
                   type="button"
                   onClick={() => {
-                    setJotformSearch("");
+                    applyJotformSearch("");
                     setJotformDateFrom("");
                     setJotformDateTo("");
-                    setPage(1);
                   }}
                   className="text-xs text-on-surface-variant hover:text-on-surface underline"
                 >
@@ -945,16 +968,12 @@ export function BolQueue() {
                   type="text"
                   placeholder="Search load #, ticket, BOL, driver, truck…"
                   defaultValue={propxSearch}
-                  onBlur={(e) => {
-                    setPropxSearch(e.target.value.trim());
-                    setPage(1);
-                  }}
+                  onBlur={(e) => applyPropxSearch(e.target.value.trim())}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      setPropxSearch(
+                      applyPropxSearch(
                         (e.target as HTMLInputElement).value.trim(),
                       );
-                      setPage(1);
                     }
                   }}
                   className="flex-1 bg-surface-variant/30 rounded px-2 py-1 text-sm"
@@ -992,10 +1011,9 @@ export function BolQueue() {
                 <button
                   type="button"
                   onClick={() => {
-                    setPropxSearch("");
+                    applyPropxSearch("");
                     setPropxDateFrom("");
                     setPropxDateTo("");
-                    setPage(1);
                   }}
                   className="text-xs text-on-surface-variant hover:text-on-surface underline"
                 >
