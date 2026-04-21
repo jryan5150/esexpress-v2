@@ -549,7 +549,7 @@ export async function transitionStatus(
   await db
     .update(paymentBatches)
     .set({
-      status: newStatus,
+      status: newStatus as typeof paymentBatches.status._.data,
       statusHistory: history,
       updatedAt: new Date(),
     })

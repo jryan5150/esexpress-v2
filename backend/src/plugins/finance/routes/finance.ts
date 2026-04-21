@@ -59,7 +59,13 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
       const offset = (pageNum - 1) * pageSize;
 
       const conditions = [];
-      if (status) conditions.push(eq(paymentBatches.status, status));
+      if (status)
+        conditions.push(
+          eq(
+            paymentBatches.status,
+            status as unknown as typeof paymentBatches.status._.data,
+          ),
+        );
       if (driverId) conditions.push(eq(paymentBatches.driverId, driverId));
       if (from && to) {
         conditions.push(
@@ -248,7 +254,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
         carrierName: string;
       }>;
 
-      await updateBatch(db, id, body);
+      await updateBatch(db, id, body as Parameters<typeof updateBatch>[2]);
 
       return {
         success: true,

@@ -274,7 +274,7 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
         .where(eq(jotformImports.id, importId))
         .limit(1)
         .then((r) => ({
-          importDriverName: r[0]?.driverName ?? null,
+          importDriverName: r[0]?.importDriverName ?? null,
         }));
       if (importDriverName?.trim()) {
         const { wells } = await import("../../../db/schema.js");

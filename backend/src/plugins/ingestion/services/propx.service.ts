@@ -185,7 +185,7 @@ export class PropxClient {
 
           return (await response.json()) as T;
         }),
-      { throwOnTimeout: true },
+      undefined,
     ) as T;
   }
 
@@ -376,7 +376,7 @@ export class PropxClient {
           const buffer = Buffer.from(await response.arrayBuffer());
           return { buffer, contentType };
         }),
-      { throwOnTimeout: true },
+      undefined,
     ) as Promise<{ buffer: Buffer; contentType: string } | null>;
   }
 

@@ -74,7 +74,11 @@ const feedbackRoutes: FastifyPluginAsync = async (fastify) => {
     "/screenshot",
     {
       preHandler: [fastify.authenticate],
-      config: { rawBody: false },
+      // rawBody from fastify-raw-body; augmenting FastifyContextConfig
+      // centrally is the cleaner path but this per-route cast is sufficient
+      // for now. Double-cast because {rawBody:boolean} has no overlap with
+      // the plugin's FastifyContextConfig shape.
+      config: { rawBody: false } as unknown as Record<string, never>,
       bodyLimit: 7 * 1024 * 1024, // 7MB (5MB image as base64 ≈ 6.7MB)
       schema: {
         body: {

@@ -298,9 +298,13 @@ export async function autoMatch(
       matchStrategy:
         (submission.matchMethod as MatchResult["matchStrategy"]) ?? null,
       confidence: submission.matchScore ?? 0,
-      discrepancies: (submission.discrepancies ?? []) as Discrepancy[],
+      // jsonb schema's $type<> enforces the shape at insert time but TS
+      // can't prove equivalence with the Discrepancy union. Round-trip via
+      // unknown.
+      discrepancies: (submission.discrepancies ??
+        []) as unknown as Discrepancy[],
       reconciliationStatus: classifyReconciliationStatus(
-        (submission.discrepancies ?? []) as Discrepancy[],
+        (submission.discrepancies ?? []) as unknown as Discrepancy[],
       ),
     };
   }
@@ -465,7 +469,7 @@ async function finalizeMatch(
       matchedLoadId: loadRow.id,
       matchMethod: strategy,
       matchScore: confidence,
-      discrepancies: discrepancies as Array<{
+      discrepancies: discrepancies as unknown as Array<{
         field: string;
         expected: unknown;
         actual: unknown;
@@ -511,9 +515,8 @@ async function refreshAssignmentUncertainReasons(
   extracted: BolExtractedRow,
 ): Promise<void> {
   try {
-    const { computeUncertainReasons } = await import(
-      "../../dispatch/services/workbench.service.js"
-    );
+    const { computeUncertainReasons } =
+      await import("../../dispatch/services/workbench.service.js");
 
     const rows = await db
       .select({
@@ -689,7 +692,7 @@ export async function manualMatch(
       matchedLoadId: loadId,
       matchMethod: "manual",
       matchScore: 100,
-      discrepancies: discrepancies as Array<{
+      discrepancies: discrepancies as unknown as Array<{
         field: string;
         expected: unknown;
         actual: unknown;
@@ -751,7 +754,14 @@ export async function getReconciliationQueue(
     };
     const dbStatuses = statusMap[filters.status];
     if (dbStatuses && dbStatuses.length > 0) {
-      const conditions = dbStatuses.map((s) => eq(bolSubmissions.status, s));
+      // Cast the plain string to the column's enum union — statusMap entries
+      // are a known subset but TS can't infer that from the Record lookup.
+      const conditions = dbStatuses.map((s) =>
+        eq(
+          bolSubmissions.status,
+          s as unknown as typeof bolSubmissions.status._.data,
+        ),
+      );
       query = query.where(
         conditions.length === 1 ? conditions[0] : or(...conditions),
       ) as typeof query;

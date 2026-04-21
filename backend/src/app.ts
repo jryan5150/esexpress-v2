@@ -143,8 +143,18 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     },
   );
 
-  // Global error handler
-  app.setErrorHandler((error, _request, reply) => {
+  // Global error handler. Narrow the caught error to a local type so all the
+  // shapes we actually read (validation, statusCode, message, stack, code)
+  // are reachable without repeated `as` casts. Fastify's FastifyError gives
+  // us most of that surface; .validation is an additional Ajv-shaped prop.
+  app.setErrorHandler((error: unknown, _request, reply) => {
+    const e = error as {
+      statusCode?: number;
+      message?: string;
+      stack?: string;
+      code?: string;
+      validation?: unknown;
+    };
     if (error instanceof AppError) {
       return reply.status(error.statusCode).send({
         success: false,
@@ -153,23 +163,27 @@ export function buildApp(opts: FastifyServerOptions = {}): FastifyInstance {
     }
 
     // Fastify validation errors
-    if (error.validation) {
+    if (e.validation) {
       return reply.status(400).send({
         success: false,
-        error: { code: "VALIDATION_ERROR", message: error.message },
+        error: {
+          code: "VALIDATION_ERROR",
+          message: e.message ?? "Validation failed",
+        },
       });
     }
 
     // Unknown errors
-    const statusCode = error.statusCode ?? 500;
+    const statusCode = e.statusCode ?? 500;
     if (statusCode === 500) {
-      console.error("[500 ERROR]", error.message, error.stack);
+      console.error("[500 ERROR]", e.message, e.stack);
     }
     return reply.status(statusCode).send({
       success: false,
       error: {
         code: "INTERNAL_ERROR",
-        message: statusCode === 500 ? "Internal server error" : error.message,
+        message:
+          statusCode === 500 ? "Internal server error" : (e.message ?? "Error"),
       },
     });
   });

@@ -51,7 +51,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       // Database lookup — requires db decorated on app
       const db = fastify.db;
       if (!db) {
-        return reply.status(503).send({
+        return (reply as any).status(503).send({
           success: false,
           error: {
             code: "SERVICE_UNAVAILABLE",
@@ -69,7 +69,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         .where(eq(users.email, email))
         .limit(1);
       if (!user || !user.passwordHash) {
-        return reply.status(401).send({
+        return (reply as any).status(401).send({
           success: false,
           error: { code: "UNAUTHORIZED", message: "Invalid email or password" },
         });
@@ -77,7 +77,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
       const valid = await verifyPassword(password, user.passwordHash);
       if (!valid) {
-        return reply.status(401).send({
+        return (reply as any).status(401).send({
           success: false,
           error: { code: "UNAUTHORIZED", message: "Invalid email or password" },
         });
@@ -153,7 +153,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     async (_request, reply) => {
       const db = fastify.db;
       if (!db) {
-        return reply.status(503).send({
+        return (reply as any).status(503).send({
           success: false,
           error: {
             code: "SERVICE_UNAVAILABLE",

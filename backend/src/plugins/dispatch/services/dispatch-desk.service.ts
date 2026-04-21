@@ -308,7 +308,14 @@ export async function getDispatchDeskLoads(
     .innerJoin(wells, eq(assignments.wellId, wells.id))
     .where(whereClause);
 
-  return { items: data, total: countResult?.total ?? data.length, page, limit };
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      count: countResult?.total ?? data.length,
+    },
+  };
 }
 
 // ─── MUTATION FUNCTIONS ───────────────────────────────────────────
@@ -519,7 +526,10 @@ export async function getMissingTicketLoads(
     .leftJoin(jotformImports, eq(jotformImports.matchedLoadId, loads.id))
     .where(
       and(
-        inArray(assignments.status, activeStatuses),
+        inArray(
+          assignments.status,
+          activeStatuses as Array<typeof assignments.status._.data>,
+        ),
         sql`${loads.ticketNo} IS NULL`,
         sql`${jotformImports.id} IS NULL`,
       ),
@@ -548,7 +558,10 @@ export async function getMissingTicketLoads(
     .leftJoin(jotformImports, eq(jotformImports.matchedLoadId, loads.id))
     .where(
       and(
-        inArray(assignments.status, activeStatuses),
+        inArray(
+          assignments.status,
+          activeStatuses as Array<typeof assignments.status._.data>,
+        ),
         sql`${loads.ticketNo} IS NULL`,
         sql`${jotformImports.id} IS NULL`,
       ),

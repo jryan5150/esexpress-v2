@@ -182,7 +182,13 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Build WHERE conditions
       const conditions = [];
-      if (status) conditions.push(eq(bolSubmissions.status, status));
+      if (status)
+        conditions.push(
+          eq(
+            bolSubmissions.status,
+            status as unknown as typeof bolSubmissions.status._.data,
+          ),
+        );
       if (driverId) conditions.push(eq(bolSubmissions.driverId, driverId));
 
       let query = db

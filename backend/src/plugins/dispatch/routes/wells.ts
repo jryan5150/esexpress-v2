@@ -44,7 +44,7 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const db = fastify.db;
       if (!db) {
-        return reply.status(503).send({
+        return (reply as any).status(503).send({
           success: false,
           error: {
             code: "SERVICE_UNAVAILABLE",
@@ -77,7 +77,7 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const db = fastify.db;
       if (!db) {
-        return reply.status(503).send({
+        return (reply as any).status(503).send({
           success: false,
           error: {
             code: "SERVICE_UNAVAILABLE",
@@ -129,7 +129,7 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const db = fastify.db;
       if (!db) {
-        return reply.status(503).send({
+        return (reply as any).status(503).send({
           success: false,
           error: {
             code: "SERVICE_UNAVAILABLE",
@@ -179,7 +179,7 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const db = fastify.db;
       if (!db) {
-        return reply.status(503).send({
+        return (reply as any).status(503).send({
           success: false,
           error: {
             code: "SERVICE_UNAVAILABLE",
