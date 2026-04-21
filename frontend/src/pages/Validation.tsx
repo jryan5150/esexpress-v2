@@ -578,17 +578,28 @@ export function Validation() {
                             shows the JotForm ticket photo matched to this
                             load so dispatchers can see image without
                             bouncing to BOL Queue. */}
-                        <div className="w-12 h-12 rounded-md overflow-hidden bg-surface-container-highest shrink-0 border border-outline-variant/30">
+                        <div className="relative w-12 h-12 rounded-md overflow-hidden bg-surface-container-highest shrink-0 border border-outline-variant/30">
                           {a.photoUrls && a.photoUrls.length > 0 ? (
-                            <img
-                              src={resolveUrl(a.photoUrls[0])}
-                              alt="Ticket"
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display =
-                                  "none";
-                              }}
-                            />
+                            <>
+                              <img
+                                src={resolveUrl(a.photoUrls[0])}
+                                alt="Ticket"
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display =
+                                    "none";
+                                }}
+                              />
+                              {a.photoUrls.length > 1 && (
+                                <span
+                                  className="absolute -top-1 -right-1 bg-primary text-on-primary text-[9px] font-bold leading-none rounded-full px-1 py-0.5 tabular-nums ring-1 ring-surface shadow"
+                                  aria-label={`${a.photoUrls.length} photos`}
+                                  title={`${a.photoUrls.length} photos — open in Workbench drawer to cycle`}
+                                >
+                                  {a.photoUrls.length}
+                                </span>
+                              )}
+                            </>
                           ) : (
                             <div
                               className="w-full h-full flex items-center justify-center"

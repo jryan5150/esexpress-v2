@@ -115,6 +115,48 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // GET /:id/photos — all photo URLs for the drawer's prev/next carousel.
+  // Pulled on-demand (not in the list response) to keep the list query fast.
+  // Merges assignment-scoped, load-scoped, and historical bol_submissions
+  // sources, deduplicated. Signed via the same photoSign helper the list
+  // uses so cross-origin JotForm/GCS photos remain proxyable.
+  fastify.get(
+    "/:id/photos",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
+      const { listAssignmentPhotos } =
+        await import("../services/workbench.service.js");
+      const { id } = request.params as { id: number };
+      try {
+        const urls = await listAssignmentPhotos(db, id);
+        return { success: true, data: urls };
+      } catch (err) {
+        if (err instanceof AppError) {
+          return reply.status(err.statusCode).send({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+        }
+        request.log.error({ err }, "list assignment photos failed");
+        return reply.status(500).send({
+          success: false,
+          error: { code: "INTERNAL_ERROR", message: "Failed to load photos" },
+        });
+      }
+    },
+  );
+
   // POST /:id/advance — advance handler_stage
   fastify.post(
     "/:id/advance",

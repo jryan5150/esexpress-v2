@@ -7,6 +7,7 @@ import {
   useFlagToUncertain,
   useUpdatePcsNumber,
   useUpdateAssignmentNotes,
+  useAssignmentPhotos,
 } from "../hooks/use-workbench";
 import { reportError } from "../lib/sentry";
 
@@ -256,6 +257,29 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
   const pcsUpdate = useUpdatePcsNumber();
   const notesUpdate = useUpdateAssignmentNotes();
   const [lightbox, setLightbox] = useState(false);
+  // Lazy-fetch the full photo array only when the drawer thinks there's
+  // more than one. Most rows have 0-1 photos and paying for this query on
+  // every drawer open isn't worth it.
+  const needsPhotoList = (row.photoCount ?? 0) > 1;
+  const photosQuery = useAssignmentPhotos(
+    needsPhotoList ? row.assignmentId : null,
+  );
+  const photoUrls: string[] =
+    photosQuery.data && photosQuery.data.length > 0
+      ? photosQuery.data
+      : row.photoThumbUrl
+        ? [row.photoThumbUrl]
+        : [];
+  const [photoIdx, setPhotoIdx] = useState(0);
+  useEffect(() => {
+    setPhotoIdx(0);
+  }, [row.assignmentId]);
+  const currentPhoto = photoUrls[photoIdx] ?? row.photoThumbUrl ?? null;
+  const stepPhoto = (delta: number) => {
+    if (photoUrls.length < 2) return;
+    const n = photoUrls.length;
+    setPhotoIdx((i) => (i + delta + n) % n);
+  };
   // Notes state — defensive coerce: old workbench responses may not include
   // the `notes` field at all; old ones may have null. Either way map to "".
   const initialNotes = typeof row.notes === "string" ? row.notes : "";
@@ -377,14 +401,45 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
       {/* Photo + fields layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* BOL Photo */}
-        <div className="bg-black/20 rounded flex flex-col items-center justify-center min-h-[280px] p-4 gap-3">
-          {row.photoThumbUrl ? (
-            <img
-              src={row.photoThumbUrl}
-              alt="BOL"
-              className="max-h-[360px] w-auto cursor-zoom-in rounded"
-              onClick={() => setLightbox(true)}
-            />
+        <div className="relative bg-black/20 rounded flex flex-col items-center justify-center min-h-[280px] p-4 gap-3">
+          {currentPhoto ? (
+            <>
+              <img
+                src={currentPhoto}
+                alt="BOL"
+                className="max-h-[360px] w-auto cursor-zoom-in rounded"
+                onClick={() => setLightbox(true)}
+              />
+              {photoUrls.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Previous photo"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      stepPhoto(-1);
+                    }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next photo"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      stepPhoto(1);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 text-white hover:bg-black/70 flex items-center justify-center"
+                  >
+                    ›
+                  </button>
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tabular-nums">
+                    {photoIdx + 1} / {photoUrls.length}
+                  </div>
+                </>
+              )}
+            </>
           ) : (
             <>
               <div className="text-on-surface-variant text-sm">
@@ -690,9 +745,11 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
         </div>
       </div>
 
-      {/* Lightbox — shared component */}
+      {/* Lightbox — shared component. Passes the full array so cycling
+          in the lightbox matches cycling in the drawer thumbnail. */}
       <PhotoLightbox
-        url={lightbox ? row.photoThumbUrl : null}
+        urls={lightbox ? photoUrls : undefined}
+        initialIndex={photoIdx}
         alt={`Load ${row.loadNo} BOL`}
         onClose={() => setLightbox(false)}
       />

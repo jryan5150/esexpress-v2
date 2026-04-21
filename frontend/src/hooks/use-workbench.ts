@@ -81,6 +81,28 @@ export function useWorkbench(
   });
 }
 
+/**
+ * Fetch every photo URL attached to an assignment via any of the three
+ * sources the list view COALESCEs (assignment-scoped, load-scoped,
+ * historical bol_submissions). Lazy — only fires when enabled=true so the
+ * drawer pays for it only when open.
+ */
+export function useAssignmentPhotos(assignmentId: number | null) {
+  return useQuery({
+    queryKey: ["workbench", "photos", assignmentId],
+    queryFn: () =>
+      api
+        .get<
+          string[] | { data: string[] }
+        >(`/dispatch/workbench/${assignmentId}/photos`)
+        .then((r) =>
+          Array.isArray(r) ? r : ((r as { data: string[] })?.data ?? []),
+        ),
+    enabled: assignmentId != null,
+    staleTime: 30_000,
+  });
+}
+
 export function useAdvanceStage() {
   return useMutation({
     mutationFn: (p: { id: number; stage: HandlerStage; notes?: string }) =>
@@ -170,7 +192,6 @@ export function useUpdateLoadField() {
       api.patch(`/dispatch/loads/${p.loadId}`, p.updates),
     onSuccess: () => {
       invalidateSharedSurfaces();
-      
     },
   });
 }

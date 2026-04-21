@@ -236,14 +236,26 @@ export const WorkbenchRow = memo(function WorkbenchRow({
                 e.stopPropagation();
                 setLightboxOpen(true);
               }}
-              title="Click to enlarge"
-              className="cursor-zoom-in"
+              title={
+                row.photoCount > 1
+                  ? `${row.photoCount} photos — click to enlarge`
+                  : "Click to enlarge"
+              }
+              className="relative cursor-zoom-in inline-block"
             >
               <img
                 src={row.photoThumbUrl}
                 alt={`Load ${row.loadNo} ticket photo`}
                 className="h-8 w-8 object-cover rounded ring-1 ring-outline-variant hover:ring-primary"
               />
+              {row.photoCount > 1 && (
+                <span
+                  className="absolute -top-1 -right-1 bg-primary text-on-primary text-[9px] font-bold leading-none rounded-full px-1 py-0.5 tabular-nums ring-1 ring-surface shadow"
+                  aria-label={`${row.photoCount} photos`}
+                >
+                  {row.photoCount}
+                </span>
+              )}
             </button>
           ) : row.photoStatus === "missing" ? (
             <span className="text-xs text-red-700">no photo</span>

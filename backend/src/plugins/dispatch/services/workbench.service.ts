@@ -231,6 +231,10 @@ export interface WorkbenchRow {
   wellName: string | null;
   photoStatus: string | null;
   photoThumbUrl: string | null;
+  /** Total photo count across assignment-scoped, load-scoped, and historical
+   *  bol_submissions sources. Drives the multi-photo count badge on rows
+   *  and the prev/next affordance in the drawer. 0 when nothing exists. */
+  photoCount: number;
   rate: string | null;
   /** PCS load number — manually entered by dispatcher post-build. */
   pcsNumber: string | null;
@@ -429,6 +433,23 @@ export async function listWorkbenchRows(
           (SELECT ${bolSubmissions.photos}->0->>'url' FROM ${bolSubmissions} WHERE ${bolSubmissions.matchedLoadId} = ${loads.id} ORDER BY ${bolSubmissions.id} DESC LIMIT 1)
         )
       `,
+      // Total photo count across all three sources. Keeps the three-source
+      // fallback pattern consistent with photoThumbUrl so a load with one
+      // assignment photo + two load photos + a historical bol_submission
+      // reports 3 (not 1, not 4). jsonb_array_length returns 0 for empty
+      // arrays; we guard against NULL photos JSON with COALESCE.
+      photoCount: sql<number>`
+        (SELECT COUNT(*)::int FROM ${photos}
+          WHERE ${photos.assignmentId} = ${assignments.id}
+            OR ${photos.loadId} = ${loads.id}
+        )
+        +
+        COALESCE((
+          SELECT SUM(jsonb_array_length(COALESCE(${bolSubmissions.photos}, '[]'::jsonb)))::int
+          FROM ${bolSubmissions}
+          WHERE ${bolSubmissions.matchedLoadId} = ${loads.id}
+        ), 0)
+      `,
       rate: loads.rate,
       // Phase 5+6: OCR-extracted fields from the most-recent bol_submission
       // matched to this load. Correlated subqueries avoid row multiplication
@@ -580,6 +601,7 @@ export async function listWorkbenchRows(
       wellName: r.wellName,
       photoStatus: r.photoStatus,
       photoThumbUrl: r.photoThumbUrl,
+      photoCount: r.photoCount ?? 0,
       rate: r.rate,
       pcsNumber: r.pcsNumber,
       notes: r.notes,
@@ -672,6 +694,80 @@ export async function advanceStage(
       })
       .where(eq(assignments.id, assignmentId));
   });
+}
+
+/**
+ * Return every photo URL attached to an assignment via any of the three
+ * sources the workbench list already COALESCEs: the current assignment,
+ * the underlying load, and historical bol_submissions. Deduplicated by
+ * URL (same photo could live in both the photos table and a historical
+ * submission after a match). Ordered assignment-scoped first, then load,
+ * then historical — most-relevant-first for the drawer carousel.
+ *
+ * Used by the Workbench drawer's prev/next photo control. Separate endpoint
+ * (not rolled into the list response) so the list query stays fast — most
+ * rows have 0 or 1 photo and don't need the full array anyway.
+ */
+export async function listAssignmentPhotos(
+  db: Database,
+  assignmentId: number,
+): Promise<string[]> {
+  const [assignment] = await db
+    .select({ id: assignments.id, loadId: assignments.loadId })
+    .from(assignments)
+    .where(eq(assignments.id, assignmentId))
+    .limit(1);
+  if (!assignment) {
+    throw new NotFoundError(`Assignment ${assignmentId} not found`);
+  }
+  const loadId = assignment.loadId;
+
+  // Three source queries in parallel — cheap lookups, tiny rowsets.
+  const [assignmentPhotos, loadPhotos, historicalRows] = await Promise.all([
+    db
+      .select({ url: photos.sourceUrl })
+      .from(photos)
+      .where(eq(photos.assignmentId, assignmentId))
+      .orderBy(photos.id),
+    loadId == null
+      ? Promise.resolve([] as { url: string | null }[])
+      : db
+          .select({ url: photos.sourceUrl })
+          .from(photos)
+          .where(
+            and(eq(photos.loadId, loadId), sql`${photos.assignmentId} IS NULL`),
+          )
+          .orderBy(photos.id),
+    loadId == null
+      ? Promise.resolve([] as { photos: unknown }[])
+      : db
+          .select({ photos: bolSubmissions.photos })
+          .from(bolSubmissions)
+          .where(eq(bolSubmissions.matchedLoadId, loadId))
+          .orderBy(sql`${bolSubmissions.id} DESC`),
+  ]);
+
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  const push = (u: string | null | undefined) => {
+    if (!u || seen.has(u)) return;
+    seen.add(u);
+    ordered.push(u);
+  };
+
+  for (const r of assignmentPhotos) push(r.url);
+  for (const r of loadPhotos) push(r.url);
+  for (const r of historicalRows) {
+    const arr = Array.isArray(r.photos) ? r.photos : [];
+    for (const entry of arr as Array<Record<string, unknown> | string>) {
+      if (typeof entry === "string") push(entry);
+      else if (entry && typeof entry === "object" && "url" in entry) {
+        push(String(entry.url));
+      }
+    }
+  }
+
+  return ordered;
 }
 
 export async function claimAssignment(

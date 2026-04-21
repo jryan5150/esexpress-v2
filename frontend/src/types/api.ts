@@ -310,6 +310,10 @@ export interface WorkbenchRow {
   wellName: string | null;
   photoStatus: "attached" | "pending" | "missing" | null;
   photoThumbUrl: string | null;
+  /** Total count across assignment-scoped + load-scoped + historical bol_submissions.
+   *  Drives the multi-photo count badge on rows and the prev/next affordance
+   *  on the drawer. 0 when no photo exists anywhere. */
+  photoCount: number;
   rate: string | null;
   pcsNumber: string | null;
   notes: string | null;
