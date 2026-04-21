@@ -12,11 +12,17 @@ export function useBolQueue(opts?: {
   page?: number;
   limit?: number;
   status?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }) {
   const params = new URLSearchParams();
   if (opts?.page) params.set("page", String(opts.page));
   if (opts?.limit) params.set("limit", String(opts.limit));
   if (opts?.status) params.set("status", opts.status);
+  if (opts?.search) params.set("search", opts.search);
+  if (opts?.dateFrom) params.set("dateFrom", opts.dateFrom);
+  if (opts?.dateTo) params.set("dateTo", opts.dateTo);
   const qs = params.toString() ? `?${params}` : "";
   return useQuery({
     queryKey: [...qk.bol.queue(), opts] as const,

@@ -522,6 +522,7 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
   // NOTE: /jotform/sync and /jotform/stats are registered in photos.ts
 
   // GET /jotform/queue — JotForm imports as BOL queue items with photo URLs
+  // Supports status / search / date-range filters mirroring the PropX queue.
   fastify.get(
     "/jotform/queue",
     {
@@ -531,6 +532,9 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
           type: "object",
           properties: {
             status: { type: "string" },
+            search: { type: "string", maxLength: 80 },
+            dateFrom: { type: "string", format: "date" },
+            dateTo: { type: "string", format: "date" },
             page: { type: "integer", minimum: 1, default: 1 },
             limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
           },
@@ -551,32 +555,67 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
 
       const {
         status,
+        search,
+        dateFrom,
+        dateTo,
         page = 1,
         limit = 50,
       } = request.query as {
         status?: string;
+        search?: string;
+        dateFrom?: string;
+        dateTo?: string;
         page?: number;
         limit?: number;
       };
       const offset = (page - 1) * limit;
 
-      const { sql, desc } = await import("drizzle-orm");
+      const { and, sql, desc } = await import("drizzle-orm");
 
-      // Count total for pagination meta
-      let countQuery = db
-        .select({ total: sql<number>`cast(count(*) as int)` })
-        .from(jotformImports);
+      // Normalize UI terminology — frontend uses "unmatched" mirroring PropX,
+      // but the jotform_imports.status enum value is "pending".
+      const normalizedStatus =
+        status === "unmatched"
+          ? "pending"
+          : status === "all"
+            ? undefined
+            : status;
 
-      if (status) {
-        countQuery = countQuery.where(
-          sql`${jotformImports.status} = ${status}`,
-        ) as typeof countQuery;
+      const conditions: Array<ReturnType<typeof sql>> = [];
+      if (normalizedStatus) {
+        conditions.push(sql`${jotformImports.status} = ${normalizedStatus}`);
       }
+      if (search) {
+        const pattern = `%${search}%`;
+        conditions.push(
+          sql`(${jotformImports.bolNo} ILIKE ${pattern} OR ${jotformImports.driverName} ILIKE ${pattern} OR ${jotformImports.truckNo} ILIKE ${pattern} OR ${loads.loadNo} ILIKE ${pattern} OR ${loads.ticketNo} ILIKE ${pattern})`,
+        );
+      }
+      if (dateFrom) {
+        conditions.push(
+          sql`${jotformImports.submittedAt} >= ${`${dateFrom}T00:00:00-05:00`}::timestamptz`,
+        );
+      }
+      if (dateTo) {
+        conditions.push(
+          sql`${jotformImports.submittedAt} <= ${`${dateTo}T23:59:59.999-05:00`}::timestamptz`,
+        );
+      }
+      const whereClause =
+        conditions.length > 0 ? and(...conditions) : undefined;
 
-      const [countResult] = await countQuery;
+      // Count total for pagination meta (same joins as the list query so
+      // search hits on load fields count correctly).
+      const countQueryBase = db
+        .select({ total: sql<number>`cast(count(*) as int)` })
+        .from(jotformImports)
+        .leftJoin(loads, eq(jotformImports.matchedLoadId, loads.id));
+      const [countResult] = whereClause
+        ? await countQueryBase.where(whereClause)
+        : await countQueryBase;
       const total = countResult?.total ?? 0;
 
-      let query = db
+      const listQueryBase = db
         .select({
           id: jotformImports.id,
           jotformSubmissionId: jotformImports.jotformSubmissionId,
@@ -606,14 +645,9 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
         .orderBy(desc(jotformImports.createdAt))
         .limit(limit)
         .offset(offset);
-
-      if (status) {
-        query = query.where(
-          sql`${jotformImports.status} = ${status}`,
-        ) as typeof query;
-      }
-
-      const rows = await query;
+      const rows = whereClause
+        ? await listQueryBase.where(whereClause)
+        : await listQueryBase;
 
       // Map to queue item format the frontend expects
       const data = rows.map((r) => ({

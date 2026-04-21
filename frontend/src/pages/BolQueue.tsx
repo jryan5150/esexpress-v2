@@ -153,6 +153,15 @@ export function BolQueue() {
   const [propxSearch, setPropxSearch] = useState("");
   const [propxDateFrom, setPropxDateFrom] = useState("");
   const [propxDateTo, setPropxDateTo] = useState("");
+  // JotForm Submissions tab state — mirrors PropX so the two surfaces look
+  // and feel identical. Filter state is separate from the Reconciliation
+  // tab's `filter` so the pill selections don't collide.
+  const [jotformFilter, setJotformFilter] = useState<
+    "all" | "matched" | "pending"
+  >("all");
+  const [jotformSearch, setJotformSearch] = useState("");
+  const [jotformDateFrom, setJotformDateFrom] = useState("");
+  const [jotformDateTo, setJotformDateTo] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [photoModal, setPhotoModal] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -171,7 +180,25 @@ export function BolQueue() {
   }, [photoModal]);
 
   const statsQuery = useBolStats();
-  const queueQuery = useBolQueue({ page, limit: pageSize });
+  // When the JotForm tab is active, push its filter state to the server so
+  // search spans the full library (not just the current page). Other tabs
+  // that share this query read an unfiltered dataset, matching prior
+  // behavior — the Reconciliation tab still runs its client-side filter.
+  const onJotformTab = activeTab === "submissions";
+  const queueQuery = useBolQueue({
+    page,
+    limit: pageSize,
+    status: onJotformTab
+      ? jotformFilter === "pending"
+        ? "unmatched"
+        : jotformFilter === "matched"
+          ? "matched"
+          : undefined
+      : undefined,
+    search: onJotformTab ? jotformSearch || undefined : undefined,
+    dateFrom: onJotformTab ? jotformDateFrom || undefined : undefined,
+    dateTo: onJotformTab ? jotformDateTo || undefined : undefined,
+  });
   const missingQuery = useMissingTickets({ page, limit: pageSize });
   const propxQuery = usePropxQueue({
     page,
@@ -606,6 +633,96 @@ export function BolQueue() {
                 <span className="font-medium text-tertiary">{matchRate}</span>{" "}
                 match rate.
               </div>
+              <div className="ml-auto flex items-center gap-1 bg-surface-container-high rounded-lg p-0.5 border border-outline-variant/30">
+                {(["all", "matched", "pending"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => {
+                      setJotformFilter(f);
+                      setPage(1);
+                    }}
+                    className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md transition-all ${
+                      jotformFilter === f
+                        ? "bg-primary-container text-on-primary-container shadow-sm"
+                        : "text-outline hover:text-on-surface"
+                    }`}
+                  >
+                    {f === "pending" ? "unmatched" : f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search + date range */}
+            <div className="flex items-center gap-2 flex-wrap bg-surface-container-lowest border border-outline-variant/40 rounded-[10px] px-3 py-2">
+              <label className="flex items-center gap-1.5 flex-1 min-w-[220px]">
+                <span className="material-symbols-outlined text-outline text-[16px]">
+                  search
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search BOL, driver, truck, load #, ticket…"
+                  defaultValue={jotformSearch}
+                  onBlur={(e) => {
+                    setJotformSearch(e.target.value.trim());
+                    setPage(1);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setJotformSearch(
+                        (e.target as HTMLInputElement).value.trim(),
+                      );
+                      setPage(1);
+                    }
+                  }}
+                  className="flex-1 bg-surface-variant/30 rounded px-2 py-1 text-sm"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-xs text-on-surface-variant">
+                <span className="font-medium uppercase tracking-wider text-[10px]">
+                  From
+                </span>
+                <input
+                  type="date"
+                  className="bg-surface-variant/30 rounded px-2 py-1 text-sm"
+                  value={jotformDateFrom}
+                  onChange={(e) => {
+                    setJotformDateFrom(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </label>
+              <label className="flex items-center gap-1 text-xs text-on-surface-variant">
+                <span className="font-medium uppercase tracking-wider text-[10px]">
+                  To
+                </span>
+                <input
+                  type="date"
+                  className="bg-surface-variant/30 rounded px-2 py-1 text-sm"
+                  value={jotformDateTo}
+                  onChange={(e) => {
+                    setJotformDateTo(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </label>
+              {(jotformSearch || jotformDateFrom || jotformDateTo) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setJotformSearch("");
+                    setJotformDateFrom("");
+                    setJotformDateTo("");
+                    setPage(1);
+                  }}
+                  className="text-xs text-on-surface-variant hover:text-on-surface underline"
+                >
+                  Clear
+                </button>
+              )}
+              <span className="ml-auto text-xs text-outline">
+                {queueTotal} of {total}
+              </span>
             </div>
 
             {queueQuery.isLoading ? (
