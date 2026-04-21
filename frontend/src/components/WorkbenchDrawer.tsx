@@ -96,7 +96,7 @@ function OcrAcceptButtons({
   isSaving,
 }: OcrAcceptButtonsProps) {
   return (
-    <div className="mt-1 flex items-center gap-1">
+    <div data-ocr-accept className="mt-1 flex items-center gap-1">
       <button
         type="button"
         disabled={isSaving}
@@ -440,13 +440,15 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
             type="number"
             placeholder="$/ton"
           />
-          <EditableField
-            label="PCS #"
-            value={row.pcsNumber}
-            onSave={savePcsNumber}
-            isSaving={pcsUpdate.isPending}
-            placeholder="Enter after build"
-          />
+          <div data-pcs-number>
+            <EditableField
+              label="PCS #"
+              value={row.pcsNumber}
+              onSave={savePcsNumber}
+              isSaving={pcsUpdate.isPending}
+              placeholder="Enter after build"
+            />
+          </div>
         </div>
       </div>
 
@@ -636,6 +638,7 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
           {row.handlerStage !== "uncertain" && (
             <button
               type="button"
+              data-flag-button
               onClick={flagBack}
               disabled={flag.isPending}
               title="Send this load back to the Uncertain queue for re-review. Requires a reason you'll type next."
@@ -647,6 +650,7 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
           {row.handlerStage !== "cleared" && (
             <button
               type="button"
+              data-primary-action
               onClick={advanceToNext}
               disabled={advance.isPending}
               title={ADVANCE_COPY[row.handlerStage].title}

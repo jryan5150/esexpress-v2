@@ -293,6 +293,7 @@ export function Workbench() {
           )}
           <button
             type="button"
+            data-show-walkthrough
             onClick={() => setWalkthroughOpen(true)}
             className="text-xs text-primary hover:underline"
           >
