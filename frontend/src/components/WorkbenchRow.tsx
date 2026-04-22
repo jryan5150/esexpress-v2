@@ -2,6 +2,7 @@ import { memo, useState } from "react";
 import { StagePill } from "./StagePill";
 import { MatchScoreBadge } from "./MatchScoreBadge";
 import { PhotoLightbox } from "./PhotoLightbox";
+import { BOLDisplay } from "./BOLDisplay";
 import { useWeightUnit } from "../hooks/use-weight-unit";
 import type {
   WorkbenchRow as Row,
@@ -209,23 +210,13 @@ export const WorkbenchRow = memo(function WorkbenchRow({
         </div>
 
         <div className="col-span-2 truncate">
-          <div className="flex items-baseline gap-2">
-            <span
-              className="text-[9px] uppercase tracking-wider text-on-surface-variant w-16 shrink-0"
-              title={`BOL pulled from ${SOURCE_LABEL[row.loadSource] ?? row.loadSource}`}
-            >
-              {SOURCE_LABEL[row.loadSource] ?? "BOL"} BOL
-            </span>
-            <span className="font-mono text-xs">{row.bolNo ?? "--"}</span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-[9px] uppercase tracking-wider text-on-surface-variant w-16 shrink-0">
-              Ticket
-            </span>
-            <span className="font-mono text-[11px] text-on-surface-variant">
-              {row.ticketNo ?? "--"}
-            </span>
-          </div>
+          <BOLDisplay
+            ticketNo={row.ticketNo}
+            bolNo={row.bolNo}
+            loadSource={row.loadSource}
+            size="sm"
+            showSourcePrefix
+          />
           <div className="text-[11px] text-on-surface-variant mt-0.5">
             {formatWeight(row.weightTons)}
           </div>

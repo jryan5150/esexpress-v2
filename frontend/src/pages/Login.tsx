@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLogin } from "../hooks/use-auth";
+import { api } from "../lib/api";
 
 // Animated particle field — responsive, GPU-accelerated
 function ParticleBackground() {
@@ -102,6 +103,12 @@ export function Login() {
   const login = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [magicMode, setMagicMode] = useState(false);
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicState, setMagicState] = useState<
+    "idle" | "sending" | "sent" | "error"
+  >("idle");
+  const [magicError, setMagicError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -111,6 +118,23 @@ export function Login() {
         onSuccess: () => navigate("/workbench"),
       },
     );
+  }
+
+  async function handleMagicLinkSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setMagicState("sending");
+    setMagicError(null);
+    try {
+      await api.post<{ message: string }>("/auth/request-magic-link", {
+        email: magicEmail,
+      });
+      setMagicState("sent");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Unable to send sign-in link.";
+      setMagicError(message);
+      setMagicState("error");
+    }
   }
 
   return (
@@ -222,6 +246,117 @@ export function Login() {
               )}
             </button>
           </form>
+
+          {/* Magic-link divider + affordance */}
+          <div className="pt-2">
+            <div className="flex items-center gap-3 my-4">
+              <div className="h-px flex-1 bg-on-surface/10" />
+              <span className="text-[10px] font-label uppercase tracking-widest text-on-surface/30">
+                or
+              </span>
+              <div className="h-px flex-1 bg-on-surface/10" />
+            </div>
+
+            {!magicMode && magicState !== "sent" && (
+              <button
+                type="button"
+                onClick={() => setMagicMode(true)}
+                className="w-full bg-surface-container-high border border-on-surface/10 text-on-surface/80 py-3 rounded-lg font-medium text-sm hover:bg-surface-container-highest hover:border-on-surface/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">mail</span>
+                Email me a sign-in link
+              </button>
+            )}
+
+            {magicMode && magicState !== "sent" && (
+              <form className="space-y-3" onSubmit={handleMagicLinkSubmit}>
+                <div className="space-y-2">
+                  <label
+                    htmlFor="magic-email"
+                    className="block text-[10px] font-bold font-label uppercase tracking-widest text-on-surface/50"
+                  >
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface/30 text-lg">
+                      mail
+                    </span>
+                    <input
+                      id="magic-email"
+                      type="email"
+                      value={magicEmail}
+                      onChange={(e) => setMagicEmail(e.target.value)}
+                      placeholder="you@esexpressllc.com"
+                      className="w-full bg-surface-container-high border border-on-surface/10 rounded-lg px-4 py-3 pl-10 text-sm text-on-surface placeholder:text-on-surface/20 font-body focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/30 transition-all"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {magicState === "error" && magicError && (
+                  <div className="bg-error/10 border border-error/20 rounded-lg px-3 py-2 text-xs text-error">
+                    {magicError}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMagicMode(false);
+                      setMagicEmail("");
+                      setMagicError(null);
+                      setMagicState("idle");
+                    }}
+                    className="flex-1 bg-surface-container border border-on-surface/10 text-on-surface/70 py-2.5 rounded-lg font-medium text-sm hover:bg-surface-container-high transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={magicState === "sending" || !magicEmail}
+                    className="flex-1 bg-primary-container/90 text-on-primary-container py-2.5 rounded-lg font-bold text-sm hover:brightness-110 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {magicState === "sending" ? (
+                      <>
+                        <span className="material-symbols-outlined text-sm animate-spin">
+                          progress_activity
+                        </span>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-sm">
+                          send
+                        </span>
+                        Send link
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {magicState === "sent" && (
+              <div className="bg-success/10 border border-success/20 rounded-lg px-4 py-3 text-sm text-on-surface/80">
+                <div className="flex items-start gap-3">
+                  <span className="material-symbols-outlined text-success text-lg mt-0.5">
+                    mark_email_read
+                  </span>
+                  <div>
+                    <p className="font-medium text-on-surface">
+                      Check your inbox
+                    </p>
+                    <p className="text-xs text-on-surface/60 mt-1">
+                      If this email is on your account, we've sent you a sign-in
+                      link. It expires in 15 minutes.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

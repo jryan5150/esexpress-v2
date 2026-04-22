@@ -12,6 +12,14 @@ export interface CreateWellInput {
   longitude?: string;
   propxJobId?: string;
   propxDestinationId?: string;
+  needsRateInfo?: boolean;
+  ratePerTon?: string | null;
+  ffcRate?: string | null;
+  fscRate?: string | null;
+  mileageFromLoader?: string | null;
+  customerName?: string | null;
+  carrierId?: number | null;
+  loaderSandplant?: string | null;
 }
 
 export interface UpdateWellInput {
@@ -24,6 +32,14 @@ export interface UpdateWellInput {
   longitude?: string;
   propxJobId?: string;
   propxDestinationId?: string;
+  needsRateInfo?: boolean;
+  ratePerTon?: string | null;
+  ffcRate?: string | null;
+  fscRate?: string | null;
+  mileageFromLoader?: string | null;
+  customerName?: string | null;
+  carrierId?: number | null;
+  loaderSandplant?: string | null;
 }
 
 export async function listWells(
@@ -107,6 +123,14 @@ export async function createWell(db: Database, input: CreateWellInput) {
       longitude: input.longitude,
       propxJobId: input.propxJobId,
       propxDestinationId: input.propxDestinationId,
+      needsRateInfo: input.needsRateInfo,
+      ratePerTon: input.ratePerTon ?? undefined,
+      ffcRate: input.ffcRate ?? undefined,
+      fscRate: input.fscRate ?? undefined,
+      mileageFromLoader: input.mileageFromLoader ?? undefined,
+      customerName: input.customerName ?? undefined,
+      carrierId: input.carrierId ?? undefined,
+      loaderSandplant: input.loaderSandplant ?? undefined,
     })
     .returning();
   return well;

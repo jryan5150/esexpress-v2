@@ -11,6 +11,7 @@ import { qk } from "../lib/query-client";
 import { useToast } from "../components/Toast";
 import { WellPicker } from "../components/WellPicker";
 import { Pagination } from "../components/Pagination";
+import { BOLDisplay } from "../components/BOLDisplay";
 
 /**
  * Inline editable field for the Validation page (O-09 / P2-4).
@@ -784,12 +785,23 @@ export function Validation() {
                               fieldKey="weightTons"
                               loadId={a.loadId}
                             />
-                            <InlineEdit
-                              label="BOL #"
-                              value={a.bolNo}
-                              fieldKey="bolNo"
-                              loadId={a.loadId}
-                            />
+                            {/* BOL — unified display. The paper ticket # is
+                                the BOL in everyday speech; the Logistiq/PropX
+                                system ID renders only as a muted suffix. Edit
+                                the ticket number via the "Ticket #" field
+                                below; the system ID is not dispatcher-editable
+                                from Validation. */}
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[10px] uppercase tracking-wider text-on-surface-variant">
+                                BOL
+                              </span>
+                              <BOLDisplay
+                                ticketNo={a.ticketNo}
+                                bolNo={a.bolNo}
+                                size="sm"
+                                showSourcePrefix={false}
+                              />
+                            </div>
                             <InlineEdit
                               label="Ticket #"
                               value={a.ticketNo}

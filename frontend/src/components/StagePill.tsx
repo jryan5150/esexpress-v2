@@ -1,10 +1,16 @@
 import type { HandlerStage } from "../types/api";
 
+// Label consolidation per Apr 21 call: "Entered" → "Completed" across
+// all user-facing surfaces. The underlying handler_stage DB enum stays
+// 'entered' (avoid migration + enum rename); only the display label
+// changes. Scout's pref (Apr 9 team call: "I like completed after the
+// load is built") + Jessica's endorsement. One word for the terminal
+// state going forward.
 const STAGE_LABELS: Record<HandlerStage, string> = {
   uncertain: "Uncertain",
   ready_to_build: "Ready to Build",
   building: "Building",
-  entered: "Entered",
+  entered: "Completed",
   cleared: "Cleared",
 };
 

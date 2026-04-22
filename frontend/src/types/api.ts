@@ -11,6 +11,29 @@ export interface Well {
   dailyTargetTons: number | null;
   status: "active" | "standby" | "completed" | "closed";
   needsRateInfo?: boolean;
+  // Per-well commercial + logistics fields (admin-owned, added 2026-04-22).
+  // Numerics are wire-string (drizzle numeric -> string) to preserve
+  // precision; frontend renders as-is and sends back as strings.
+  ratePerTon?: string | null;
+  ffcRate?: string | null;
+  fscRate?: string | null;
+  mileageFromLoader?: string | null;
+  customerName?: string | null;
+  carrierId?: number | null;
+  loaderSandplant?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Carrier — trucking company we coordinate dispatch for.
+// phase drives the validation-rollout dial (phase1 = Jessica validates
+// all loads; phase2 = builder self-validates on dispatch desk).
+export interface Carrier {
+  id: number;
+  name: string;
+  phase: "phase1" | "phase2";
+  active: boolean;
+  notes: string | null;
   createdAt: string;
   updatedAt: string;
 }

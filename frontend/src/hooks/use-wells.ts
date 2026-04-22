@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { qk } from "../lib/query-client";
 import type {
   Well,
+  Carrier,
   Assignment,
   DispatchDeskLoad,
   ValidationSummary,
@@ -375,11 +376,46 @@ export function useUpdateWell() {
         propxJobId: string;
         propxDestinationId: string;
         needsRateInfo: boolean;
+        ratePerTon: string | null;
+        ffcRate: string | null;
+        fscRate: string | null;
+        mileageFromLoader: string | null;
+        customerName: string | null;
+        carrierId: number | null;
+        loaderSandplant: string | null;
       }>;
     }) => api.put<Well>(`/dispatch/wells/${params.id}`, params.patch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.wells.all });
       queryClient.invalidateQueries({ queryKey: qk.readiness.all });
+    },
+  });
+}
+
+// Carriers — small helper. Cached aggressively since this list changes
+// rarely (3 rows seeded, phase-flipped by humans only).
+export function useCarriers() {
+  return useQuery({
+    queryKey: ["carriers", "list"],
+    queryFn: () => api.get<Carrier[]>("/dispatch/carriers/"),
+    staleTime: 5 * 60_000, // 5 min — carriers change rarely
+  });
+}
+
+export function useUpdateCarrier() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      id: number;
+      patch: Partial<{
+        name: string;
+        phase: "phase1" | "phase2";
+        active: boolean;
+        notes: string | null;
+      }>;
+    }) => api.put<Carrier>(`/dispatch/carriers/${params.id}`, params.patch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["carriers"] });
     },
   });
 }

@@ -1,5 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { useWells, useUpdateWell } from "../../hooks/use-wells";
+import {
+  useWells,
+  useUpdateWell,
+  useCreateWell,
+  useCarriers,
+} from "../../hooks/use-wells";
 import { useToast } from "../../components/Toast";
 import type { Well } from "../../types/api";
 
@@ -16,6 +21,53 @@ const STATUS_COLORS: Record<string, string> = {
 
 const PAGE_SIZE = 25;
 
+// ─── Inline details editor ─────────────────────────────────────────
+// Secondary (rate / mileage / customer / carrier / loader) fields live
+// behind a "Details" expand toggle — keeps the happy-path row compact
+// while still letting admins edit rare fields on demand. Pattern B per
+// 2026-04-22 scope.
+type DetailField =
+  | "ratePerTon"
+  | "ffcRate"
+  | "fscRate"
+  | "mileageFromLoader"
+  | "customerName"
+  | "loaderSandplant";
+
+const DETAIL_FIELD_META: Record<
+  DetailField,
+  { label: string; placeholder: string; prefix?: string; numeric?: boolean }
+> = {
+  ratePerTon: {
+    label: "Rate / ton",
+    placeholder: "e.g. 7.8500",
+    prefix: "$",
+    numeric: true,
+  },
+  ffcRate: {
+    label: "FFC rate",
+    placeholder: "e.g. 0.0500",
+    prefix: "$",
+    numeric: true,
+  },
+  fscRate: {
+    label: "FSC (fuel)",
+    placeholder: "e.g. 0.4200",
+    prefix: "$",
+    numeric: true,
+  },
+  mileageFromLoader: {
+    label: "Miles from loader",
+    placeholder: "e.g. 42.5",
+    numeric: true,
+  },
+  customerName: { label: "Customer", placeholder: "e.g. ConocoPhillips" },
+  loaderSandplant: {
+    label: "Loader / Sandplant",
+    placeholder: "e.g. Magnum Monahans",
+  },
+};
+
 export function WellsAdmin() {
   const [filter, setFilter] = useState<StatusFilter>("active");
   const [page, setPage] = useState(1);
@@ -26,11 +78,19 @@ export function WellsAdmin() {
   // destination strings — adding one unblocks orphan loads auto-mapping.
   const [aliasWellId, setAliasWellId] = useState<number | null>(null);
   const [aliasInput, setAliasInput] = useState<string>("");
+  // Details expand toggle per row (secondary commercial/logistics fields).
+  const [detailsWellId, setDetailsWellId] = useState<number | null>(null);
+  // New-well create form visibility + name draft.
+  const [creating, setCreating] = useState(false);
+  const [newWellName, setNewWellName] = useState("");
   const { toast } = useToast();
   const wellsQuery = useWells();
+  const carriersQuery = useCarriers();
   const updateWell = useUpdateWell();
+  const createWell = useCreateWell();
 
   const wells: Well[] = Array.isArray(wellsQuery.data) ? wellsQuery.data : [];
+  const carriers = Array.isArray(carriersQuery.data) ? carriersQuery.data : [];
 
   const filtered = useMemo(() => {
     if (filter === "all") return wells;
@@ -75,6 +135,9 @@ export function WellsAdmin() {
   const closeAliasEditor = () => {
     setAliasWellId(null);
     setAliasInput("");
+  };
+  const toggleDetails = (well: Well) => {
+    setDetailsWellId((curr) => (curr === well.id ? null : well.id));
   };
   const addAlias = (well: Well) => {
     const clean = aliasInput.trim();
@@ -133,12 +196,32 @@ export function WellsAdmin() {
     );
   };
 
+  const submitCreate = () => {
+    const name = newWellName.trim();
+    if (!name) {
+      toast("Well name is required", "error");
+      return;
+    }
+    createWell.mutate(
+      { name },
+      {
+        onSuccess: () => {
+          toast(`Created well "${name}"`, "success");
+          setNewWellName("");
+          setCreating(false);
+        },
+        onError: (err) =>
+          toast(`Create failed: ${(err as Error).message}`, "error"),
+      },
+    );
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="px-7 pt-5 pb-4 border-b border-outline-variant/40 bg-surface-container-lowest header-gradient shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
-          <div>
+          <div className="flex-1">
             <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
               Wells Management
             </h1>
@@ -146,9 +229,59 @@ export function WellsAdmin() {
               Administration // Well Site Registry
             </p>
           </div>
+          <button
+            onClick={() => setCreating((c) => !c)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors cursor-pointer shadow-sm"
+            aria-label="Create new well"
+          >
+            <span className="material-symbols-outlined text-base">add</span>
+            New Well
+          </button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-6">
+        {/* Inline-create form — toggled by the header "+ New Well" button */}
+        {creating && (
+          <div className="bg-surface-container-high border-l-4 border-primary px-5 py-3 rounded-lg flex items-center gap-3">
+            <span className="text-[11px] uppercase tracking-wider font-bold text-on-surface-variant">
+              New well
+            </span>
+            <input
+              type="text"
+              value={newWellName}
+              onChange={(e) => setNewWellName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitCreate();
+                if (e.key === "Escape") {
+                  setCreating(false);
+                  setNewWellName("");
+                }
+              }}
+              autoFocus
+              placeholder="Well name (other fields editable after creation)"
+              className="flex-1 px-2 py-1 text-sm border border-outline-variant rounded focus:border-primary focus:outline-none bg-background"
+              disabled={createWell.isPending}
+              aria-label="New well name"
+            />
+            <button
+              onClick={submitCreate}
+              disabled={createWell.isPending || !newWellName.trim()}
+              className="px-3 py-1 text-xs font-bold rounded bg-primary text-on-primary hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Create
+            </button>
+            <button
+              onClick={() => {
+                setCreating(false);
+                setNewWellName("");
+              }}
+              className="px-2 py-1 text-xs text-on-surface-variant hover:text-on-surface"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         {/* Filter Bar */}
         <div className="flex items-center gap-2">
           {filterButtons.map((btn) => (
@@ -241,6 +374,7 @@ export function WellsAdmin() {
               >
                 Needs Rate?
               </div>
+              <div className="w-28 text-center">Details</div>
               <div className="w-16 text-center">Actions</div>
             </div>
 
@@ -358,6 +492,27 @@ export function WellsAdmin() {
                     </label>
                   </div>
 
+                  {/* Details toggle — expands secondary commercial/logistics fields */}
+                  <div className="w-28 text-center">
+                    <button
+                      onClick={() => toggleDetails(well)}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                        detailsWellId === well.id
+                          ? "bg-primary/15 text-primary"
+                          : "text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface"
+                      }`}
+                      title="Edit rate, FFC/FSC, mileage, customer, carrier, and loader/sandplant"
+                      aria-expanded={detailsWellId === well.id}
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        {detailsWellId === well.id
+                          ? "expand_less"
+                          : "expand_more"}
+                      </span>
+                      {detailsWellId === well.id ? "Close" : "Details"}
+                    </button>
+                  </div>
+
                   {/* Actions */}
                   <div className="w-16 text-center">
                     <button
@@ -444,6 +599,32 @@ export function WellsAdmin() {
                     </div>
                   </div>
                 )}
+
+                {/* Details panel — secondary commercial / logistics fields.
+                    Blur saves each field, Esc cancels the in-progress draft.
+                    Carrier is a dropdown wired to the seeded carriers list. */}
+                {detailsWellId === well.id && (
+                  <WellDetailsEditor
+                    well={well}
+                    carriers={carriers}
+                    onClose={() => setDetailsWellId(null)}
+                    onSave={(patch, label) =>
+                      updateWell.mutate(
+                        { id: well.id, patch },
+                        {
+                          onSuccess: () =>
+                            toast(`Updated ${well.name} → ${label}`, "success"),
+                          onError: (err) =>
+                            toast(
+                              `Update failed: ${(err as Error).message}`,
+                              "error",
+                            ),
+                        },
+                      )
+                    }
+                    saving={updateWell.isPending}
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -477,6 +658,190 @@ export function WellsAdmin() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── WellDetailsEditor ─────────────────────────────────────────────
+// Secondary fields editor — rendered in an expand panel under the row.
+// Fields commit on blur (save-on-leave) so admins can tab through the
+// form without clicking save on each. Numeric fields are sent as
+// strings to preserve precision across the wire (drizzle numeric →
+// string round-trip).
+
+interface WellDetailsEditorProps {
+  well: Well;
+  carriers: Array<{ id: number; name: string; phase: string; active: boolean }>;
+  onClose: () => void;
+  onSave: (patch: Record<string, unknown>, label: string) => void;
+  saving: boolean;
+}
+
+function WellDetailsEditor({
+  well,
+  carriers,
+  onClose,
+  onSave,
+  saving,
+}: WellDetailsEditorProps) {
+  return (
+    <div className="bg-surface-container-high px-6 py-4 border-l-2 border-primary-container">
+      <div className="flex items-center gap-3 mb-3">
+        <span className="text-[11px] uppercase tracking-wider font-bold text-on-surface-variant">
+          Details — {well.name}
+        </span>
+        <button
+          onClick={onClose}
+          className="text-[11px] text-on-surface-variant hover:text-on-surface ml-auto"
+        >
+          close
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3">
+        {/* Numeric + text detail fields */}
+        {(
+          [
+            "ratePerTon",
+            "ffcRate",
+            "fscRate",
+            "mileageFromLoader",
+            "customerName",
+            "loaderSandplant",
+          ] as DetailField[]
+        ).map((field) => (
+          <DetailTextField
+            key={field}
+            field={field}
+            well={well}
+            onSave={onSave}
+            saving={saving}
+          />
+        ))}
+
+        {/* Carrier — dropdown wired to the seeded carriers list.
+            Phase1 is the dispatch-rollout default; Phase2 gets flipped
+            in carriers admin (follow-up). */}
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor={`carrier-${well.id}`}
+            className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant"
+          >
+            Carrier
+          </label>
+          <select
+            id={`carrier-${well.id}`}
+            value={well.carrierId ?? ""}
+            disabled={saving}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const next = raw === "" ? null : parseInt(raw, 10);
+              if (next === (well.carrierId ?? null)) return;
+              const label =
+                next === null
+                  ? "carrier cleared"
+                  : `carrier → ${carriers.find((c) => c.id === next)?.name ?? next}`;
+              onSave({ carrierId: next }, label);
+            }}
+            className="px-2 py-1 text-sm border border-outline-variant rounded focus:border-primary focus:outline-none bg-background disabled:opacity-40"
+            aria-label={`Carrier for ${well.name}`}
+          >
+            <option value="">— none —</option>
+            {carriers
+              .filter((c) => c.active || c.id === well.carrierId)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.phase === "phase2" ? " (phase 2)" : ""}
+                </option>
+              ))}
+          </select>
+        </div>
+      </div>
+      <p className="text-[10px] text-on-surface-variant mt-3">
+        Tip: numeric fields (rate, FFC, FSC, mileage) save on blur. Press Escape
+        to discard an in-progress edit.
+      </p>
+    </div>
+  );
+}
+
+interface DetailTextFieldProps {
+  field: DetailField;
+  well: Well;
+  onSave: (patch: Record<string, unknown>, label: string) => void;
+  saving: boolean;
+}
+
+function DetailTextField({
+  field,
+  well,
+  onSave,
+  saving,
+}: DetailTextFieldProps) {
+  const meta = DETAIL_FIELD_META[field];
+  const current = (well[field] as string | null | undefined) ?? "";
+  const [draft, setDraft] = useState<string>(String(current));
+  const [focused, setFocused] = useState(false);
+
+  // Keep draft in sync if the well row updates externally and the
+  // field isn't currently being edited.
+  useEffect(() => {
+    if (!focused) setDraft(String(current));
+  }, [current, focused]);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    const next = trimmed === "" ? null : trimmed;
+    if ((next ?? "") === (current ?? "")) return;
+    if (meta.numeric && next !== null) {
+      const parsed = Number(next);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        // Revert invalid entry — let toast come from the user's next save
+        setDraft(String(current));
+        return;
+      }
+    }
+    onSave({ [field]: next }, `${meta.label} → ${next ?? "cleared"}`);
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label
+        htmlFor={`${field}-${well.id}`}
+        className="text-[10px] uppercase tracking-wider font-bold text-on-surface-variant"
+      >
+        {meta.label}
+      </label>
+      <div className="relative">
+        {meta.prefix && (
+          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-on-surface-variant pointer-events-none">
+            {meta.prefix}
+          </span>
+        )}
+        <input
+          id={`${field}-${well.id}`}
+          type="text"
+          inputMode={meta.numeric ? "decimal" : "text"}
+          value={draft}
+          disabled={saving}
+          placeholder={meta.placeholder}
+          onChange={(e) => setDraft(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            commit();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            if (e.key === "Escape") {
+              setDraft(String(current));
+              (e.target as HTMLInputElement).blur();
+            }
+          }}
+          className={`w-full px-2 ${meta.prefix ? "pl-5" : ""} py-1 text-sm border border-outline-variant rounded focus:border-primary focus:outline-none bg-background disabled:opacity-40`}
+          aria-label={`${meta.label} for ${well.name}`}
+        />
       </div>
     </div>
   );

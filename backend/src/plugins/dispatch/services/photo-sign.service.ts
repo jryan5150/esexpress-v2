@@ -31,11 +31,20 @@ const ALLOWED_HOST_PREFIXES = [
   "https://publicapis.propx.com/",
 ];
 
-function wrapIfAllowed(url: string | null): string | null {
+export function wrapPhotoUrl(url: string | null): string | null {
   if (!url) return null;
   const allowed = ALLOWED_HOST_PREFIXES.some((p) => url.startsWith(p));
   if (!allowed) return url;
   return `${BACKEND_URL}${PROXY_PATH}?url=${encodeURIComponent(url)}`;
+}
+
+export function wrapPhotoUrls(urls: (string | null | undefined)[]): string[] {
+  const out: string[] = [];
+  for (const u of urls) {
+    const wrapped = wrapPhotoUrl(u ?? null);
+    if (wrapped) out.push(wrapped);
+  }
+  return out;
 }
 
 export async function signPhotoUrls<T extends { photoThumbUrl: string | null }>(
@@ -43,6 +52,6 @@ export async function signPhotoUrls<T extends { photoThumbUrl: string | null }>(
 ): Promise<T[]> {
   return rows.map((r) => ({
     ...r,
-    photoThumbUrl: wrapIfAllowed(r.photoThumbUrl),
+    photoThumbUrl: wrapPhotoUrl(r.photoThumbUrl),
   }));
 }

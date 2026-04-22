@@ -1,6 +1,6 @@
 {
-  "id": "7b326f7a-66fa-476c-acc8-cb4ba12bb0af",
-  "prevId": "a234e5c9-a2d0-4285-87b7-e77789e4ebee",
+  "id": "2e9b6eb6-4171-4aa6-a2df-5eb3841a9012",
+  "prevId": "c1789926-8d9c-4f0e-9b83-062af91669c4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -57,6 +57,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "match_audit": {
+          "name": "match_audit",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "pcs_sequence": {
           "name": "pcs_sequence",
           "type": "integer",
@@ -83,6 +95,45 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'[]'::jsonb"
+        },
+        "handler_stage": {
+          "name": "handler_stage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'uncertain'"
+        },
+        "current_handler_id": {
+          "name": "current_handler_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uncertain_reasons": {
+          "name": "uncertain_reasons",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "stage_changed_at": {
+          "name": "stage_changed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "entered_on": {
+          "name": "entered_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pcs_number": {
+          "name": "pcs_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -216,6 +267,66 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "idx_assignments_handler_stage": {
+          "name": "idx_assignments_handler_stage",
+          "columns": [
+            {
+              "expression": "handler_stage",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_assignments_current_handler": {
+          "name": "idx_assignments_current_handler",
+          "columns": [
+            {
+              "expression": "current_handler_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_assignments_entered_on": {
+          "name": "idx_assignments_entered_on",
+          "columns": [
+            {
+              "expression": "entered_on",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_assignments_pcs_number": {
+          "name": "idx_assignments_pcs_number",
+          "columns": [
+            {
+              "expression": "pcs_number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -264,6 +375,19 @@
           "tableTo": "users",
           "columnsFrom": [
             "assigned_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "assignments_current_handler_id_users_id_fk": {
+          "name": "assignments_current_handler_id_users_id_fk",
+          "tableFrom": "assignments",
+          "tableTo": "users",
+          "columnsFrom": [
+            "current_handler_id"
           ],
           "columnsTo": [
             "id"
@@ -464,6 +588,117 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.breadcrumbs": {
+      "name": "breadcrumbs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_data": {
+          "name": "event_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        },
+        "zone": {
+          "name": "zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_breadcrumbs_event_type": {
+          "name": "idx_breadcrumbs_event_type",
+          "columns": [
+            {
+              "expression": "event_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_breadcrumbs_created_at": {
+          "name": "idx_breadcrumbs_created_at",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_breadcrumbs_user_id": {
+          "name": "idx_breadcrumbs_user_id",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "breadcrumbs_user_id_users_id_fk": {
+          "name": "breadcrumbs_user_id_users_id_fk",
+          "tableFrom": "breadcrumbs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.customer_mappings": {
       "name": "customer_mappings",
       "schema": "",
@@ -513,6 +748,120 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.data_integrity_runs": {
+      "name": "data_integrity_runs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "script_name": {
+          "name": "script_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ran_by": {
+          "name": "ran_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ran_at": {
+          "name": "ran_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "row_count_before": {
+          "name": "row_count_before",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "row_count_after": {
+          "name": "row_count_after",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dry_run": {
+          "name": "dry_run",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'running'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        }
+      },
+      "indexes": {
+        "idx_data_integrity_runs_ran_at": {
+          "name": "idx_data_integrity_runs_ran_at",
+          "columns": [
+            {
+              "expression": "ran_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_data_integrity_runs_script_name": {
+          "name": "idx_data_integrity_runs_script_name",
+          "columns": [
+            {
+              "expression": "script_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1038,6 +1387,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "original_ocr_bol_no": {
+          "name": "original_ocr_bol_no",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bol_corrected_by": {
+          "name": "bol_corrected_by",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bol_corrected_at": {
+          "name": "bol_corrected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1113,6 +1480,19 @@
           "tableTo": "users",
           "columnsFrom": [
             "manually_matched_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "jotform_imports_bol_corrected_by_users_id_fk": {
+          "name": "jotform_imports_bol_corrected_by_users_id_fk",
+          "tableFrom": "jotform_imports",
+          "tableTo": "users",
+          "columnsFrom": [
+            "bol_corrected_by"
           ],
           "columnsTo": [
             "id"
@@ -1335,6 +1715,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "weight_lbs": {
+          "name": "weight_lbs",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "rate": {
           "name": "rate",
           "type": "numeric(10, 2)",
@@ -1384,11 +1770,38 @@
           "primaryKey": false,
           "notNull": false
         },
+        "historical_complete": {
+          "name": "historical_complete",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "historical_complete_reason": {
+          "name": "historical_complete_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "raw_data": {
           "name": "raw_data",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "pickup_state": {
+          "name": "pickup_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "delivery_state": {
+          "name": "delivery_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
         },
         "created_at": {
           "name": "created_at",
@@ -1567,6 +1980,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "idx_loads_historical_complete": {
+          "name": "idx_loads_historical_complete",
+          "columns": [
+            {
+              "expression": "historical_complete",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -1646,6 +2074,178 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.match_decisions": {
+      "name": "match_decisions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "assignment_id": {
+          "name": "assignment_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "load_id": {
+          "name": "load_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "features_snapshot": {
+          "name": "features_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score_before": {
+          "name": "score_before",
+          "type": "numeric(4, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score_after": {
+          "name": "score_after",
+          "type": "numeric(4, 3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tier_before": {
+          "name": "tier_before",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tier_after": {
+          "name": "tier_after",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_match_decisions_created_at": {
+          "name": "idx_match_decisions_created_at",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_match_decisions_action": {
+          "name": "idx_match_decisions_action",
+          "columns": [
+            {
+              "expression": "action",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_match_decisions_assignment_id": {
+          "name": "idx_match_decisions_assignment_id",
+          "columns": [
+            {
+              "expression": "assignment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "match_decisions_assignment_id_assignments_id_fk": {
+          "name": "match_decisions_assignment_id_assignments_id_fk",
+          "tableFrom": "match_decisions",
+          "tableTo": "assignments",
+          "columnsFrom": [
+            "assignment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "match_decisions_load_id_loads_id_fk": {
+          "name": "match_decisions_load_id_loads_id_fk",
+          "tableFrom": "match_decisions",
+          "tableTo": "loads",
+          "columnsFrom": [
+            "load_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "match_decisions_user_id_users_id_fk": {
+          "name": "match_decisions_user_id_users_id_fk",
+          "tableFrom": "match_decisions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -2601,6 +3201,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "assigned_wells": {
           "name": "assigned_wells",
           "type": "jsonb",
@@ -2710,6 +3316,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "needs_rate_info": {
+          "name": "needs_rate_info",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "match_feedback": {
           "name": "match_feedback",

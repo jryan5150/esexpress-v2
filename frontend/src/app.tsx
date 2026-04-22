@@ -11,6 +11,9 @@ import { BreadcrumbProvider } from "./breadcrumbs/BreadcrumbProvider";
 const Login = lazy(() =>
   import("./pages/Login").then((m) => ({ default: m.Login })),
 );
+const MagicLinkLanding = lazy(() =>
+  import("./pages/MagicLinkLanding").then((m) => ({ default: m.MagicLinkLanding })),
+);
 const Workbench = lazy(() =>
   import("./pages/Workbench").then((m) => ({ default: m.Workbench })),
 );
@@ -84,6 +87,7 @@ export function App() {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/magic-link" element={<MagicLinkLanding />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<Layout />}>
                   <Route index element={<ExceptionFeed />} />

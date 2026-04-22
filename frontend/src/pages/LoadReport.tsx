@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useWorkbench } from "../hooks/use-workbench";
 import { useWeightUnit } from "../hooks/use-weight-unit";
+import { BOLDisplay } from "../components/BOLDisplay";
 import type { WorkbenchRow as Row } from "../types/api";
 
 /**
@@ -348,44 +349,31 @@ function Table({ rows }: { rows: Row[] }) {
                   </td>
                 );
               }
-              // BOL # deep-links into BOL Center's JotForm tab with the BOL
-              // pre-searched. That's the tab where driver-submitted ticket
-              // photos live, which is what a payroll reviewer is looking for
-              // when a row looks off. Server-side search spans jotform BOL +
-              // joined load BOL, so matched rows surface too.
-              if (c.key === "bolNo" && r.bolNo) {
-                // When the system's BOL (often Logistiq's internal code)
-                // differs from the paper ticket number, surface both inline
-                // so payroll sees the mapping at a glance instead of
-                // discovering the mismatch after-the-fact.
-                const bolVsTicketDiffer =
-                  r.ticketNo != null &&
-                  r.ticketNo.trim() !== "" &&
-                  r.ticketNo.trim() !== r.bolNo.trim();
+              // BOL # deep-links into Load Center with the identifier
+              // pre-searched. Server-side search spans ticket_no + bol_no, so
+              // whichever identifier is primary for this load will resolve.
+              if (c.key === "bolNo" && (r.bolNo || r.ticketNo)) {
+                // Prefer the paper ticket for the search term — it's the
+                // canonical BOL (vocabulary decision with Jessica, 2026-04-21)
+                // and matches what payroll sees on the physical document.
+                const searchTerm = r.ticketNo?.trim() || r.bolNo || "";
                 return (
                   <td
                     key={String(c.key)}
                     className="px-3 py-1.5 text-on-surface"
                   >
                     <Link
-                      to={`/workbench?search=${encodeURIComponent(r.bolNo)}`}
-                      className="text-primary hover:underline font-medium"
-                      title={
-                        bolVsTicketDiffer
-                          ? `System BOL ${r.bolNo}. Ticket # on paper: ${r.ticketNo}. Click to open in Load Center.`
-                          : `Open BOL ${r.bolNo} in Load Center`
-                      }
+                      to={`/workbench?search=${encodeURIComponent(searchTerm)}`}
+                      className="text-primary hover:underline inline-flex"
                     >
-                      {r.bolNo}
+                      <BOLDisplay
+                        ticketNo={r.ticketNo}
+                        bolNo={r.bolNo}
+                        loadSource={r.loadSource}
+                        size="sm"
+                        showSourcePrefix={false}
+                      />
                     </Link>
-                    {bolVsTicketDiffer && (
-                      <span
-                        className="ml-1 text-[10px] text-on-surface-variant tabular-nums"
-                        title="Ticket number printed on the driver's paper"
-                      >
-                        · #{r.ticketNo}
-                      </span>
-                    )}
                   </td>
                 );
               }
