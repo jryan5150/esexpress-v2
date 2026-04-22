@@ -11,6 +11,7 @@ import {
 } from "../hooks/use-bol";
 import { Pagination } from "../components/Pagination";
 import { useToast } from "../components/Toast";
+import { BOLDisplay } from "../components/BOLDisplay";
 import { useWeightUnit } from "../hooks/use-weight-unit";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
@@ -923,9 +924,21 @@ export function BolQueue() {
                         </button>
                         <div className="p-3 space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-data font-bold text-sm text-on-surface truncate">
-                              {sub.bolNumber || "— no BOL"}
-                            </span>
+                            {/* BOL — driver's JotForm submission IS the paper
+                                ticket # in their hand; treat it as ticketNo.
+                                When the matched load carries a different
+                                system BOL (Logistiq AU…), BOLDisplay renders
+                                that as a muted suffix automatically. */}
+                            <BOLDisplay
+                              ticketNo={sub.bolNumber}
+                              bolNo={
+                                (load as { bolNo?: string | null } | null)
+                                  ?.bolNo ?? null
+                              }
+                              loadSource="jotform"
+                              size="sm"
+                              showSourcePrefix={false}
+                            />
                             <span
                               className={`ml-auto text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0 ${
                                 matched
@@ -951,30 +964,6 @@ export function BolQueue() {
                                 : ""}
                             </div>
                           )}
-                          {/* Cross-ref chip — when the submission's BOL (what
-                              the driver wrote / Vision OCR'd) differs from
-                              the matched load's BOL (often Logistiq's AU...
-                              code), surface the mapping so the user knows
-                              both names point to the same load. Silent
-                              otherwise. */}
-                          {load &&
-                            sub.bolNumber &&
-                            (load as { bolNo?: string | null }).bolNo &&
-                            sub.bolNumber.trim() !==
-                              String(
-                                (load as { bolNo?: string | null }).bolNo ?? "",
-                              ).trim() && (
-                              <div
-                                className="inline-flex items-center gap-1 text-[10px] text-on-surface-variant bg-primary/5 border border-primary/20 rounded px-1.5 py-0.5"
-                                title="The driver's submission BOL and the system's BOL for this load differ. Both are the same load under two names."
-                              >
-                                <span className="material-symbols-outlined text-[10px]">
-                                  swap_horiz
-                                </span>
-                                system BOL:{" "}
-                                {(load as { bolNo?: string | null }).bolNo}
-                              </div>
-                            )}
                           {item.discrepancies.length > 0 && (
                             <div
                               className={`text-[10px] font-semibold inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full ${
@@ -1188,8 +1177,14 @@ export function BolQueue() {
                               : "no assignment"}
                           </span>
                         </div>
-                        <div className="text-[11px] text-outline flex flex-wrap gap-x-3 gap-y-0.5">
-                          <span>Ticket {item.ticketNo ?? "--"}</span>
+                        <div className="text-[11px] text-outline flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                          <BOLDisplay
+                            ticketNo={item.ticketNo}
+                            bolNo={item.bolNo}
+                            loadSource="propx"
+                            size="sm"
+                            showSourcePrefix={false}
+                          />
                           <span>{item.driverName ?? "no driver"}</span>
                           <span>Truck {item.truckNo ?? "--"}</span>
                         </div>
@@ -1336,7 +1331,13 @@ export function BolQueue() {
                         {load.wellName}
                       </span>
                       <span className="font-label text-[11px] text-on-surface-variant">
-                        {load.bolNo || "--"}
+                        <BOLDisplay
+                          ticketNo={load.ticketNo}
+                          bolNo={load.bolNo}
+                          loadSource={load.loadSource}
+                          size="sm"
+                          showSourcePrefix={false}
+                        />
                       </span>
                       <span className="font-label text-[11px] text-on-surface-variant text-right tabular-nums">
                         {formatWeight(load.weightTons)}
@@ -1598,10 +1599,14 @@ function ManualMatchPanel({ importId }: { importId: number }) {
                     </span>
                   )}
                 </div>
-                <div className="text-[11px] text-outline mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                <div className="text-[11px] text-outline mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                   <span>{h.driverName ?? "no driver"}</span>
-                  <span>BOL {h.bolNo ?? "--"}</span>
-                  <span>Ticket {h.ticketNo ?? "--"}</span>
+                  <BOLDisplay
+                    ticketNo={h.ticketNo}
+                    bolNo={h.bolNo}
+                    size="sm"
+                    showSourcePrefix={false}
+                  />
                   <span>
                     {h.deliveredOn
                       ? new Date(h.deliveredOn).toLocaleDateString()

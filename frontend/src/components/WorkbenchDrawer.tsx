@@ -64,6 +64,7 @@ class DrawerErrorBoundary extends Component<
 }
 import { StagePill } from "./StagePill";
 import { PhotoLightbox } from "./PhotoLightbox";
+import { BOLDisplay } from "./BOLDisplay";
 import type { WorkbenchRow, UncertainReason } from "../types/api";
 
 interface WorkbenchDrawerProps {
@@ -501,13 +502,25 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
 
         {/* Editable fields */}
         <div className="grid grid-cols-2 gap-2">
-          <EditableField
-            label={row.loadSource === "logistiq" ? "BOL # (Logistiq)" : "BOL #"}
-            value={row.bolNo}
-            ocrValue={ocr?.ocrBolNo}
-            onSave={saveField("bolNo")}
-            isSaving={update.isPending}
-          />
+          {/* BOL — rendered read-only via the unified BOLDisplay. The paper
+              ticket number IS the BOL (vocabulary decision with Jessica,
+              2026-04-21); the Logistiq/PropX system identifier is shown only
+              as a muted suffix. To edit the ticket number itself, use the
+              "Ticket #" field below — this avoids the previous confusion
+              where a "BOL #" editable exposed the system ID as if it were
+              dispatcher-owned data. */}
+          <div className="col-span-2 flex flex-col gap-1">
+            <span className="text-[10px] uppercase tracking-wider text-on-surface-variant">
+              BOL
+            </span>
+            <BOLDisplay
+              ticketNo={row.ticketNo}
+              bolNo={row.bolNo}
+              loadSource={row.loadSource}
+              size="md"
+              showSourcePrefix={false}
+            />
+          </div>
           <EditableField
             label="Ticket #"
             value={row.ticketNo}
@@ -515,18 +528,18 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
             isSaving={update.isPending}
           />
           {/* Vocabulary disambiguation — Logistiq-sourced loads carry an
-              internal code (e.g. AU26...) as their "BOL," but the dispatch
-              team calls the scale-ticket number the BOL in everyday speech.
-              Surface the mapping only when the two differ so Jessica sees
-              both identifiers for the same load without hunting. */}
+              internal code (e.g. AU26...) that the source system calls a
+              "BOL," but the dispatch team uses the scale-ticket number as
+              the BOL in everyday speech. Surface the mapping only when the
+              two differ so the user sees both identifiers for the same
+              load without hunting. */}
           {row.bolNo &&
             row.ticketNo &&
             row.bolNo.trim() !== row.ticketNo.trim() && (
               <div className="col-span-2 -mt-1 text-[11px] text-on-surface-variant bg-primary/5 border border-primary/15 rounded px-2 py-1.5 leading-snug">
                 <span className="font-semibold text-primary">Heads up —</span>{" "}
-                {row.loadSource === "logistiq"
-                  ? `Logistiq calls this load BOL ${row.bolNo}. The paper ticket the driver handed over is #${row.ticketNo}. Same load, two numbers.`
-                  : `System BOL ${row.bolNo} differs from the ticket number ${row.ticketNo} on the paper. Both point to this load.`}
+                System ID (Logistiq internal code) differs from the paper ticket
+                number — both identify the same load.
               </div>
             )}
           <EditableField
