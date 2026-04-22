@@ -1,0 +1,234 @@
+openapi: 3.0.4
+info:
+  title: Authorization API
+  contact:
+    name: "PCS Software, Inc."
+    email: PCS-OpenAPI@pcssoft.com
+  version: v1
+servers:
+- url: https://api.pcssoft.com/authorization/v1
+  description: Pcs Api Gateway
+paths:
+  /tokens:
+    get:
+      tags:
+      - Tokens
+      summary: Retrieves an access token for the specified client application
+      parameters:
+      - name: applicationId
+        in: query
+        description: The unique identifier of the client application
+        required: false
+        schema:
+          type: string
+      - name: applicationSecret
+        in: query
+        description: The provisioned client secret for authentication
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ClientToken"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientToken"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/ClientToken"
+        "404":
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal Server Error
+    post:
+      tags:
+      - Tokens
+      summary: Retrieves an access token for the specified client application
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppCredentialModel"
+          text/json:
+            schema:
+              $ref: "#/components/schemas/AppCredentialModel"
+          application/*+json:
+            schema:
+              $ref: "#/components/schemas/AppCredentialModel"
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ClientToken"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientToken"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/ClientToken"
+        "404":
+          description: Not Found
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal Server Error
+  /tokens/oauth:
+    post:
+      tags:
+      - Tokens
+      summary: Retrieves an access token for the specified client application using the standard OAuth endpoint
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/tokens_oauth_body"
+            encoding:
+              grant_type:
+                style: form
+              client_id:
+                style: form
+              client_secret:
+                style: form
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/OauthTokenResponse"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OauthTokenResponse"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/OauthTokenResponse"
+        "400":
+          description: Bad Request
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+            text/json:
+              schema:
+                $ref: "#/components/schemas/ProblemDetails"
+        "500":
+          description: Internal Server Error
+components:
+  schemas:
+    AppCredentialModel:
+      required:
+      - ApplicationId
+      - ApplicationSecret
+      type: object
+      properties:
+        ApplicationId:
+          minLength: 1
+          type: string
+        ApplicationSecret:
+          minLength: 1
+          type: string
+      additionalProperties: false
+    ClientToken:
+      type: object
+      properties:
+        AccessToken:
+          type: string
+          nullable: true
+        ExpiresInSeconds:
+          type: integer
+          format: int32
+      additionalProperties: false
+    InboundWebhookProviderTypeEnum:
+      type: integer
+      format: int32
+      enum:
+      - 1
+      - 2
+    OauthTokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          nullable: true
+        expires_in:
+          type: integer
+          format: int32
+      additionalProperties: false
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        status:
+          type: integer
+          format: int32
+          nullable: true
+        detail:
+          type: string
+          nullable: true
+        instance:
+          type: string
+          nullable: true
+      additionalProperties: false
+    SortDirection:
+      type: integer
+      format: int32
+      enum:
+      - 0
+      - 1
+    UserSortDirection:
+      type: integer
+      format: int32
+      enum:
+      - 0
+      - 1
+    WebhookTagTypeEnum:
+      type: integer
+      format: int32
+      enum:
+      - 1
+      - 2
+    tokens_oauth_body:
+      required:
+      - client_id
+      - client_secret
+      - grant_type
+      type: object
+      properties:
+        grant_type:
+          type: string
+        client_id:
+          type: string
+        client_secret:
+          type: string
