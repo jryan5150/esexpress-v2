@@ -18,7 +18,7 @@ import type { Database } from "../../../db/client.js";
 import { ValidationError, NotFoundError } from "../../../lib/errors.js";
 import { scoreMatch } from "./match-scorer.service.js";
 import { extractMatchFeatures } from "./match-features.service.js";
-import { signPhotoUrls } from "./photo-sign.service.js";
+import { signPhotoUrls, wrapPhotoUrls } from "./photo-sign.service.js";
 
 export interface UncertainReasonInput {
   wellId: number | null;
@@ -734,9 +734,7 @@ export async function listAssignmentPhotos(
       : db
           .select({ url: photos.sourceUrl })
           .from(photos)
-          .where(
-            and(eq(photos.loadId, loadId), sql`${photos.assignmentId} IS NULL`),
-          )
+          .where(eq(photos.loadId, loadId))
           .orderBy(photos.id),
     loadId == null
       ? Promise.resolve([] as { photos: unknown }[])
@@ -767,7 +765,11 @@ export async function listAssignmentPhotos(
     }
   }
 
-  return ordered;
+  // Route every URL through the proxy so the drawer's carousel uses the same
+  // cached, authenticated path as photoThumbUrl on the list response. Without
+  // this wrap the carousel would hit raw GCS URLs which 403 against the
+  // private bucket and defeat the <img> tag's Cache-Control on the proxy.
+  return wrapPhotoUrls(ordered);
 }
 
 export async function claimAssignment(
