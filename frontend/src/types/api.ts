@@ -339,6 +339,11 @@ export interface WorkbenchRow {
   photoCount: number;
   rate: string | null;
   pcsNumber: string | null;
+  /** PCS-side status (populated by /pcs/sync-loads). "Active" | "Dispatched"
+   *  | "Delivered" | etc. null if v2 has no PCS record for this load. */
+  pcsStatus: string | null;
+  /** PCS internal loadId — present when reconciled against PCS. null if not. */
+  pcsLoadId: number | null;
   notes: string | null;
   statusHistory: Array<{
     status: string;

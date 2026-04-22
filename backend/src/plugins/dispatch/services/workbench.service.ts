@@ -238,6 +238,12 @@ export interface WorkbenchRow {
   rate: string | null;
   /** PCS load number — manually entered by dispatcher post-build. */
   pcsNumber: string | null;
+  /** PCS-side status synced from PCS GetLoads ("Active" | "Dispatched" |
+   *  "Delivered" | etc.). null when v2 has no PCS record for this load.
+   *  Populated by /pcs/sync-loads; read from assignments.pcsDispatch jsonb. */
+  pcsStatus: string | null;
+  /** PCS internal loadId — present when reconciled against PCS. */
+  pcsLoadId: number | null;
   /** Free-form dispatcher notes, persisted per assignment. */
   notes: string | null;
   /** Stage-transition history for the timeline view in the drawer. */
@@ -403,6 +409,8 @@ export async function listWorkbenchRows(
       stageChangedAt: assignments.stageChangedAt,
       enteredOn: assignments.enteredOn,
       pcsNumber: assignments.pcsNumber,
+      pcsSequence: assignments.pcsSequence,
+      pcsDispatch: assignments.pcsDispatch,
       notes: assignments.notes,
       statusHistory: assignments.statusHistory,
       loadId: loads.id,
@@ -604,6 +612,12 @@ export async function listWorkbenchRows(
       photoCount: r.photoCount ?? 0,
       rate: r.rate,
       pcsNumber: r.pcsNumber,
+      pcsStatus:
+        ((r.pcsDispatch as Record<string, unknown> | null)?.pcs_status as
+          | string
+          | null
+          | undefined) ?? null,
+      pcsLoadId: r.pcsSequence ?? null,
       notes: r.notes,
       statusHistory: (r.statusHistory ?? []) as WorkbenchRow["statusHistory"],
       matchScore: score.score,

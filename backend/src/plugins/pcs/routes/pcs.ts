@@ -391,6 +391,65 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // ─── POST /sync-loads — pull PCS load list + reconcile onto v2 ────
+  // Reads PCS GetLoads for the configured division and updates
+  // assignments.pcsSequence + pcsDispatch with the PCS state. Returns a
+  // summary including "missed by v2" (PCS loads with no v2 match) so we
+  // can surface ingest gaps without needing Jessica's reconciliation sheet.
+  //
+  // Admin-only for now. Can be cron'd later.
+  fastify.post(
+    "/sync-loads",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+      schema: {
+        body: {
+          type: "object",
+          properties: {
+            sinceDays: { type: "integer", minimum: 1, maximum: 90 },
+            companyLetter: { type: "string", minLength: 1, maxLength: 1 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+      const { syncPcsLoads } = await import("../services/pcs-sync.service.js");
+      const body = (request.body ?? {}) as {
+        sinceDays?: number;
+        companyLetter?: string;
+      };
+      const fromDate = new Date(
+        Date.now() - (body.sinceDays ?? 7) * 24 * 60 * 60 * 1000,
+      );
+      try {
+        const result = await syncPcsLoads(db, {
+          fromDate,
+          companyLetter: body.companyLetter,
+        });
+        return { success: true, data: result };
+      } catch (err) {
+        request.log.error({ err }, "pcs sync failed");
+        return reply.status(500).send({
+          success: false,
+          error: {
+            code: "PCS_SYNC_ERROR",
+            message: err instanceof Error ? err.message : String(err),
+          },
+        });
+      }
+    },
+  );
+
   // ─── POST /send-dispatch-message — driver notification via PCS ────
   fastify.post(
     "/send-dispatch-message",

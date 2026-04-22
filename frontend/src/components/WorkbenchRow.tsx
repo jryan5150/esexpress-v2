@@ -1,5 +1,6 @@
 import { memo, useState } from "react";
 import { StagePill } from "./StagePill";
+import { PcsPill } from "./PcsPill";
 import { MatchScoreBadge } from "./MatchScoreBadge";
 import { PhotoLightbox } from "./PhotoLightbox";
 import { BOLDisplay } from "./BOLDisplay";
@@ -261,7 +262,10 @@ export const WorkbenchRow = memo(function WorkbenchRow({
         </div>
 
         <div className="col-span-2">
-          <StagePill stage={row.handlerStage} clean={isCleanUncertain} />
+          <div className="flex flex-wrap items-center gap-1">
+            <StagePill stage={row.handlerStage} clean={isCleanUncertain} />
+            <PcsPill pcsStatus={row.pcsStatus} pcsLoadId={row.pcsLoadId} />
+          </div>
           <div className="text-xs text-on-surface-variant mt-0.5">
             {formatDate(row.stageChangedAt)}
           </div>
