@@ -60,6 +60,28 @@ export const invitedEmails = pgTable("invited_emails", {
 
 // ─── DISPATCH CORE ────────────────────────────────────────────────
 
+// Carriers — the trucking companies we coordinate dispatch for. Seeded
+// with Liberty / Logistiq / JRT. The `phase` column is the Phase 1 /
+// Phase 2 rollout dial: phase1 = Jessica validates all loads for this
+// carrier; phase2 = the builder (Scout / Steph / Keli) validates inline
+// on the dispatch desk. The phase flip happens per-carrier, starting
+// with Liberty once PCS REST dispatch is live. Added 2026-04-22.
+export const carriers = pgTable("carriers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  phase: text("phase", { enum: ["phase1", "phase2"] })
+    .notNull()
+    .default("phase1"),
+  active: boolean("active").notNull().default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const wells = pgTable(
   "wells",
   {
@@ -82,6 +104,27 @@ export const wells = pgTable(
     // as "Need Well Rate Info" (burnt orange) on the dispatch desk so
     // Jessica can chase the rate before invoicing.
     needsRateInfo: boolean("needs_rate_info").notNull().default(false),
+    // Per-well commercial + logistics fields (admin-owned). Added
+    // 2026-04-22 to move rate data out of spreadsheets into the app.
+    // Numeric rates allow 4 decimal places (cents + micros for fuel
+    // surcharge calculations). `mileageFromLoader` is round-trip /
+    // one-way depending on how the carrier invoices — follow-up with
+    // Jessica which convention wins before it drives any calc.
+    ratePerTon: numeric("rate_per_ton", { precision: 10, scale: 4 }),
+    ffcRate: numeric("ffc_rate", { precision: 10, scale: 4 }),
+    fscRate: numeric("fsc_rate", { precision: 10, scale: 4 }),
+    mileageFromLoader: numeric("mileage_from_loader", {
+      precision: 10,
+      scale: 2,
+    }),
+    customerName: text("customer_name"),
+    // FK to carriers. Left as a plain integer column + foreign key
+    // constraint (see migration) so drizzle doesn't try to reorder the
+    // table definition — carriers is declared above.
+    carrierId: integer("carrier_id").references(() => carriers.id, {
+      onDelete: "set null",
+    }),
+    loaderSandplant: text("loader_sandplant"),
     matchFeedback: jsonb("match_feedback")
       .$type<
         Array<{
@@ -745,5 +788,38 @@ export const matchDecisions = pgTable(
     index("idx_match_decisions_created_at").on(table.createdAt),
     index("idx_match_decisions_action").on(table.action),
     index("idx_match_decisions_assignment_id").on(table.assignmentId),
+  ],
+);
+
+// ─── OPS / AUDIT ──────────────────────────────────────────────────
+//
+// Every mutation script or remediation run logs a row here: script name,
+// timestamp, row counts before/after, dry-run flag, free-form notes, and
+// arbitrary metadata. Supports both manual scripts (via a runner helper)
+// and automated jobs. Not consumed by any UI yet — the data earns its
+// keep forensically. "What did we change between Tuesday and Wednesday?"
+// becomes answerable.
+export const dataIntegrityRuns = pgTable(
+  "data_integrity_runs",
+  {
+    id: serial("id").primaryKey(),
+    scriptName: text("script_name").notNull(),
+    ranBy: text("ran_by"),
+    ranAt: timestamp("ran_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    rowCountBefore: integer("row_count_before"),
+    rowCountAfter: integer("row_count_after"),
+    dryRun: boolean("dry_run").notNull().default(false),
+    status: text("status", {
+      enum: ["running", "completed", "failed"],
+    })
+      .notNull()
+      .default("running"),
+    notes: text("notes"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  },
+  (table) => [
+    index("idx_data_integrity_runs_ran_at").on(table.ranAt),
+    index("idx_data_integrity_runs_script_name").on(table.scriptName),
   ],
 );

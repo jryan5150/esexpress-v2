@@ -1,5 +1,6 @@
 import { type FastifyPluginAsync } from "fastify";
 import { wellRoutes } from "./routes/wells.js";
+import { carrierRoutes } from "./routes/carriers.js";
 import { loadRoutes } from "./routes/loads.js";
 import { commentRoutes } from "./routes/comments.js";
 import { assignmentRoutes } from "./routes/assignments.js";
@@ -13,6 +14,7 @@ import searchRoutes from "./routes/search.js";
 
 const dispatchPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(wellRoutes, { prefix: "/wells" });
+  fastify.register(carrierRoutes, { prefix: "/carriers" });
   fastify.register(loadRoutes, { prefix: "/loads" });
   fastify.register(commentRoutes, { prefix: "/loads" });
   fastify.register(assignmentRoutes, { prefix: "/assignments" });

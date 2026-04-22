@@ -2,19 +2,110 @@
   "version": "7",
   "dialect": "postgresql",
   "entries": [
-    { "idx": 0, "version": "7", "when": 1774982652444, "tag": "0000_common_maverick", "breakpoints": true },
-    { "idx": 1, "version": "7", "when": 1775084302267, "tag": "0001_elite_black_knight", "breakpoints": true },
-    { "idx": 2, "version": "7", "when": 1775229149792, "tag": "0002_perpetual_mole_man", "breakpoints": true },
-    { "idx": 3, "version": "7", "when": 1775285369213, "tag": "0003_stiff_black_panther", "breakpoints": true },
-    { "idx": 4, "version": "7", "when": 1775294019134, "tag": "0004_aromatic_cobalt_man", "breakpoints": true },
-    { "idx": 5, "version": "7", "when": 1775918322664, "tag": "0005_brave_human_robot", "breakpoints": true },
-    { "idx": 6, "version": "7", "when": 1776125890680, "tag": "0006_curvy_prowler", "breakpoints": true },
-    { "idx": 7, "version": "7", "when": 1776127247034, "tag": "0007_rare_sauron", "breakpoints": true },
-    { "idx": 8, "version": "7", "when": 1776197440972, "tag": "0008_wide_captain_universe", "breakpoints": true },
-    { "idx": 9, "version": "7", "when": 1776199985026, "tag": "0009_typical_scarlet_witch", "breakpoints": true },
-    { "idx": 10, "version": "7", "when": 1776231935608, "tag": "0010_lumpy_mad_thinker", "breakpoints": true },
-    { "idx": 11, "version": "7", "when": 1776288168878, "tag": "0011_easy_epoch", "breakpoints": true },
-    { "idx": 12, "version": "7", "when": 1776566942710, "tag": "0012_tan_turbo", "breakpoints": true },
-    { "idx": 13, "version": "7", "when": 1776797009430, "tag": "0013_goofy_silver_surfer", "breakpoints": true }
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1774982652444,
+      "tag": "0000_common_maverick",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775084302267,
+      "tag": "0001_elite_black_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775229149792,
+      "tag": "0002_perpetual_mole_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775285369213,
+      "tag": "0003_stiff_black_panther",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775294019134,
+      "tag": "0004_aromatic_cobalt_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775918322664,
+      "tag": "0005_brave_human_robot",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776125890680,
+      "tag": "0006_curvy_prowler",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776127247034,
+      "tag": "0007_rare_sauron",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776197440972,
+      "tag": "0008_wide_captain_universe",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776199985026,
+      "tag": "0009_typical_scarlet_witch",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776231935608,
+      "tag": "0010_lumpy_mad_thinker",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776288168878,
+      "tag": "0011_easy_epoch",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776566942710,
+      "tag": "0012_tan_turbo",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776863731043,
+      "tag": "0013_handy_lily_hollister",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1776864174466,
+      "tag": "0014_bright_yellow_claw",
+      "breakpoints": true
+    }
   ]
 }
