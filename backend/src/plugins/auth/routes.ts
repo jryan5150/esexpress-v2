@@ -1,6 +1,11 @@
 import { type FastifyPluginAsync } from "fastify";
+import magicLinkRoutes from "./magic-link.js";
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
+
+  // Magic-link endpoints: POST /request-magic-link, GET /magic-link/verify/:token
+  await fastify.register(magicLinkRoutes);
+
   // POST /auth/login — local email/password login (stricter rate limit)
   fastify.post(
     "/login",

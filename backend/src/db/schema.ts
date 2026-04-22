@@ -702,6 +702,60 @@ export const syncRuns = pgTable(
   ],
 );
 
+// ─── NOTIFICATIONS ───────────────────────────────────────────────
+// Every outbound email (magic link, alerts, digests, maintenance notices) is
+// logged here BEFORE send is attempted and updated after. This is the system
+// of record for "did we actually email X about Y?" — queryable for audits and
+// for suppressing duplicate notifications.
+export const notificationEvents = pgTable(
+  "notification_events",
+  {
+    id: serial("id").primaryKey(),
+    eventType: text("event_type").notNull(), // 'magic_link' | 'alert' | 'maintenance_done' | 'daily_digest' | etc
+    recipient: text("recipient").notNull(), // email address
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow().notNull(),
+    success: boolean("success").notNull(),
+    retryCount: integer("retry_count").notNull().default(0),
+    error: text("error"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  },
+  (table) => [
+    index("idx_notification_events_event_type").on(table.eventType),
+    index("idx_notification_events_recipient").on(table.recipient),
+    index("idx_notification_events_sent_at").on(table.sentAt),
+  ],
+);
+
+// ─── MAGIC LINK AUTH ─────────────────────────────────────────────
+// Passwordless sign-in tokens. Generated with 32 bytes of crypto-random
+// entropy, hex-encoded, 15-minute TTL. `usedAt` non-null = single-use
+// enforced. Rate limiting (3/hr/email) is enforced at route layer by
+// counting recent rows for the same email.
+export const magicLinkTokens = pgTable(
+  "magic_link_tokens",
+  {
+    id: serial("id").primaryKey(),
+    token: text("token").notNull().unique(),
+    userId: integer("user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    email: text("email").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    requestedFromIp: text("requested_from_ip"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_magic_link_tokens_token").on(table.token),
+    index("idx_magic_link_tokens_email").on(table.email),
+    index("idx_magic_link_tokens_expires_at").on(table.expiresAt),
+  ],
+);
+
 // ─── FEEDBACK ────────────────────────────────────────────────────
 export const feedback = pgTable(
   "feedback",
