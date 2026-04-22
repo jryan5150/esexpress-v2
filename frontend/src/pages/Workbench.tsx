@@ -180,15 +180,15 @@ function WorkbenchEmptyState({
 const FILTERS: { value: WorkbenchFilter; label: string }[] = [
   { value: "uncertain", label: "Uncertain" },
   { value: "ready_to_build", label: "Ready to Build" },
-  { value: "mine", label: "Mine" },
   { value: "missing_ticket", label: "Missing Ticket" },
   { value: "missing_driver", label: "Missing Driver" },
   { value: "needs_rate", label: "Needs Rate" },
   { value: "built_today", label: "Built Today" },
-  { value: "ready_to_clear", label: "Ready to Clear" },
-  { value: "entered_today", label: "Entered Today" },
   { value: "all", label: "All" },
 ];
+// Removed per Apr 21 call: "Mine" (unused under all-admin posture),
+// "Ready to Clear" (UI-only filter Jessica said she didn't use),
+// "Entered Today" (redundant with "Built Today" + "Completed" label).
 
 export function Workbench() {
   const [params, setParams] = useSearchParams();
@@ -221,7 +221,7 @@ export function Workbench() {
   // Uncertain and the sub-filters stay on stage_changed_at DESC because
   // recency is more useful when triaging. URL param `sort=date` overrides.
   const sortParam = params.get("sort");
-  const defaultSortByDate = filter === "ready_to_build" || filter === "mine";
+  const defaultSortByDate = filter === "ready_to_build";
   const sortBy: "stage_changed_at" | "delivered_on" =
     sortParam === "date" || (sortParam !== "recent" && defaultSortByDate)
       ? "delivered_on"
