@@ -12,28 +12,28 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { Office } from './Office';
+import { mapValues } from '../runtime.js';
+import type { Office } from './Office.js';
 import {
     OfficeFromJSON,
     OfficeFromJSONTyped,
     OfficeToJSON,
     OfficeToJSONTyped,
-} from './Office';
-import type { LoadStop } from './LoadStop';
+} from './Office.js';
+import type { LoadStop } from './LoadStop.js';
 import {
     LoadStopFromJSON,
     LoadStopFromJSONTyped,
     LoadStopToJSON,
     LoadStopToJSONTyped,
-} from './LoadStop';
-import type { LoadRating } from './LoadRating';
+} from './LoadStop.js';
+import type { LoadRating } from './LoadRating.js';
 import {
     LoadRatingFromJSON,
     LoadRatingFromJSONTyped,
     LoadRatingToJSON,
     LoadRatingToJSONTyped,
-} from './LoadRating';
+} from './LoadRating.js';
 
 /**
  * 

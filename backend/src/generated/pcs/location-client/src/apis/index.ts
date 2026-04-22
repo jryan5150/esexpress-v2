@@ -1,3 +1,3 @@
 /* tslint:disable */
 /* eslint-disable */
-export * from './DevelopersApi';
+export * from './DevelopersApi.js';

@@ -13,13 +13,13 @@
  */
 
 
-import * as runtime from '../runtime';
+import * as runtime from '../runtime.js';
 import type {
   Fault,
   GetInvoices200ResponseInner,
   Invoice,
   PatchDocument,
-} from '../models/index';
+} from '../models/index.js';
 import {
     FaultFromJSON,
     FaultToJSON,
@@ -29,7 +29,7 @@ import {
     InvoiceToJSON,
     PatchDocumentFromJSON,
     PatchDocumentToJSON,
-} from '../models/index';
+} from '../models/index.js';
 
 export interface AddInvoiceRequest {
     invoice?: Invoice;

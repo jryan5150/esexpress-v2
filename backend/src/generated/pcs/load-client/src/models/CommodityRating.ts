@@ -12,14 +12,14 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { CommodityRate } from './CommodityRate';
+import { mapValues } from '../runtime.js';
+import type { CommodityRate } from './CommodityRate.js';
 import {
     CommodityRateFromJSON,
     CommodityRateFromJSONTyped,
     CommodityRateToJSON,
     CommodityRateToJSONTyped,
-} from './CommodityRate';
+} from './CommodityRate.js';
 
 /**
  * 

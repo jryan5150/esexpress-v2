@@ -12,14 +12,14 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { Address } from './Address';
+import { mapValues } from '../runtime.js';
+import type { Address } from './Address.js';
 import {
     AddressFromJSON,
     AddressFromJSONTyped,
     AddressToJSON,
     AddressToJSONTyped,
-} from './Address';
+} from './Address.js';
 
 /**
  * 

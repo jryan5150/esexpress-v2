@@ -12,14 +12,14 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { CommodityLocator } from './CommodityLocator';
+import { mapValues } from '../runtime.js';
+import type { CommodityLocator } from './CommodityLocator.js';
 import {
     CommodityLocatorFromJSON,
     CommodityLocatorFromJSONTyped,
     CommodityLocatorToJSON,
     CommodityLocatorToJSONTyped,
-} from './CommodityLocator';
+} from './CommodityLocator.js';
 
 /**
  * 

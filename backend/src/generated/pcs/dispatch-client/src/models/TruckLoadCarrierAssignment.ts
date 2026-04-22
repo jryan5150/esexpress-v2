@@ -12,28 +12,28 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { CarrierLocator } from './CarrierLocator';
+import { mapValues } from '../runtime.js';
+import type { CarrierLocator } from './CarrierLocator.js';
 import {
     CarrierLocatorFromJSON,
     CarrierLocatorFromJSONTyped,
     CarrierLocatorToJSON,
     CarrierLocatorToJSONTyped,
-} from './CarrierLocator';
-import type { AutoRespondNotification } from './AutoRespondNotification';
+} from './CarrierLocator.js';
+import type { AutoRespondNotification } from './AutoRespondNotification.js';
 import {
     AutoRespondNotificationFromJSON,
     AutoRespondNotificationFromJSONTyped,
     AutoRespondNotificationToJSON,
     AutoRespondNotificationToJSONTyped,
-} from './AutoRespondNotification';
-import type { LineHaulRate } from './LineHaulRate';
+} from './AutoRespondNotification.js';
+import type { LineHaulRate } from './LineHaulRate.js';
 import {
     LineHaulRateFromJSON,
     LineHaulRateFromJSONTyped,
     LineHaulRateToJSON,
     LineHaulRateToJSONTyped,
-} from './LineHaulRate';
+} from './LineHaulRate.js';
 
 /**
  * 

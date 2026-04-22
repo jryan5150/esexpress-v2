@@ -12,49 +12,49 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { Office } from './Office';
+import { mapValues } from '../runtime.js';
+import type { Office } from './Office.js';
 import {
     OfficeFromJSON,
     OfficeFromJSONTyped,
     OfficeToJSON,
     OfficeToJSONTyped,
-} from './Office';
-import type { LoadStop } from './LoadStop';
+} from './Office.js';
+import type { LoadStop } from './LoadStop.js';
 import {
     LoadStopFromJSON,
     LoadStopFromJSONTyped,
     LoadStopToJSON,
     LoadStopToJSONTyped,
-} from './LoadStop';
-import type { LoadRating } from './LoadRating';
+} from './LoadStop.js';
+import type { LoadRating } from './LoadRating.js';
 import {
     LoadRatingFromJSON,
     LoadRatingFromJSONTyped,
     LoadRatingToJSON,
     LoadRatingToJSONTyped,
-} from './LoadRating';
-import type { LessThanTruckLoad } from './LessThanTruckLoad';
+} from './LoadRating.js';
+import type { LessThanTruckLoad } from './LessThanTruckLoad.js';
 import {
     LessThanTruckLoadFromJSON,
     LessThanTruckLoadFromJSONTyped,
     LessThanTruckLoadToJSON,
     LessThanTruckLoadToJSONTyped,
-} from './LessThanTruckLoad';
-import type { IntermodalLoad } from './IntermodalLoad';
+} from './LessThanTruckLoad.js';
+import type { IntermodalLoad } from './IntermodalLoad.js';
 import {
     IntermodalLoadFromJSON,
     IntermodalLoadFromJSONTyped,
     IntermodalLoadToJSON,
     IntermodalLoadToJSONTyped,
-} from './IntermodalLoad';
-import type { TruckLoad } from './TruckLoad';
+} from './IntermodalLoad.js';
+import type { TruckLoad } from './TruckLoad.js';
 import {
     TruckLoadFromJSON,
     TruckLoadFromJSONTyped,
     TruckLoadToJSON,
     TruckLoadToJSONTyped,
-} from './TruckLoad';
+} from './TruckLoad.js';
 
 /**
  * 

@@ -12,28 +12,28 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { AccessorialRate } from './AccessorialRate';
+import { mapValues } from '../runtime.js';
+import type { AccessorialRate } from './AccessorialRate.js';
 import {
     AccessorialRateFromJSON,
     AccessorialRateFromJSONTyped,
     AccessorialRateToJSON,
     AccessorialRateToJSONTyped,
-} from './AccessorialRate';
-import type { LineHaulLoadRate } from './LineHaulLoadRate';
+} from './AccessorialRate.js';
+import type { LineHaulLoadRate } from './LineHaulLoadRate.js';
 import {
     LineHaulLoadRateFromJSON,
     LineHaulLoadRateFromJSONTyped,
     LineHaulLoadRateToJSON,
     LineHaulLoadRateToJSONTyped,
-} from './LineHaulLoadRate';
-import type { CommodityRating } from './CommodityRating';
+} from './LineHaulLoadRate.js';
+import type { CommodityRating } from './CommodityRating.js';
 import {
     CommodityRatingFromJSON,
     CommodityRatingFromJSONTyped,
     CommodityRatingToJSON,
     CommodityRatingToJSONTyped,
-} from './CommodityRating';
+} from './CommodityRating.js';
 
 /**
  * 

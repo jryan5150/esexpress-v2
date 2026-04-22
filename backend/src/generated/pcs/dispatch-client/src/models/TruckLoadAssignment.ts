@@ -12,49 +12,49 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { TrailerLocator } from './TrailerLocator';
+import { mapValues } from '../runtime.js';
+import type { TrailerLocator } from './TrailerLocator.js';
 import {
     TrailerLocatorFromJSON,
     TrailerLocatorFromJSONTyped,
     TrailerLocatorToJSON,
     TrailerLocatorToJSONTyped,
-} from './TrailerLocator';
-import type { DriverLocator } from './DriverLocator';
+} from './TrailerLocator.js';
+import type { DriverLocator } from './DriverLocator.js';
 import {
     DriverLocatorFromJSON,
     DriverLocatorFromJSONTyped,
     DriverLocatorToJSON,
     DriverLocatorToJSONTyped,
-} from './DriverLocator';
-import type { AutoRespondNotification } from './AutoRespondNotification';
+} from './DriverLocator.js';
+import type { AutoRespondNotification } from './AutoRespondNotification.js';
 import {
     AutoRespondNotificationFromJSON,
     AutoRespondNotificationFromJSONTyped,
     AutoRespondNotificationToJSON,
     AutoRespondNotificationToJSONTyped,
-} from './AutoRespondNotification';
-import type { TruckLocator } from './TruckLocator';
+} from './AutoRespondNotification.js';
+import type { TruckLocator } from './TruckLocator.js';
 import {
     TruckLocatorFromJSON,
     TruckLocatorFromJSONTyped,
     TruckLocatorToJSON,
     TruckLocatorToJSONTyped,
-} from './TruckLocator';
-import type { LineHaulRate } from './LineHaulRate';
+} from './TruckLocator.js';
+import type { LineHaulRate } from './LineHaulRate.js';
 import {
     LineHaulRateFromJSON,
     LineHaulRateFromJSONTyped,
     LineHaulRateToJSON,
     LineHaulRateToJSONTyped,
-} from './LineHaulRate';
-import type { UnitLocator } from './UnitLocator';
+} from './LineHaulRate.js';
+import type { UnitLocator } from './UnitLocator.js';
 import {
     UnitLocatorFromJSON,
     UnitLocatorFromJSONTyped,
     UnitLocatorToJSON,
     UnitLocatorToJSONTyped,
-} from './UnitLocator';
+} from './UnitLocator.js';
 
 /**
  * 

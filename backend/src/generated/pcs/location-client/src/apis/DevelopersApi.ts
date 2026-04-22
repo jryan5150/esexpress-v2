@@ -13,12 +13,12 @@
  */
 
 
-import * as runtime from '../runtime';
+import * as runtime from '../runtime.js';
 import type {
   Fault,
   Location,
   LocationId,
-} from '../models/index';
+} from '../models/index.js';
 import {
     FaultFromJSON,
     FaultToJSON,
@@ -26,7 +26,7 @@ import {
     LocationToJSON,
     LocationIdFromJSON,
     LocationIdToJSON,
-} from '../models/index';
+} from '../models/index.js';
 
 export interface AddTrailerLocationRequest {
     ocpApimSubscriptionKey: string;

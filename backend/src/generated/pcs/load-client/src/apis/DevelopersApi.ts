@@ -13,7 +13,7 @@
  */
 
 
-import * as runtime from '../runtime';
+import * as runtime from '../runtime.js';
 import type {
   AddLoad200Response,
   AddLoadRequest,
@@ -23,7 +23,7 @@ import type {
   PatchDocument,
   UpdateLoad200Response,
   UpdateLoadRequest,
-} from '../models/index';
+} from '../models/index.js';
 import {
     AddLoad200ResponseFromJSON,
     AddLoad200ResponseToJSON,
@@ -41,7 +41,7 @@ import {
     UpdateLoad200ResponseToJSON,
     UpdateLoadRequestFromJSON,
     UpdateLoadRequestToJSON,
-} from '../models/index';
+} from '../models/index.js';
 
 export interface AddLoadOperationRequest {
     addLoadRequest: AddLoadRequest;

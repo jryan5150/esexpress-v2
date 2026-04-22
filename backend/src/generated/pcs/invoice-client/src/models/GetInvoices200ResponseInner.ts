@@ -12,35 +12,35 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { Office } from './Office';
+import { mapValues } from '../runtime.js';
+import type { Office } from './Office.js';
 import {
     OfficeFromJSON,
     OfficeFromJSONTyped,
     OfficeToJSON,
     OfficeToJSONTyped,
-} from './Office';
-import type { Invoice } from './Invoice';
+} from './Office.js';
+import type { Invoice } from './Invoice.js';
 import {
     InvoiceFromJSON,
     InvoiceFromJSONTyped,
     InvoiceToJSON,
     InvoiceToJSONTyped,
-} from './Invoice';
-import type { InvoiceItem } from './InvoiceItem';
+} from './Invoice.js';
+import type { InvoiceItem } from './InvoiceItem.js';
 import {
     InvoiceItemFromJSON,
     InvoiceItemFromJSONTyped,
     InvoiceItemToJSON,
     InvoiceItemToJSONTyped,
-} from './InvoiceItem';
-import type { Term } from './Term';
+} from './InvoiceItem.js';
+import type { Term } from './Term.js';
 import {
     TermFromJSON,
     TermFromJSONTyped,
     TermToJSON,
     TermToJSONTyped,
-} from './Term';
+} from './Term.js';
 
 /**
  * 

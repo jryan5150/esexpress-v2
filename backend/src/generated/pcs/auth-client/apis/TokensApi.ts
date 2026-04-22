@@ -13,13 +13,13 @@
  */
 
 
-import * as runtime from '../runtime';
+import * as runtime from '../runtime.js';
 import type {
   AppCredentialModel,
   ClientToken,
   OauthTokenResponse,
   ProblemDetails,
-} from '../models/index';
+} from '../models/index.js';
 import {
     AppCredentialModelFromJSON,
     AppCredentialModelToJSON,
@@ -29,7 +29,7 @@ import {
     OauthTokenResponseToJSON,
     ProblemDetailsFromJSON,
     ProblemDetailsToJSON,
-} from '../models/index';
+} from '../models/index.js';
 
 export interface TokensGetRequest {
     applicationId?: string;

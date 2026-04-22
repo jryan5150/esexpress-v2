@@ -1,6 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
-export * from './Fault';
-export * from './FaultDetailsInner';
-export * from './ModelError';
-export * from './ValidationError';
+export * from './Fault.js';
+export * from './FaultDetailsInner.js';
+export * from './ModelError.js';
+export * from './ValidationError.js';

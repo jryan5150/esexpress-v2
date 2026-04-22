@@ -12,14 +12,14 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { Office } from './Office';
+import { mapValues } from '../runtime.js';
+import type { Office } from './Office.js';
 import {
     OfficeFromJSON,
     OfficeFromJSONTyped,
     OfficeToJSON,
     OfficeToJSONTyped,
-} from './Office';
+} from './Office.js';
 
 /**
  * 

@@ -12,27 +12,27 @@
  * Do not edit the class manually.
  */
 
-import type { IntermodalLoad } from './IntermodalLoad';
+import type { IntermodalLoad } from './IntermodalLoad.js';
 import {
     instanceOfIntermodalLoad,
     IntermodalLoadFromJSON,
     IntermodalLoadFromJSONTyped,
     IntermodalLoadToJSON,
-} from './IntermodalLoad';
-import type { LessThanTruckLoad } from './LessThanTruckLoad';
+} from './IntermodalLoad.js';
+import type { LessThanTruckLoad } from './LessThanTruckLoad.js';
 import {
     instanceOfLessThanTruckLoad,
     LessThanTruckLoadFromJSON,
     LessThanTruckLoadFromJSONTyped,
     LessThanTruckLoadToJSON,
-} from './LessThanTruckLoad';
-import type { TruckLoad } from './TruckLoad';
+} from './LessThanTruckLoad.js';
+import type { TruckLoad } from './TruckLoad.js';
 import {
     instanceOfTruckLoad,
     TruckLoadFromJSON,
     TruckLoadFromJSONTyped,
     TruckLoadToJSON,
-} from './TruckLoad';
+} from './TruckLoad.js';
 
 /**
  * @type UpdateLoadRequest

@@ -13,14 +13,14 @@
  */
 
 
-import * as runtime from '../runtime';
+import * as runtime from '../runtime.js';
 import type {
   CarrierDispatchRecord,
   Fault,
   LoadDispatch,
   TruckLoadAssignment,
   TruckLoadCarrierAssignment,
-} from '../models/index';
+} from '../models/index.js';
 import {
     CarrierDispatchRecordFromJSON,
     CarrierDispatchRecordToJSON,
@@ -32,7 +32,7 @@ import {
     TruckLoadAssignmentToJSON,
     TruckLoadCarrierAssignmentFromJSON,
     TruckLoadCarrierAssignmentToJSON,
-} from '../models/index';
+} from '../models/index.js';
 
 export interface BrokerDispatchGetRequest {
     status?: string;

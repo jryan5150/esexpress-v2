@@ -12,14 +12,14 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { FaultDetailsInner } from './FaultDetailsInner';
+import { mapValues } from '../runtime.js';
+import type { FaultDetailsInner } from './FaultDetailsInner.js';
 import {
     FaultDetailsInnerFromJSON,
     FaultDetailsInnerFromJSONTyped,
     FaultDetailsInnerToJSON,
     FaultDetailsInnerToJSONTyped,
-} from './FaultDetailsInner';
+} from './FaultDetailsInner.js';
 
 /**
  * 

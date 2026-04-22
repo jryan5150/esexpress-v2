@@ -12,14 +12,14 @@
  * Do not edit the class manually.
  */
 
-import { mapValues } from '../runtime';
-import type { AccessorialLocator } from './AccessorialLocator';
+import { mapValues } from '../runtime.js';
+import type { AccessorialLocator } from './AccessorialLocator.js';
 import {
     AccessorialLocatorFromJSON,
     AccessorialLocatorFromJSONTyped,
     AccessorialLocatorToJSON,
     AccessorialLocatorToJSONTyped,
-} from './AccessorialLocator';
+} from './AccessorialLocator.js';
 
 /**
  * 
