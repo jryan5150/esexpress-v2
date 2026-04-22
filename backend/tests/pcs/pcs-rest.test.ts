@@ -22,7 +22,7 @@ describe("PCS REST — buildAddLoadRequest", () => {
     delete process.env.PCS_COMPANY_LTR;
   });
 
-  it("maps the DispatchPackage fields onto an AddLoadRequest shape", () => {
+  it("maps DispatchPackage to PCS-validated TruckLoad shape (verified 2026-04-22 against Hairpin)", () => {
     const pkg = buildDispatchPackage(
       { id: 1, status: "pending" },
       {
@@ -40,21 +40,26 @@ describe("PCS REST — buildAddLoadRequest", () => {
 
     const body = buildAddLoadRequest(pkg) as Record<string, unknown>;
 
-    expect(body.billToId).toBe("company-123");
+    // Fields proven valid by loadId 357468 creation on 2026-04-22
+    expect(body.loadClass).toBe("TL");
+    expect(body.status).toBe("Dispatched");
+    expect(body.office).toEqual({ code: "1" });
+    expect(body.billToId).toBe("V646");
     expect(body.billToName).toBe("ES Express");
-    expect(body.driverName).toBe("John Doe");
-    expect(body.truckNumber).toBe("T-99");
-    expect(body.trailerNumber).toBe("TR-77");
-    expect(body.originName).toBe("Sandplant A");
-    expect(body.destinationName).toBe("Well-Alpha");
-    expect(body.commodity).toBe("Frac Sand");
-    expect(body.weight).toBe(42.5);
-    expect(body.customerLoadNumber).toBe("L-555");
-    expect(body.loadClass).toBe("tl");
-    expect(body.status).toBe("dispatched");
+    expect(body.totalWeight).toBe(85000); // 42.5 tons * 2000 lbs
+    expect(body.loadReference).toBe("L-555");
+
+    // SOAP-era fields PCS rejects (not in TruckLoad schema) must NOT be sent
+    expect(body.driverName).toBeUndefined();
+    expect(body.truckNumber).toBeUndefined();
+    expect(body.originName).toBeUndefined();
+    expect(body.destinationName).toBeUndefined();
+    expect(body.commodity).toBeUndefined();
+    expect(body.customerLoadNumber).toBeUndefined();
+    expect(body.loadType).toBeUndefined();
   });
 
-  it("defaults weight to 0 when tonnage is unparseable", () => {
+  it("defaults totalWeight to 0 when tonnage is unparseable", () => {
     const pkg = buildDispatchPackage(
       { id: 2, status: "pending" },
       {
@@ -70,7 +75,7 @@ describe("PCS REST — buildAddLoadRequest", () => {
       { name: "Well" },
     );
     const body = buildAddLoadRequest(pkg) as Record<string, unknown>;
-    expect(body.weight).toBe(0);
+    expect(body.totalWeight).toBe(0);
   });
 });
 

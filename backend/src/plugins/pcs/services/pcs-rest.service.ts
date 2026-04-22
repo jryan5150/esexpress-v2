@@ -138,33 +138,34 @@ async function fetchAssignmentData(
 
 /**
  * Build the Load API AddLoad request body from an internal dispatch package.
- * The generated client's AddLoadRequest is a union of TruckLoad | LessThanTruckLoad
- * | IntermodalLoad. We populate a TruckLoad-shaped payload with the fields we
- * know; unknown optional fields are left off.
  *
- * NOTE: This mapping is derived from the 2026-03-06 Load API v1.0.0.0 Swagger
- * plus the SOAP PostDispatch param set. Field names in PCS's actual
- * /dispatching/v1/load endpoint may differ — validate on first real POST.
+ * Payload shape validated 2026-04-22 via direct API call against Hairpin —
+ * loadId 357468 created successfully and voided. Real Hairpin loads returned
+ * by GetLoads have: loadClass="TL", loadType=null, office={code:"1"},
+ * billToId="V646" (ES Express customer code), loadReference=<ticket_no>.
+ *
+ * PCS rejects made-up fields like driverName/truckNumber/originName/commodity
+ * (SOAP-era fields). Driver/truck/trailer assignment is a SEPARATE API call
+ * against POST /truckload/{loadId}/company/dispatch and is not part of the
+ * load-creation payload.
+ *
+ * Tons → lbs: weight stored as tons in v2, PCS wants lbs. Convert inline.
  */
 export function buildAddLoadRequest(pkg: DispatchPackage): AddLoadRequest {
-  // Weight in SOAP came through as tons (per-load conversion). The Load API
-  // accepts weight as a number; we parse and default to 0 if unparseable.
-  const weightNumber = Number.parseFloat(pkg.weight);
+  const weightTons = Number.parseFloat(pkg.weight);
+  const totalWeight = Number.isFinite(weightTons) ? weightTons * 2000 : 0;
+
   const body = {
-    loadClass: "tl",
-    loadType: "FS", // Frac Sand — adjust if PCS expects a different code
-    billToId: pkg.companyObjectId,
-    billToName: pkg.companyName,
-    driverName: pkg.driverName,
-    truckNumber: pkg.truckNumber,
-    trailerNumber: pkg.trailerNumber,
-    originName: pkg.originName,
-    destinationName: pkg.destinationName,
-    commodity: pkg.commodity,
-    weight: Number.isFinite(weightNumber) ? weightNumber : 0,
-    status: "dispatched",
-    // Preserve our internal load number as a reference the PCS side can echo
-    customerLoadNumber: pkg.loadNumber,
+    loadClass: "TL",
+    status: "Dispatched",
+    office: { code: "1" },
+    billToId: "V646",
+    billToName: "ES Express",
+    totalWeight,
+    loadReference: pkg.loadNumber,
+    notes: pkg.destinationName
+      ? `v2 dispatch → ${pkg.destinationName}`
+      : undefined,
   };
   return body as unknown as AddLoadRequest;
 }
@@ -225,6 +226,19 @@ export async function dispatchLoad(
         ) {
           throw new NetworkError(
             `PCS Load API request failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+        // Surface the real PCS error body — the OpenAPI client's ResponseError
+        // swallows the response, leaving us with "Response returned an error
+        // code" and no detail. Read the body so the caller sees fields + code.
+        if (
+          err instanceof Error &&
+          "response" in err &&
+          err.response instanceof Response
+        ) {
+          const bodyText = await err.response.text().catch(() => "");
+          throw new Error(
+            `PCS ${err.response.status}: ${bodyText || err.message}`,
           );
         }
         throw err;
