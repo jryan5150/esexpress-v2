@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
   "id": "3238b7c3-be76-4f0c-a5cc-7cae2ee3a69a",
-=======
-  "id": "7b326f7a-66fa-476c-acc8-cb4ba12bb0af",
->>>>>>> 574a4bc (feat(comments): add load_comments table + CRUD API for drawer UI)
   "prevId": "a234e5c9-a2d0-4285-87b7-e77789e4ebee",
   "version": "7",
   "dialect": "postgresql",
@@ -468,7 +464,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
     "public.breadcrumbs": {
       "name": "breadcrumbs",
       "schema": "",
@@ -580,8 +575,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-=======
->>>>>>> 574a4bc (feat(comments): add load_comments table + CRUD API for drawer UI)
     "public.customer_mappings": {
       "name": "customer_mappings",
       "schema": "",
@@ -1253,115 +1246,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
-=======
-    "public.load_comments": {
-      "name": "load_comments",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "load_id": {
-          "name": "load_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "author_user_id": {
-          "name": "author_user_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "author_name": {
-          "name": "author_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "body": {
-          "name": "body",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "idx_load_comments_load_id": {
-          "name": "idx_load_comments_load_id",
-          "columns": [
-            {
-              "expression": "load_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "load_comments_load_id_loads_id_fk": {
-          "name": "load_comments_load_id_loads_id_fk",
-          "tableFrom": "load_comments",
-          "tableTo": "loads",
-          "columnsFrom": [
-            "load_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "load_comments_author_user_id_users_id_fk": {
-          "name": "load_comments_author_user_id_users_id_fk",
-          "tableFrom": "load_comments",
-          "tableTo": "users",
-          "columnsFrom": [
-            "author_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
->>>>>>> 574a4bc (feat(comments): add load_comments table + CRUD API for drawer UI)
     "public.loads": {
       "name": "loads",
       "schema": "",
