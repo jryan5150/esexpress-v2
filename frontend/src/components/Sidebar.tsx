@@ -410,6 +410,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 </span>
                 Load Diagnostics
               </Link>
+              <Link
+                to="/admin/scope-discovery"
+                className={`${navClass("/admin/scope-discovery")} !pl-9`}
+                title="Review queue — wells v2 doesn't know about yet (historical flywheel + PCS reconciliation)."
+              >
+                <span className={iconClass("/admin/scope-discovery")}>
+                  travel_explore
+                </span>
+                Scope Discovery
+              </Link>
             </div>
           )}
 

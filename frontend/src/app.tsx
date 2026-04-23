@@ -1,5 +1,11 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Outlet,
+  Navigate,
+} from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/query-client";
 import { ToastProvider } from "./components/Toast";
@@ -12,7 +18,9 @@ const Login = lazy(() =>
   import("./pages/Login").then((m) => ({ default: m.Login })),
 );
 const MagicLinkLanding = lazy(() =>
-  import("./pages/MagicLinkLanding").then((m) => ({ default: m.MagicLinkLanding })),
+  import("./pages/MagicLinkLanding").then((m) => ({
+    default: m.MagicLinkLanding,
+  })),
 );
 const Workbench = lazy(() =>
   import("./pages/Workbench").then((m) => ({ default: m.Workbench })),
@@ -51,6 +59,11 @@ const UsersAdmin = lazy(() =>
 const MissedLoadsReport = lazy(() =>
   import("./pages/admin/MissedLoadsReport").then((m) => ({
     default: m.MissedLoadsReport,
+  })),
+);
+const ScopeDiscovery = lazy(() =>
+  import("./pages/admin/ScopeDiscovery").then((m) => ({
+    default: m.ScopeDiscovery,
   })),
 );
 const LoadReport = lazy(() =>
@@ -99,7 +112,9 @@ export function App() {
                   />
                   <Route
                     path="validation"
-                    element={<Navigate to="/workbench?filter=uncertain" replace />}
+                    element={
+                      <Navigate to="/workbench?filter=uncertain" replace />
+                    }
                   />
                   <Route path="finance" element={<Finance />} />
                   <Route path="wells/:wellId" element={<WellWorkspace />} />
@@ -109,6 +124,10 @@ export function App() {
                   <Route
                     path="admin/missed-loads"
                     element={<MissedLoadsReport />}
+                  />
+                  <Route
+                    path="admin/scope-discovery"
+                    element={<ScopeDiscovery />}
                   />
                   <Route path="load-report" element={<LoadReport />} />
                   <Route path="settings" element={<Settings />} />

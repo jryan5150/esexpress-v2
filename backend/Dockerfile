@@ -19,6 +19,9 @@ WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./
+# Runtime assets — JSON artifacts served by diag endpoints (e.g. the
+# flywheel discovery report consumed by /diag/scope-discovery).
+COPY --from=build /app/resources ./resources
 
 EXPOSE 3000
 CMD ["node", "dist/server.js"]

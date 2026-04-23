@@ -701,6 +701,136 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       };
     },
   );
+
+  // GET /scope-discovery — surfaces the two scope-expansion signals
+  // together: (1) flywheel historical discovery — wells seen in 3 years
+  // of dispatch that v2 doesn't know about; (2) PCS-sync missed-by-v2
+  // — active PCS loads that don't resolve to a v2 assignment. The
+  // admin review queue renders both as tabs.
+  //
+  // Pull-style: reads the flywheel JSON artifact from the repo docs
+  // folder (written by the 2026-04-23 discovery run) and the latest
+  // PCS sync response. No DB writes here — this endpoint is for the
+  // review queue UI, which dispatches any "add well / onboard" action
+  // through the existing wells admin routes.
+  fastify.get(
+    "/scope-discovery",
+    { preHandler: [fastify.authenticate, fastify.requireRole(["admin"])] },
+    async (_request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+
+      const { readFile } = await import("node:fs/promises");
+      const { join, dirname } = await import("node:path");
+      const { fileURLToPath } = await import("node:url");
+
+      // Resolve the JSON at runtime. Production (Railway) ships the
+      // artifact in backend/resources/ (copied by the Dockerfile's final
+      // stage). Local dev can also fall back to the repo-root docs/
+      // folder. Check both shapes so the endpoint works in either env.
+      const hereDir = dirname(fileURLToPath(import.meta.url));
+      const candidates = [
+        // Production: /app/resources/flywheel-discovery-2026-04-23.json
+        join(process.cwd(), "resources/flywheel-discovery-2026-04-23.json"),
+        // Dev (backend/): ../resources/flywheel-discovery-2026-04-23.json
+        join(
+          hereDir,
+          "../../../../resources/flywheel-discovery-2026-04-23.json",
+        ),
+        // Repo-root fallback (original artifact location)
+        join(hereDir, "../../../../../docs/2026-04-23-flywheel-discovery.json"),
+        join(hereDir, "../../../../docs/2026-04-23-flywheel-discovery.json"),
+        join(process.cwd(), "docs/2026-04-23-flywheel-discovery.json"),
+        join(process.cwd(), "../docs/2026-04-23-flywheel-discovery.json"),
+      ];
+
+      interface FlywheelWell {
+        name: string;
+        loads: number;
+        earliest: string;
+        latest: string;
+        top_city: string;
+        divisions: number;
+        in_v2: boolean;
+        classification: string;
+      }
+      interface FlywheelArtifact {
+        stats: Record<string, unknown>;
+        buckets: {
+          well: FlywheelWell[];
+          sandplant?: FlywheelWell[];
+          other?: FlywheelWell[];
+        };
+      }
+
+      let flywheel: FlywheelArtifact | null = null;
+      for (const path of candidates) {
+        try {
+          const raw = await readFile(path, "utf8");
+          flywheel = JSON.parse(raw) as FlywheelArtifact;
+          break;
+        } catch {
+          // try the next candidate path
+        }
+      }
+
+      // Latest PCS sync response — runs every 15 min, so reading the
+      // last completed run gives us the current missedByV2 snapshot
+      // without re-hitting PCS on every queue render. If no prior run
+      // exists, fall back to an empty list (UI shows "awaiting first
+      // sync" state).
+      const { eq, desc, and } = await import("drizzle-orm");
+      const { dataIntegrityRuns } = await import("../../../db/schema.js");
+      const [latestPcsSync] = await db
+        .select({
+          ranAt: dataIntegrityRuns.ranAt,
+          completedAt: dataIntegrityRuns.completedAt,
+          status: dataIntegrityRuns.status,
+          metadata: dataIntegrityRuns.metadata,
+        })
+        .from(dataIntegrityRuns)
+        .where(
+          and(
+            eq(dataIntegrityRuns.scriptName, "pcs-sync-loads"),
+            eq(dataIntegrityRuns.status, "completed"),
+          ),
+        )
+        .orderBy(desc(dataIntegrityRuns.ranAt))
+        .limit(1);
+
+      const wells = flywheel?.buckets.well ?? [];
+      // Sort by historical volume — highest-impact wells surface first
+      // in the review queue. Matches how Jessica's team prioritizes.
+      wells.sort((a, b) => b.loads - a.loads);
+
+      return {
+        success: true,
+        data: {
+          generatedAt: new Date().toISOString(),
+          flywheel: {
+            stats: flywheel?.stats ?? null,
+            wells,
+            sandplants: flywheel?.buckets.sandplant ?? [],
+            otherCount: flywheel?.buckets.other?.length ?? 0,
+          },
+          latestPcsSync: latestPcsSync
+            ? {
+                ranAt: latestPcsSync.ranAt,
+                completedAt: latestPcsSync.completedAt,
+                metadata: latestPcsSync.metadata,
+              }
+            : null,
+        },
+      };
+    },
+  );
 };
 
 export default diagRoutes;
