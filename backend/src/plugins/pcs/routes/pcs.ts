@@ -381,6 +381,42 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // ─── GET /debug/load/:loadId — TEMP 2026-04-23 diagnostic for
+  // investigating PCS→v2 reconciliation. Proxies GetLoad so we can see
+  // what Stops + ReferenceNumber actually look like on production
+  // loads. Remove once bridging strategy is locked.
+  fastify.get<{ Params: { loadId: string } }>(
+    "/debug/load/:loadId",
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const { loadId } = request.params;
+      const { getAccessToken } =
+        await import("../services/pcs-auth.service.js");
+      const db = fastify.db;
+      if (!db) return reply.status(503).send({ success: false });
+      const bearer = await getAccessToken(db);
+      const companyId = process.env.PCS_COMPANY_ID ?? "";
+      const companyLetter = process.env.PCS_COMPANY_LTR ?? "B";
+      const baseUrl = process.env.PCS_BASE_URL ?? "https://api.pcssoft.com";
+      const res = await fetch(`${baseUrl}/dispatching/v1/load/${loadId}`, {
+        headers: {
+          Authorization: `Bearer ${bearer}`,
+          "X-Company-Id": companyId,
+          "X-Company-Letter": companyLetter,
+          Accept: "application/json",
+        },
+      });
+      const text = await res.text();
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = text;
+      }
+      return { success: res.ok, status: res.status, data: parsed };
+    },
+  );
+
   // ─── GET /health — PCS connectivity check ─────────────────────────
   fastify.get("/health", async (_request, _reply) => {
     const result = await healthCheck();
