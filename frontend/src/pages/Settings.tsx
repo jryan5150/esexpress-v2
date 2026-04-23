@@ -82,7 +82,9 @@ function PcsSection() {
         companyLetter="B"
         tone="production"
         title="ES Express Production (B)"
-        description="Turning this ON starts live PCS pushes for validated loads. Production impact. Confirmation required on both enable and disable."
+        description="Not yet enabled on the integration side. Waiting on Kyle (PCS) to confirm OAuth scope + routing parameter for ES Express writes. Once confirmed, this toggle unlocks production pushes."
+        disabled
+        disabledReason="Awaiting PCS-side confirmation — see description"
       />
     </div>
   );
@@ -96,6 +98,11 @@ interface ToggleProps {
   tone: "test" | "production";
   title: string;
   description: string;
+  /** When true, the card renders greyed-out with no interactable controls.
+   *  Use for divisions we haven't wired end-to-end yet (e.g. ES Express
+   *  pending Kyle's OAuth-scope confirmation as of 2026-04-23). */
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 function PcsCompanyToggle({
@@ -106,6 +113,8 @@ function PcsCompanyToggle({
   tone,
   title,
   description,
+  disabled = false,
+  disabledReason,
 }: ToggleProps) {
   const qc = useQueryClient();
   const [confirm, setConfirm] = useState<null | boolean>(null);
@@ -147,7 +156,8 @@ function PcsCompanyToggle({
 
   return (
     <div
-      className={`border-2 rounded-[12px] p-6 ${cardBorder} ${cardAccent} card-rest`}
+      className={`border-2 rounded-[12px] p-6 ${cardBorder} ${cardAccent} card-rest ${disabled ? "opacity-50 pointer-events-none select-none" : ""}`}
+      aria-disabled={disabled}
     >
       <div className="flex items-start justify-between gap-6">
         <div className="flex-1">
@@ -160,11 +170,21 @@ function PcsCompanyToggle({
             >
               {labelText}
             </span>
+            {disabled && (
+              <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border bg-gray-200 text-gray-700 border-gray-400">
+                Not yet available
+              </span>
+            )}
           </div>
           <p className="text-sm text-on-surface-variant mt-1 max-w-2xl">
             {description}
           </p>
-          {current?.updatedAt && (
+          {disabled && disabledReason && (
+            <p className="text-xs text-gray-600 italic mt-2">
+              {disabledReason}
+            </p>
+          )}
+          {!disabled && current?.updatedAt && (
             <p className="text-xs text-on-surface-variant/70 mt-2">
               Last changed {new Date(current.updatedAt).toLocaleString()}
               {current.updatedBy ? ` by user #${current.updatedBy}` : ""}
@@ -177,19 +197,27 @@ function PcsCompanyToggle({
         <div className="flex flex-col items-end gap-2">
           <span
             className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full border ${
-              enabled
-                ? "bg-emerald-100 text-emerald-900 border-emerald-400"
-                : "bg-gray-100 text-gray-700 border-gray-300"
+              disabled
+                ? "bg-gray-200 text-gray-600 border-gray-300"
+                : enabled
+                  ? "bg-emerald-100 text-emerald-900 border-emerald-400"
+                  : "bg-gray-100 text-gray-700 border-gray-300"
             }`}
           >
-            {settings.isLoading ? "Loading…" : enabled ? "ON" : "OFF"}
+            {disabled
+              ? "Pending"
+              : settings.isLoading
+                ? "Loading…"
+                : enabled
+                  ? "ON"
+                  : "OFF"}
           </span>
           {confirm === null ? (
             <button
               type="button"
               onClick={() => setConfirm(!enabled)}
-              disabled={settings.isLoading || flip.isPending}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md border disabled:opacity-50 ${
+              disabled={disabled || settings.isLoading || flip.isPending}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md border disabled:opacity-50 disabled:cursor-not-allowed ${
                 enabled
                   ? "bg-rose-50 text-rose-900 border-rose-300 hover:bg-rose-100"
                   : "bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100"

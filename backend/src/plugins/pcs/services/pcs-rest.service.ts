@@ -172,7 +172,14 @@ export function buildAddLoadRequest(pkg: DispatchPackage): AddLoadRequest {
 
 async function buildLoadApi(
   accessTokenProvider: () => Promise<string>,
-  companyLetter: "A" | "B" = "B",
+  // Parameter retained for callsite compatibility but UNUSED.
+  // 2026-04-23 finding: X-Company-Letter on REST writes triggers PCS 500s
+  // ("An unexpected error has occurred"). Yesterday's successful push
+  // (loadId 357468) sent NO letter header and routed to the Hairpin
+  // pool via OAuth + billToId defaults. Reads are un-segmented by
+  // letter either way. Header removed pending Kyle clarification on
+  // the REST-side letter semantics.
+  _companyLetterReserved: "A" | "B" = "B",
 ): Promise<DevelopersApi> {
   // Generated client's operations use urlPath = "/" — final URL is
   // basePath + urlPath. Kyle's updated endpoint is /dispatching/v1/load,
@@ -185,16 +192,14 @@ async function buildLoadApi(
   // manually via the headers option. Token acquired per-call.
   const bearer = await accessTokenProvider();
 
-  // X-Company-Letter selects the PCS division. Default "B" is ES Express
-  // production; "A" is the Hairpin test division. Per-call override lets
-  // us push to either without toggling env vars.
   const config = new Configuration({
     basePath,
     accessToken: () => Promise.resolve(bearer),
     headers: {
       Authorization: `Bearer ${bearer}`,
       "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
-      "X-Company-Letter": companyLetter,
+      // X-Company-Letter intentionally omitted — see comment on the
+      // function's _companyLetterReserved parameter.
     },
   });
   return new DevelopersApi(config);

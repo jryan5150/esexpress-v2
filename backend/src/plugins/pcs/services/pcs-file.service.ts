@@ -35,10 +35,14 @@ const getPcsBaseUrl = (): string =>
   process.env.PCS_BASE_URL ?? "https://api.pcssoft.com";
 
 const getCompanyHeaders = (
-  company: "A" | "B" = "B",
+  // Parameter retained for callsite compatibility but UNUSED.
+  // 2026-04-23: X-Company-Letter on REST writes triggers PCS 500s.
+  // Yesterday's proven-working push (loadId 357468) sent no letter.
+  // Same applies to photo upload + cancel — omit the letter header.
+  _companyReserved: "A" | "B" = "B",
 ): Record<string, string> => ({
   "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
-  "X-Company-Letter": company,
+  // X-Company-Letter intentionally omitted — see comment above.
 });
 
 export interface PhotoGateResult {
