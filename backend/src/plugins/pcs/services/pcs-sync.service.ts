@@ -81,10 +81,19 @@ export async function syncPcsLoads(
   // Generated client's getLoads urlPath is "/", so basePath must end at
   // /load. Kyle's endpoint is /dispatching/v1/load.
   const basePath = `${getPcsBaseUrl()}/dispatching/v1/load`;
+
+  // OpenAPI spec didn't declare OAuth security scheme, so the generated
+  // client's accessToken config is never actually consumed — the
+  // Authorization header has to be attached manually via headers. Get the
+  // token up front and inject it. Token TTL is 3600s; we acquire per-sync,
+  // which is fine for a ≤few-second operation.
+  const bearer = await getAccessToken(db);
+
   const config = new Configuration({
     basePath,
-    accessToken: () => getAccessToken(db),
+    accessToken: () => Promise.resolve(bearer),
     headers: {
+      Authorization: `Bearer ${bearer}`,
       "X-Company-Id": companyId,
       "X-Company-Letter": companyLetter,
     },

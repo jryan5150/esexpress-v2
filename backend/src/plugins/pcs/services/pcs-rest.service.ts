@@ -170,17 +170,28 @@ export function buildAddLoadRequest(pkg: DispatchPackage): AddLoadRequest {
   return body as unknown as AddLoadRequest;
 }
 
-function buildLoadApi(
+async function buildLoadApi(
   accessTokenProvider: () => Promise<string>,
-): DevelopersApi {
+): Promise<DevelopersApi> {
   // Generated client's operations use urlPath = "/" — final URL is
   // basePath + urlPath. Kyle's updated endpoint is /dispatching/v1/load,
   // so basePath must end at /load for the generated relative paths to
   // resolve correctly.
   const basePath = `${getPcsBaseUrl()}/dispatching/v1/load`;
+
+  // OpenAPI spec didn't declare OAuth security, so accessToken config is
+  // never auto-consumed by the generated client. Inject the Bearer header
+  // manually via the headers option. Token acquired per-call.
+  const bearer = await accessTokenProvider();
+
   const config = new Configuration({
     basePath,
-    accessToken: accessTokenProvider,
+    accessToken: () => Promise.resolve(bearer),
+    headers: {
+      Authorization: `Bearer ${bearer}`,
+      "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
+      "X-Company-Letter": process.env.PCS_COMPANY_LTR ?? "B",
+    },
   });
   return new DevelopersApi(config);
 }
@@ -215,7 +226,7 @@ export async function dispatchLoad(
   const pkg = buildDispatchPackage(assignment, load, well);
   const body = buildAddLoadRequest(pkg);
 
-  const api = buildLoadApi(() => getAccessToken(db));
+  const api = await buildLoadApi(() => getAccessToken(db));
 
   try {
     const response = await restPolicy.execute(async () => {
