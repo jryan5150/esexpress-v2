@@ -160,7 +160,7 @@ export function buildAddLoadRequest(pkg: DispatchPackage): AddLoadRequest {
     status: "Dispatched",
     office: { code: "1" },
     billToId: "V646",
-    billToName: "ES Express",
+    billToName: "Hairpin",
     totalWeight,
     loadReference: pkg.loadNumber,
     notes: pkg.destinationName
