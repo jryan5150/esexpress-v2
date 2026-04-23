@@ -388,15 +388,15 @@ export async function dispatchLoad(
       res.headers.forEach((v, k) => {
         respHeaders[k] = v;
       });
-      console.log("[pcs-addload-diag] RESPONSE", {
-        status: res.status,
-        statusText: res.statusText,
-        headers: respHeaders,
-        body: responseText,
-      });
 
       if (!res.ok) {
-        throw new Error(`PCS ${res.status}: ${responseText || res.statusText}`);
+        // Include request body in the error so we can cross-reference
+        // with Kyle even when Railway's logger eats console.log output.
+        // Truncate if huge; these TruckLoad payloads are always <2KB so
+        // full inclusion is fine.
+        throw new Error(
+          `PCS ${res.status}: resp=${responseText || res.statusText} | req=${serializedBody} | respHeaders=${JSON.stringify(respHeaders)}`,
+        );
       }
       try {
         return JSON.parse(responseText) as Record<string, unknown>;
