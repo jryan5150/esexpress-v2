@@ -99,7 +99,16 @@ export function useAssignmentPhotos(assignmentId: number | null) {
           Array.isArray(r) ? r : ((r as { data: string[] })?.data ?? []),
         ),
     enabled: assignmentId != null,
-    staleTime: 30_000,
+    // Photo URL *sets* rarely change for a given assignment (only when a
+    // new JotForm photo gets attached). The URLs themselves are immutable
+    // (proxy returns Cache-Control: public, max-age=86400, immutable).
+    // Infinity staleTime means re-opening the drawer for the same
+    // assignment doesn't re-hit the server; refetch only on:
+    //   - window focus (caught by default useQuery behavior for new data)
+    //   - explicit invalidation after Run Check / new JotForm sync
+    // This removes the "photos reload every drawer open" friction.
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 60 * 60 * 1000, // keep in memory 1h so carousel nav is instant
   });
 }
 

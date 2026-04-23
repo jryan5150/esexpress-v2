@@ -410,7 +410,20 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
                 src={currentPhoto}
                 alt="BOL"
                 className="max-h-[360px] w-auto cursor-zoom-in rounded"
+                loading="eager"
+                decoding="async"
                 onClick={() => setLightbox(true)}
+                onError={(e) => {
+                  // Transient fetch failure (proxy 503, CDN edge miss).
+                  // One retry with a cache-buster — if that fails, leave
+                  // the broken image and let the user Run Check.
+                  const img = e.currentTarget;
+                  if (!img.dataset.retried) {
+                    img.dataset.retried = "1";
+                    const sep = currentPhoto.includes("?") ? "&" : "?";
+                    img.src = `${currentPhoto}${sep}_r=${Date.now()}`;
+                  }
+                }}
               />
               {photoUrls.length > 1 && (
                 <>

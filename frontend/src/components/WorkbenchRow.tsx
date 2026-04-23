@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { StagePill } from "./StagePill";
 import { PcsPill } from "./PcsPill";
 import { PhotoStateBadge } from "./PhotoStateBadge";
@@ -6,6 +7,7 @@ import { MatchScoreBadge } from "./MatchScoreBadge";
 import { PhotoLightbox } from "./PhotoLightbox";
 import { BOLDisplay } from "./BOLDisplay";
 import { useWeightUnit } from "../hooks/use-weight-unit";
+import { api } from "../lib/api";
 import type {
   WorkbenchRow as Row,
   HandlerStage,
@@ -159,11 +161,34 @@ export const WorkbenchRow = memo(function WorkbenchRow({
   const action = primaryAction(row.handlerStage, isCleanUncertain);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const { format: formatWeight } = useWeightUnit();
+  const qc = useQueryClient();
+
+  // Prefetch photo list on hover/focus. Warms the query cache so opening
+  // the drawer has photos ready instead of showing a spinner. Cheap —
+  // ~300 bytes per assignment, cached with staleTime:Infinity in the
+  // hook, so repeated hovers don't refetch.
+  const prefetchPhotos = () => {
+    if (!row.assignmentId || (row.photoCount ?? 0) < 2) return;
+    qc.prefetchQuery({
+      queryKey: ["workbench", "photos", row.assignmentId],
+      queryFn: () =>
+        api
+          .get<
+            string[] | { data: string[] }
+          >(`/dispatch/workbench/${row.assignmentId}/photos`)
+          .then((r) =>
+            Array.isArray(r) ? r : ((r as { data: string[] })?.data ?? []),
+          ),
+      staleTime: Number.POSITIVE_INFINITY,
+    });
+  };
 
   return (
     <div
       className="group relative flex items-stretch bg-surface border border-surface-variant rounded-md hover:border-primary/40 cursor-pointer"
       onClick={onRowClick}
+      onMouseEnter={prefetchPhotos}
+      onFocus={prefetchPhotos}
     >
       <div
         className="w-1 rounded-l-md"
