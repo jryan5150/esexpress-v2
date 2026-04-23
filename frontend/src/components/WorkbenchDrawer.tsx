@@ -1,5 +1,6 @@
 import { useState, useEffect, Component, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useUpdateLoadField,
   useBolReconciliation,
@@ -9,6 +10,7 @@ import {
   useUpdateAssignmentNotes,
   useAssignmentPhotos,
 } from "../hooks/use-workbench";
+import { api } from "../lib/api";
 import { reportError } from "../lib/sentry";
 
 /**
@@ -243,6 +245,76 @@ const REASON_LABEL: Record<UncertainReason, string> = {
   missing_tickets: "Ticket missing / not arrived",
 };
 
+/**
+ * Re-run Claude Vision OCR on this assignment's latest BOL submission.
+ * Any dispatcher can hit this (per 2026-04-22 client ask: "I want the OCR
+ * for everyone") — not admin-gated. Resets retryCount so MAX_RETRY
+ * doesn't block.
+ *
+ * Use cases: OCR extracted wrong BOL# or weight, photo was rotated after
+ * initial pass, driver uploaded a cleaner copy, original confidence low.
+ */
+function RerunOcrButton({ assignmentId }: { assignmentId: number }) {
+  const qc = useQueryClient();
+  const [flash, setFlash] = useState<null | { ok: boolean; msg: string }>(null);
+  const mut = useMutation({
+    mutationFn: async () =>
+      api.post<{
+        success: boolean;
+        data: {
+          submissionId: number;
+          extraction: { overallConfidence: number };
+          validation: { isValid: boolean };
+        };
+      }>(`/dispatch/workbench/${assignmentId}/rerun-ocr`, {}),
+    onSuccess: (r) => {
+      const conf = Math.round(
+        (r.data?.extraction?.overallConfidence ?? 0) * 100,
+      );
+      setFlash({
+        ok: r.data?.validation?.isValid ?? false,
+        msg: r.data?.validation?.isValid
+          ? `OCR re-ran — ${conf}% confidence`
+          : `OCR re-ran — ${conf}% confidence, validation warnings`,
+      });
+      qc.invalidateQueries({ queryKey: ["workbench"] });
+      setTimeout(() => setFlash(null), 6000);
+    },
+    onError: (err: Error) => {
+      setFlash({ ok: false, msg: `Re-run failed: ${err.message}` });
+      setTimeout(() => setFlash(null), 8000);
+    },
+  });
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          mut.mutate();
+        }}
+        disabled={mut.isPending}
+        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded border border-white/20 bg-black/40 text-white hover:bg-black/60 disabled:opacity-50"
+        title="Re-run Claude Vision OCR on the latest BOL photo"
+      >
+        {mut.isPending ? "Re-running OCR…" : "Re-run OCR"}
+      </button>
+      {flash && (
+        <span
+          className={`text-xs px-2 py-0.5 rounded ${
+            flash.ok
+              ? "bg-emerald-100 text-emerald-900"
+              : "bg-amber-100 text-amber-900"
+          }`}
+        >
+          {flash.msg}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function WorkbenchDrawer(props: WorkbenchDrawerProps) {
   return (
     <DrawerErrorBoundary onReset={props.onClose}>
@@ -454,6 +526,7 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
                   </div>
                 </>
               )}
+              <RerunOcrButton assignmentId={row.assignmentId} />
             </>
           ) : (
             <>

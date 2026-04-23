@@ -600,6 +600,99 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // POST /:id/rerun-ocr — re-run Claude Vision extraction on the latest
+  // BOL submission for this assignment's load. Available to any dispatcher
+  // (not admin-gated, per 2026-04-22: "I want the OCR for everyone").
+  // Use cases: OCR extracted wrong BOL#/weight, photo orientation fixed
+  // after initial pass, driver uploaded better photo, initial confidence
+  // was low. Resets retryCount so the MAX_RETRY guard doesn't block.
+  fastify.post(
+    "/:id/rerun-ocr",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
+      const { id: assignmentId } = request.params as { id: number };
+      try {
+        const { eq, sql: drizzleSql } = await import("drizzle-orm");
+        const { assignments, bolSubmissions } =
+          await import("../../../db/schema.js");
+
+        // Find assignment's load
+        const [row] = await db
+          .select({ loadId: assignments.loadId })
+          .from(assignments)
+          .where(eq(assignments.id, assignmentId))
+          .limit(1);
+        if (!row?.loadId) {
+          return reply.status(404).send({
+            success: false,
+            error: {
+              code: "NO_LOAD",
+              message: "Assignment has no linked load to re-OCR.",
+            },
+          });
+        }
+
+        // Find latest bol_submission matched to this load
+        const [submission] = await db
+          .select({ id: bolSubmissions.id })
+          .from(bolSubmissions)
+          .where(eq(bolSubmissions.matchedLoadId, row.loadId))
+          .orderBy(drizzleSql`${bolSubmissions.id} DESC`)
+          .limit(1);
+
+        if (!submission) {
+          return reply.status(404).send({
+            success: false,
+            error: {
+              code: "NO_BOL_SUBMISSION",
+              message:
+                "No BOL submission exists for this load yet. Ensure a JotForm photo is attached first.",
+            },
+          });
+        }
+
+        // Reset retryCount so the MAX_RETRY guard allows re-extraction
+        await db
+          .update(bolSubmissions)
+          .set({ retryCount: 0 })
+          .where(eq(bolSubmissions.id, submission.id));
+
+        const { processSubmission } =
+          await import("../../verification/services/bol-extraction.service.js");
+        const result = await processSubmission(db, submission.id);
+
+        return {
+          success: true,
+          data: {
+            submissionId: submission.id,
+            extraction: result.extraction,
+            validation: result.validation,
+          },
+        };
+      } catch (err) {
+        request.log.error({ err }, "rerun-ocr failed");
+        return reply.status(500).send({
+          success: false,
+          error: {
+            code: "RERUN_OCR_FAILED",
+            message: err instanceof Error ? err.message : String(err),
+          },
+        });
+      }
+    },
+  );
+
   // POST /:id/run-photo-check — force JotForm sync small-window, return
   // quickly so the drawer's "Run Check" button feels instant. Used to
   // avoid the 30-min cron wait when driver says "I just uploaded."
