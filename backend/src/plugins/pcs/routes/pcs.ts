@@ -422,15 +422,23 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
     const result = await healthCheck();
     const diag = diagnostics();
     const db = fastify.db;
+    // Report both the legacy singular flag and the per-company flags
+    // so the admin UI can render two toggles (A = Hairpin test, B = ES
+    // Express production). dispatchEnabled (singular) preserves the old
+    // shape for any client that hasn't been updated.
     let dispatchEnabled = PCS_DISPATCH_ENABLED;
+    let dispatchEnabledHairpin = false;
+    let dispatchEnabledEsexpress = PCS_DISPATCH_ENABLED;
     if (db) {
-      const { getBooleanSetting } =
+      const { getPcsDispatchEnabled, getBooleanSetting } =
         await import("../../dispatch/services/app-settings.service.js");
       dispatchEnabled = await getBooleanSetting(
         db,
         "pcs_dispatch_enabled",
         "PCS_DISPATCH_ENABLED",
       );
+      dispatchEnabledHairpin = await getPcsDispatchEnabled(db, "A");
+      dispatchEnabledEsexpress = await getPcsDispatchEnabled(db, "B");
     }
 
     return {
@@ -439,6 +447,8 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
         pcsOnline: result.online,
         circuitBreaker: diag.status,
         dispatchEnabled,
+        dispatchEnabledHairpin,
+        dispatchEnabledEsexpress,
         checkedAt: new Date().toISOString(),
       },
     };

@@ -34,9 +34,11 @@ import { getAccessToken } from "./pcs-auth.service.js";
 const getPcsBaseUrl = (): string =>
   process.env.PCS_BASE_URL ?? "https://api.pcssoft.com";
 
-const getCompanyHeaders = (): Record<string, string> => ({
+const getCompanyHeaders = (
+  company: "A" | "B" = "B",
+): Record<string, string> => ({
   "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
-  "X-Company-Letter": process.env.PCS_COMPANY_LTR ?? "B",
+  "X-Company-Letter": company,
 });
 
 export interface PhotoGateResult {
@@ -173,6 +175,7 @@ export async function uploadPhotoToPcs(
   pcsLoadId: number | string,
   buffer: Buffer,
   filename: string,
+  company: "A" | "B" = "B",
 ): Promise<{ attachmentName: string }> {
   const bearer = await getAccessToken(db);
   const url = `${getPcsBaseUrl()}/file/v1/load/${pcsLoadId}/attachments/BillOfLading`;
@@ -195,7 +198,7 @@ export async function uploadPhotoToPcs(
     method: "POST",
     headers: {
       Authorization: `Bearer ${bearer}`,
-      ...getCompanyHeaders(),
+      ...getCompanyHeaders(company),
       "Content-Type": `multipart/form-data; boundary=${boundary}`,
       "Content-Length": String(body.length),
     },
@@ -214,7 +217,7 @@ export async function uploadPhotoToPcs(
     {
       headers: {
         Authorization: `Bearer ${bearer}`,
-        ...getCompanyHeaders(),
+        ...getCompanyHeaders(company),
       },
     },
   );
@@ -236,6 +239,7 @@ export async function uploadPhotoToPcs(
 export async function cancelPcsLoad(
   db: Database,
   pcsLoadId: number | string,
+  company: "A" | "B" = "B",
 ): Promise<void> {
   const bearer = await getAccessToken(db);
   const url = `${getPcsBaseUrl()}/dispatching/v1/load/${pcsLoadId}`;
@@ -244,7 +248,7 @@ export async function cancelPcsLoad(
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${bearer}`,
-      ...getCompanyHeaders(),
+      ...getCompanyHeaders(company),
     },
   });
 

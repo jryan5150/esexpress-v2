@@ -98,6 +98,34 @@ export async function setAppSetting(
   cache.delete(key);
 }
 
+/**
+ * PCS push flag lookup by company letter. Wraps the two per-company
+ * boolean settings with a fallback chain that matches the Thursday
+ * 2026-04-23 migration:
+ *
+ *   A (Hairpin test):     pcs_dispatch_enabled_hairpin   → false
+ *   B (ES Express prod):  pcs_dispatch_enabled_esexpress → legacy
+ *                         pcs_dispatch_enabled → env PCS_DISPATCH_ENABLED
+ *                         → false
+ *
+ * Callers pass the company letter of the division they intend to push
+ * to; this helper picks the right flag. Defaults to "B" so any legacy
+ * path that doesn't yet pass a company stays bound to the ES Express
+ * production flag (safe default — prod stays gated).
+ */
+export async function getPcsDispatchEnabled(
+  db: Database,
+  company: "A" | "B" = "B",
+): Promise<boolean> {
+  if (company === "A") {
+    return getBooleanSetting(db, "pcs_dispatch_enabled_hairpin");
+  }
+  // B: prefer per-company flag, fall back to legacy singular flag, then env.
+  const perCompany = await getAppSetting(db, "pcs_dispatch_enabled_esexpress");
+  if (perCompany != null) return perCompany === "true" || perCompany === "1";
+  return getBooleanSetting(db, "pcs_dispatch_enabled", "PCS_DISPATCH_ENABLED");
+}
+
 export async function listAppSettings(db: Database): Promise<
   Array<{
     key: string;

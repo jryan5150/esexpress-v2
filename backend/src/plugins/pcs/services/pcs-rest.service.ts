@@ -172,6 +172,7 @@ export function buildAddLoadRequest(pkg: DispatchPackage): AddLoadRequest {
 
 async function buildLoadApi(
   accessTokenProvider: () => Promise<string>,
+  companyLetter: "A" | "B" = "B",
 ): Promise<DevelopersApi> {
   // Generated client's operations use urlPath = "/" — final URL is
   // basePath + urlPath. Kyle's updated endpoint is /dispatching/v1/load,
@@ -184,13 +185,16 @@ async function buildLoadApi(
   // manually via the headers option. Token acquired per-call.
   const bearer = await accessTokenProvider();
 
+  // X-Company-Letter selects the PCS division. Default "B" is ES Express
+  // production; "A" is the Hairpin test division. Per-call override lets
+  // us push to either without toggling env vars.
   const config = new Configuration({
     basePath,
     accessToken: () => Promise.resolve(bearer),
     headers: {
       Authorization: `Bearer ${bearer}`,
       "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
-      "X-Company-Letter": process.env.PCS_COMPANY_LTR ?? "B",
+      "X-Company-Letter": companyLetter,
     },
   });
   return new DevelopersApi(config);
@@ -204,24 +208,27 @@ async function buildLoadApi(
 export async function dispatchLoad(
   db: Database,
   assignmentId: number,
+  options: { company?: "A" | "B" } = {},
 ): Promise<DispatchResult> {
-  // DB-backed flag so admin UI can flip it without an env edit. Env var
-  // PCS_DISPATCH_ENABLED stays as the bootstrap fallback when no DB row
-  // exists. 10-sec cache in the helper prevents per-dispatch DB hits.
-  const { getBooleanSetting } =
+  // Default to B (ES Express production) for backward compat with any
+  // caller that hasn't been updated to pass a company. Hairpin test
+  // division pushes must explicitly pass company: "A".
+  const company = options.company ?? "B";
+
+  // DB-backed flag per company so admin UI can flip independently.
+  // Legacy singular pcs_dispatch_enabled still consulted as B-side
+  // fallback for backward compat. 10-sec cache in the helper prevents
+  // per-dispatch DB hits.
+  const { getPcsDispatchEnabled } =
     await import("../../dispatch/services/app-settings.service.js");
-  const enabled = await getBooleanSetting(
-    db,
-    "pcs_dispatch_enabled",
-    "PCS_DISPATCH_ENABLED",
-  );
+  const enabled = await getPcsDispatchEnabled(db, company);
   if (!enabled) {
+    const divisionLabel = company === "A" ? "Hairpin (A)" : "ES Express (B)";
     return {
       success: false,
       error: {
         code: "PCS_DISPATCH_DISABLED",
-        message:
-          "PCS dispatch is disabled. Flip the toggle in Admin → Settings to enable.",
+        message: `PCS dispatch is disabled for ${divisionLabel}. Flip the toggle in Admin → Settings to enable.`,
         retryable: false,
       },
       latencyMs: 0,
@@ -283,7 +290,7 @@ export async function dispatchLoad(
   const pkg = buildDispatchPackage(assignment, load, well);
   const body = buildAddLoadRequest(pkg);
 
-  const api = await buildLoadApi(() => getAccessToken(db));
+  const api = await buildLoadApi(() => getAccessToken(db), company);
 
   try {
     const response = await restPolicy.execute(async () => {
@@ -341,13 +348,14 @@ export async function dispatchLoad(
         pcsLoadId,
         photoBuffer,
         photoFilename,
+        company,
       );
       attachmentName = uploaded.attachmentName;
     } catch (uploadErr) {
       // Rollback — best-effort; log but don't let rollback failure mask
       // the real upload error.
       try {
-        await cancelPcsLoad(db, pcsLoadId);
+        await cancelPcsLoad(db, pcsLoadId, company);
       } catch {
         // swallow — the upload error is the load-bearing signal
       }
