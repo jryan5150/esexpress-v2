@@ -354,6 +354,24 @@ export async function dispatchLoad(
   try {
     const response = await restPolicy.execute(async () => {
       const url = `${getPcsBaseUrl()}/dispatching/v1/load`;
+      const serializedBody = JSON.stringify(truckLoadBody);
+
+      // Diagnostic: log exact wire format so we can cross-reference with
+      // Kyle. Tokens masked. Bytes-exact so he can locate on his side.
+      console.log("[pcs-addload-diag] REQUEST", {
+        url,
+        method: "POST",
+        headerKeys: [
+          "Authorization (Bearer <masked>)",
+          "X-Company-Id",
+          "Content-Type: application/json",
+          "Accept: application/json",
+        ],
+        xCompanyId: process.env.PCS_COMPANY_ID ?? "",
+        bodyLen: serializedBody.length,
+        body: serializedBody,
+      });
+
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -362,13 +380,29 @@ export async function dispatchLoad(
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify(truckLoadBody),
+        body: serializedBody,
       });
+
+      const responseText = await res.text().catch(() => "");
+      const respHeaders: Record<string, string> = {};
+      res.headers.forEach((v, k) => {
+        respHeaders[k] = v;
+      });
+      console.log("[pcs-addload-diag] RESPONSE", {
+        status: res.status,
+        statusText: res.statusText,
+        headers: respHeaders,
+        body: responseText,
+      });
+
       if (!res.ok) {
-        const bodyText = await res.text().catch(() => "");
-        throw new Error(`PCS ${res.status}: ${bodyText || res.statusText}`);
+        throw new Error(`PCS ${res.status}: ${responseText || res.statusText}`);
       }
-      return (await res.json()) as Record<string, unknown>;
+      try {
+        return JSON.parse(responseText) as Record<string, unknown>;
+      } catch {
+        return { raw: responseText } as Record<string, unknown>;
+      }
     });
     // `company` variable kept in scope — future work may wire it to
     // letter-based routing once Kyle confirms REST-side behavior.
