@@ -133,17 +133,6 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      if (!PCS_DISPATCH_ENABLED) {
-        return reply.status(403).send({
-          success: false,
-          error: {
-            code: "PCS_DISPATCH_DISABLED",
-            message:
-              "PCS dispatch is disabled. Set PCS_DISPATCH_ENABLED=true to enable.",
-          },
-        });
-      }
-
       const db = fastify.db;
       if (!db) {
         return reply.status(503).send({
@@ -151,6 +140,23 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
           error: {
             code: "SERVICE_UNAVAILABLE",
             message: "Database not connected",
+          },
+        });
+      }
+      const { getBooleanSetting } =
+        await import("../../dispatch/services/app-settings.service.js");
+      const enabled = await getBooleanSetting(
+        db,
+        "pcs_dispatch_enabled",
+        "PCS_DISPATCH_ENABLED",
+      );
+      if (!enabled) {
+        return reply.status(403).send({
+          success: false,
+          error: {
+            code: "PCS_DISPATCH_DISABLED",
+            message:
+              "PCS dispatch is disabled. Flip the toggle in Admin → Settings to enable.",
           },
         });
       }
@@ -379,13 +385,24 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/health", async (_request, _reply) => {
     const result = await healthCheck();
     const diag = diagnostics();
+    const db = fastify.db;
+    let dispatchEnabled = PCS_DISPATCH_ENABLED;
+    if (db) {
+      const { getBooleanSetting } =
+        await import("../../dispatch/services/app-settings.service.js");
+      dispatchEnabled = await getBooleanSetting(
+        db,
+        "pcs_dispatch_enabled",
+        "PCS_DISPATCH_ENABLED",
+      );
+    }
 
     return {
       success: true,
       data: {
         pcsOnline: result.online,
         circuitBreaker: diag.status,
-        dispatchEnabled: PCS_DISPATCH_ENABLED,
+        dispatchEnabled,
         checkedAt: new Date().toISOString(),
       },
     };

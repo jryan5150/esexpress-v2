@@ -877,3 +877,19 @@ export const dataIntegrityRuns = pgTable(
     index("idx_data_integrity_runs_script_name").on(table.scriptName),
   ],
 );
+
+// Key/value feature-flag + settings store. Created 2026-04-22 to make
+// PCS_DISPATCH_ENABLED flippable via admin UI rather than requiring a
+// Railway env-var edit. "Toggle is yours" becomes real.
+//
+// Values stored as text; callers cast. Pattern: one row per key, updated
+// in place. `updatedBy` captures who flipped it for audit.
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value"),
+  description: text("description"),
+  updatedBy: integer("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

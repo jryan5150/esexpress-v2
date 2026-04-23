@@ -205,13 +205,23 @@ export async function dispatchLoad(
   db: Database,
   assignmentId: number,
 ): Promise<DispatchResult> {
-  if (!PCS_DISPATCH_ENABLED) {
+  // DB-backed flag so admin UI can flip it without an env edit. Env var
+  // PCS_DISPATCH_ENABLED stays as the bootstrap fallback when no DB row
+  // exists. 10-sec cache in the helper prevents per-dispatch DB hits.
+  const { getBooleanSetting } =
+    await import("../../dispatch/services/app-settings.service.js");
+  const enabled = await getBooleanSetting(
+    db,
+    "pcs_dispatch_enabled",
+    "PCS_DISPATCH_ENABLED",
+  );
+  if (!enabled) {
     return {
       success: false,
       error: {
         code: "PCS_DISPATCH_DISABLED",
         message:
-          "PCS dispatch is disabled. Set PCS_DISPATCH_ENABLED=true to enable.",
+          "PCS dispatch is disabled. Flip the toggle in Admin → Settings to enable.",
         retryable: false,
       },
       latencyMs: 0,
