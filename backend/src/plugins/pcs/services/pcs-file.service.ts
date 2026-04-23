@@ -133,14 +133,49 @@ export async function fetchAndNormalizePhoto(photoUrl: string): Promise<{
   filename: string;
   wasRotated: boolean;
 }> {
-  // Route JotForm / GCS URLs through our photo proxy so auth + SSRF
-  // allowlist are handled. External URLs already come proxied from the
-  // workbench surface, but for defensiveness we still tolerate raw URLs.
-  const res = await fetch(photoUrl, {
-    headers: { Accept: "image/*" },
+  // JotForm hosts require apiKey to serve the actual image — without it
+  // every GET returns the login HTML page, which sharp can't decode.
+  // photo.service.ts's proxy handles this for frontend `<img src>`, but
+  // server-side PCS push has its own fetch path. Mirror the apiKey
+  // injection here so Hairpin/ES Express pushes work on JotForm-sourced
+  // BOLs.  (Same triage as photo.service.ts 2026-04-15 comment.)
+  let fetchUrl = photoUrl;
+  try {
+    const parsed = new URL(photoUrl);
+    const isJotForm =
+      parsed.hostname === "hairpintrucking.jotform.com" ||
+      parsed.hostname === "www.jotform.com";
+    if (isJotForm && !parsed.searchParams.has("apiKey")) {
+      const apiKey = process.env.JOTFORM_API_KEY;
+      if (apiKey) {
+        parsed.searchParams.set("apiKey", apiKey);
+        fetchUrl = parsed.href;
+      }
+    }
+  } catch {
+    // fall through with original URL; fetch will throw below if invalid
+  }
+
+  const res = await fetch(fetchUrl, {
+    headers: {
+      Accept: "image/*",
+      // Generic UA — JotForm bot-blocks non-browser UAs with 302 to
+      // a JS-redirect page that returns HTML, not the image.
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    },
   });
   if (!res.ok) {
     throw new Error(`Photo fetch failed: HTTP ${res.status} from ${photoUrl}`);
+  }
+  // Guard: if JotForm didn't recognize the apiKey the response is HTML
+  // at content-type text/html, not an image. Sharp's error message
+  // ("unsupported image format") is cryptic — catch this up front.
+  const ct = res.headers.get("content-type") ?? "";
+  if (ct.startsWith("text/") || ct.startsWith("application/")) {
+    throw new Error(
+      `Photo fetch returned non-image content-type="${ct}" from ${photoUrl}. Check JOTFORM_API_KEY or photo allowlist.`,
+    );
   }
   const arrayBuf = await res.arrayBuffer();
   const raw = Buffer.from(arrayBuf);
