@@ -1,45 +1,50 @@
 # ES Express — Monday April 27 Walkthrough Script
 
 **Time:** Monday 10:00 AM CST
-**Format:** ~45 min walkthrough + 15 min Q&A
+**Format:** ~50 min walkthrough + 10 min Q&A
 **Attendees:** Jessica, Jeri, Mike, Bryan, Jace
+**Updated:** 2026-04-23 evening — reframed for cross-check pillar + Mike segment + honest push status
 
-This is a speaking guide, not a script to read. Bullet points per section. The goal is to make Mike / Jeri's "continue vs. stop" decision easy by showing the system is operational, accurate, and answers their team's daily questions.
+This is a speaking guide, not a script to read. Bullet points per segment. The goal is to make Mike / Jeri's "continue vs. stop" decision easy by showing the system is operational, accurate, and answers their team's daily questions in the team's own words.
 
 ---
 
-## Opening (5 min) — frame the value proposition clearly
+## Opening (4 min) — frame the value, mirror their words
 
-> "What you asked for was a product running, team validating, no PCS push. That's what you're about to see. I also want to be upfront about something we learned between Monday's email and now that reframes the scope conversation — in your favor."
+> "What you asked for was a product running, your team validating, no PCS push. Site has been live since Friday, your team has had the weekend to touch it. Jessica's reconciliation work Wednesday morning is the proof — she hand-counted two wells against system numbers and we matched on 22 of 27 days. The disagreements were explainable on her end too."
 
 **Key talking points:**
 
-- System has been live since Thursday evening. Your team has had 3+ days to touch it.
-- PCS integration tested end-to-end. Push is wired, attachment upload works, sync pulls the active pipeline.
-- The toggle for PCS push is in Admin → Settings. Flip it when you're ready. Timing is yours.
+- Site live since Friday afternoon — your team has had real validation time before this meeting
+- The reconciliation work Jessica did mid-week IS the proof point — system mirrored her hand-counts
+- New since Tuesday's call: a layer that automates that exact reconciliation against PCS, every 15 minutes
+- PCS push is wired and the toggle is in your hands — current state I'll be candid about in segment 5
+
+**Tone:** confident, not promotional. The product earned the meeting; the meeting confirms.
 
 ---
 
-## Segment 1 — Daily dispatch workflow (10 min)
+## Segment 1 — Daily dispatch workflow (Scout/Steph) (8 min)
 
-**Show:** Load Center, as Scout or Steph would see it.
+**Show:** Workbench, as Scout would see it.
 
 **Demo flow:**
 
-1. Load Center → filter = "Ready to Build" → ~N loads
-2. Click a load → drawer opens → photo renders (no reload)
-3. Point out the StagePill + PcsPill + PhotoStateBadge showing live state at a glance
-4. Advance stage → shows stage transition + audit log
+1. Workbench → filter = "Ready to Build" → live count
+2. Click a load → drawer opens → photo renders, no reload
+3. Point out the StagePill + PcsPill + PhotoStateBadge + (NEW) Cross-Check section
+4. Advance stage → audit log entry shows who/when
 
-**What to emphasize:**
+**What to emphasize (in their words):**
 
-- _"No more 'is this photo missing or just delayed' question — every row tells you why it's in the state it's in."_ Point at a PhotoStateBadge saying "Photo pending — next JotForm sync in 12 min."
-- _"JotForm freshness chip at the top shows the pipeline is healthy. Green means last sync was under 30 min ago."_
-- _"Any dispatcher — Scout, Steph, Keli — can hit 'Run Check' to force a JotForm sync without waiting for the 30-min cron."_
+- _"No more 'is this photo missing or just delayed' question — every row tells you why it's in the state it's in."_ Point at PhotoStateBadge "Photo pending — next JotForm sync in 12 min."
+- _"JotForm freshness chip at top — green means last sync was under 30 min ago. Anyone on the team can hit Run Check to force a sync without waiting for the cron."_
+
+**Mirror their language:** never say "tier 1" — say "ready to build." Never say "discrepancy" without explaining as "where v2 and PCS disagree." Their workflow words win; ours are scaffolding.
 
 ---
 
-## Segment 2 — Validation workflow (Jessica's surface) (8 min)
+## Segment 2 — Validation workflow (Jessica's surface) (6 min)
 
 **Show:** filter = "Uncertain" → single-row validation + inline edit
 
@@ -48,124 +53,188 @@ This is a speaking guide, not a script to read. Bullet points per section. The g
 1. Filter to uncertain loads → single-user validation page
 2. Inline edit a field → save → persist
 3. Drop to a load → add a comment → cross-team annotation
+4. Show the audit log → the April 20 batch-clear is attributed to "system backfill" not a mystery person
 
 **What to emphasize:**
 
 - _"This is optimized for one person. One power user validates. No clicking through a team UI."_
 - _"Comments are per-load, cross-team. Dispatch can tag billing, billing can tag driver."_
-- _"Every stage change has who-did-it attribution. The April 20 batch-clear incident is attributed to system backfill in the drawer timeline — not a mystery user action."_
+- _"Every stage change has who-did-it attribution. The April 20 batch-clear shows in the timeline as system backfill — not a mystery user action you have to chase."_
 
 ---
 
-## Segment 3 — Reconciliation (Jenny's surface) (10 min) ⚡
+## Segment 3 — Cross-check + reconciliation (Jenny + Jessica) (12 min) ⚡
 
-**This is the strongest segment.** Three reveals:
+**This is the strongest segment. Four reveals:**
 
-### A. PCS sync is live
+### A. The reconciliation Jessica did Wednesday is now automated
 
-> "The system pulls your PCS active load list every 15 minutes. Each v2 load shows its PCS state inline — 'PCS: Dispatched', 'PCS: Arrived', 'Not in PCS'. No more tab-switching."
+> "On April 23 you sent line-by-line counts for two wells against your hand-count. System matched yours on 22 of 27 days. The two anomalies were explainable on your end — date-shifted loads on 4/6, sync paused for maintenance on 4/22. That manual comparison you did — the system now does that against PCS every 15 minutes, automatically."
 
-- Click the "Not in PCS" filter → shows Scout/Steph's actual build queue
-- Explain: _"Every load that's still needing to be built in PCS is here. When toggle flips, one click validates AND pushes."_
+- Open `/admin/discrepancies` → show the live discrepancy list
+- _"Each row is a place where what v2 thinks doesn't match what PCS thinks. We surface the difference; you decide what's actionable."_
 
-### B. Reconciliation — two systems, two naming conventions, a real bridge
+### B. What the cross-check actually catches
 
-> "When we connected the PCS pull this week, we found something structural: v2 and PCS are tracking the same deliveries under different identifiers. v2 ingests carrier dispatch from PropX and Logistiq — Liberty Apache Formentera Wrangler, Liberty Titan DNR Chili. PCS holds the customer-billing view — Comstock Dinkins JG 1H, Frac-Chem Load. Different names, same trucks."
+Walk through the categories with one example each:
 
-- Pull up a live sync response (`curl /api/v1/pcs/sync-loads`) showing the 44 active PCS loads
-- 1 matched (our test push), 43 unmatched — but each unmatched entry is now **rich**:
-  - Shipper: "Cayuga Sands" · ticket #1654276 · 05/08/2023
-  - Consignee: "Comstock Dinkins JG 1H" · Marquez, TX
-  - 52,620 lb · 81 miles
-- _"Every load that doesn't auto-link tells us **why**. Here: Cayuga Sands as an origin isn't in our ingestion. Comstock Dinkins JG 1H as a well isn't in our master. That's not a bug — that's scope we haven't set up yet. 43 historical loads waiting for the onboarding."_
+| What it catches                                                     | Where it surfaces    | Live example today                                                                                |
+| ------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------- |
+| **Status differences** — PCS shows different stage than v2          | Drawer + admin index | The 4/22 test push (PCS load 357468) — PCS cancelled it, system now shows "PCS: Cancelled" inline |
+| **Weight differences** — v2 weight vs PCS billed weight             | Drawer               | (when present)                                                                                    |
+| **Well naming differences** — v2 well vs PCS consignee              | Drawer               | (when present)                                                                                    |
+| **Rate differences** — v2 expected rate vs PCS billed               | Drawer               | (when present, post-pricing-config)                                                               |
+| **Unmapped destinations** — 3+ loads landing somewhere with no well | Admin index          | Wells 1/2/3 (851 loads) — same destination Jessica asked us about 4/22                            |
 
-### C. The bridging mechanism is wired — it's waiting for scope
+> "The 'Wells 1/2/3' alert is the system catching the same thing Jessica caught manually two days ago. It catches the next one without anyone having to remember."
 
-> "For loads where v2 already covers the route, the bridge fires automatically. The matcher checks: does our OCR-extracted driver ticket match the scale ticket PCS's shipper stop has? Yes → auto-link. We don't have that data today because these 43 are from a service line v2 wasn't configured for. The moment we onboard Cayuga Sands as a loader and Comstock Dinkins as a well, the bridge closes for those 43 — and every future delivery down that lane."
+### C. PCS reconciliation queue ("Missed by v2")
 
-### D. The flywheel finding — v2 was built on ~8% of your well universe
+> "Same mechanism, different angle. Every 15 minutes the system pulls PCS's active load list. For each load, two questions: do I have this? If not, why? Today: 44 PCS active, 1 matched (our test push), 43 unmatched. Each unmatched entry is rich — shipper, consignee, ticket, weight, miles. Cayuga Sands → Comstock Dinkins JG 1H, 36 of them. We're not configured for that pipeline yet, which means it's scope expansion, not a matcher failure."
 
-> "Tonight we processed 3 years of your historical dispatch data. 1,143 unique destinations across the corpus. v2 had 95 wells. There's a ~163-well gap we never knew about — with 21,000 historical loads attached to them. And now we know: the well PCS is billing against right now — Comstock Dinkins JG 1H — is #1 on that list with 605 historical loads."
+- Open `/admin/scope-discovery` → "In PCS, Not in v2" tab → the 43 enriched entries
 
-- Show the flywheel discovery report + point at Comstock Dinkins JG 1H as the top consignee
-- _"Two separate tools — the PCS reconciliation sync and the historical flywheel — independently landed on the same well. That's not coincidence. That's the same scope gap surfacing from two directions. 14 of those 163 got corrected overnight. The other 149 are in a review queue for your team, and every one of them expands v2's reach."_
+### D. The 163-well flywheel finding
+
+> "Tonight we processed 3 years of your historical dispatch — 198,806 dispatch rows. 1,143 unique destinations across the corpus. v2 had 95 wells. There are 163 wells with meaningful load volume that v2 didn't know about — 21,000 historical loads behind them. The well PCS is billing right now — Comstock Dinkins JG 1H — is #1 on that list with 605 historical loads. Two independent surfaces (PCS pull + 3-year flywheel) landed on the same well. That's not coincidence — that's scope discovery."
+
+- Show `/admin/scope-discovery` → "Wells We Discovered" tab
+- _"14 of 163 got corrected overnight. The other 149 are in your team's review queue. Approve, alias, or skip — your call. Every approval expands what the system catches automatically."_
+
+**What this means together:** PCS is now your truth-checker for v2 during the validation period. Scope discovery is your truth-checker against your own history. Both run continuously. **The product isn't what they show you today — it's what they keep finding while nobody's watching.**
 
 ---
 
-## Segment 4 — Trust signals (5 min)
+## Segment 4 — Trust signals + audit trail (4 min)
 
-**Show:** Home page matcher accuracy badge, diagnostics page, audit log drawer tab.
+**Show:** Audit log on a load, scope-discovery review queue, freshness chip.
 
 **Demo flow:**
 
-1. Matcher accuracy: **99.24% accept rate** across last week (real, measured on 4,734 human decisions)
-2. Home page badge showing the trend
-3. Drawer audit log on a recently-cleared load → who, when, why
+1. Drawer → Audit Log tab on a recently-modified load → who, when, why
+2. Note the gear-vs-person icon distinction (system actions vs user actions)
+3. Home page Matcher pill — clickable to Load Diagnostics page
+4. JotForm freshness chip — proves the pipeline isn't paused
 
 **What to emphasize:**
 
-- _"The matcher number is real — it's what your team accepted vs. overrode over 7 days. Not an estimate."_
-- _"Every operation we run is logged in data_integrity_runs. When I say '28,648 rows were corrected Tuesday', that's traceable — not a vibe."_
+- _"Nothing happens in this system unrecorded. The April 20 batch-clear shows as system backfill in the audit log, not a mystery action."_
+- _"The matcher learns from what your team confirms vs overrides. We don't quote you a synthetic accuracy number — your reconciliation Wednesday WAS the accuracy check. 22 of 27 days exact."_
+- _"Every operation we run — schema migration, photo re-link, alias addition — gets logged in `data_integrity_runs`. When I say 'X corrected on date Y,' that's traceable."_
 
 ---
 
-## Segment 5 — PCS push toggle (3 min)
+## Segment 5 — PCS push: candid status (4 min)
 
-**Show:** Admin → Settings → PCS Push toggle (OFF).
+**Show:** Admin → Settings → PCS push toggles. Drawer audit on PCS test load 357468.
+
+**The candid framing:**
+
+> "Here's the honest state. PCS push is wired end-to-end — code is deployed, OAuth works, payload shape is validated, file API attaches photos. We pushed test load 357468 to PCS Hairpin on April 22 and voided it cleanly. You can see the audit trail right here.
+>
+> Three push attempts today returned a 500 from PCS's AddLoad endpoint. We captured the exact request payload, the response headers, and PCS's correlation IDs from their App Insights. Sent that to Kyle Thursday evening for server-side lookup. The same payload shape worked Tuesday — something on PCS's side or in our auth context shifted between Tuesday and Wednesday morning. Working from their stack trace, not guessing.
+>
+> The toggle is yours. When Kyle clarifies, you flip it. We're not betting the engagement on push working day-one — the cross-check layer is doing the heavy lifting during validation regardless."
 
 **Demo flow:**
 
-1. Open Settings page
-2. Show the toggle currently OFF + last-changed timestamp
-3. _"You flip this. Not me, not Railway. Flip it when you're ready."_
+1. Show PCS load 357468 in v2 → drawer shows "PCS: Cancelled" (proves the read+bridge works for that record)
+2. Open Settings → show the two-toggle UI (Hairpin, ES Express) → currently A=on for sync, B=off
+3. _"Push toggle is wired. Read+bridge are doing the work this week. Push goes live the moment Kyle and we close out the 500."_
 
-**Key line:**
-
-> "This is the fulfillment of 'toggle is yours.' Last change of position shows in the audit. When you feel good about the validation pass, flip it. If anything breaks on first push, flip it back in one click."
+**Don't:** apologize, hedge, get defensive. State it, show evidence the read works, move on.
 
 ---
 
-## Q&A prep — likely questions + answers
+## Segment 6 — For Mike: the engagement value in a year (4 min) 🎯
+
+**This segment is specifically for Mike.** He processes ROI + saved-time + caught-money, not feature lists.
+
+**Three numbers to lead with:**
+
+### 1. Missed-load exposure (3 years, real data)
+
+> "We analyzed your invoiced load-number sequences for gaps over 3 years. Found 1,778 sequence gaps across both Hairpin and ES Express. Most are cancellations — we sampled 15 random gaps and zero appeared in dispatch. But at conservative 10% genuine-miss rate, that's $60K of unrecovered revenue. At 25%, $150K. Going forward, the cross-check catches new ones inside 15 minutes, not quarters. The cost of missing a load isn't $300 — it's $300 plus Jenny's hour finding it three months later. We just removed both."
+
+### 2. The 163-well scope expansion
+
+> "v2 was built against 95 wells. Your business actually runs through 1,143 destinations historically. The 163-well gap that surfaced tonight isn't extra work for you — it's billing capacity v2 already covers infrastructure-wise. Your team approves them and they're in. Each well-onboarding is hours, not weeks."
+
+### 3. The comparative cost frame
+
+> "$5,500/month for a system that learns your business and keeps surfacing what you don't know you don't know. Your prior attempt at this was 8 months and $50,000 to replicate other TMS solutions and didn't ship. v2 was started in early April — 23 days of build time — and it's running cross-checks against your live PCS data right now. The bet you make continuing isn't 'will this software get better.' It's 'do we want this learning loop running indefinitely.'"
+
+**Then to Mike specifically:**
+
+> "Mike, can you log in on your laptop right now? I want you to drive for the next 90 seconds. Not a demo I run — you opening the system from your seat, clicking what catches your eye. Tell me where it feels right and where it doesn't."
+
+**This is the Mike-specific engineered moment.** Get him driving. Get him making decisions. Get him touching the system in front of his team. If he engages, the meeting is over and you've won. If he refuses, you've at least surfaced his actual posture early.
+
+---
+
+## Segment 7 — The toggle and the close (3 min)
+
+**Show:** Admin → Settings → PCS push toggles, last-changed timestamp.
+
+**Demo flow:**
+
+1. Show toggles still off
+2. Show last-changed timestamp in audit
+3. _"You flip these. Not me, not Railway. The toggle is the fulfillment of 'go-live is your call.' When Kyle resolves the 500, you have the green to push at the timing you choose — no further deploy, no further conversation with us required for that moment."_
+
+**Then the ask:**
+
+> "What would you need to see today to feel comfortable continuing past Friday's billing cutoff? If you can name the bar, we'll either show you we cleared it or you'll have a clean reason for the call you're making."
+
+This puts Mike / Jeri into specifying their bar instead of generally evaluating. If they can't name it, you already have their soft-yes.
+
+---
+
+## Q&A prep — likely questions + honest answers
 
 ### "Can we actually use it daily?"
 
-Yes. Walk through Scout's typical day: see Ready-to-Build, open drawer, check BOL photo, advance to Building, push to PCS when toggle's on. We've tested each step against real data.
+Yes. Walk through Scout's typical day: see Ready-to-Build, open drawer, check BOL photo, advance to Building, push to PCS when toggle's on. Each step has been used against real data this week.
 
 ### "How accurate is the matching?"
 
-99.24% on real decisions over the past week. The matcher learns from what your team confirms vs. overrides — that's the accuracy signal, not a synthetic benchmark.
+Two honest answers. The matcher backfill that completed Thursday produced Tier 1 = 46,008 / Tier 2 = 7,202 with no untiered orphans — that's the system's confidence. The accuracy check is what Jessica did Wednesday: hand-counted two wells, system matched on 22 of 27 days. We can do the same comparison for any well you want — pick one, I'll have the comparison Tuesday.
 
 ### "What about Jenny's reconciliation?"
 
-The 'missed by v2' signal is automated now. PCS sync every 15 minutes fetches the full detail on each PCS load — shipper + ticket #, consignee + city, dates, weight, miles. Each unmatched entry tells her exactly _why_ it's unmatched. Today it's surfacing 43 Cayuga Sands → Comstock Dinkins loads from 2023 that we haven't set up a pipeline for. Her review queue is no longer "go compare spreadsheets" — it's "do I want to onboard this scope or skip it." We kept the bridge infrastructure wired so the moment a well gets onboarded, every historical PCS load for it auto-links on the next sync.
+The cross-check layer is the automated version of what she does. Every 15 min, system pulls PCS state and surfaces where v2 and PCS disagree — status, weight, well, rate, missing destinations. Today it's surfacing 3 items including the orphan-destination Jessica caught manually two days ago. Forward-looking, Jenny stops being the detective and becomes the reviewer.
 
 ### "Why does our PCS loadReference not match v2's load_no?"
 
-Because they came from different starting points. v2's load_no is PropX's internal sequence. PCS's loadReference is whatever your team types when building the load — often the paper scale ticket the driver hands back at pickup. Both systems are right; they just never agreed on a key. v2 now knows how to bridge: shipper-stop referenceNumber against our OCR-extracted ticket. For the current 43 mismatched loads, the gap isn't the bridge — it's that v2 never ingested that pipeline's driver photos. Fix the pipeline scope, bridge closes on its own.
+Different starting points. v2's load_no is PropX's internal sequence. PCS's loadReference is whatever your team types — often the paper scale ticket. Both systems are right; they never agreed on a key. v2 now bridges via the shipper-stop reference number against our OCR-extracted ticket. For the current 43 mismatched loads, the gap isn't the bridge — it's that v2 never ingested that pipeline. Fix the pipeline scope, bridge closes on its own.
 
 ### "What about payroll?"
 
-Load Report page exists with truck/date grouping + CSV export + PCS number column. That matches Jodi's Apr 17 ask almost exactly. Accessible via sidebar → Load Report.
+Load Report page exists with truck/date grouping + CSV export + PCS number column. That matches Jodi's Apr 17 ask. Sidebar → Load Report.
 
 ### "What about the 163 wells you found?"
 
-Review queue. We're not auto-adding. Your team classifies each as real / stale / sandplant-mis-classified. We add the approved ones as a bulk import.
+Review queue at `/admin/scope-discovery`. We don't auto-add. Your team classifies each as real / stale / sandplant-mis-classified. Approved ones get bulk-imported.
 
 ### "What about scope creep / cost?"
 
-The 163-well finding isn't scope creep — it's scope discovery. We built v2 against the 95 wells you gave us originally. Your business has more. Bringing them in is part of normal onboarding; the flywheel that found them runs continuously post-Monday so new wells auto-surface as they arrive.
+The 163-well finding isn't scope creep — it's scope discovery. We built v2 against the 95 wells you gave us. Your business has more. Bringing them in is normal onboarding; the flywheel that found them runs continuously, so new wells auto-surface as they show up in the historical record.
 
-### "What if we flip the toggle and PCS push fails?"
+### "What if we flip the toggle and PCS push 500s?"
 
-First push hits Hairpin by default (the test division we've been validating against all week). If it goes sideways, one DELETE call voids. Toggle-off pauses everything.
+Right now it does. We're working with Kyle to resolve. Until that's clean, the toggle stays in your hands; flipping it produces the 500 we already captured. We're not asking you to flip it before that resolves. Read+bridge keep working regardless of push state.
 
 ### "When can we start pushing to PCS for real?"
 
-The moment you flip the toggle. Physically working.
+The moment Kyle and our payload reconcile. Code is deployed; the bottleneck is on PCS's side. We'll send you the resolution as soon as we have it.
 
 ### "Why should we continue past the billing period?"
 
-Because the reveal — 163 missing wells, 99% match accuracy on real decisions, PCS-reconciliation automated without needing our sheets share — is evidence the system makes the team faster now, not someday. If we stop now, you lose the flywheel that's going to find the next gap before your team stumbles into it.
+Because the cross-check layer's value compounds. One discrepancy today, ten next week, hundreds per quarter. Every one is either money (missed billing), accuracy (wrong well/weight), or scope (gap in coverage). The system you're paying $5,500/month for in May is the same system that will have caught 500+ of those by August. The curve isn't linear; it's an audit ratchet that never sleeps.
+
+### "What's our actual leverage if we stop using v2?"
+
+Honest: you keep your data — full export available. You go back to your prior workflow. You lose the cross-check layer that's catching things your team would otherwise discover quarterly. Not a threat — a description of the trade.
 
 ---
 
@@ -173,20 +242,27 @@ Because the reveal — 163 missing wells, 99% match accuracy on real decisions, 
 
 - Don't oversell. "It works" is stronger than "it's revolutionary."
 - Don't flip the PCS dispatch toggle. That's their decision.
-- Don't drag them through the calibration findings — have the docs linked but only walk through if asked.
-- Don't apologize for the 163-well gap. Frame it as what we learned _because_ we had the flywheel infrastructure to find it.
+- Don't drag them through calibration findings — have docs linked, walk through only if asked.
+- Don't apologize for the 163-well gap or the push 500. Frame as what we learned by building the layer.
+- Don't use OUR vocabulary when their vocabulary works. "Discrepancy" → "where v2 and PCS disagree." "Tier 1" → "ready to build." "Orphan destination" → "destination we don't have a well for yet."
+- **Don't run the demo without putting Mike in the driver's seat at least once.**
 
-## Decision ask — the close
+---
+
+## The decision-ask (the close)
 
 > "What would you need to see today to feel comfortable continuing past Friday's billing cutoff?"
 
-This puts Mike / Jeri into specifying their bar instead of generally evaluating. If they can't name it, you already have their yes.
+This puts the burden on them to name a bar. If they can't, you already have soft-yes. If they can, the bar is now negotiable.
+
+If the answer is a feature gap → confirm timing, write it down. If the answer is "let us think" → press for what they need to evaluate. If the answer is "we're good" → confirm continuation in writing same-day.
 
 ---
 
 ## Post-walkthrough follow-ups (same-day)
 
-- Email recap with bullet list of what was covered + links to the reports
+- Email recap with bullet list of what was covered + links to the live URLs
 - Any P1 issue surfaced during walkthrough → fix same day, reply-all with "fixed: X"
-- If continue decision → kick off Thursday AM flywheel continuous-discovery cron
+- If continue decision → kick off Tuesday AM the post-Monday roadmap (week-1 builds: discrepancy email digest, alert thresholds, bonus UI polish)
 - If stop decision → same-day honest wind-down plan (data export, SOP for their team)
+- If conditional yes → confirm the condition + deadline in writing within 2 hours of meeting end

@@ -1,0 +1,49 @@
+To: <kyle's email>
+Cc:
+Subject: PCS AddLoad 500s — correlation IDs for App Insights lookup
+
+Kyle,
+
+We've hit consistent HTTP 500s on POST /dispatching/v1/load since
+yesterday morning. Two captured attempts below — both return your
+generic "An unexpected error has occurred" with content-type:
+text/plain and 65–332ms response times, suggesting an immediate
+exception before the AddLoad logic runs.
+
+The same payload shape successfully created loadId 357468 on 4/22
+(visible in our records, voided as planned), so something appears to
+have changed on your side or in our auth context between 4/22 16:02
+CDT and 4/23 07:55 CDT.
+
+Could you look up these correlation IDs in App Insights and tell us
+what the actual exception is? Either of these would unblock us.
+
+Attempt 1 (2026-04-23 21:55:21 UTC):
+  x-correlation-id: 4bc404da-4814-45a8-9039-c59b705635d3 |
+                    46d997ff-f24d-49b1-ba26-f6b2070eec9a
+
+Attempt 2 (2026-04-23 22:03:19 UTC):
+  x-correlation-id: 56b96a4f-4d2e-4477-90a3-0dc9924fa316 |
+                    29e2e7c9-4202-4433-aab3-3d43e813fcd5
+
+request-context appId (both): cid-v1:2fd240e3-105d-4cb2-a2e8-df9fab774281
+
+Wire payload (only billToName differs between the two attempts):
+{"Status":"Dispatched","LoadClass":"TL","BillToId":"V646",
+ "BillToName":"ES Express","LoadReference":"TEST-2026042318001",
+ "TotalWeight":50000,
+ "Notes":"v2 dispatch → Alliance-Silver HIll-D Pad North",
+ "Office":{"Code":1}}
+
+Headers: Authorization Bearer (OAuth via /authorization/v1/tokens/oauth),
+X-Company-Id: 138936, Content-Type: application/json. Customer
+138936 / billToId V646 (your data, working as of 4/22).
+
+No urgency on our end — we've reframed this week as a validation
+period using your sync data as the truth source while push is paused.
+Just want to be working from your server-side stack trace rather
+than guessing. Happy to run another attempt anytime if you need more
+data points.
+
+Thanks,
+Jace
