@@ -168,11 +168,15 @@ export async function fetchAndNormalizePhoto(photoUrl: string): Promise<{
   if (!res.ok) {
     throw new Error(`Photo fetch failed: HTTP ${res.status} from ${photoUrl}`);
   }
-  // Guard: if JotForm didn't recognize the apiKey the response is HTML
-  // at content-type text/html, not an image. Sharp's error message
-  // ("unsupported image format") is cryptic — catch this up front.
+  // Guard: if JotForm didn't recognize the apiKey the response is the
+  // HTML login page (content-type text/html). Sharp's error message on
+  // HTML bytes ("unsupported image format") is cryptic — catch this up
+  // front with an actionable message. Binary content-types (including
+  // application/octet-stream, which JotForm uses for /uploads/...) are
+  // fine — sharp's magic-byte sniffing will reject anything that isn't
+  // actually an image with a clearer error.
   const ct = res.headers.get("content-type") ?? "";
-  if (ct.startsWith("text/") || ct.startsWith("application/")) {
+  if (ct.startsWith("text/")) {
     throw new Error(
       `Photo fetch returned non-image content-type="${ct}" from ${photoUrl}. Check JOTFORM_API_KEY or photo allowlist.`,
     );
