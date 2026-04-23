@@ -423,12 +423,12 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               <Link
                 to="/admin/discrepancies"
                 className={`${navClass("/admin/discrepancies")} !pl-9`}
-                title="Cross-check between v2 and PCS — every 15 min the system surfaces where the two sources disagree."
+                title="What PCS sees vs what v2 sees — every 15 min the system surfaces where the two disagree."
               >
                 <span className={iconClass("/admin/discrepancies")}>
                   compare_arrows
                 </span>
-                Discrepancies
+                What PCS Sees
               </Link>
             </div>
           )}

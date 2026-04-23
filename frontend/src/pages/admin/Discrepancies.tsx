@@ -38,21 +38,23 @@ interface DiscrepancyResponse {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  status_drift: "Status drift",
-  weight_drift: "Weight drift",
-  well_mismatch: "Well mismatch",
-  photo_gap: "Photo gap",
-  rate_drift: "Rate drift",
-  orphan_destination: "Orphan destination",
+  status_drift: "Stage differs from PCS",
+  weight_drift: "Weight differs from PCS",
+  well_mismatch: "Different well in PCS",
+  photo_gap: "Photo missing",
+  rate_drift: "Rate differs from PCS",
+  orphan_destination: "Destination not mapped",
 };
 
 const TYPE_DESC: Record<string, string> = {
-  status_drift: "v2 stage doesn't match what PCS reports for this load",
-  weight_drift: "v2 weight differs from PCS billed weight by >5%",
-  well_mismatch: "v2 well name doesn't match PCS consignee company",
+  status_drift: "v2 has this load at one stage; PCS has it at another",
+  weight_drift: "v2 weight and PCS billed weight differ by more than 5%",
+  well_mismatch:
+    "v2 mapped this load to one well; PCS billed it to a different consignee",
   photo_gap: "BOL photo expected on one side, missing on the other",
-  rate_drift: "v2 expected rate differs from PCS billed rate by >5%",
-  orphan_destination: "Destination has 3+ loads but no well mapping in v2",
+  rate_drift: "v2 expected rate and PCS billed rate differ by more than 5%",
+  orphan_destination:
+    "3 or more loads point at this destination but it isn't in your wells master",
 };
 
 const SEVERITY_DOT: Record<Discrepancy["severity"], string> = {
@@ -119,11 +121,12 @@ export function Discrepancies() {
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div>
             <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
-              Discrepancies
+              What PCS sees
             </h1>
             <p className="text-xs text-on-surface-variant mt-0.5">
-              Cross-check between v2 and PCS — every 15 min, the system surfaces
-              where the two sources disagree.{" "}
+              Every 15 minutes, the system pulls PCS state and surfaces where
+              its truth doesn't match yours — automating the reconciliation
+              Jenny does by hand. Each row is something your team can decide on.{" "}
               {generatedAt && (
                 <span className="text-outline">
                   Last refreshed {generatedAt}.
@@ -185,10 +188,10 @@ export function Discrepancies() {
               check_circle
             </span>
             <div className="mt-2 text-on-surface font-semibold">
-              No open discrepancies
+              v2 and PCS agree
             </div>
             <div className="mt-1 text-xs text-outline">
-              v2 and PCS agree on every matched load.
+              Nothing flagged across every load currently in both systems.
             </div>
           </div>
         )}

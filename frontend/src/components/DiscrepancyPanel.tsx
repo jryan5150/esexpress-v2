@@ -34,12 +34,12 @@ interface DiscrepancyResponse {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  status_drift: "Status drift",
-  weight_drift: "Weight drift",
-  well_mismatch: "Well mismatch",
-  photo_gap: "Photo gap",
-  rate_drift: "Rate drift",
-  orphan_destination: "Orphan destination",
+  status_drift: "Stage differs from PCS",
+  weight_drift: "Weight differs from PCS",
+  well_mismatch: "Different well in PCS",
+  photo_gap: "Photo missing",
+  rate_drift: "Rate differs from PCS",
+  orphan_destination: "Destination not mapped",
 };
 
 const SEVERITY_DOT: Record<Discrepancy["severity"], string> = {
@@ -84,7 +84,7 @@ export function DiscrepancyPanel({ assignmentId }: { assignmentId: number }) {
     return (
       <div className="space-y-2">
         <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
-          PCS Cross-Check
+          What PCS sees
         </span>
         <div className="text-[10px] text-outline/60 italic">checking…</div>
       </div>
@@ -95,7 +95,7 @@ export function DiscrepancyPanel({ assignmentId }: { assignmentId: number }) {
     return (
       <div className="space-y-2">
         <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
-          PCS Cross-Check
+          What PCS sees
         </span>
         <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400">
           <span className="material-symbols-outlined text-sm">
@@ -110,7 +110,7 @@ export function DiscrepancyPanel({ assignmentId }: { assignmentId: number }) {
   return (
     <div className="space-y-2">
       <span className="text-[9px] font-semibold text-outline tracking-[0.08em] uppercase">
-        PCS Cross-Check ({items.length})
+        What PCS sees · {items.length} {items.length === 1 ? "issue" : "issues"}
       </span>
       <div className="space-y-1.5">
         {items.map((d) => (
