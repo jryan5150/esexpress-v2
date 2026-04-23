@@ -28,16 +28,16 @@ export function Settings() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-4">
-        <PcsToggleCard />
+        <PcsSection />
       </div>
     </div>
   );
 }
 
-function PcsToggleCard() {
-  const qc = useQueryClient();
-  const [confirm, setConfirm] = useState<null | boolean>(null); // target state awaiting confirm
-
+/** PCS push integration — two independent toggles, one per company.
+ *  Hairpin (A) is the test division — safe to flip for smoke testing.
+ *  ES Express (B) is production — flip only when ready for live pushes. */
+function PcsSection() {
   const settings = useQuery({
     queryKey: ["admin", "settings"],
     queryFn: () =>
@@ -50,6 +50,66 @@ function PcsToggleCard() {
     refetchInterval: 30_000,
   });
 
+  return (
+    <div className="space-y-4">
+      <div className="px-2">
+        <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-[0.08em]">
+          PCS Push — Per-Division Toggles
+        </h2>
+        <p className="text-xs text-on-surface-variant/80 mt-1 max-w-3xl">
+          Independent switches for the two PCS divisions. Turning one on does
+          not affect the other. Default: both off. Anything pushed to Hairpin
+          lands in a test division and can be voided from here — safe to
+          experiment. ES Express is your production division; flip only when
+          validated.
+        </p>
+      </div>
+
+      <PcsCompanyToggle
+        settings={settings}
+        settingKey="pcs_dispatch_enabled_hairpin"
+        division="Hairpin"
+        companyLetter="A"
+        tone="test"
+        title="Hairpin Test Division (A)"
+        description="Safe to enable for smoke testing. Pushes create loads in the Hairpin test division only — no production billing impact. Void any test load directly from the v2 drawer."
+      />
+
+      <PcsCompanyToggle
+        settings={settings}
+        settingKey="pcs_dispatch_enabled_esexpress"
+        division="ES Express"
+        companyLetter="B"
+        tone="production"
+        title="ES Express Production (B)"
+        description="Turning this ON starts live PCS pushes for validated loads. Production impact. Confirmation required on both enable and disable."
+      />
+    </div>
+  );
+}
+
+interface ToggleProps {
+  settings: ReturnType<typeof useQuery<AppSetting[]>>;
+  settingKey: string;
+  division: string;
+  companyLetter: "A" | "B";
+  tone: "test" | "production";
+  title: string;
+  description: string;
+}
+
+function PcsCompanyToggle({
+  settings,
+  settingKey,
+  division,
+  companyLetter,
+  tone,
+  title,
+  description,
+}: ToggleProps) {
+  const qc = useQueryClient();
+  const [confirm, setConfirm] = useState<null | boolean>(null);
+
   const flip = useMutation({
     mutationFn: async (next: boolean) =>
       api.put<{
@@ -60,7 +120,7 @@ function PcsToggleCard() {
           updatedBy: string;
           updatedAt: string;
         };
-      }>(`/dispatch/admin/settings/pcs_dispatch_enabled`, {
+      }>(`/dispatch/admin/settings/${settingKey}`, {
         value: next ? "true" : "false",
       }),
     onSuccess: () => {
@@ -70,28 +130,49 @@ function PcsToggleCard() {
     },
   });
 
-  const current = settings.data?.find((s) => s.key === "pcs_dispatch_enabled");
+  const current = settings.data?.find((s) => s.key === settingKey);
   const enabled = current?.value === "true";
 
+  // Palette — test (yellow/amber) vs production (rose/red). Distinct colors
+  // on the card border + the enabled pill help dispatchers tell at a glance
+  // which division they're operating on, even on a crowded screen.
+  const cardBorder =
+    tone === "test" ? "border-amber-300/50" : "border-rose-400/50";
+  const cardAccent = tone === "test" ? "bg-amber-50/40" : "bg-rose-50/30";
+  const labelBadge =
+    tone === "test"
+      ? "bg-amber-100 text-amber-900 border-amber-300"
+      : "bg-rose-100 text-rose-900 border-rose-300";
+  const labelText = tone === "test" ? "TEST" : "PRODUCTION";
+
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] p-6 card-rest">
+    <div
+      className={`border-2 rounded-[12px] p-6 ${cardBorder} ${cardAccent} card-rest`}
+    >
       <div className="flex items-start justify-between gap-6">
         <div className="flex-1">
-          <h2 className="text-base font-bold font-headline text-on-surface">
-            PCS Push Integration
-          </h2>
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-base font-bold font-headline text-on-surface">
+              {title}
+            </h2>
+            <span
+              className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${labelBadge}`}
+            >
+              {labelText}
+            </span>
+          </div>
           <p className="text-sm text-on-surface-variant mt-1 max-w-2xl">
-            Master toggle for pushing validated loads to PCS. When ON, the
-            Validate action automatically creates a matching PCS load with the
-            BOL photo attached. When OFF, dispatches remain local to v2 —
-            nothing is sent to PCS.
+            {description}
           </p>
           {current?.updatedAt && (
-            <p className="text-xs text-on-surface-variant mt-2">
+            <p className="text-xs text-on-surface-variant/70 mt-2">
               Last changed {new Date(current.updatedAt).toLocaleString()}
               {current.updatedBy ? ` by user #${current.updatedBy}` : ""}
             </p>
           )}
+          <p className="text-[11px] text-on-surface-variant/60 mt-1 font-mono">
+            X-Company-Letter: {companyLetter} · division: {division}
+          </p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <span
@@ -119,7 +200,9 @@ function PcsToggleCard() {
           ) : (
             <div className="flex items-center gap-2">
               <span className="text-xs text-on-surface-variant">
-                {confirm ? "Enable PCS push?" : "Disable PCS push?"}
+                {confirm
+                  ? `Enable PCS push for ${division}?`
+                  : `Disable PCS push for ${division}?`}
               </span>
               <button
                 type="button"
