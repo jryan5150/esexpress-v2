@@ -127,6 +127,13 @@
       "when": 1776927000000,
       "tag": "0017_pcs_dispatch_per_company",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1776983562272,
+      "tag": "0018_heavy_loa",
+      "breakpoints": true
     }
   ]
 }

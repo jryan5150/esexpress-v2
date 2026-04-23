@@ -12,6 +12,7 @@ import {
 } from "../hooks/use-workbench";
 import { api } from "../lib/api";
 import { reportError } from "../lib/sentry";
+import { DiscrepancyPanel } from "./DiscrepancyPanel";
 
 /**
  * Isolated error boundary for the expand-drawer content. Prevents a render
@@ -776,6 +777,14 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
           className="w-full text-sm text-on-surface bg-background/60 border border-outline-variant/40 rounded px-2 py-1.5 focus:outline-none focus:border-primary/60 resize-y disabled:opacity-60"
           aria-label="Dispatcher notes"
         />
+      </div>
+
+      {/* PCS Cross-Check — discrepancies between v2 and PCS for this load.
+          Empty when v2 and PCS agree (collapses to a small "agree" line).
+          Surfaces status drift, weight drift, well mismatch, rate drift in
+          the dispatcher's flow without requiring a tab switch. */}
+      <div className="px-4 pb-3">
+        <DiscrepancyPanel assignmentId={row.assignmentId} />
       </div>
 
       {/* Stage transition timeline — audit trail of how this row moved

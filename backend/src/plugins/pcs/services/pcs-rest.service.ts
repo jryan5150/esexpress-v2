@@ -160,7 +160,11 @@ export function buildAddLoadRequest(pkg: DispatchPackage): AddLoadRequest {
     status: "Dispatched",
     office: { code: "1" },
     billToId: "V646",
-    billToName: "Hairpin",
+    // Reverted 2026-04-23 from "Hairpin" — the test file (pcs-rest.test.ts:48)
+    // codifies "ES Express" as the value proven valid by loadId 357468
+    // creation on 2026-04-22. The 4/23 change to "Hairpin" was a guess
+    // during 500 debugging, never validated.
+    billToName: "ES Express",
     totalWeight,
     loadReference: pkg.loadNumber,
     notes: pkg.destinationName

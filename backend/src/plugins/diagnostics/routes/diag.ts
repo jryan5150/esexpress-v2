@@ -831,6 +831,179 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       };
     },
   );
+  // GET /discrepancies — open cross-check discrepancies (auth required)
+  // Optional filters: ?type=status_drift|weight_drift|... &severity=warning
+  // &assignmentId=123  &includeResolved=true
+  fastify.get<{
+    Querystring: {
+      type?: string;
+      severity?: string;
+      assignmentId?: string;
+      includeResolved?: string;
+      limit?: string;
+    };
+  }>(
+    "/discrepancies",
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+
+      const { discrepancies, assignments, loads, wells } =
+        await import("../../../db/schema.js");
+      const { and, desc, eq, isNull, sql } = await import("drizzle-orm");
+
+      const limit = Math.min(
+        Number.parseInt(request.query.limit ?? "200", 10) || 200,
+        500,
+      );
+
+      const conditions = [];
+      if (!request.query.includeResolved) {
+        conditions.push(isNull(discrepancies.resolvedAt));
+      }
+      if (request.query.type) {
+        conditions.push(
+          eq(
+            discrepancies.discrepancyType,
+            request.query.type as "status_drift",
+          ),
+        );
+      }
+      if (request.query.severity) {
+        conditions.push(
+          eq(discrepancies.severity, request.query.severity as "info"),
+        );
+      }
+      if (request.query.assignmentId) {
+        const aid = Number.parseInt(request.query.assignmentId, 10);
+        if (Number.isFinite(aid)) {
+          conditions.push(eq(discrepancies.assignmentId, aid));
+        }
+      }
+
+      const rows = await db
+        .select({
+          id: discrepancies.id,
+          subjectKey: discrepancies.subjectKey,
+          assignmentId: discrepancies.assignmentId,
+          loadId: discrepancies.loadId,
+          discrepancyType: discrepancies.discrepancyType,
+          severity: discrepancies.severity,
+          v2Value: discrepancies.v2Value,
+          pcsValue: discrepancies.pcsValue,
+          message: discrepancies.message,
+          metadata: discrepancies.metadata,
+          detectedAt: discrepancies.detectedAt,
+          lastSeenAt: discrepancies.lastSeenAt,
+          resolvedAt: discrepancies.resolvedAt,
+          resolutionNotes: discrepancies.resolutionNotes,
+          ticketNo: loads.ticketNo,
+          loadNo: loads.loadNo,
+          wellName: wells.name,
+        })
+        .from(discrepancies)
+        .leftJoin(assignments, eq(discrepancies.assignmentId, assignments.id))
+        .leftJoin(loads, eq(discrepancies.loadId, loads.id))
+        .leftJoin(wells, eq(assignments.wellId, wells.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(discrepancies.detectedAt))
+        .limit(limit);
+
+      const [summary] = await db
+        .select({
+          openTotal: sql<number>`COUNT(*) FILTER (WHERE ${discrepancies.resolvedAt} IS NULL)::int`,
+        })
+        .from(discrepancies);
+
+      const byTypeRows = await db
+        .select({
+          discrepancyType: discrepancies.discrepancyType,
+          n: sql<number>`COUNT(*)::int`,
+        })
+        .from(discrepancies)
+        .where(isNull(discrepancies.resolvedAt))
+        .groupBy(discrepancies.discrepancyType);
+
+      const byType: Record<string, number> = {};
+      for (const r of byTypeRows) byType[r.discrepancyType] = r.n;
+
+      return {
+        success: true,
+        data: {
+          generatedAt: new Date().toISOString(),
+          summary: {
+            openTotal: summary?.openTotal ?? 0,
+            byType,
+          },
+          discrepancies: rows,
+        },
+      };
+    },
+  );
+
+  // POST /discrepancies/:id/resolve — manually mark a discrepancy resolved
+  // (admin action; auto-resolve still happens via sweep when the underlying
+  // condition heals).
+  fastify.post<{
+    Params: { id: string };
+    Body: { notes?: string };
+  }>(
+    "/discrepancies/:id/resolve",
+    { preHandler: [fastify.authenticate] },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+
+      const id = Number.parseInt(request.params.id, 10);
+      if (!Number.isFinite(id)) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: "BAD_REQUEST", message: "Invalid id" },
+        });
+      }
+
+      const { discrepancies } = await import("../../../db/schema.js");
+      const { eq } = await import("drizzle-orm");
+      const userId = (request.user as { id?: number } | undefined)?.id ?? null;
+
+      const [updated] = await db
+        .update(discrepancies)
+        .set({
+          resolvedAt: new Date(),
+          resolvedBy: userId,
+          resolutionNotes: request.body?.notes ?? "manually resolved",
+        })
+        .where(eq(discrepancies.id, id))
+        .returning({
+          id: discrepancies.id,
+          resolvedAt: discrepancies.resolvedAt,
+        });
+
+      if (!updated) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: "Discrepancy not found" },
+        });
+      }
+
+      return { success: true, data: updated };
+    },
+  );
 };
 
 export default diagRoutes;

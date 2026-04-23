@@ -420,6 +420,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 </span>
                 Scope Discovery
               </Link>
+              <Link
+                to="/admin/discrepancies"
+                className={`${navClass("/admin/discrepancies")} !pl-9`}
+                title="Cross-check between v2 and PCS — every 15 min the system surfaces where the two sources disagree."
+              >
+                <span className={iconClass("/admin/discrepancies")}>
+                  compare_arrows
+                </span>
+                Discrepancies
+              </Link>
             </div>
           )}
 

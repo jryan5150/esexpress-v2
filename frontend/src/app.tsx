@@ -66,6 +66,11 @@ const ScopeDiscovery = lazy(() =>
     default: m.ScopeDiscovery,
   })),
 );
+const Discrepancies = lazy(() =>
+  import("./pages/admin/Discrepancies").then((m) => ({
+    default: m.Discrepancies,
+  })),
+);
 const LoadReport = lazy(() =>
   import("./pages/LoadReport").then((m) => ({ default: m.LoadReport })),
 );
@@ -128,6 +133,10 @@ export function App() {
                   <Route
                     path="admin/scope-discovery"
                     element={<ScopeDiscovery />}
+                  />
+                  <Route
+                    path="admin/discrepancies"
+                    element={<Discrepancies />}
                   />
                   <Route path="load-report" element={<LoadReport />} />
                   <Route path="settings" element={<Settings />} />

@@ -24,6 +24,22 @@ import {
   wells,
 } from "../../../db/schema.js";
 import { getAccessToken } from "./pcs-auth.service.js";
+import {
+  computePerLoadDiscrepancies,
+  persistDiscrepancies,
+  sweepOrphanDestinations,
+} from "./pcs-discrepancy.service.js";
+
+const PER_LOAD_DISCREPANCY_TYPES = [
+  "status_drift",
+  "weight_drift",
+  "well_mismatch",
+  "rate_drift",
+] as const;
+
+interface PcsRating {
+  lineHaulRate?: string | number | null;
+}
 
 /**
  * Response shape from PCS GetLoads. Verified 2026-04-22 via direct API
@@ -70,6 +86,7 @@ interface PcsStop {
 }
 interface PcsLoadDetail extends PcsLoadRow {
   stops?: PcsStop[];
+  rating?: PcsRating | null;
 }
 
 const getPcsBaseUrl = (): string =>
@@ -376,8 +393,77 @@ export async function syncPcsLoads(
       })
       .where(inArray(assignments.id, assignmentIds));
 
+    // Cross-check compute. Fetch detail if not already (load_reference path
+    // skipped it). Cheap — adds one API call per matched load on the
+    // 15-min cron.
+    if (detail === null) {
+      detail = await fetchPcsLoadDetail(bearer, pcsLoadId);
+      consigneeStop =
+        detail?.stops?.find((s) => s.type?.toLowerCase() === "consignee") ??
+        null;
+    }
+    const consigneeCompany = consigneeStop?.companyName ?? null;
+    const pcsRating = detail?.rating ?? null;
+
+    for (const hit of hits) {
+      const [v2] = await db
+        .select({
+          handlerStage: assignments.handlerStage,
+          weightLbs: loads.weightLbs,
+          weightTons: loads.weightTons,
+          wellName: wells.name,
+          wellAliases: wells.aliases,
+          wellRatePerTon: wells.ratePerTon,
+        })
+        .from(assignments)
+        .innerJoin(loads, eq(assignments.loadId, loads.id))
+        .leftJoin(wells, eq(assignments.wellId, wells.id))
+        .where(eq(assignments.id, hit.assignmentId))
+        .limit(1);
+      if (!v2) continue;
+
+      const v2WeightLbs =
+        v2.weightLbs != null
+          ? Number(v2.weightLbs)
+          : v2.weightTons != null
+            ? Number(v2.weightTons) * 2000
+            : null;
+      const v2RatePerTon =
+        v2.wellRatePerTon != null ? Number(v2.wellRatePerTon) : null;
+
+      const computed = computePerLoadDiscrepancies({
+        assignmentId: hit.assignmentId,
+        loadId: hit.loadId,
+        v2HandlerStage: v2.handlerStage,
+        v2WeightLbs:
+          v2WeightLbs != null && Number.isFinite(v2WeightLbs)
+            ? v2WeightLbs
+            : null,
+        v2WellName: v2.wellName,
+        v2WellAliases: Array.isArray(v2.wellAliases) ? v2.wellAliases : null,
+        v2WellRatePerTon:
+          v2RatePerTon != null && Number.isFinite(v2RatePerTon)
+            ? v2RatePerTon
+            : null,
+        pcs: pl,
+        pcsConsigneeCompany: consigneeCompany,
+        pcsRating: pcsRating,
+      });
+
+      await persistDiscrepancies(
+        db,
+        `assignment:${hit.assignmentId}`,
+        computed,
+        PER_LOAD_DISCREPANCY_TYPES,
+      );
+    }
+
     matched += hits.length;
   }
+
+  // Post-loop sweep — orphan_destination is a v2-internal aggregate,
+  // independent of PCS sync but runs on the same cadence.
+  await sweepOrphanDestinations(db);
 
   return {
     ranAt: now.toISOString(),

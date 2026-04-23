@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useUpdateLoad, useDuplicateLoad } from "../hooks/use-wells";
 import { useToast } from "./Toast";
+import { DiscrepancyPanel } from "./DiscrepancyPanel";
 
 /**
  * Free-form notes editor for an assignment (O-05). Saves on blur / Cmd+Enter.
@@ -353,6 +354,7 @@ export function ExpandDrawer({
   settlementDate,
   shipperBol,
   dispatcherNotes,
+  assignmentId,
   notes: notesProp,
   onSaveNotes,
   isSavingNotes,
@@ -769,6 +771,9 @@ export function ExpandDrawer({
               </div>
             )}
           </div>
+
+          {/* PCS Cross-Check — only renders if drawer has an assignmentId */}
+          {assignmentId && <DiscrepancyPanel assignmentId={assignmentId} />}
 
           {/* Weight Detail */}
           {(grossWeightLbs || netWeightLbs) && (

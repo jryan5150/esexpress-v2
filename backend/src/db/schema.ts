@@ -893,3 +893,92 @@ export const appSettings = pgTable("app_settings", {
     .notNull()
     .defaultNow(),
 });
+
+// ─── CROSS-CHECK / DISCREPANCY DETECTION ─────────────────────────
+//
+// Created 2026-04-23 evening. Productizes the cross-check that v2's PCS
+// sync was already implicitly performing — every 15 min the sync pulls
+// PCS state and matches against v2; this table records WHERE the two
+// sources disagree.
+//
+// One row per (subject_key, discrepancy_type) open at a time. When a
+// discrepancy resolves (the values agree, or PCS state catches up), the
+// row gets resolved_at set rather than deleted — preserves history for
+// "this load drifted twice last week" pattern detection.
+//
+// `subject_key` is an opaque identifier the unique-open constraint binds
+// against. For per-assignment types it's "assignment:{id}"; for
+// orphan_destination it's "destination:{name}". Lets one constraint
+// enforce uniqueness across heterogeneous subject types.
+//
+// `assignment_id` and `load_id` are denormalized FK refs for query
+// convenience — the JOIN-by-FK is cheaper than parsing subject_key.
+//
+// Surfaces:
+//   - Drawer "Cross-check" section per load
+//   - /admin/discrepancies admin index
+//   - Workbench row tint when assignment has any open discrepancy
+//   - Diag endpoint: GET /api/v1/diag/discrepancies (open only)
+//
+// Populated by: pcs-sync.service.ts at end of each matched-loop iteration
+// (per-load types) + post-loop sweep (orphan_destination aggregate).
+
+export const DISCREPANCY_TYPES = [
+  "status_drift", // v2.handler_stage vs PCS pcs_status divergence
+  "weight_drift", // >5% diff between v2 weight_lbs and PCS totalWeight
+  "well_mismatch", // v2 well name not equal to PCS consignee company
+  "photo_gap", // PCS expects BOL but v2 has none, or vice versa
+  "rate_drift", // v2 well rate_per_ton vs PCS rating.lineHaulRate
+  "orphan_destination", // v2 destination not mapped to any well (3+ loads)
+] as const;
+
+export const DISCREPANCY_SEVERITIES = ["info", "warning", "critical"] as const;
+
+export const discrepancies = pgTable(
+  "discrepancies",
+  {
+    id: serial("id").primaryKey(),
+    subjectKey: text("subject_key").notNull(),
+    assignmentId: integer("assignment_id").references(() => assignments.id, {
+      onDelete: "cascade",
+    }),
+    loadId: integer("load_id").references(() => loads.id, {
+      onDelete: "cascade",
+    }),
+    discrepancyType: text("discrepancy_type", {
+      enum: [...DISCREPANCY_TYPES],
+    }).notNull(),
+    severity: text("severity", { enum: [...DISCREPANCY_SEVERITIES] })
+      .notNull()
+      .default("info"),
+    v2Value: text("v2_value"),
+    pcsValue: text("pcs_value"),
+    message: text("message").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+    detectedAt: timestamp("detected_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedBy: integer("resolved_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    resolutionNotes: text("resolution_notes"),
+  },
+  (table) => [
+    uniqueIndex("uq_discrepancies_open_per_subject_type")
+      .on(table.subjectKey, table.discrepancyType)
+      .where(sql`${table.resolvedAt} IS NULL`),
+    index("idx_discrepancies_assignment_open")
+      .on(table.assignmentId)
+      .where(
+        sql`${table.resolvedAt} IS NULL AND ${table.assignmentId} IS NOT NULL`,
+      ),
+    index("idx_discrepancies_type_open")
+      .on(table.discrepancyType)
+      .where(sql`${table.resolvedAt} IS NULL`),
+    index("idx_discrepancies_detected_at").on(table.detectedAt),
+  ],
+);

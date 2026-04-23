@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../lib/api";
 import {
   useWorkbench,
   useAdvanceStage,
@@ -275,6 +277,40 @@ export function Workbench() {
       return key === tabularWell;
     });
   }, [rows, view, tabularWell]);
+
+  // Cross-check signal: which displayed assignments have open discrepancies?
+  // Single fetch per workbench mount, refresh every 60s. Used to amber-tint
+  // affected rows so dispatchers see drift without opening the drawer.
+  const discrepancyQuery = useQuery({
+    queryKey: ["discrepancies", "workbench-open"],
+    queryFn: () =>
+      api
+        .get<{
+          success: boolean;
+          data: {
+            discrepancies: Array<{
+              assignmentId: number | null;
+              severity: string;
+            }>;
+          };
+        }>("/diag/discrepancies?limit=500")
+        .then((r) => r.data),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const discrepancyByAssignment = useMemo(() => {
+    const map = new Map<number, { severity: string }>();
+    for (const d of discrepancyQuery.data?.discrepancies ?? []) {
+      if (d.assignmentId == null) continue;
+      const existing = map.get(d.assignmentId);
+      const rank = (s: string) =>
+        s === "critical" ? 3 : s === "warning" ? 2 : 1;
+      if (!existing || rank(d.severity) > rank(existing.severity)) {
+        map.set(d.assignmentId, { severity: d.severity });
+      }
+    }
+    return map;
+  }, [discrepancyQuery.data]);
 
   // For bulk-bar: categorize selected rows so we know which bulk actions
   // apply. Clean-uncertain rows can be confirmed; ready_to_build rows can
@@ -708,29 +744,49 @@ export function Workbench() {
               }}
             />
           ) : (
-            displayedRows.map((row) => (
-              <div key={row.assignmentId} data-workbench-row>
-                <WorkbenchRow
-                  row={row}
-                  selected={selected.has(row.assignmentId)}
-                  onToggleSelect={() => toggleSelect(row.assignmentId)}
-                  onRowClick={() =>
-                    setExpandedId((prev) =>
-                      prev === row.assignmentId ? null : row.assignmentId,
-                    )
+            displayedRows.map((row) => {
+              const disc = discrepancyByAssignment.get(row.assignmentId);
+              const tintClass = disc
+                ? disc.severity === "critical"
+                  ? "border-l-2 border-red-500"
+                  : disc.severity === "warning"
+                    ? "border-l-2 border-amber-400"
+                    : "border-l-2 border-blue-400"
+                : "";
+              return (
+                <div
+                  key={row.assignmentId}
+                  data-workbench-row
+                  data-has-discrepancy={disc ? "true" : undefined}
+                  className={tintClass}
+                  title={
+                    disc
+                      ? `PCS cross-check: ${disc.severity} discrepancy — open the row to see details`
+                      : undefined
                   }
-                  onPrimaryAction={() => primaryActionFor(row)}
-                  onFlagAction={() => setResolveRow(row)}
-                  isPending={advance.isPending || routeUncertain.isPending}
-                />
-                {expandedId === row.assignmentId && (
-                  <WorkbenchDrawer
+                >
+                  <WorkbenchRow
                     row={row}
-                    onClose={() => setExpandedId(null)}
+                    selected={selected.has(row.assignmentId)}
+                    onToggleSelect={() => toggleSelect(row.assignmentId)}
+                    onRowClick={() =>
+                      setExpandedId((prev) =>
+                        prev === row.assignmentId ? null : row.assignmentId,
+                      )
+                    }
+                    onPrimaryAction={() => primaryActionFor(row)}
+                    onFlagAction={() => setResolveRow(row)}
+                    isPending={advance.isPending || routeUncertain.isPending}
                   />
-                )}
-              </div>
-            ))
+                  {expandedId === row.assignmentId && (
+                    <WorkbenchDrawer
+                      row={row}
+                      onClose={() => setExpandedId(null)}
+                    />
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
