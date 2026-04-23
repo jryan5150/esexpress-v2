@@ -89,10 +89,23 @@ export async function syncPcsLoads(
   });
   const api = new DevelopersApi(config);
 
-  // Pull PCS loads
-  const pcsLoads: GetLoads200ResponseInner[] = await api.getLoads({
-    from: fromDate,
-  });
+  // Pull PCS loads. Wrap to surface real PCS error bodies (ResponseError
+  // from the generated client swallows the body, leaving us with the
+  // useless "Response returned an error code" message).
+  let pcsLoads: GetLoads200ResponseInner[];
+  try {
+    pcsLoads = await api.getLoads({ from: fromDate });
+  } catch (err: unknown) {
+    if (
+      err instanceof Error &&
+      "response" in err &&
+      err.response instanceof Response
+    ) {
+      const bodyText = await err.response.text().catch(() => "");
+      throw new Error(`PCS ${err.response.status}: ${bodyText || err.message}`);
+    }
+    throw err;
+  }
 
   const pcsLoadCount = pcsLoads.length;
   let matched = 0;
