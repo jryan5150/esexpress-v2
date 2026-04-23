@@ -325,20 +325,30 @@ export async function dispatchLoad(
   // directly. Mirrors the raw-fetch pattern already used by
   // pcs-sync.service.ts for GetLoads for similar camelCase-drift reasons.
   const bearer = await getAccessToken(db);
+  const bodyMap = body as unknown as Record<string, unknown>;
+
+  // PCS schema: Office.Code is PascalCase AND required to be an integer.
+  // Our buildAddLoadRequest passes { code: "1" } — transform to { Code: 1 }.
+  const officeSrc =
+    (bodyMap.office as Record<string, unknown> | undefined) ?? {};
+  const rawCode = officeSrc.code ?? officeSrc.Code;
+  const officeCode =
+    typeof rawCode === "string" ? Number.parseInt(rawCode, 10) : rawCode;
+
   const truckLoadBody = {
-    Status: (body as unknown as Record<string, unknown>).status,
-    LoadClass: (body as unknown as Record<string, unknown>).loadClass,
-    LoadType: (body as unknown as Record<string, unknown>).loadType,
-    BillToId: (body as unknown as Record<string, unknown>).billToId,
-    BillToName: (body as unknown as Record<string, unknown>).billToName,
-    LoadReference: (body as unknown as Record<string, unknown>).loadReference,
-    BillingType: (body as unknown as Record<string, unknown>).billingType,
-    MilesBilled: (body as unknown as Record<string, unknown>).milesBilled,
-    TotalWeight: (body as unknown as Record<string, unknown>).totalWeight,
-    Pallets: (body as unknown as Record<string, unknown>).pallets,
-    Notes: (body as unknown as Record<string, unknown>).notes,
-    Office: (body as unknown as Record<string, unknown>).office,
-    Stops: (body as unknown as Record<string, unknown>).stops,
+    Status: bodyMap.status,
+    LoadClass: bodyMap.loadClass,
+    LoadType: bodyMap.loadType,
+    BillToId: bodyMap.billToId,
+    BillToName: bodyMap.billToName,
+    LoadReference: bodyMap.loadReference,
+    BillingType: bodyMap.billingType,
+    MilesBilled: bodyMap.milesBilled,
+    TotalWeight: bodyMap.totalWeight,
+    Pallets: bodyMap.pallets,
+    Notes: bodyMap.notes,
+    Office: { Code: officeCode },
+    Stops: bodyMap.stops,
   };
 
   try {
