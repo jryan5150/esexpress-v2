@@ -338,6 +338,24 @@ export interface WorkbenchRow {
    *  Drives the multi-photo count badge on rows and the prev/next affordance
    *  on the drawer. 0 when no photo exists anywhere. */
   photoCount: number;
+  /** Derived semantic state — answers "why isn't there a photo?" instead
+   *  of binary attached/missing. See photo-state.service.ts. Auto-
+   *  transitions based on load age + JotForm sync cadence. */
+  photoState:
+    | "attached"
+    | "pending_jotform"
+    | "overdue"
+    | "needs_review"
+    | "human_flagged_missing"
+    | "unreadable";
+  /** Contextual message for non-attached states (empty for attached). */
+  photoStateMessage: string;
+  /** Minutes since load.createdAt — drives overdue math; null if unknown. */
+  photoStateMinutesOld: number | null;
+  /** Hint: should UI show a "Run Check" button to force a JotForm sync? */
+  photoStateAllowRunCheck: boolean;
+  /** ISO — when the next scheduled JotForm sync will fire. */
+  photoStateNextSync: string | null;
   rate: string | null;
   pcsNumber: string | null;
   /** PCS-side status (populated by /pcs/sync-loads). "Active" | "Dispatched"

@@ -19,6 +19,7 @@ import { ValidationError, NotFoundError } from "../../../lib/errors.js";
 import { scoreMatch } from "./match-scorer.service.js";
 import { extractMatchFeatures } from "./match-features.service.js";
 import { signPhotoUrls, wrapPhotoUrls } from "./photo-sign.service.js";
+import { computePhotoState } from "./photo-state.service.js";
 
 export interface UncertainReasonInput {
   wellId: number | null;
@@ -236,6 +237,20 @@ export interface WorkbenchRow {
    *  bol_submissions sources. Drives the multi-photo count badge on rows
    *  and the prev/next affordance in the drawer. 0 when nothing exists. */
   photoCount: number;
+  /** Derived semantic state: attached | pending_jotform | overdue |
+   *  needs_review | human_flagged_missing | unreadable. See
+   *  photo-state.service.ts. Computed; not persisted. */
+  photoState: string;
+  /** Contextual user-facing message per state (empty for attached). */
+  photoStateMessage: string;
+  /** Minutes since the load was created — drives overdue math. null when
+   *  we can't compute (missing createdAt). */
+  photoStateMinutesOld: number | null;
+  /** When UI should offer "Run Check" button (force JotForm sync now). */
+  photoStateAllowRunCheck: boolean;
+  /** ISO timestamp of the next expected JotForm sync tick. Lets UI show
+   *  "next check in 12 min" without duplicating the cron schedule. */
+  photoStateNextSync: string | null;
   rate: string | null;
   /** PCS load number — manually entered by dispatcher post-build. */
   pcsNumber: string | null;
@@ -439,6 +454,7 @@ export async function listWorkbenchRows(
       weightTons: loads.weightTons,
       truckNo: loads.truckNo,
       deliveredOn: loads.deliveredOn,
+      loadCreatedAt: loads.createdAt,
       pickupState: loads.pickupState,
       deliveryState: loads.deliveryState,
       wellId: wells.id,
@@ -626,6 +642,26 @@ export async function listWorkbenchRows(
       photoStatus: r.photoStatus,
       photoThumbUrl: r.photoThumbUrl,
       photoCount: r.photoCount ?? 0,
+      ...(() => {
+        const s = computePhotoState({
+          photoStatus: r.photoStatus,
+          photoCount: r.photoCount ?? 0,
+          photoThumbUrl: r.photoThumbUrl,
+          loadCreatedAt: r.loadCreatedAt,
+          uncertainReasons: r.uncertainReasons as UncertainReason[] | null,
+          // OCR confidence from bol_submissions — TODO wire via separate
+          // subquery once the ai_extracted_data schema is confirmed. For
+          // now unreadable state won't trigger from this input.
+          ocrConfidence: null,
+        });
+        return {
+          photoState: s.state,
+          photoStateMessage: s.message,
+          photoStateMinutesOld: s.minutesSinceLoadCreated,
+          photoStateAllowRunCheck: s.allowRunCheck,
+          photoStateNextSync: s.nextExpectedSync,
+        };
+      })(),
       rate: r.rate,
       pcsNumber: r.pcsNumber,
       pcsStatus:

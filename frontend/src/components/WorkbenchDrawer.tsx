@@ -65,6 +65,7 @@ class DrawerErrorBoundary extends Component<
 import { StagePill } from "./StagePill";
 import { PhotoLightbox } from "./PhotoLightbox";
 import { BOLDisplay } from "./BOLDisplay";
+import { PhotoStateBadge } from "./PhotoStateBadge";
 import type { WorkbenchRow, UncertainReason } from "../types/api";
 
 interface WorkbenchDrawerProps {
@@ -443,6 +444,7 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
             </>
           ) : (
             <>
+              <PhotoStateBadge row={row} />
               <div className="text-on-surface-variant text-sm">
                 No photo attached
               </div>

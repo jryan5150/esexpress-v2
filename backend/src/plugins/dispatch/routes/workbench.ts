@@ -600,6 +600,71 @@ export const workbenchRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // POST /:id/run-photo-check — force JotForm sync small-window, return
+  // quickly so the drawer's "Run Check" button feels instant. Used to
+  // avoid the 30-min cron wait when driver says "I just uploaded."
+  // Available to any authenticated dispatcher (not admin-gated) so Scout
+  // or Steph can self-serve without escalating.
+  fastify.post(
+    "/:id/run-photo-check",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) return reply.status(503).send(DB_UNAVAILABLE);
+      try {
+        const apiKey = process.env.JOTFORM_API_KEY;
+        if (!apiKey) {
+          return reply.status(503).send({
+            success: false,
+            error: {
+              code: "JOTFORM_NOT_CONFIGURED",
+              message: "JotForm API key not set — ask admin to configure.",
+            },
+          });
+        }
+        const { syncWeightTickets } =
+          await import("../../verification/services/jotform.service.js");
+        // Small window so the button feels fast. 50 recent submissions
+        // cover ~2 hours of driver uploads at typical rate.
+        const result = await syncWeightTickets(
+          db,
+          {
+            apiKey,
+            formId: process.env.JOTFORM_FORM_ID,
+            baseUrl: process.env.JOTFORM_BASE_URL,
+          },
+          { limit: 50, offset: 0 },
+        );
+        return {
+          success: true,
+          data: {
+            fetched: result.fetched ?? 0,
+            matched: result.matched ?? 0,
+            stored: result.stored ?? 0,
+          },
+        };
+      } catch (err) {
+        request.log.error({ err }, "run-photo-check failed");
+        return reply.status(500).send({
+          success: false,
+          error: {
+            code: "RUN_PHOTO_CHECK_FAILED",
+            message: err instanceof Error ? err.message : String(err),
+          },
+        });
+      }
+    },
+  );
+
   // POST /build-duplicate — batch advance to building
   fastify.post(
     "/build-duplicate",
