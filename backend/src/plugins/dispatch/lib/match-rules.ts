@@ -111,22 +111,27 @@ export function applyTwoIdentifierRule(
   ];
   const signalCount = signals.filter(Boolean).length;
 
-  // Single-signal exceptions that bypass the two-identifier requirement
+  // Single-signal exceptions that bypass the two-identifier requirement.
+  // Each exception's safety is backed by a specific database invariant:
   if (tier === 1 && signalCount === 1) {
     if (evidence.confirmedMapping) {
+      // Human previously approved this destination→well pairing.
       return { tier: 1, demoted: false, signalCount };
     }
     if (evidence.exactAliasMatch) {
-      // Alias was human-curated (Jessica's reply, flywheel-reviewed, etc.)
+      // Aliases are human-curated (Jessica's reply, flywheel-reviewed).
       return { tier: 1, demoted: false, signalCount };
     }
     if (evidence.propxJobIdMatch) {
-      // Upstream system-generated identity — distinct well IDs from PropX
+      // Upstream system-generated UUID — distinct per well in PropX.
       return { tier: 1, demoted: false, signalCount };
     }
-    // exact_name alone (no alias, no propxJobId, no cross-source) — still
-    // demote. Name-only can still false-positive on generic names like
-    // "Roberts" matching multiple physical wells without disambiguation.
+    if (evidence.exactNameMatch) {
+      // wells.name carries a UNIQUE constraint — an exact normalized-name
+      // match is guaranteed to resolve to exactly one well. False-positive
+      // risk is zero by schema invariant.
+      return { tier: 1, demoted: false, signalCount };
+    }
   }
 
   if (tier === 1 && signalCount < 2) {

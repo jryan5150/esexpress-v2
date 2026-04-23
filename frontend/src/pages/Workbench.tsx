@@ -71,6 +71,11 @@ const FILTER_EMPTY_COPY: Record<
     body: "No loads have been typed into PCS today. Check Ready to Build for what's queued.",
     cta: { to: "?filter=ready_to_build", label: "Ready to Build →" },
   },
+  not_in_pcs: {
+    title: "Every load is in PCS.",
+    body: "Nothing is missing from PCS right now — the build queue and PCS are in sync. Check Ready to Build to see what's staged next.",
+    cta: { to: "?filter=ready_to_build", label: "Ready to Build →" },
+  },
   all: {
     title: "No loads in the system.",
     body: "Load Center is completely empty. If this looks wrong, the ingest sync may be paused — check with Jace or the admin dashboard.",
