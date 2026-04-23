@@ -223,6 +223,53 @@ export async function dispatchLoad(
     db,
     assignmentId,
   );
+
+  // ─── Photo gate — hard requirement per client (no photo, no PCS push) ───
+  // Jessica Apr 6 / Apr 17: "100% + photo → ready_to_build". We run this
+  // check BEFORE touching PCS so no load ever lands there without a BOL.
+  const {
+    photoGateCheck,
+    fetchAndNormalizePhoto,
+    uploadPhotoToPcs,
+    cancelPcsLoad,
+  } = await import("./pcs-file.service.js");
+
+  const gate = await photoGateCheck(db, assignmentId, load.id);
+  if (!gate.ok || !gate.photoUrl) {
+    return {
+      success: false,
+      error: {
+        code: "PHOTO_REQUIRED",
+        message:
+          "Cannot push to PCS: no BOL photo attached to this assignment. Photos are a hard requirement — attach one and retry.",
+        retryable: false,
+      },
+      latencyMs: Date.now() - startMs,
+    };
+  }
+
+  // Pre-fetch + normalize BEFORE creating the load in PCS. If this fails,
+  // we abort without ever touching PCS — nothing to roll back.
+  let photoBuffer: Buffer;
+  let photoFilename: string;
+  let photoWasRotated = false;
+  try {
+    const normalized = await fetchAndNormalizePhoto(gate.photoUrl);
+    photoBuffer = normalized.buffer;
+    photoFilename = normalized.filename;
+    photoWasRotated = normalized.wasRotated;
+  } catch (err) {
+    return {
+      success: false,
+      error: {
+        code: "PHOTO_FETCH_FAILED",
+        message: `Photo fetch/normalize failed: ${err instanceof Error ? err.message : String(err)}`,
+        retryable: true,
+      },
+      latencyMs: Date.now() - startMs,
+    };
+  }
+
   const pkg = buildDispatchPackage(assignment, load, well);
   const body = buildAddLoadRequest(pkg);
 
@@ -260,14 +307,52 @@ export async function dispatchLoad(
       }
     });
 
-    const latencyMs = Date.now() - startMs;
-
     // AddLoad200Response shape varies by PCS version; capture the raw response
     // envelope for observability, and try to pull a loadId if present.
     const pcsLoadId = (response as Record<string, unknown>)?.loadId as
       | number
       | string
       | undefined;
+
+    if (pcsLoadId == null) {
+      throw new Error(
+        `PCS AddLoad returned 200 without loadId — cannot attach photo. Response: ${JSON.stringify(response)}`,
+      );
+    }
+
+    // ─── Photo upload — atomic with load creation ─────────────────────
+    // If this fails we roll back the just-created PCS load so the client
+    // never ends up with a BOL-less orphan. The photo requirement is
+    // non-negotiable per Jessica's Apr 6 / Apr 17 asks.
+    let attachmentName: string;
+    try {
+      const uploaded = await uploadPhotoToPcs(
+        db,
+        pcsLoadId,
+        photoBuffer,
+        photoFilename,
+      );
+      attachmentName = uploaded.attachmentName;
+    } catch (uploadErr) {
+      // Rollback — best-effort; log but don't let rollback failure mask
+      // the real upload error.
+      try {
+        await cancelPcsLoad(db, pcsLoadId);
+      } catch {
+        // swallow — the upload error is the load-bearing signal
+      }
+      return {
+        success: false,
+        error: {
+          code: "PHOTO_UPLOAD_FAILED",
+          message: `Photo upload to PCS failed: ${uploadErr instanceof Error ? uploadErr.message : String(uploadErr)} — load ${pcsLoadId} rolled back.`,
+          retryable: true,
+        },
+        latencyMs: Date.now() - startMs,
+      };
+    }
+
+    const latencyMs = Date.now() - startMs;
 
     await db
       .update(assignments)
@@ -278,6 +363,8 @@ export async function dispatchLoad(
           dispatch_status: "Dispatched",
           pcs_load_id: pcsLoadId ?? null,
           pcs_response: response,
+          pcs_attachment_name: attachmentName,
+          photo_was_rotated: photoWasRotated,
           last_status_sync: new Date().toISOString(),
           transport: "rest",
         },
