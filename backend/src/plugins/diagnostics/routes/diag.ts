@@ -55,6 +55,93 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /cron-health — public endpoint usable by external uptime monitors.
+  // Returns 200 when ALL configured cron sources have a recent successful
+  // run within their expected cadence. Returns 503 (with detail) when
+  // any source is stale or last run was a failure. Designed for polling
+  // every 5–15 min by UptimeRobot / Better Stack so cron failures
+  // surface even if Sentry isn't wired.
+  fastify.get("/cron-health", async (_request, reply) => {
+    const db = fastify.db;
+    if (!db) {
+      return reply.status(503).send({
+        success: false,
+        data: { healthy: false, reason: "db not connected" },
+      });
+    }
+    const { syncRuns } = await import("../../../db/schema.js");
+    const { desc, eq } = await import("drizzle-orm");
+
+    // Per-source max-staleness in minutes. PCS = 15 min cron + 5 min grace.
+    // JotForm = 30 min cron + 10 min grace. PropX/Logistiq run every 4 hr
+    // during business hours so we use 5 hr to absorb the gap.
+    const STALENESS_BUDGET_MIN: Record<string, number> = {
+      pcs: 20,
+      jotform: 40,
+      propx: 300,
+      logistiq: 300,
+      automap: 300,
+    };
+
+    const checks: Array<{
+      source: string;
+      ok: boolean;
+      reason?: string;
+      lastRun?: { status: string; minutesAgo: number };
+    }> = [];
+
+    for (const [source, budgetMin] of Object.entries(STALENESS_BUDGET_MIN)) {
+      const [latest] = await db
+        .select({
+          status: syncRuns.status,
+          startedAt: syncRuns.startedAt,
+        })
+        .from(syncRuns)
+        .where(
+          eq(
+            syncRuns.source,
+            source as "propx" | "logistiq" | "automap" | "jotform" | "pcs",
+          ),
+        )
+        .orderBy(desc(syncRuns.startedAt))
+        .limit(1);
+
+      if (!latest) {
+        checks.push({
+          source,
+          ok: false,
+          reason: "no runs recorded yet",
+        });
+        continue;
+      }
+      const minutesAgo = Math.floor(
+        (Date.now() - latest.startedAt.getTime()) / 60_000,
+      );
+      const tooOld = minutesAgo > budgetMin;
+      const failed = latest.status === "failed";
+      checks.push({
+        source,
+        ok: !tooOld && !failed,
+        reason: failed
+          ? `last run failed`
+          : tooOld
+            ? `${minutesAgo}m old (budget ${budgetMin}m)`
+            : undefined,
+        lastRun: { status: latest.status, minutesAgo },
+      });
+    }
+
+    const allOk = checks.every((c) => c.ok);
+    return reply.status(allOk ? 200 : 503).send({
+      success: allOk,
+      data: {
+        healthy: allOk,
+        checks,
+        checkedAt: new Date().toISOString(),
+      },
+    });
+  });
+
   // GET /pipeline — last sync per source (auth required)
   fastify.get(
     "/pipeline",
@@ -73,7 +160,13 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       const { syncRuns } = await import("../../../db/schema.js");
       const { desc, eq } = await import("drizzle-orm");
 
-      const sources = ["propx", "logistiq", "automap", "jotform"] as const;
+      const sources = [
+        "propx",
+        "logistiq",
+        "automap",
+        "jotform",
+        "pcs",
+      ] as const;
       const pipeline: Record<string, unknown> = {};
 
       for (const source of sources) {

@@ -12,13 +12,14 @@
 import cron from "node-cron";
 import type { Database } from "./db/client.js";
 import { syncRuns } from "./db/schema.js";
+import { reportError } from "./lib/sentry.js";
 
 const TZ = "America/Chicago";
 
 let db: Database | null = null;
 
 export async function recordSyncRun(
-  source: "propx" | "logistiq" | "automap" | "jotform",
+  source: "propx" | "logistiq" | "automap" | "jotform" | "pcs",
   startedAt: Date,
   result: {
     status: "success" | "failed" | "skipped";
@@ -104,13 +105,14 @@ export function startScheduler(database: Database) {
           return {
             status: "success",
             recordsProcessed: result.pcsLoadCount,
-            metadata: {
-              matched: result.matched,
-              missedByV2: result.missedByV2.length,
-              latencyMs: result.latencyMs,
-            },
+            matched: result.matched,
+            missedByV2: result.missedByV2.length,
+            latencyMs: result.latencyMs,
+            bridgeable: result.bridgeable,
+            scopeGap: result.scopeGap,
           };
         })(),
+        "pcs",
       ),
     { timezone: TZ },
   );
@@ -129,7 +131,7 @@ export function startScheduler(database: Database) {
 async function runWithLog(
   name: string,
   promise: Promise<unknown>,
-  source?: "propx" | "logistiq" | "automap" | "jotform",
+  source?: "propx" | "logistiq" | "automap" | "jotform" | "pcs",
 ) {
   const startedAt = new Date();
   try {
@@ -141,9 +143,18 @@ async function runWithLog(
     );
     if (source) {
       const rec = result as Record<string, unknown> | null;
+      // Some return shapes use { skipped: true }, others { status: "skipped" }
+      // (PCS sync returns the latter). Normalize both.
+      const status: "success" | "failed" | "skipped" =
+        rec?.skipped || rec?.status === "skipped"
+          ? "skipped"
+          : rec?.status === "failed"
+            ? "failed"
+            : "success";
       await recordSyncRun(source, startedAt, {
-        status: rec?.skipped ? "skipped" : "success",
+        status,
         recordsProcessed:
+          (rec?.recordsProcessed as number) ||
           (rec?.mapped as number) ||
           (rec?.stored as number) ||
           (rec?.total as number) ||
@@ -154,6 +165,14 @@ async function runWithLog(
   } catch (err) {
     const ms = Date.now() - startedAt.getTime();
     console.error(`[scheduler] ${name} FAILED after ${ms}ms:`, err);
+    // Surface to Sentry so cron failures don't sit silent (Railway pino
+    // eats console.error). Tagged so we can filter scheduler-only alerts.
+    reportError(err instanceof Error ? err : new Error(String(err)), {
+      job: name,
+      source: source ?? "unknown",
+      durationMs: ms,
+      kind: "scheduler-failure",
+    });
     if (source) {
       await recordSyncRun(source, startedAt, {
         status: "failed",

@@ -684,7 +684,7 @@ export const syncRuns = pgTable(
   {
     id: serial("id").primaryKey(),
     source: text("source", {
-      enum: ["propx", "logistiq", "automap", "jotform"],
+      enum: ["propx", "logistiq", "automap", "jotform", "pcs"],
     }).notNull(),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
