@@ -68,19 +68,27 @@ This is a speaking guide, not a script to read. Bullet points per section. The g
 - Click the "Not in PCS" filter → shows Scout/Steph's actual build queue
 - Explain: _"Every load that's still needing to be built in PCS is here. When toggle flips, one click validates AND pushes."_
 
-### B. Calibration finding — PCS and v2 track different lifecycle stages
+### B. Reconciliation — two systems, two naming conventions, a real bridge
 
-> "When we ran the calibration this week, we found something structural: v2 and PCS are looking at the same business from opposite ends. v2 ingests carrier dispatch from PropX and Logistiq — Liberty Apache Formentera Wrangler, Liberty Titan DNR Chili. PCS holds the downstream billing — Comstock Dinkins JG 1H, Frac-Chem Load. Same deliveries, different naming conventions."
+> "When we connected the PCS pull this week, we found something structural: v2 and PCS are tracking the same deliveries under different identifiers. v2 ingests carrier dispatch from PropX and Logistiq — Liberty Apache Formentera Wrangler, Liberty Titan DNR Chili. PCS holds the customer-billing view — Comstock Dinkins JG 1H, Frac-Chem Load. Different names, same trucks."
 
-- Pull up `/docs/2026-04-23-calibration-report.md` as visual
-- _"Your 44 currently-open PCS loads don't match v2's names 1-to-1 because your team manually enters the customer-facing well name when billing. Post-toggle-flip, v2 push carries the carrier name into PCS's loadReference field — reconciliation becomes automatic."_
+- Pull up a live sync response (`curl /api/v1/pcs/sync-loads`) showing the 44 active PCS loads
+- 1 matched (our test push), 43 unmatched — but each unmatched entry is now **rich**:
+  - Shipper: "Cayuga Sands" · ticket #1654276 · 05/08/2023
+  - Consignee: "Comstock Dinkins JG 1H" · Marquez, TX
+  - 52,620 lb · 81 miles
+- _"Every load that doesn't auto-link tells us **why**. Here: Cayuga Sands as an origin isn't in our ingestion. Comstock Dinkins JG 1H as a well isn't in our master. That's not a bug — that's scope we haven't set up yet. 43 historical loads waiting for the onboarding."_
 
-### C. The flywheel finding — v2 was built on ~8% of your well universe
+### C. The bridging mechanism is wired — it's waiting for scope
 
-> "Tonight we processed 3 years of your historical dispatch data. 1,143 unique destinations across the corpus. v2 had 95 wells. There's a ~163-well gap we never knew about — with 21,000 historical loads attached to them."
+> "For loads where v2 already covers the route, the bridge fires automatically. The matcher checks: does our OCR-extracted driver ticket match the scale ticket PCS's shipper stop has? Yes → auto-link. We don't have that data today because these 43 are from a service line v2 wasn't configured for. The moment we onboard Cayuga Sands as a loader and Comstock Dinkins as a well, the bridge closes for those 43 — and every future delivery down that lane."
 
-- Show the flywheel discovery report
-- _"We're not discovering bugs. We're discovering scope. 14 of those got corrected overnight. The other 152 are in a review queue for your team."_
+### D. The flywheel finding — v2 was built on ~8% of your well universe
+
+> "Tonight we processed 3 years of your historical dispatch data. 1,143 unique destinations across the corpus. v2 had 95 wells. There's a ~163-well gap we never knew about — with 21,000 historical loads attached to them. And now we know: the well PCS is billing against right now — Comstock Dinkins JG 1H — is #1 on that list with 605 historical loads."
+
+- Show the flywheel discovery report + point at Comstock Dinkins JG 1H as the top consignee
+- _"Two separate tools — the PCS reconciliation sync and the historical flywheel — independently landed on the same well. That's not coincidence. That's the same scope gap surfacing from two directions. 14 of those 163 got corrected overnight. The other 149 are in a review queue for your team, and every one of them expands v2's reach."_
 
 ---
 
@@ -129,7 +137,11 @@ Yes. Walk through Scout's typical day: see Ready-to-Build, open drawer, check BO
 
 ### "What about Jenny's reconciliation?"
 
-The 'missed by v2' signal is automated now. PCS sync every 15 minutes surfaces any PCS load without a v2 counterpart. That's her manual cross-reference workflow, automated.
+The 'missed by v2' signal is automated now. PCS sync every 15 minutes fetches the full detail on each PCS load — shipper + ticket #, consignee + city, dates, weight, miles. Each unmatched entry tells her exactly _why_ it's unmatched. Today it's surfacing 43 Cayuga Sands → Comstock Dinkins loads from 2023 that we haven't set up a pipeline for. Her review queue is no longer "go compare spreadsheets" — it's "do I want to onboard this scope or skip it." We kept the bridge infrastructure wired so the moment a well gets onboarded, every historical PCS load for it auto-links on the next sync.
+
+### "Why does our PCS loadReference not match v2's load_no?"
+
+Because they came from different starting points. v2's load_no is PropX's internal sequence. PCS's loadReference is whatever your team types when building the load — often the paper scale ticket the driver hands back at pickup. Both systems are right; they just never agreed on a key. v2 now knows how to bridge: shipper-stop referenceNumber against our OCR-extracted ticket. For the current 43 mismatched loads, the gap isn't the bridge — it's that v2 never ingested that pipeline's driver photos. Fix the pipeline scope, bridge closes on its own.
 
 ### "What about payroll?"
 
