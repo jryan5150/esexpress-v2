@@ -375,18 +375,29 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
   // investigating PCS→v2 reconciliation. Proxies GetLoad so we can see
   // what Stops + ReferenceNumber actually look like on production
   // loads. Remove once bridging strategy is locked.
-  fastify.get<{ Params: { loadId: string } }>(
+  fastify.get<{
+    Params: { loadId: string };
+    Querystring: { letter?: string };
+  }>(
     "/debug/load/:loadId",
     { preHandler: [fastify.authenticate] },
     async (request, reply) => {
       const { loadId } = request.params;
+      // A/B verification: accept ?letter=A|B to test whether
+      // X-Company-Letter actually segments data. Default to env when
+      // not specified. Added 2026-04-23 to diagnose the A/B uncertainty
+      // surfaced during Friday-drop prep.
+      const letterParam = request.query.letter?.toUpperCase();
+      const companyLetter =
+        letterParam === "A" || letterParam === "B"
+          ? letterParam
+          : (process.env.PCS_COMPANY_LTR ?? "B");
       const { getAccessToken } =
         await import("../services/pcs-auth.service.js");
       const db = fastify.db;
       if (!db) return reply.status(503).send({ success: false });
       const bearer = await getAccessToken(db);
       const companyId = process.env.PCS_COMPANY_ID ?? "";
-      const companyLetter = process.env.PCS_COMPANY_LTR ?? "B";
       const baseUrl = process.env.PCS_BASE_URL ?? "https://api.pcssoft.com";
       const res = await fetch(`${baseUrl}/dispatching/v1/load/${loadId}`, {
         headers: {
@@ -403,7 +414,12 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
       } catch {
         parsed = text;
       }
-      return { success: res.ok, status: res.status, data: parsed };
+      return {
+        success: res.ok,
+        status: res.status,
+        letter: companyLetter,
+        data: parsed,
+      };
     },
   );
 
