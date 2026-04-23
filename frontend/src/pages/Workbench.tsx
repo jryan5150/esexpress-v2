@@ -11,6 +11,7 @@ import {
 import { useCurrentUser } from "../hooks/use-auth";
 import { WorkbenchRow } from "../components/WorkbenchRow";
 import { WorkbenchDrawer } from "../components/WorkbenchDrawer";
+import { PipelineFreshnessChip } from "../components/PipelineFreshnessChip";
 import { BuildDuplicateModal } from "../components/BuildDuplicateModal";
 import { ResolveModal } from "../components/ResolveModal";
 import { WorkbenchOnboarding } from "../components/WorkbenchOnboarding";
@@ -463,6 +464,10 @@ export function Workbench() {
             Show walkthrough
           </button>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 mb-2">
+        <PipelineFreshnessChip />
       </div>
 
       <div className="flex gap-1 flex-wrap items-center">
