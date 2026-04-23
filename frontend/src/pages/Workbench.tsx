@@ -180,6 +180,7 @@ function WorkbenchEmptyState({
 const FILTERS: { value: WorkbenchFilter; label: string }[] = [
   { value: "uncertain", label: "Uncertain" },
   { value: "ready_to_build", label: "Ready to Build" },
+  { value: "not_in_pcs", label: "Not in PCS" },
   { value: "missing_ticket", label: "Missing Ticket" },
   { value: "missing_driver", label: "Missing Driver" },
   { value: "needs_rate", label: "Needs Rate" },

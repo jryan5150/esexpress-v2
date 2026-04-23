@@ -78,7 +78,9 @@ export async function syncPcsLoads(
     options.companyLetter ?? process.env.PCS_COMPANY_LTR ?? "B";
   const companyId = process.env.PCS_COMPANY_ID ?? "";
 
-  const basePath = `${getPcsBaseUrl()}/dispatching/v1`;
+  // Generated client's getLoads urlPath is "/", so basePath must end at
+  // /load. Kyle's endpoint is /dispatching/v1/load.
+  const basePath = `${getPcsBaseUrl()}/dispatching/v1/load`;
   const config = new Configuration({
     basePath,
     accessToken: () => getAccessToken(db),

@@ -29,6 +29,7 @@ const WORKBENCH_FILTER_ENUM = [
   "missing_driver",
   "needs_rate",
   "built_today",
+  "not_in_pcs",
   "all",
 ] as const;
 

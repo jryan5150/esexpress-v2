@@ -181,6 +181,7 @@ export type WorkbenchFilter =
   | "missing_driver"
   | "needs_rate"
   | "built_today"
+  | "not_in_pcs"
   | "all";
 
 export interface WorkbenchListParams {
@@ -312,6 +313,21 @@ export async function listWorkbenchRows(
         return and(
           eq(assignments.handlerStage, "uncertain"),
           sql`${assignments.uncertainReasons} @> '["rate_missing"]'::jsonb`,
+        );
+      case "not_in_pcs":
+        // Scout/Steph work queue: loads that are built-or-building in v2 but
+        // have no PCS counterpart yet (pcsDispatch.pcs_status is null/empty).
+        // Populated by the /pcs/sync-loads reconciliation job — if that's
+        // never been run, every assignment shows here. After sync, only the
+        // genuinely-not-in-PCS ones remain. Direct replacement for the
+        // "go look at the PCS list" tab-switch.
+        return and(
+          inArray(assignments.handlerStage, [
+            "uncertain",
+            "ready_to_build",
+            "building",
+          ]),
+          sql`COALESCE(${assignments.pcsDispatch}->>'pcs_status', '') = ''`,
         );
       case "built_today":
         // Loads a real dispatcher moved through the build pipeline today.

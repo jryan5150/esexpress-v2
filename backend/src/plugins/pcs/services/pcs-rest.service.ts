@@ -173,7 +173,11 @@ export function buildAddLoadRequest(pkg: DispatchPackage): AddLoadRequest {
 function buildLoadApi(
   accessTokenProvider: () => Promise<string>,
 ): DevelopersApi {
-  const basePath = `${getPcsBaseUrl()}/dispatching/v1`;
+  // Generated client's operations use urlPath = "/" — final URL is
+  // basePath + urlPath. Kyle's updated endpoint is /dispatching/v1/load,
+  // so basePath must end at /load for the generated relative paths to
+  // resolve correctly.
+  const basePath = `${getPcsBaseUrl()}/dispatching/v1/load`;
   const config = new Configuration({
     basePath,
     accessToken: accessTokenProvider,

@@ -304,6 +304,7 @@ export type WorkbenchFilter =
   | "missing_driver"
   | "needs_rate"
   | "built_today"
+  | "not_in_pcs"
   | "all";
 
 export type LoadSource = "propx" | "logistiq" | "jotform" | "manual";
