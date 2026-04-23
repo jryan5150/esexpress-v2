@@ -18,10 +18,29 @@
 import { eq, or, inArray } from "drizzle-orm";
 import type { Database } from "../../../db/client.js";
 import { assignments, loads } from "../../../db/schema.js";
-import { Configuration } from "../../../generated/pcs/load-client/src/runtime.js";
-import { DevelopersApi } from "../../../generated/pcs/load-client/src/apis/DevelopersApi.js";
-import type { GetLoads200ResponseInner } from "../../../generated/pcs/load-client/src/models/GetLoads200ResponseInner.js";
 import { getAccessToken } from "./pcs-auth.service.js";
+
+/**
+ * Response shape from PCS GetLoads. Verified 2026-04-22 via direct API
+ * calls — the generator-produced GetLoads200ResponseInner model uses
+ * TitleCase keys (e.g. json['LoadReference']) while the real PCS
+ * response uses camelCase (loadReference). Hand-rolled type here to
+ * match the actual wire format.
+ */
+interface PcsLoadRow {
+  loadId?: string | number;
+  status?: string;
+  loadClass?: string;
+  loadType?: string | null;
+  office?: { code?: string };
+  billToId?: string;
+  billToName?: string;
+  loadReference?: string | null;
+  reference1?: string | null;
+  milesBilled?: string | number | null;
+  totalWeight?: string | number | null;
+  notes?: string | null;
+}
 
 const getPcsBaseUrl = (): string =>
   process.env.PCS_BASE_URL ?? "https://api.pcssoft.com";
@@ -78,45 +97,29 @@ export async function syncPcsLoads(
     options.companyLetter ?? process.env.PCS_COMPANY_LTR ?? "B";
   const companyId = process.env.PCS_COMPANY_ID ?? "";
 
-  // Generated client's getLoads urlPath is "/", so basePath must end at
-  // /load. Kyle's endpoint is /dispatching/v1/load.
-  const basePath = `${getPcsBaseUrl()}/dispatching/v1/load`;
-
-  // OpenAPI spec didn't declare OAuth security scheme, so the generated
-  // client's accessToken config is never actually consumed — the
-  // Authorization header has to be attached manually via headers. Get the
-  // token up front and inject it. Token TTL is 3600s; we acquire per-sync,
-  // which is fine for a ≤few-second operation.
+  // Raw fetch against GetLoads — the generated OpenAPI client's
+  // FromJSON converter expects TitleCase keys but the real PCS response
+  // is camelCase, so typed deserialization drops fields like
+  // loadReference silently. Raw JSON + hand-rolled type is reliable.
   const bearer = await getAccessToken(db);
+  const fromDateParam = fromDate.toISOString().substring(0, 10);
+  const url = `${getPcsBaseUrl()}/dispatching/v1/load?from=${fromDateParam}`;
 
-  const config = new Configuration({
-    basePath,
-    accessToken: () => Promise.resolve(bearer),
+  const res = await fetch(url, {
     headers: {
       Authorization: `Bearer ${bearer}`,
       "X-Company-Id": companyId,
       "X-Company-Letter": companyLetter,
+      Accept: "application/json",
     },
   });
-  const api = new DevelopersApi(config);
 
-  // Pull PCS loads. Wrap to surface real PCS error bodies (ResponseError
-  // from the generated client swallows the body, leaving us with the
-  // useless "Response returned an error code" message).
-  let pcsLoads: GetLoads200ResponseInner[];
-  try {
-    pcsLoads = await api.getLoads({ from: fromDate });
-  } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      "response" in err &&
-      err.response instanceof Response
-    ) {
-      const bodyText = await err.response.text().catch(() => "");
-      throw new Error(`PCS ${err.response.status}: ${bodyText || err.message}`);
-    }
-    throw err;
+  if (!res.ok) {
+    const bodyText = await res.text().catch(() => "");
+    throw new Error(`PCS ${res.status}: ${bodyText || res.statusText}`);
   }
+
+  const pcsLoads = (await res.json()) as PcsLoadRow[];
 
   const pcsLoadCount = pcsLoads.length;
   let matched = 0;
