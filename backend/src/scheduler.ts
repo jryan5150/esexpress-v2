@@ -82,6 +82,39 @@ export function startScheduler(database: Database) {
     { timezone: TZ },
   );
 
+  // ─── PCS load sync (every 15 min) — pulls PCS's load list for the
+  // configured division and reconciles onto v2's assignments, populating
+  // pcsSequence + pcsDispatch.pcs_status so the Workbench's PcsPill
+  // stays warm without anyone triggering it. Surfaces missed-by-v2 gaps
+  // as a byproduct (Jenny's manual reconciliation, automated).
+  cron.schedule(
+    "*/15 * * * *",
+    () =>
+      runWithLog(
+        "PCS Sync (15m)",
+        (async () => {
+          if (!db) return { status: "skipped" };
+          const { syncPcsLoads } =
+            await import("./plugins/pcs/services/pcs-sync.service.js");
+          const result = await syncPcsLoads(db, {
+            // 3-day window — covers any load that might not have been in
+            // the previous tick's view without hammering PCS for history.
+            fromDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+          });
+          return {
+            status: "success",
+            recordsProcessed: result.pcsLoadCount,
+            metadata: {
+              matched: result.matched,
+              missedByV2: result.missedByV2.length,
+              latencyMs: result.latencyMs,
+            },
+          };
+        })(),
+      ),
+    { timezone: TZ },
+  );
+
   console.log("[scheduler] Cron jobs registered (TZ: America/Chicago)");
   console.log("[scheduler]   04:00 — PropX sync (7d)");
   console.log("[scheduler]   04:15 — Logistiq sync (7d)");
@@ -90,6 +123,7 @@ export function startScheduler(database: Database) {
     "[scheduler]   08:00, 12:00, 16:00, 20:00 — PropX + Logistiq (2d) + Auto-map",
   );
   console.log("[scheduler]   every 30m — JotForm photo sync");
+  console.log("[scheduler]   every 15m — PCS sync");
 }
 
 async function runWithLog(
