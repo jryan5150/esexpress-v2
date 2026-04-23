@@ -9,8 +9,7 @@ import { SearchOverlay } from "../search/SearchOverlay";
 export function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const userQuery = useCurrentUser();
-  const userName =
-    ((userQuery.data as Record<string, unknown>)?.name as string) || "";
+  const userName = userQuery.data?.name ?? "";
   const initials = userName
     ? userName
         .split(" ")

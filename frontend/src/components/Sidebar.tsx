@@ -336,10 +336,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               <span>Online ({Math.max(onlineUsers.length, 1)}) &mdash;</span>
               <span className="font-medium text-on-surface-variant truncate">
                 {onlineUsers.length === 0
-                  ? (
-                      (userQuery.data as Record<string, unknown>)
-                        ?.name as string
-                    )?.split(" ")[0] || "You"
+                  ? (userQuery.data?.name?.split(" ")[0] ?? "You")
                   : onlineUsers
                       .map((u: any) => u.userName?.split(" ")[0] || "User")
                       .join(", ")}

@@ -81,7 +81,9 @@ export function PhotoStateBadge({
         title={row.photoStateMessage}
       >
         {label}
-        {row.photoStateMinutesOld != null && row.photoState !== "attached" && (
+        {/* `photoState === "attached"` is already returned-out at line 72,
+             so no need to re-check it here. */}
+        {row.photoStateMinutesOld != null && (
           <span className="ml-1 opacity-75">
             · {formatAge(row.photoStateMinutesOld)}
           </span>

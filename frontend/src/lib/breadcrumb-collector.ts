@@ -11,6 +11,11 @@ interface SessionSummary {
   pageCount: number;
   totalDuration: number;
   pagesVisited: string[];
+  // Index signature lets the feedback API (which types this as
+  // Record<string, unknown>) accept the summary without unsafe casts.
+  // Forward-compatible: new fields added to the summary are carried
+  // through to the feedback payload automatically.
+  [key: string]: unknown;
 }
 
 const MAX_BREADCRUMBS = 50;

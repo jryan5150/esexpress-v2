@@ -152,14 +152,18 @@ export function Finance() {
     ? Number(statusData.under_review ?? 0)
     : MOCK_STATUS_SUMMARY.processing;
 
-  // Batch table data
-  const batchArray = Array.isArray(batchesQuery.data)
-    ? batchesQuery.data
-    : Array.isArray((batchesQuery.data as Record<string, unknown>)?.items)
-      ? ((batchesQuery.data as Record<string, unknown>).items as Array<
-          Record<string, unknown>
-        >)
-      : null;
+  // Batch table data — response can be either an array (list endpoint) or
+  // a paginated wrapper (`{ items, page, ... }`). Narrow without unsafe
+  // casts by going through `unknown` first.
+  const batchData = batchesQuery.data as unknown;
+  const batchArray = Array.isArray(batchData)
+    ? (batchData as Array<Record<string, unknown>>)
+    : (() => {
+        const wrapper = batchData as { items?: unknown } | null | undefined;
+        return Array.isArray(wrapper?.items)
+          ? (wrapper.items as Array<Record<string, unknown>>)
+          : null;
+      })();
   const cycles = batchArray
     ? batchArray.map((b: Record<string, unknown>) => {
         const status = String(b.status || "pending").toLowerCase();

@@ -47,7 +47,11 @@ export function useWeightUnit(): {
    *  Returns a placeholder for nullish / NaN inputs. */
   format: (weightTons: string | number | null | undefined) => string;
 } {
-  const unit = useSyncExternalStore(subscribe, readUnit, () => "tons");
+  // Server-snapshot fallback matches the client default so SSR pre-render
+  // doesn't flash the wrong unit on hydration. Typed as a const return so
+  // WeightUnit stays narrowed (instead of widening to string).
+  const getServerSnapshot = (): WeightUnit => "tons";
+  const unit = useSyncExternalStore(subscribe, readUnit, getServerSnapshot);
 
   const setUnit = useCallback((next: WeightUnit) => {
     try {
