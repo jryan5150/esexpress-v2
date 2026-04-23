@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   useWells,
   useDispatchReadiness,
@@ -8,6 +9,7 @@ import {
   useMatchAccuracy,
 } from "../hooks/use-wells";
 import { useHeartbeat } from "../hooks/use-presence";
+import { api } from "../lib/api";
 
 export function ExceptionFeed() {
   useHeartbeat({ currentPage: "feed" });
@@ -17,6 +19,24 @@ export function ExceptionFeed() {
   const validationQuery = useValidationSummary();
   const pipelineQuery = usePipelineStatus();
   const matchAccuracyQuery = useMatchAccuracy();
+
+  // Cross-check pill — open discrepancy count, refreshed every 60s.
+  // Visible on home page so the new feature surfaces immediately on
+  // login (Mike's first-90-seconds path).
+  const discrepancyCountQuery = useQuery({
+    queryKey: ["discrepancies", "open-count"],
+    queryFn: () =>
+      api
+        .get<{
+          success: boolean;
+          data: {
+            summary: { openTotal: number; byType: Record<string, number> };
+          };
+        }>("/diag/discrepancies?limit=1")
+        .then((r) => r.data),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
 
   const isLoading = wellsQuery.isLoading || readinessQuery.isLoading;
 
@@ -96,6 +116,37 @@ export function ExceptionFeed() {
                 {Math.round(matchAccuracyQuery.data.overall.acceptRate * 100)}%
               </button>
             )}
+          {/* Cross-Check pill — open discrepancies between v2 and PCS.
+              Pulses amber when items exist; muted green when v2 and PCS
+              agree across every matched load. Click → admin index. */}
+          {discrepancyCountQuery.data &&
+            (() => {
+              const n = discrepancyCountQuery.data.summary.openTotal;
+              const hasItems = n > 0;
+              return (
+                <button
+                  type="button"
+                  onClick={() => navigate("/admin/discrepancies")}
+                  title={
+                    hasItems
+                      ? `${n} open ${n === 1 ? "item" : "items"} where PCS shows something different than v2. Click to review.`
+                      : "v2 and PCS agree across every matched load."
+                  }
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[10px] font-semibold uppercase tracking-wide tabular-nums transition-colors cursor-pointer ${
+                    hasItems
+                      ? "bg-amber-400/10 border-amber-400/30 text-amber-700 dark:text-amber-400 hover:bg-amber-400/15"
+                      : "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/15"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-xs">
+                    compare_arrows
+                  </span>
+                  {hasItems
+                    ? `PCS: ${n} ${n === 1 ? "item" : "items"}`
+                    : "PCS: aligned"}
+                </button>
+              );
+            })()}
           {wellsQuery.dataUpdatedAt > 0 && (
             <span
               className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-surface-container-highest text-[10px] font-semibold uppercase tracking-wide text-outline tabular-nums"

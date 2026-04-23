@@ -20,6 +20,9 @@ import {
   loads,
   wells,
 } from "../../../db/schema.js";
+import { similarityScore, normalizeName } from "../../dispatch/lib/fuzzy.js";
+
+const ORPHAN_SUGGESTION_THRESHOLD = 0.6;
 
 interface PcsLoadSummary {
   status?: string | null;
@@ -254,7 +257,10 @@ export async function persistDiscrepancies(
           lastSeenAt: now,
         },
       })
-      .returning({ id: discrepancies.id, insertedAt: discrepancies.detectedAt });
+      .returning({
+        id: discrepancies.id,
+        insertedAt: discrepancies.detectedAt,
+      });
     if (result[0]) {
       // crude inserted vs updated — if detected_at == now (within 1s),
       // it was an insert
@@ -271,7 +277,10 @@ export async function persistDiscrepancies(
   if (typesToCheck.length > 0) {
     const resolvedRows = await db
       .update(discrepancies)
-      .set({ resolvedAt: now, resolutionNotes: "auto-resolved: no longer detected by sync" })
+      .set({
+        resolvedAt: now,
+        resolutionNotes: "auto-resolved: no longer detected by sync",
+      })
       .where(
         and(
           eq(discrepancies.subjectKey, subjectKey),
@@ -311,11 +320,62 @@ export async function sweepOrphanDestinations(
     .groupBy(loads.destinationName)
     .having(sql`COUNT(*) >= ${ORPHAN_DEST_THRESHOLD}`);
 
+  // Pull all wells once for fuzzy-match suggestions. Cheap (95 wells today).
+  const allWells = await db
+    .select({
+      id: wells.id,
+      name: wells.name,
+      aliases: wells.aliases,
+    })
+    .from(wells);
+  type WellCandidate = { id: number; name: string; candidate: string };
+  const candidates: WellCandidate[] = [];
+  for (const w of allWells) {
+    candidates.push({
+      id: w.id,
+      name: w.name,
+      candidate: normalizeName(w.name),
+    });
+    if (Array.isArray(w.aliases)) {
+      for (const a of w.aliases) {
+        if (typeof a === "string") {
+          candidates.push({
+            id: w.id,
+            name: w.name,
+            candidate: normalizeName(a),
+          });
+        }
+      }
+    }
+  }
+
+  function suggestWell(
+    destination: string,
+  ): { wellId: number; wellName: string; score: number } | undefined {
+    const target = normalizeName(destination);
+    if (!target) return undefined;
+    let best: { wellId: number; wellName: string; score: number } | undefined;
+    for (const c of candidates) {
+      const score = similarityScore(target, c.candidate);
+      if (
+        score >= ORPHAN_SUGGESTION_THRESHOLD &&
+        (!best || score > best.score)
+      ) {
+        best = { wellId: c.id, wellName: c.name, score };
+      }
+    }
+    return best;
+  }
+
   const now = new Date();
   let created = 0;
   for (const o of orphans) {
     if (!o.destination) continue;
     const subjectKey = `destination:${o.destination}`;
+    const suggestion = suggestWell(o.destination);
+    const message = suggestion
+      ? `${o.orphanCount} loads point to "${o.destination}". Closest existing well is "${suggestion.wellName}" (${Math.round(suggestion.score * 100)}% match) — alias it there if it's the same well, or add as a new well.`
+      : `${o.orphanCount} loads point to "${o.destination}" but no well is mapped. Add it to the wells master.`;
     const computed: ComputedDiscrepancy = {
       subjectKey,
       assignmentId: null,
@@ -324,8 +384,11 @@ export async function sweepOrphanDestinations(
       severity: o.orphanCount >= 10 ? "warning" : "info",
       v2Value: null,
       pcsValue: o.destination,
-      message: `${o.orphanCount} loads point to destination "${o.destination}" but no well is mapped. Add it to the wells master or alias to an existing well.`,
-      metadata: { orphanCount: o.orphanCount },
+      message,
+      metadata: {
+        orphanCount: o.orphanCount,
+        ...(suggestion ? { suggestedWell: suggestion } : {}),
+      },
     };
     const result = await db
       .insert(discrepancies)
@@ -352,7 +415,10 @@ export async function sweepOrphanDestinations(
           lastSeenAt: now,
         },
       })
-      .returning({ id: discrepancies.id, insertedAt: discrepancies.detectedAt });
+      .returning({
+        id: discrepancies.id,
+        insertedAt: discrepancies.detectedAt,
+      });
     if (result[0]) {
       const isInsert =
         Math.abs(result[0].insertedAt.getTime() - now.getTime()) < 1000;
@@ -363,7 +429,9 @@ export async function sweepOrphanDestinations(
   // Resolve orphan_destination discrepancies whose destination is now mapped
   // (i.e. no longer in the orphan list)
   const stillOrphanKeys = new Set(
-    orphans.filter((o) => o.destination).map((o) => `destination:${o.destination}`),
+    orphans
+      .filter((o) => o.destination)
+      .map((o) => `destination:${o.destination}`),
   );
   const openOrphans = await db
     .select({ id: discrepancies.id, subjectKey: discrepancies.subjectKey })

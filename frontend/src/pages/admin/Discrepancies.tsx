@@ -13,6 +13,12 @@ import { useHeartbeat } from "../../hooks/use-presence";
  * Filter by type chip + by severity. 5-minute auto-refresh.
  */
 
+interface SuggestedWell {
+  wellId: number;
+  wellName: string;
+  score: number;
+}
+
 interface Discrepancy {
   id: number;
   subjectKey: string;
@@ -23,6 +29,11 @@ interface Discrepancy {
   v2Value: string | null;
   pcsValue: string | null;
   message: string;
+  metadata: {
+    orphanCount?: number;
+    suggestedWell?: SuggestedWell;
+    [k: string]: unknown;
+  } | null;
   detectedAt: string;
   lastSeenAt: string;
   resolvedAt: string | null;
@@ -293,6 +304,27 @@ function DiscrepancyRow({
               )}
             </div>
           )}
+          {/* Suggested-well callout for orphan_destination rows. The
+              fuzzy-match runs in the sweep; we just display its result
+              here so Jessica can decide quickly: alias to the
+              suggested well, or add as new. */}
+          {isOrphan && d.metadata?.suggestedWell && (
+            <div className="mt-2 px-2 py-1.5 rounded bg-primary/5 border border-primary/20 text-[11px]">
+              <span className="text-outline">Closest existing well:</span>{" "}
+              <Link
+                to={`/admin/wells?well=${d.metadata.suggestedWell.wellId}`}
+                className="font-semibold text-primary hover:underline"
+              >
+                {d.metadata.suggestedWell.wellName}
+              </Link>{" "}
+              <span className="text-outline tabular-nums">
+                ({Math.round(d.metadata.suggestedWell.score * 100)}% match)
+              </span>{" "}
+              <span className="text-outline">
+                — alias it there if same well, otherwise add as new.
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex flex-col gap-1 shrink-0">
           {d.assignmentId && !isOrphan && (
@@ -305,10 +337,16 @@ function DiscrepancyRow({
           )}
           {isOrphan && (
             <Link
-              to="/admin/wells"
+              to={
+                d.metadata?.suggestedWell
+                  ? `/admin/wells?well=${d.metadata.suggestedWell.wellId}`
+                  : "/admin/wells"
+              }
               className="text-[11px] text-primary underline whitespace-nowrap"
             >
-              add to wells
+              {d.metadata?.suggestedWell
+                ? "open suggested well"
+                : "add to wells"}
             </Link>
           )}
           <button
