@@ -20,7 +20,7 @@
  */
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { and, eq, gte, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, gte, isNull, sql } from "drizzle-orm";
 import {
   loads,
   assignments,
@@ -90,7 +90,11 @@ async function main() {
   let totalTier3 = 0;
   let totalAssignmentsCreated = 0;
   let totalErrors = 0;
-  let lastBatchFirstId = -1;
+  // Monotonic cursor — every iteration advances strictly forward through
+  // the load-id space. Prior loop-guard approach (re-querying by
+  // first-id-in-batch) oscillated between the first two "stuck" batches
+  // when neither produced matches, leaving 95%+ of orphans untouched.
+  let cursorId = 0;
   const start = Date.now();
 
   while (true) {
@@ -98,44 +102,18 @@ async function main() {
       .select({ id: loads.id })
       .from(loads)
       .leftJoin(assignments, eq(loads.id, assignments.loadId))
-      .where(and(isNull(assignments.id), gte(loads.createdAt, fromDate)))
+      .where(
+        and(
+          isNull(assignments.id),
+          gte(loads.createdAt, fromDate),
+          gt(loads.id, cursorId),
+        ),
+      )
       .orderBy(loads.id)
       .limit(BATCH_SIZE);
 
     if (batch.length === 0) break;
 
-    // Loop guard — same ID twice means we're stuck on Tier 3 with no assignments created
-    if (batch[0].id === lastBatchFirstId) {
-      // Advance past the stuck batch
-      const skipped = await db
-        .select({ id: loads.id })
-        .from(loads)
-        .leftJoin(assignments, eq(loads.id, assignments.loadId))
-        .where(and(isNull(assignments.id), gte(loads.createdAt, fromDate)))
-        .orderBy(loads.id)
-        .limit(BATCH_SIZE)
-        .offset(BATCH_SIZE);
-      if (skipped.length === 0) break;
-      const skipIds = skipped.map((r: { id: number }) => r.id);
-      const skipResults = await processLoadBatch(db, skipIds, systemUserId);
-      for (const r of skipResults) {
-        totalProcessed++;
-        if (r.tier === 1) totalTier1++;
-        else if (r.tier === 2) totalTier2++;
-        else totalTier3++;
-        if (r.assignmentId) totalAssignmentsCreated++;
-        if (r.error) totalErrors++;
-      }
-      lastBatchFirstId = -1;
-      if (totalProcessed % 1000 < BATCH_SIZE) {
-        console.log(
-          `processed=${totalProcessed} tier1=${totalTier1} tier2=${totalTier2} tier3=${totalTier3} created=${totalAssignmentsCreated} errors=${totalErrors}`,
-        );
-      }
-      continue;
-    }
-
-    lastBatchFirstId = batch[0].id;
     const loadIds = batch.map((r: { id: number }) => r.id);
     const results = await processLoadBatch(db, loadIds, systemUserId);
 
@@ -148,17 +126,15 @@ async function main() {
       if (r.error) totalErrors++;
     }
 
-    if (totalProcessed % 1000 < BATCH_SIZE) {
-      console.log(
-        `processed=${totalProcessed} tier1=${totalTier1} tier2=${totalTier2} tier3=${totalTier3} created=${totalAssignmentsCreated} errors=${totalErrors} (${Math.floor((Date.now() - start) / 1000)}s)`,
-      );
-    }
+    // Advance cursor to the max id in this batch. Matched loads leave the
+    // orphan set but cursor still moves past them; unmatched loads also get
+    // skipped over so we never re-process the same batch.
+    cursorId = loadIds[loadIds.length - 1];
 
-    // Reset guard if this batch produced assignments
-    const created = results.filter(
-      (r: { assignmentId: number | null }) => r.assignmentId,
-    ).length;
-    if (created > 0) lastBatchFirstId = -1;
+    // Log every batch — tight feedback loop on whether the matcher is firing.
+    console.log(
+      `cursor=${cursorId} processed=${totalProcessed} tier1=${totalTier1} tier2=${totalTier2} tier3=${totalTier3} created=${totalAssignmentsCreated} errors=${totalErrors} (${Math.floor((Date.now() - start) / 1000)}s)`,
+    );
   }
 
   const elapsed = Math.floor((Date.now() - start) / 1000);
