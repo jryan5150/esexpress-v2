@@ -121,26 +121,6 @@ export async function syncPcsLoads(
 
   const pcsLoads = (await res.json()) as PcsLoadRow[];
 
-  // TEMP DIAGNOSTIC 2026-04-23: dump full shape of first 3 PCS rows to
-  // identify which field carries the v2-bridgeable identifier. Remove
-  // after reconciliation strategy is locked.
-  console.log("[pcs-sync-diag] Total rows:", pcsLoads.length);
-  console.log(
-    "[pcs-sync-diag] Sample row 0:",
-    JSON.stringify(pcsLoads[0] ?? null, null, 2),
-  );
-  console.log(
-    "[pcs-sync-diag] Sample row 1:",
-    JSON.stringify(pcsLoads[1] ?? null, null, 2),
-  );
-  console.log(
-    "[pcs-sync-diag] Sample row 2:",
-    JSON.stringify(pcsLoads[2] ?? null, null, 2),
-  );
-  const allKeys = new Set<string>();
-  for (const pl of pcsLoads) for (const k of Object.keys(pl)) allKeys.add(k);
-  console.log("[pcs-sync-diag] All keys:", [...allKeys].sort().join(", "));
-
   const pcsLoadCount = pcsLoads.length;
   let matched = 0;
   let unmatched = 0;
