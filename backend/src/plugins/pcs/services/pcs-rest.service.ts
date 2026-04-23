@@ -311,39 +311,58 @@ export async function dispatchLoad(
   const pkg = buildDispatchPackage(assignment, load, well);
   const body = buildAddLoadRequest(pkg);
 
-  const api = await buildLoadApi(() => getAccessToken(db), company);
+  // ─── Raw fetch instead of generated OpenAPI client ─────────────────────
+  // 2026-04-23 finding: the generated client's AddLoadRequestToJSON is a
+  // union dispatcher that checks instanceOfIntermodalLoad FIRST. Because
+  // IntermodalLoad's type-guard requires only {status, loadClass, office}
+  // (same as TruckLoad), our TruckLoad-shaped payload gets serialized as
+  // IntermodalLoad — which STRIPS TotalWeight, BillingType, MilesBilled,
+  // Pallets and instead emits Boundary, BookingNumber, Container,
+  // Chassis (all undefined). PCS receives a TL-class load with no
+  // TotalWeight → server-side NullReferenceException → 500.
+  //
+  // Fix: bypass the generator, emit the PascalCase TruckLoad payload
+  // directly. Mirrors the raw-fetch pattern already used by
+  // pcs-sync.service.ts for GetLoads for similar camelCase-drift reasons.
+  const bearer = await getAccessToken(db);
+  const truckLoadBody = {
+    Status: (body as unknown as Record<string, unknown>).status,
+    LoadClass: (body as unknown as Record<string, unknown>).loadClass,
+    LoadType: (body as unknown as Record<string, unknown>).loadType,
+    BillToId: (body as unknown as Record<string, unknown>).billToId,
+    BillToName: (body as unknown as Record<string, unknown>).billToName,
+    LoadReference: (body as unknown as Record<string, unknown>).loadReference,
+    BillingType: (body as unknown as Record<string, unknown>).billingType,
+    MilesBilled: (body as unknown as Record<string, unknown>).milesBilled,
+    TotalWeight: (body as unknown as Record<string, unknown>).totalWeight,
+    Pallets: (body as unknown as Record<string, unknown>).pallets,
+    Notes: (body as unknown as Record<string, unknown>).notes,
+    Office: (body as unknown as Record<string, unknown>).office,
+    Stops: (body as unknown as Record<string, unknown>).stops,
+  };
 
   try {
     const response = await restPolicy.execute(async () => {
-      try {
-        return await api.addLoad({ addLoadRequest: body });
-      } catch (err: unknown) {
-        // Rewrap transport errors for the circuit breaker
-        if (
-          err instanceof TypeError ||
-          (err instanceof Error && err.name === "AbortError") ||
-          (err instanceof Error && err.name === "TimeoutError")
-        ) {
-          throw new NetworkError(
-            `PCS Load API request failed: ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
-        // Surface the real PCS error body — the OpenAPI client's ResponseError
-        // swallows the response, leaving us with "Response returned an error
-        // code" and no detail. Read the body so the caller sees fields + code.
-        if (
-          err instanceof Error &&
-          "response" in err &&
-          err.response instanceof Response
-        ) {
-          const bodyText = await err.response.text().catch(() => "");
-          throw new Error(
-            `PCS ${err.response.status}: ${bodyText || err.message}`,
-          );
-        }
-        throw err;
+      const url = `${getPcsBaseUrl()}/dispatching/v1/load`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${bearer}`,
+          "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(truckLoadBody),
+      });
+      if (!res.ok) {
+        const bodyText = await res.text().catch(() => "");
+        throw new Error(`PCS ${res.status}: ${bodyText || res.statusText}`);
       }
+      return (await res.json()) as Record<string, unknown>;
     });
+    // `company` variable kept in scope — future work may wire it to
+    // letter-based routing once Kyle confirms REST-side behavior.
+    void company;
 
     // AddLoad200Response shape varies by PCS version; capture the raw response
     // envelope for observability, and try to pull a loadId if present.
