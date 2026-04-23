@@ -83,6 +83,21 @@ export function applyFuzzyNeverAlone(
  *
  * A load with only one signal (even an exact one) drops to Tier 2 for
  * human review. This is the single biggest false-positive prevention.
+ *
+ * EXCEPTION (2026-04-22): a confirmed_mapping alone is sufficient — that's
+ * an explicit human approval of this destination→well pairing, and demoting
+ * it to Tier 2 re-asks the same human for the same approval.
+ *
+ * EXCEPTION (2026-04-23): an exact_alias match alone is sufficient when the
+ * alias was human-curated. Our alias corpus came from Jessica's explicit
+ * reply + flywheel-surfaced human-review candidates. Treating it as
+ * "untrusted" re-asks for approval we already have. This aligns the rule
+ * with how the anti-hallucination concern actually applies: fuzzy matches
+ * are the risk, exact curated matches are not.
+ *
+ * Pre-fix symptom: full-corpus backfill produced Tier 1 = 0 because most
+ * loads only have 1 source (PropX OR Logistiq, not both), so crossSourceBoost
+ * is false → exact_name alone was getting demoted to Tier 2.
  */
 export function applyTwoIdentifierRule(
   tier: 1 | 2 | 3,
@@ -95,6 +110,24 @@ export function applyTwoIdentifierRule(
     evidence.crossSourceBoost,
   ];
   const signalCount = signals.filter(Boolean).length;
+
+  // Single-signal exceptions that bypass the two-identifier requirement
+  if (tier === 1 && signalCount === 1) {
+    if (evidence.confirmedMapping) {
+      return { tier: 1, demoted: false, signalCount };
+    }
+    if (evidence.exactAliasMatch) {
+      // Alias was human-curated (Jessica's reply, flywheel-reviewed, etc.)
+      return { tier: 1, demoted: false, signalCount };
+    }
+    if (evidence.propxJobIdMatch) {
+      // Upstream system-generated identity — distinct well IDs from PropX
+      return { tier: 1, demoted: false, signalCount };
+    }
+    // exact_name alone (no alias, no propxJobId, no cross-source) — still
+    // demote. Name-only can still false-positive on generic names like
+    // "Roberts" matching multiple physical wells without disambiguation.
+  }
 
   if (tier === 1 && signalCount < 2) {
     return { tier: 2, demoted: true, signalCount };
