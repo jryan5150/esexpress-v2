@@ -143,24 +143,14 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
           },
         });
       }
-      const { getBooleanSetting } =
-        await import("../../dispatch/services/app-settings.service.js");
-      const enabled = await getBooleanSetting(
-        db,
-        "pcs_dispatch_enabled",
-        "PCS_DISPATCH_ENABLED",
-      );
-      if (!enabled) {
-        return reply.status(403).send({
-          success: false,
-          error: {
-            code: "PCS_DISPATCH_DISABLED",
-            message:
-              "PCS dispatch is disabled. Flip the toggle in Admin → Settings to enable.",
-          },
-        });
-      }
 
+      // Route-level pre-check removed 2026-04-23: dispatchLoad now does
+      // per-company gating with auto-inference. The legacy singular
+      // pcs_dispatch_enabled pre-check here was blocking Hairpin-only
+      // (A on, B off) flows because it only looked at the legacy flag.
+      // dispatchLoad's internal check returns the same PCS_DISPATCH_DISABLED
+      // error code wrapped as a non-success response, so clients still see
+      // the disabled state.
       const { assignmentId } = request.body as { assignmentId: number };
       const result = await dispatchLoad(db, assignmentId);
 

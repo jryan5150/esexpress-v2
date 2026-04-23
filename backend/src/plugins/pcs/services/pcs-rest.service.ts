@@ -210,17 +210,33 @@ export async function dispatchLoad(
   assignmentId: number,
   options: { company?: "A" | "B" } = {},
 ): Promise<DispatchResult> {
-  // Default to B (ES Express production) for backward compat with any
-  // caller that hasn't been updated to pass a company. Hairpin test
-  // division pushes must explicitly pass company: "A".
-  const company = options.company ?? "B";
-
-  // DB-backed flag per company so admin UI can flip independently.
-  // Legacy singular pcs_dispatch_enabled still consulted as B-side
-  // fallback for backward compat. 10-sec cache in the helper prevents
-  // per-dispatch DB hits.
   const { getPcsDispatchEnabled } =
     await import("../../dispatch/services/app-settings.service.js");
+
+  // Auto-company inference: when the caller doesn't specify a company
+  // explicitly, pick based on which toggle is on. This makes the Friday-
+  // drop self-demo work naturally — team toggles A (Hairpin test) on,
+  // pushes a test load, push routes to A automatically with no extra
+  // UI wiring.
+  //
+  // Rules (checked only when caller didn't pass company):
+  //   A on,  B off → route to A (test-drive mode)
+  //   A off, B on  → route to B (normal production)
+  //   A on,  B on  → route to B (production takes priority — preserves
+  //                  Scout's normal workflow even while testing)
+  //   A off, B off → will fall through to the disabled error below
+  let company: "A" | "B" = options.company ?? "B";
+  if (options.company === undefined) {
+    const [aOn, bOn] = await Promise.all([
+      getPcsDispatchEnabled(db, "A"),
+      getPcsDispatchEnabled(db, "B"),
+    ]);
+    if (aOn && !bOn) company = "A";
+    else if (bOn) company = "B";
+    // else both off → company stays "B" and the disabled check below
+    // returns a clear error.
+  }
+
   const enabled = await getPcsDispatchEnabled(db, company);
   if (!enabled) {
     const divisionLabel = company === "A" ? "Hairpin (A)" : "ES Express (B)";
