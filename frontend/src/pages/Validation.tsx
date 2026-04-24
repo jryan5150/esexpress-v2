@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useValidationSummary,
@@ -6,6 +7,7 @@ import {
   useValidationReject,
   useUpdateLoad,
 } from "../hooks/use-wells";
+import { useBolStats, useMissingTickets } from "../hooks/use-bol";
 import { api } from "../lib/api";
 import { qk } from "../lib/query-client";
 import { useToast } from "../components/Toast";
@@ -219,6 +221,21 @@ export function Validation() {
   const confirmMutation = useValidationConfirm();
   const rejectMutation = useValidationReject();
 
+  // Meld bridge (2026-04-24): surface the "photo arrived, needs matching"
+  // and "load exists, no photo yet" counts as header cards so Jessica can
+  // see her full pre-dispatch verification workload on one page. Full
+  // inline merge lands Monday — see
+  // docs/superpowers/specs/2026-04-24-validate-bol-meld-design.md.
+  const bolStatsQuery = useBolStats();
+  const missingTicketsQuery = useMissingTickets({ limit: 1 });
+  const unmatchedPhotos = Number(
+    (bolStatsQuery.data as { unmatched?: number } | undefined)?.unmatched ?? 0,
+  );
+  const missingTickets = Number(
+    (missingTicketsQuery.data as { meta?: { total?: number } } | undefined)
+      ?.meta?.total ?? 0,
+  );
+
   const tier1Query = useQuery({
     queryKey: [...qk.validation.tier(1), tierPages[1], tierPageSizes[1]],
     queryFn: () =>
@@ -338,10 +355,10 @@ export function Validation() {
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div className="flex-1">
             <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
-              Validation Desk
+              Pre-Dispatch Verification
             </h1>
             <p className="text-[11px] font-medium text-outline tracking-[0.08em] uppercase mt-0.5">
-              Tier-Based Review // Photo + Match Side-By-Side
+              Confirm Assignments // Match Photos // Catch Missing Tickets
             </p>
           </div>
           {/* Inline BOL search — Jessica ask on 2026-04-15 call */}
@@ -397,6 +414,77 @@ export function Validation() {
               </span>
               Approve All Tier 1
             </button>
+          </div>
+        )}
+
+        {/* Meld bridge (2026-04-24): two cross-surface counts that gate
+            dispatch. Click → land on the matching workflow in BOL Center.
+            Phase 2 (Monday) inlines these as expandable sections so the
+            entire pre-dispatch workload lives on one page. */}
+        {(unmatchedPhotos > 0 || missingTickets > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link
+              to="/bol?tab=reconciliation"
+              className="bg-surface-container-lowest rounded-[12px] p-5 border border-outline-variant/40 border-l-4 border-l-primary-container hover:bg-surface-container-high transition-all card-rest cursor-pointer flex items-center gap-4"
+            >
+              <div className="bg-primary-container/10 p-3 rounded-lg shrink-0">
+                <span className="material-symbols-outlined icon-filled text-primary-container text-2xl">
+                  add_a_photo
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className="font-data text-2xl font-bold text-primary-container tabular-nums"
+                    title="JotForm submissions where the driver uploaded a photo but auto-match could not link it to a load yet"
+                  >
+                    {bolStatsQuery.isLoading ? "..." : unmatchedPhotos}
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                    Awaiting Photo Match
+                  </span>
+                </div>
+                <p className="text-[10px] text-on-surface-variant uppercase tracking-wider mt-1">
+                  Photo arrived &mdash; needs to be linked to a load
+                </p>
+              </div>
+              <span className="material-symbols-outlined text-on-surface-variant shrink-0">
+                arrow_forward
+              </span>
+            </Link>
+            <Link
+              to="/bol?tab=missing"
+              className={`bg-surface-container-lowest rounded-[12px] p-5 border border-outline-variant/40 border-l-4 ${missingTickets > 0 ? "border-l-error" : "border-l-tertiary"} hover:bg-surface-container-high transition-all card-rest cursor-pointer flex items-center gap-4`}
+            >
+              <div
+                className={`${missingTickets > 0 ? "bg-error/10" : "bg-tertiary/10"} p-3 rounded-lg shrink-0`}
+              >
+                <span
+                  className={`material-symbols-outlined icon-filled text-2xl ${missingTickets > 0 ? "text-error" : "text-tertiary"}`}
+                >
+                  {missingTickets > 0 ? "warning" : "verified"}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className={`font-data text-2xl font-bold tabular-nums ${missingTickets > 0 ? "text-error" : "text-tertiary"}`}
+                    title="Loads in the system with no weight ticket photo attached. PCS is POST-only so these block dispatch."
+                  >
+                    {missingTicketsQuery.isLoading ? "..." : missingTickets}
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                    Missing Ticket
+                  </span>
+                </div>
+                <p className="text-[10px] text-on-surface-variant uppercase tracking-wider mt-1">
+                  Load in system &mdash; no photo arrived yet
+                </p>
+              </div>
+              <span className="material-symbols-outlined text-on-surface-variant shrink-0">
+                arrow_forward
+              </span>
+            </Link>
           </div>
         )}
 

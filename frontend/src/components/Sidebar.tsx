@@ -209,7 +209,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
             <Link
               to="/validation"
               className={navClass("/validation")}
-              title="Validate — confirm pending assignments before they reach the dispatch desk"
+              title="Validate — pre-dispatch verification: confirm assignments, see photos awaiting match, catch missing tickets"
             >
               <span className={iconClass("/validation")}>fact_check</span>
               {!collapsed && "Validate"}
