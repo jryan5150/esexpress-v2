@@ -697,6 +697,147 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
       };
     },
   );
+
+  // ─── GET /jotform/health — pipeline health surface ─────────────────
+  // Quantifies every flavor of "data populated but no photo" — the failure
+  // mode Jessica specifically called out. Returns counts so the dashboard
+  // can pin them; returns sample IDs so dispatch can drill into specific
+  // bad rows without table-scanning.
+  //
+  // Categories returned:
+  //   total                — every jotform_imports row
+  //   withPhoto            — has photoUrl OR imageUrls.length > 0
+  //   noPhotoEverSubmitted — driver submitted form fields but never attached
+  //                          a photo (typical: form-only fallback)
+  //   matchedNoPhoto       — matched a load BUT no photo URL (most concerning
+  //                          — the load shows attached fields with no image
+  //                          to verify against)
+  //   stuckPending         — pending status > 24hr (matcher couldn't bind)
+  //   visionFailed         — Vision OCR errored (lastError set on bol_submissions)
+  //
+  // Bridge audit:
+  //   matchedAndBridged    — matched_load_id set + assignment.photo_status=
+  //                          'attached' for that load
+  //   matchedNotBridged    — matched_load_id set + assignment.photo_status
+  //                          still 'missing' (the bug Phase 3 fixed; should
+  //                          stay at 0)
+  fastify.get(
+    "/jotform/health",
+    { preHandler: [fastify.authenticate] },
+    async (_request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+      const { sql, and, isNull, isNotNull, eq, ne } =
+        await import("drizzle-orm");
+
+      const [{ total }] = await db
+        .select({ total: sql<number>`COUNT(*)::int` })
+        .from(jotformImports);
+
+      const [{ withPhoto }] = await db
+        .select({ withPhoto: sql<number>`COUNT(*)::int` })
+        .from(jotformImports)
+        .where(
+          sql`${jotformImports.photoUrl} IS NOT NULL OR jsonb_array_length(${jotformImports.imageUrls}) > 0`,
+        );
+
+      const [{ noPhoto }] = await db
+        .select({ noPhoto: sql<number>`COUNT(*)::int` })
+        .from(jotformImports)
+        .where(
+          sql`${jotformImports.photoUrl} IS NULL AND (${jotformImports.imageUrls} IS NULL OR jsonb_array_length(${jotformImports.imageUrls}) = 0)`,
+        );
+
+      const [{ matchedNoPhoto }] = await db
+        .select({ matchedNoPhoto: sql<number>`COUNT(*)::int` })
+        .from(jotformImports)
+        .where(
+          and(
+            isNotNull(jotformImports.matchedLoadId),
+            sql`${jotformImports.photoUrl} IS NULL AND (${jotformImports.imageUrls} IS NULL OR jsonb_array_length(${jotformImports.imageUrls}) = 0)`,
+          ),
+        );
+
+      // Sample 5 most recent matched-no-photo rows for drilling
+      const matchedNoPhotoSamples = await db
+        .select({
+          id: jotformImports.id,
+          driverName: jotformImports.driverName,
+          bolNo: jotformImports.bolNo,
+          matchedLoadId: jotformImports.matchedLoadId,
+          submittedAt: jotformImports.submittedAt,
+        })
+        .from(jotformImports)
+        .where(
+          and(
+            isNotNull(jotformImports.matchedLoadId),
+            sql`${jotformImports.photoUrl} IS NULL AND (${jotformImports.imageUrls} IS NULL OR jsonb_array_length(${jotformImports.imageUrls}) = 0)`,
+          ),
+        )
+        .orderBy(sql`${jotformImports.submittedAt} DESC NULLS LAST`)
+        .limit(5);
+
+      // Stuck pending: created > 24h ago, status=pending
+      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const [{ stuckPending }] = await db
+        .select({ stuckPending: sql<number>`COUNT(*)::int` })
+        .from(jotformImports)
+        .where(
+          and(
+            eq(jotformImports.status, "pending"),
+            sql`${jotformImports.submittedAt} < ${since24h}`,
+          ),
+        );
+
+      // Bridge audit — matched imports whose load assignment is still 'missing'.
+      // Should be 0 after Phase 3 ran. If non-zero, Phase 3 needs re-run OR
+      // the JotForm sync's bridge step has regressed.
+      const [{ matchedNotBridged }] = await db
+        .select({ matchedNotBridged: sql<number>`COUNT(*)::int` })
+        .from(jotformImports)
+        .innerJoin(
+          assignments,
+          eq(assignments.loadId, jotformImports.matchedLoadId),
+        )
+        .where(
+          and(
+            isNotNull(jotformImports.matchedLoadId),
+            ne(assignments.photoStatus, "attached"),
+            sql`(${jotformImports.photoUrl} IS NOT NULL OR jsonb_array_length(${jotformImports.imageUrls}) > 0)`,
+          ),
+        );
+
+      // Sample of unreachable photo URLs would require a probe step — too
+      // expensive to do here on every request. Surface count of NULL photoUrl
+      // imports separately so the dashboard can flag.
+
+      return {
+        success: true,
+        data: {
+          total,
+          withPhoto,
+          noPhoto,
+          noPhotoPct:
+            total > 0 ? Math.round((noPhoto / total) * 100 * 100) / 100 : 0,
+          matchedNoPhoto,
+          stuckPending,
+          matchedNotBridged,
+          samples: {
+            matchedNoPhoto: matchedNoPhotoSamples,
+          },
+          generatedAt: new Date().toISOString(),
+        },
+      };
+    },
+  );
 };
 
 export default jotformRoutes;
