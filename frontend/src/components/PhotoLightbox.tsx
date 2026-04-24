@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { resolvePhotoUrl } from "../lib/photo-url";
 
 interface Props {
   /** Single URL (back-compat). Mutually exclusive with `urls`. */
@@ -105,7 +106,7 @@ export function PhotoLightbox({
         </>
       )}
       <img
-        src={current}
+        src={resolvePhotoUrl(current)}
         alt={alt ?? "Load photo"}
         className="max-w-[92vw] max-h-[92vh] rounded-md shadow-2xl"
         onClick={(e) => e.stopPropagation()}

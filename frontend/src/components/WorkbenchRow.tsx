@@ -8,6 +8,7 @@ import { PhotoLightbox } from "./PhotoLightbox";
 import { BOLDisplay } from "./BOLDisplay";
 import { useWeightUnit } from "../hooks/use-weight-unit";
 import { api } from "../lib/api";
+import { resolvePhotoUrl } from "../lib/photo-url";
 import type {
   WorkbenchRow as Row,
   HandlerStage,
@@ -265,7 +266,7 @@ export const WorkbenchRow = memo(function WorkbenchRow({
               className="relative cursor-zoom-in inline-block"
             >
               <img
-                src={row.photoThumbUrl}
+                src={resolvePhotoUrl(row.photoThumbUrl)}
                 alt={`Load ${row.loadNo} ticket photo`}
                 className="h-8 w-8 object-cover rounded ring-1 ring-outline-variant hover:ring-primary"
               />

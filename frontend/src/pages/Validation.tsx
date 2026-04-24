@@ -10,6 +10,7 @@ import {
 import { useBolStats, useMissingTickets } from "../hooks/use-bol";
 import { api } from "../lib/api";
 import { qk } from "../lib/query-client";
+import { resolvePhotoUrl } from "../lib/photo-url";
 import { useToast } from "../components/Toast";
 import { WellPicker } from "../components/WellPicker";
 import { Pagination } from "../components/Pagination";
@@ -135,9 +136,10 @@ interface TierAssignment {
   jotformWeight?: string | null;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "";
-const resolveUrl = (url: string) =>
-  url.startsWith("/") ? `${API_BASE}${url}` : url;
+// Photo URLs go through resolvePhotoUrl so JotForm CDN absolute URLs
+// route through the backend proxy and get EXIF auto-rotation. See
+// /lib/photo-url.ts for the routing rule.
+const resolveUrl = resolvePhotoUrl;
 
 const TIER_META: Record<
   number,

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "./Button";
 import { useUpdateLoad } from "../hooks/use-wells";
 import { useToast } from "./Toast";
+import { resolvePhotoUrl } from "../lib/photo-url";
 
 interface PhotoModalProps {
   photoUrls: string[];
@@ -183,8 +184,10 @@ export function PhotoModal({
 
   const matchPct = autoMapScore ? Math.round(Number(autoMapScore) * 100) : null;
 
-  const fullUrl = (url: string) =>
-    url.startsWith("/") ? `${import.meta.env.VITE_API_URL || ""}${url}` : url;
+  // Routes through the backend proxy for absolute URLs so EXIF auto-rotation
+  // applies — JotForm CDN images are commonly stored sideways with just the
+  // orientation tag set, and most browsers don't honor the tag.
+  const fullUrl = resolvePhotoUrl;
 
   return (
     <div

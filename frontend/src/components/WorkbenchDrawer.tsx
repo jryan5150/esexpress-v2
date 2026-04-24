@@ -12,6 +12,7 @@ import {
 } from "../hooks/use-workbench";
 import { api } from "../lib/api";
 import { reportError } from "../lib/sentry";
+import { resolvePhotoUrl } from "../lib/photo-url";
 import { DiscrepancyPanel } from "./DiscrepancyPanel";
 
 /**
@@ -349,7 +350,13 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
   useEffect(() => {
     setPhotoIdx(0);
   }, [row.assignmentId]);
-  const currentPhoto = photoUrls[photoIdx] ?? row.photoThumbUrl ?? null;
+  // Route through resolvePhotoUrl so JotForm absolute URLs go via the
+  // proxy (which auto-rotates EXIF). Relative `/api/v1/...` URLs are
+  // already-proxied and pass through with just the API base prefix.
+  const rawCurrentPhoto = photoUrls[photoIdx] ?? row.photoThumbUrl ?? null;
+  const currentPhoto = rawCurrentPhoto
+    ? resolvePhotoUrl(rawCurrentPhoto)
+    : null;
   const stepPhoto = (delta: number) => {
     if (photoUrls.length < 2) return;
     const n = photoUrls.length;

@@ -13,10 +13,12 @@ import { Pagination } from "../components/Pagination";
 import { useToast } from "../components/Toast";
 import { BOLDisplay } from "../components/BOLDisplay";
 import { useWeightUnit } from "../hooks/use-weight-unit";
+import { resolvePhotoUrl } from "../lib/photo-url";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
-const resolveUrl = (url: string) =>
-  url.startsWith("/") ? `${API_BASE}${url}` : url;
+// Photo URLs go through resolvePhotoUrl so JotForm CDN absolute URLs
+// route through the backend proxy and get EXIF auto-rotation.
+const resolveUrl = resolvePhotoUrl;
 
 interface JotFormDiscrepancy {
   field: string;
