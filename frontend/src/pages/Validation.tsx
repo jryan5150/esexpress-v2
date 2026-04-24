@@ -409,16 +409,39 @@ export function Validation() {
   const handleBulkApproveTier1 = async () => {
     const rawData = tier1Query.data as unknown;
     const tierResponse = rawData as any;
-    const assignments: TierAssignment[] = Array.isArray(tierResponse)
+    const allAssignments: TierAssignment[] = Array.isArray(tierResponse)
       ? tierResponse
       : (tierResponse?.data ?? []);
-    if (assignments.length === 0) return;
+    if (allAssignments.length === 0) return;
 
-    const ids = assignments.map((a) => a.id);
+    // Photo gate — bulk-approve ONLY assignments where a photo is
+    // confirmed attached. Jessica Apr 15: "loads that don't have an
+    // image there, but they're saying they're 100% matched". One
+    // unsafe bulk approve burns the trust ledger permanently. We
+    // surface the skipped count in the confirm dialog so she sees
+    // exactly what happened.
+    const withPhoto = allAssignments.filter(
+      (a) => a.photoStatus === "attached",
+    );
+    const skippedNoPhoto = allAssignments.length - withPhoto.length;
+
+    if (withPhoto.length === 0) {
+      toast(
+        `No Tier 1 assignments have a photo attached yet (${skippedNoPhoto} pending photo).`,
+        "warning",
+      );
+      return;
+    }
+
+    const ids = withPhoto.map((a) => a.id);
+    const skipNote =
+      skippedNoPhoto > 0
+        ? `\n\n${skippedNoPhoto} other Tier 1 assignment${skippedNoPhoto === 1 ? "" : "s"} will be skipped (no photo attached yet — those need manual review).`
+        : "";
 
     if (
       !window.confirm(
-        `Approve all ${ids.length} Tier 1 assignments? This will move them to dispatch.`,
+        `Approve ${ids.length} Tier 1 assignment${ids.length === 1 ? "" : "s"} with confirmed photos? This will move them to dispatch.${skipNote}`,
       )
     )
       return;
@@ -429,7 +452,11 @@ export function Validation() {
           api.post("/dispatch/validation/confirm", { assignmentId: id }),
         ),
       );
-      toast(`${ids.length} Tier 1 assignments approved`, "success");
+      const msg =
+        skippedNoPhoto > 0
+          ? `${ids.length} approved · ${skippedNoPhoto} skipped (no photo)`
+          : `${ids.length} Tier 1 assignments approved`;
+      toast(msg, "success");
       invalidateAll();
     } catch (err) {
       toast(`Approve failed: ${(err as Error).message}`, "error");

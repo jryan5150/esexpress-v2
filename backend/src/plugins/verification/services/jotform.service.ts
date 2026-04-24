@@ -393,6 +393,14 @@ export async function matchSubmissionToLoad(
     // case. Verified empirically 2026-04-24: 5 of 8 sampled unmatched
     // bol_submissions had this exact symptom.
     const lowered = fields.bolNo.toLowerCase();
+    // Deterministic ordering: prefer the most recently delivered load
+    // when multiple match. ticketNo + bolNo are NOT unique columns; if
+    // PropX wrote `c10698116` and Logistiq wrote `C10698116` for an
+    // unrelated load, the case-insensitive lookup could pick whichever
+    // postgres returns first. orderBy(deliveredOn DESC) makes the
+    // selection stable AND biases toward the more-recent load (which
+    // is almost always the right one for a fresh JotForm submission).
+    // Long-term: detect multi-hit and demote to Tier 3.
     const [hit] = await db
       .select({ id: loads.id })
       .from(loads)
@@ -402,6 +410,7 @@ export async function matchSubmissionToLoad(
           sql`LOWER(${loads.bolNo}) = ${lowered}`,
         ),
       )
+      .orderBy(sql`${loads.deliveredOn} DESC NULLS LAST`)
       .limit(1);
 
     if (hit) {

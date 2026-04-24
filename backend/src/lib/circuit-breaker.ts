@@ -9,9 +9,42 @@ import {
   type CircuitBreakerPolicy,
 } from "cockatiel";
 import { HttpError, NetworkError } from "./errors.js";
+import { reportError } from "./sentry.js";
 
 function isHttpStatus(err: unknown, status: number): boolean {
   return err instanceof HttpError && err.status === status;
+}
+
+/**
+ * Attach state-change listeners to a Cockatiel circuit breaker so we
+ * actually find out when one trips. Without this, a 3 AM outage at PropX
+ * silently degrades sync-runs and the only signal is aggregate failure
+ * counts. With it, every state transition lands in stdout (Railway logs
+ * are stream-searchable) and onBreak also pings Sentry as a warning so
+ * the operator sees it without tailing.
+ *
+ * Reviewer call-out 2026-04-24: best-practices agent flagged the
+ * absence of these listeners as a production-readiness gap.
+ */
+export function instrumentBreaker(name: string, breaker: CircuitBreakerPolicy) {
+  breaker.onBreak((reason) => {
+    const detail =
+      reason && typeof reason === "object" && "value" in reason
+        ? String((reason as { value: unknown }).value)
+        : String(reason);
+    console.error(`[breaker:${name}] OPEN — ${detail}`);
+    reportError(new Error(`Circuit breaker opened: ${name}`), {
+      tags: { breaker: name, event: "open" },
+      extra: { detail },
+    });
+  });
+  breaker.onReset(() => {
+    console.log(`[breaker:${name}] CLOSED — service recovered`);
+  });
+  breaker.onHalfOpen(() => {
+    console.log(`[breaker:${name}] HALF-OPEN — testing recovery`);
+  });
+  return breaker;
 }
 
 /** PropX: opens on 5 consecutive throttle signals, 5-minute cooldown.
@@ -37,7 +70,10 @@ export function createPropxBreaker() {
     backoff: new ExponentialBackoff({ initialDelay: 3000, maxDelay: 60_000 }),
   });
 
-  return { policy: wrap(retryPolicy, breaker), breaker };
+  return {
+    policy: wrap(retryPolicy, instrumentBreaker("propx", breaker)),
+    breaker,
+  };
 }
 
 /** PCS: opens on 50% failure rate in 30s window, 60s cooldown */
@@ -62,7 +98,10 @@ export function createPcsBreaker() {
     backoff: new ExponentialBackoff({ initialDelay: 3000, maxDelay: 30_000 }),
   });
 
-  return { policy: wrap(retryPolicy, breaker), breaker };
+  return {
+    policy: wrap(retryPolicy, instrumentBreaker("pcs", breaker)),
+    breaker,
+  };
 }
 
 /** JotForm: opens on 5 consecutive throttle/auth signals, 5-min cooldown.
@@ -86,7 +125,10 @@ export function createJotformBreaker() {
     backoff: new ExponentialBackoff({ initialDelay: 2000, maxDelay: 30_000 }),
   });
 
-  return { policy: wrap(retryPolicy, breaker), breaker };
+  return {
+    policy: wrap(retryPolicy, instrumentBreaker("jotform", breaker)),
+    breaker,
+  };
 }
 
 /** Logistiq: opens on 3 consecutive 5xx, 2-min cooldown.
@@ -114,7 +156,10 @@ export function createLogistiqBreaker() {
     backoff: new ExponentialBackoff({ initialDelay: 2000, maxDelay: 20_000 }),
   });
 
-  return { policy: wrap(retryPolicy, breaker), breaker };
+  return {
+    policy: wrap(retryPolicy, instrumentBreaker("logistiq", breaker)),
+    breaker,
+  };
 }
 
 /** Anthropic Vision (BOL OCR): opens on 5 consecutive 429/529, 2-min cooldown.
@@ -152,7 +197,10 @@ export function createAnthropicBreaker() {
     backoff: new ExponentialBackoff({ initialDelay: 2000, maxDelay: 30_000 }),
   });
 
-  return { policy: wrap(retryPolicy, breaker), breaker };
+  return {
+    policy: wrap(retryPolicy, instrumentBreaker("anthropic", breaker)),
+    breaker,
+  };
 }
 
 /** Microsoft Graph (notification email): opens on 3 consecutive 5xx, 1-min cooldown.
@@ -180,7 +228,10 @@ export function createGraphBreaker() {
     backoff: new ExponentialBackoff({ initialDelay: 1500, maxDelay: 15_000 }),
   });
 
-  return { policy: wrap(retryPolicy, breaker), breaker };
+  return {
+    policy: wrap(retryPolicy, instrumentBreaker("graph", breaker)),
+    breaker,
+  };
 }
 
 /** Diagnostic helper for /diag/ endpoint */

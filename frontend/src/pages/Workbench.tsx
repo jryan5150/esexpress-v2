@@ -417,7 +417,17 @@ export function Workbench() {
   return (
     <div className="flex-1 min-h-0 flex flex-col p-4 gap-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-xl font-headline">Load Center</h1>
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
+          <div>
+            <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
+              Load Center
+            </h1>
+            <p className="text-[11px] font-medium text-outline tracking-[0.08em] uppercase mt-0.5">
+              Validated // Ready to Build
+            </p>
+          </div>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           <input
             type="search"
@@ -746,12 +756,14 @@ export function Workbench() {
           ) : (
             displayedRows.map((row) => {
               const disc = discrepancyByAssignment.get(row.assignmentId);
+              // Discrepancy tint uses design tokens (matches the rest
+              // of the system) instead of raw Tailwind palette.
               const tintClass = disc
                 ? disc.severity === "critical"
-                  ? "border-l-2 border-red-500"
+                  ? "border-l-2 border-error"
                   : disc.severity === "warning"
-                    ? "border-l-2 border-amber-400"
-                    : "border-l-2 border-blue-400"
+                    ? "border-l-2 border-tertiary"
+                    : "border-l-2 border-primary-container"
                 : "";
               return (
                 <div
