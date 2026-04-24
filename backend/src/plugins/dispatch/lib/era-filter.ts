@@ -4,13 +4,20 @@ import { loads } from "../../../db/schema.js";
 export type Era = "live" | "archive";
 
 /**
- * 2026-04-01T00:00:00 CDT (America/Chicago, DST) as ISO string.
- * Pre-cutoff loads were actively dispatched via PCS while v2 was being built —
- * they're archive data, not validation work. Raised from 2026-01-01 on
- * 2026-04-14 after the team confirmed Jan-Mar PropX/Logistiq loads were
- * already reconciled outside v2.
+ * 2026-01-01T00:00:00 CDT (America/Chicago, DST) as ISO string.
+ *
+ * History: was 2026-01-01 originally → bumped to 2026-04-01 on 2026-04-14
+ * after the team said Jan-Mar PropX/Logistiq were already reconciled
+ * outside v2 → reset back to 2026-01-01 on 2026-04-24 after operator
+ * confirmed they want the entire Jan-onward operational year visible
+ * in the workbench (the cross-check loop now provides the validation
+ * coverage that used to be manual reconciliation).
+ *
+ * Live era: deliveredOn >= 2026-01-01 → workbench, dispatch desk,
+ * cross-check discrepancies. Archive era: deliveredOn < 2026-01-01 →
+ * archive search page, retained for audit.
  */
-export const ERA_CUTOFF = "2026-04-01T00:00:00-05:00";
+export const ERA_CUTOFF = "2026-01-01T00:00:00-05:00";
 
 /** Reconstruct the raw SQL text from Drizzle queryChunks for introspection. */
 function sqlToString(s: SQL): string {
@@ -27,8 +34,8 @@ function sqlToString(s: SQL): string {
 
 /**
  * Returns a Drizzle SQL condition that filters loads by era.
- * - 'live' (default): delivered_on >= 2026-01-01
- * - 'archive': delivered_on < 2026-01-01
+ * - 'live' (default): delivered_on >= ERA_CUTOFF (currently 2026-01-01)
+ * - 'archive': delivered_on < ERA_CUTOFF
  *
  * Fails closed: unknown era values default to live.
  */
