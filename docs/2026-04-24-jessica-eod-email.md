@@ -1,13 +1,12 @@
 # Email Draft — Friday 2026-04-24 EOD to Jessica
 
 **To:** Jessica Coon <jess@esexpressllc.com>
-**Cc:** Mike Coon <mike@esexpressllc.com>, Jeri (if appropriate)
 **From:** jryan@lexcom.com
 **Subject:** ES Express v2 — open for validation + Monday time?
 **Attachments:**
 
 - `2026-04-24-esexpress-validation-numbers.pdf` (numbers you can verify against your own PCS)
-- `2026-04-27-mike-onepager.pdf` (Round 4 ROI summary for Mike)
+- `2026-04-24-esexpress-v2-roi-summary.pdf` (one-page summary of what's been delivered)
 
 ---
 
@@ -33,7 +32,3 @@ The system is open for your validation. Login at **app.esexpressllc.com** with y
 Thanks for hanging in.
 
 Jace
-
----
-
-**Postscript for Mike:** the attached one-pager summarizes Round 4 ROI in plain numbers. Happy to take any questions on the value-vs-cost framing whenever works.
