@@ -785,15 +785,20 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
         .orderBy(sql`${jotformImports.submittedAt} DESC NULLS LAST`)
         .limit(5);
 
-      // Stuck pending: created > 24h ago, status=pending
-      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      // Stuck pending: created > 24h ago, status=pending. Pass an ISO
+      // string here, not a Date — postgres.js (prepare:false) crashes when
+      // a JS Date lands as a parameterized value. See project memory
+      // `feedback_postgres_date_gotcha.md`.
+      const since24hIso = new Date(
+        Date.now() - 24 * 60 * 60 * 1000,
+      ).toISOString();
       const [{ stuckPending }] = await db
         .select({ stuckPending: sql<number>`COUNT(*)::int` })
         .from(jotformImports)
         .where(
           and(
             eq(jotformImports.status, "pending"),
-            sql`${jotformImports.submittedAt} < ${since24h}`,
+            sql`${jotformImports.submittedAt} < ${since24hIso}`,
           ),
         );
 
