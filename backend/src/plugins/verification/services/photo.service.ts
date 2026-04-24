@@ -15,6 +15,7 @@
 import { resolve4 } from "node:dns/promises";
 import { zipSync, type Zippable } from "fflate";
 import { Storage } from "@google-cloud/storage";
+import sharp from "sharp";
 
 // GCS storage client — lazy-init from GCS_SERVICE_ACCOUNT_KEY env var.
 // Reused across proxy fetches so we only parse the key once per process.
@@ -210,8 +211,58 @@ export async function validateUrlSafe(url: string): Promise<URL> {
 // ---------------------------------------------------------------------------
 
 /**
+ * Apply EXIF auto-rotation to a photo buffer if its orientation is not the
+ * canonical "1" (top-left). Driver-mobile photos almost always carry a
+ * non-canonical orientation tag, which most `<img>` browsers respect — but
+ * the workbench drawer's photo carousel does not always. Normalizing here
+ * means dispatch sees photos upright every time, regardless of viewer.
+ *
+ * Skips processing when the image is already canonically oriented (cheap
+ * sharp.metadata() call) so PropX-source photos that came in correct don't
+ * pay a re-encode cost. Returns the original buffer + content type on any
+ * sharp failure (we'd rather serve a raw image than 500 the request).
+ */
+async function autoRotateIfNeeded(
+  buffer: Buffer,
+  contentType: string,
+): Promise<{ buffer: Buffer; contentType: string; rotated: boolean }> {
+  // Only process raster image types we know sharp can decode.
+  const isRaster =
+    contentType.startsWith("image/") &&
+    !contentType.includes("svg") &&
+    !contentType.includes("gif");
+  if (!isRaster) return { buffer, contentType, rotated: false };
+  try {
+    const meta = await sharp(buffer).metadata();
+    const needsRotate =
+      meta.orientation !== undefined &&
+      meta.orientation !== 1 &&
+      meta.orientation !== 0;
+    if (!needsRotate) return { buffer, contentType, rotated: false };
+    const normalized = await sharp(buffer)
+      .rotate() // auto-rotate via EXIF orientation
+      .jpeg({ quality: 90, mozjpeg: true })
+      .withMetadata({ orientation: 1 })
+      .toBuffer();
+    return {
+      buffer: normalized,
+      contentType: "image/jpeg",
+      rotated: true,
+    };
+  } catch {
+    // Never break the proxy on a sharp failure — serve the original bytes.
+    return { buffer, contentType, rotated: false };
+  }
+}
+
+/**
  * Fetches a single photo through the SSRF-safe proxy.
  * Returns the raw buffer and content-type header.
+ *
+ * Photos are EXIF-auto-rotated before serving so portrait driver-mobile
+ * photos display upright in the workbench drawer (mobile cameras encode
+ * portrait shots as landscape JPEG + EXIF orientation tag; not every
+ * `<img>` viewer respects EXIF).
  */
 export async function proxyPhoto(
   url: string,
@@ -232,7 +283,8 @@ export async function proxyPhoto(
       throw new Error(`Photo exceeds maximum size (${MAX_PHOTO_SIZE} bytes)`);
     }
     const contentType = contentTypeFromUrlExtension(gcs.object) ?? "image/jpeg";
-    return { buffer, contentType };
+    const rotated = await autoRotateIfNeeded(buffer, contentType);
+    return { buffer: rotated.buffer, contentType: rotated.contentType };
   }
 
   // JotForm Enterprise gates uploads behind auth. We inject the API key as
@@ -308,9 +360,11 @@ export async function proxyPhoto(
       throw new Error(`Photo exceeds maximum size (${MAX_PHOTO_SIZE} bytes)`);
     }
 
+    const rawBuffer = Buffer.from(arrayBuffer);
+    const rotated = await autoRotateIfNeeded(rawBuffer, contentType);
     return {
-      buffer: Buffer.from(arrayBuffer),
-      contentType,
+      buffer: rotated.buffer,
+      contentType: rotated.contentType,
     };
   } finally {
     clearTimeout(timeout);
