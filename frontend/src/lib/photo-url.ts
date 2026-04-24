@@ -24,18 +24,24 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
+/**
+ * 2026-04-24 EVENING ROLLBACK: routing absolute URLs through the proxy
+ * was saturating the backend on Validate page (50 row thumbnails × 1.4MB
+ * × 1.8s sharp re-encode) — the page was hanging visibly because of the
+ * thumbnail thundering herd, not because of any logic bug. Reverted to
+ * direct CDN fetch for absolute URLs. EXIF rotation only applies for
+ * URLs explicitly routed through the proxy by the caller (e.g. PCS push
+ * normalize step). Browser-side EXIF-aware display follows for
+ * upright-stored photos; sideways photos remain a follow-up where we
+ * either resize-on-proxy or pre-rotate at ingest time.
+ */
 export function resolvePhotoUrl(url: string | null | undefined): string {
   if (!url) return "";
 
-  // Relative path — already pointed at backend, return prefixed.
+  // Relative path — backend route, prefix with API base.
   if (url.startsWith("/")) return `${API_BASE}${url}`;
 
-  // Absolute URL — route through proxy for EXIF auto-rotation.
-  // Allowlisted hosts only (enforced server-side); everything else 400s.
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return `${API_BASE}/api/v1/verification/photos/proxy?url=${encodeURIComponent(url)}`;
-  }
-
-  // Anything else (data: URLs, blob: URLs, etc.) — return verbatim.
+  // Absolute URL — return as-is (browser fetches directly from CDN).
+  // Bypasses the backend proxy; faster + scalable for thumbnail rendering.
   return url;
 }
