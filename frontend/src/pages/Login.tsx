@@ -115,7 +115,20 @@ export function Login() {
     login.mutate(
       { email, password },
       {
-        onSuccess: () => navigate("/workbench"),
+        onSuccess: () => {
+          // First-login this release → land on guided tour. Subsequent
+          // logins → straight to Load Center as before. Flag set inside
+          // the WhatsNew page when it mounts.
+          let dest = "/workbench";
+          try {
+            if (!localStorage.getItem("esexpress-whatsnew-2026-04-24")) {
+              dest = "/whats-new";
+            }
+          } catch {
+            // localStorage unavailable — fall through to default
+          }
+          navigate(dest);
+        },
       },
     );
   }

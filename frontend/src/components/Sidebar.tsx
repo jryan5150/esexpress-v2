@@ -252,6 +252,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               <span className={iconClass("/load-report")}>summarize</span>
               {!collapsed && "Load Report"}
             </Link>
+            <Link
+              to="/whats-new"
+              className={navClass("/whats-new")}
+              title="What's New — guided tour of this week's changes"
+            >
+              <span className={iconClass("/whats-new")}>auto_awesome</span>
+              {!collapsed && "What's New"}
+            </Link>
           </div>
 
           {/* Reference — collapsible group containing all legacy workspace pages */}

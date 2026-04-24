@@ -92,6 +92,9 @@ const ArchiveLoadDetail = lazy(() =>
     default: m.ArchiveLoadDetail,
   })),
 );
+const WhatsNew = lazy(() =>
+  import("./pages/WhatsNew").then((m) => ({ default: m.WhatsNew })),
+);
 
 function PageLoader() {
   return (
@@ -146,6 +149,7 @@ export function App() {
                   />
                   <Route path="load-report" element={<LoadReport />} />
                   <Route path="settings" element={<Settings />} />
+                  <Route path="whats-new" element={<WhatsNew />} />
                   <Route
                     path="archive"
                     element={

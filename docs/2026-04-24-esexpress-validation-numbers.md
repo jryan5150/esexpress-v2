@@ -1,16 +1,28 @@
 # ES Express v2 — Validation Numbers + What's New
 
-**Sent with:** Friday 2026-04-24 3:30 PM CDT system-ready email.
-**Verified against production:** 2026-04-24 09:15 CDT (this morning).
-**Supersedes:** prior `2026-04-25-esexpress-validation-numbers.md` draft (numbers stale, framing pre-cross-check pivot).
+**Sent with:** Friday 2026-04-24 5:00 PM CDT EOD email.
+**Verified against production:** 2026-04-24 16:35 CDT (post-deploy).
+**Supersedes:** prior `2026-04-25-esexpress-validation-numbers.md` draft.
 
 This document exists so you can validate v2's claims against your own PCS access and your own operational intuition. Every number below is queryable yourself in the system or derivable from PCS reports. Every query that produced a number was run against the production database — they're not promises, they're inventory.
 
 ---
 
+## 0a. What changed this afternoon (workflow surface)
+
+Three additional improvements landed between noon and the 5 PM send, all addressed back to the Apr 15 call:
+
+- **"Validate" page renamed to "Pre-Dispatch Verification" + meld with BOL Center.** Per Bryan + Jessica's Apr 15 ask ("meld the BOL queue with validation" / "nothing would go to dispatch desk until it had been validated"), Validate is now the single front door for everything that gates dispatch. Two new "Cross-Surface Queue" cards at the top show Awaiting Photo Match + Missing Ticket counts and link to the matching workflow. Phase 2 (full inline meld) lands Monday.
+- **Date filter shipped — your direct ask: "I can put in those dates in" / "do a day's worth at a time."** Today / Yesterday / This Week / Last Week / All / Custom range. Defaults to Today so you land on today's work, not 6,000+ pending. Tier counts at the top match the date range.
+- **Photo-gated Bulk Approve.** The "Approve All Tier 1" button now ONLY approves rows with a confirmed photo. Skipped count surfaces in the confirm dialog. Closes the trust risk you flagged: "loads that don't have an image there, but they're saying they're 100% matched."
+
+Plus background hardening: 6 external-integration circuit breakers now report state changes to logs + Sentry. Workbench discrepancy tints moved to design tokens. Case-insensitive Tier 1 matcher now sorts by deliveredOn DESC for deterministic results.
+
+---
+
 ## 0. What changed this morning (post-snapshot updates)
 
-Five operational improvements landed between the original 4/23 snapshot and this 4/24 send:
+Five operational improvements landed between the original 4/23 snapshot and the noon-checkpoint:
 
 - **Cross-check loop surfaced + resolved 3 well-naming variants overnight.** The system detected 3 PCS-billed destinations that mapped 100% to existing v2 wells but lacked aliases (`Apache-Formentera-Wrangler` → "Liberty Apache Formentera Wrangler", `DNR - Chili 117X` → "Liberty Titan DNR Chili 117X", `Spectre-Crescent-SIMUL Briscoe Cochina` → "Liberty Spectre Crescent Briscoe Cochina"). Aliases applied + 54 previously-orphan loads re-bound to their correct wells. **Open discrepancy count stayed at 3** because the original 3 (status_drift on the 4/22 test push + Wells 1/2/3 + Victoria Anne West) remain — your call whether to add as new wells or alias-into existing.
 - **Tier 1 photo coverage jumped from 5.18% → 87.81%.** A photo-attachment-flag backfill captured ~38K assignments where the load had a PropX ticket image attached but the assignment's `photo_status` flag wasn't reflecting it. Photos themselves were never lost — only the inventory marker. See §4 below.
