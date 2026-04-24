@@ -312,6 +312,10 @@ interface PhotoStatusBackfillResult {
  * For every assignment whose load has at least one photos row, flip
  * photo_status to 'attached' if it isn't already. Source-agnostic — counts
  * any photo, including PropX rows backfilled by Phase 1/2.
+ *
+ * Uses an explicit IN-subquery (non-correlated) so postgres builds the
+ * distinct load_id set once and joins. The earlier correlated-EXISTS
+ * variant timed out on prod data (53K assignments × per-row EXISTS lookup).
  */
 export async function backfillAssignmentPhotoStatus(
   db: Database,
@@ -320,10 +324,7 @@ export async function backfillAssignmentPhotoStatus(
     .update(assignments)
     .set({ photoStatus: "attached", updatedAt: new Date() })
     .where(
-      and(
-        sql`${assignments.photoStatus} != 'attached'`,
-        sql`EXISTS (SELECT 1 FROM ${photos} WHERE ${photos.loadId} = ${assignments.loadId})`,
-      ),
+      sql`${assignments.photoStatus} != 'attached' AND ${assignments.loadId} IN (SELECT DISTINCT ${photos.loadId} FROM ${photos} WHERE ${photos.loadId} IS NOT NULL)`,
     )
     .returning({ id: assignments.id });
 
