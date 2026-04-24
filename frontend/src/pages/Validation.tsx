@@ -419,74 +419,100 @@ export function Validation() {
           </div>
         )}
 
-        {/* Meld bridge (2026-04-24): two cross-surface counts that gate
-            dispatch. Click → land on the matching workflow in BOL Center.
-            Phase 2 (Monday) inlines these as expandable sections so the
-            entire pre-dispatch workload lives on one page. */}
+        {/* Meld bridge (2026-04-24): two cross-surface count chips that
+            gate dispatch. These are SIGNALS pointing at adjacent workflows,
+            visually distinct from the tier cards below (which are the
+            actual queue summary). Section header + slimmer chip layout
+            establishes "these are routes, not tiers."
+            Phase 2 (Monday) inlines these as expandable sections. */}
         {(unmatchedPhotos > 0 || missingTickets > 0) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Link
-              to="/bol?tab=reconciliation"
-              className="bg-surface-container-lowest rounded-[12px] p-5 border border-outline-variant/40 border-l-4 border-l-primary-container hover:bg-surface-container-high transition-all card-rest cursor-pointer flex items-center gap-4"
-            >
-              <div className="bg-primary-container/10 p-3 rounded-lg shrink-0">
-                <span className="material-symbols-outlined icon-filled text-primary-container text-2xl">
-                  add_a_photo
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <span
-                    className="font-data text-2xl font-bold text-primary-container tabular-nums"
-                    title="JotForm submissions where the driver uploaded a photo but auto-match could not link it to a load yet"
-                  >
-                    {bolStatsQuery.isLoading ? "..." : unmatchedPhotos}
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                    Awaiting Photo Match
-                  </span>
-                </div>
-                <p className="text-[10px] text-on-surface-variant uppercase tracking-wider mt-1">
-                  Photo arrived &mdash; needs to be linked to a load
-                </p>
-              </div>
-              <span className="material-symbols-outlined text-on-surface-variant shrink-0">
-                arrow_forward
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 px-2">
+              <span className="text-[10px] uppercase tracking-[0.2em] font-black text-on-surface-variant">
+                Cross-Surface Queue
               </span>
-            </Link>
-            <Link
-              to="/bol?tab=missing"
-              className={`bg-surface-container-lowest rounded-[12px] p-5 border border-outline-variant/40 border-l-4 ${missingTickets > 0 ? "border-l-error" : "border-l-tertiary"} hover:bg-surface-container-high transition-all card-rest cursor-pointer flex items-center gap-4`}
-            >
-              <div
-                className={`${missingTickets > 0 ? "bg-error/10" : "bg-tertiary/10"} p-3 rounded-lg shrink-0`}
+              <div className="flex-1 h-px bg-outline-variant/30" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Link
+                to="/bol?tab=reconciliation"
+                className="bg-surface-container-lowest rounded-[10px] px-4 py-3 border border-outline-variant/30 hover:border-primary-container/50 hover:bg-surface-container-high transition-all cursor-pointer flex items-center gap-3"
               >
                 <span
-                  className={`material-symbols-outlined icon-filled text-2xl ${missingTickets > 0 ? "text-error" : "text-tertiary"}`}
+                  className="material-symbols-outlined text-primary-container text-xl"
+                  aria-hidden
+                >
+                  add_a_photo
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className="font-data text-lg font-bold text-primary-container tabular-nums leading-none"
+                      title="JotForm submissions where the driver uploaded a photo but auto-match could not link it to a load yet"
+                    >
+                      {bolStatsQuery.isLoading ? "..." : unmatchedPhotos}
+                    </span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-on-surface">
+                      Awaiting Photo Match
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant mt-0.5">
+                    Photo arrived &mdash; needs to be linked to a load &rarr; BOL Center
+                  </p>
+                </div>
+                <span
+                  className="material-symbols-outlined text-on-surface-variant text-base shrink-0"
+                  aria-hidden
+                >
+                  arrow_forward
+                </span>
+              </Link>
+              <Link
+                to="/bol?tab=missing"
+                className={`bg-surface-container-lowest rounded-[10px] px-4 py-3 border border-outline-variant/30 ${missingTickets > 0 ? "hover:border-error/50" : "hover:border-tertiary/50"} hover:bg-surface-container-high transition-all cursor-pointer flex items-center gap-3`}
+              >
+                <span
+                  className={`material-symbols-outlined text-xl ${missingTickets > 0 ? "text-error" : "text-tertiary"}`}
+                  aria-hidden
                 >
                   {missingTickets > 0 ? "warning" : "verified"}
                 </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <span
-                    className={`font-data text-2xl font-bold tabular-nums ${missingTickets > 0 ? "text-error" : "text-tertiary"}`}
-                    title="Loads in the system with no weight ticket photo attached. PCS is POST-only so these block dispatch."
-                  >
-                    {missingTicketsQuery.isLoading ? "..." : missingTickets}
-                  </span>
-                  <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
-                    Missing Ticket
-                  </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className={`font-data text-lg font-bold tabular-nums leading-none ${missingTickets > 0 ? "text-error" : "text-tertiary"}`}
+                      title="Loads in the system with no weight ticket photo attached. PCS is POST-only so these block dispatch."
+                    >
+                      {missingTicketsQuery.isLoading ? "..." : missingTickets}
+                    </span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-on-surface">
+                      Missing Ticket
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant mt-0.5">
+                    Load in system &mdash; no photo arrived yet &rarr; BOL Center
+                  </p>
                 </div>
-                <p className="text-[10px] text-on-surface-variant uppercase tracking-wider mt-1">
-                  Load in system &mdash; no photo arrived yet
-                </p>
-              </div>
-              <span className="material-symbols-outlined text-on-surface-variant shrink-0">
-                arrow_forward
-              </span>
-            </Link>
+                <span
+                  className="material-symbols-outlined text-on-surface-variant text-base shrink-0"
+                  aria-hidden
+                >
+                  arrow_forward
+                </span>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Tier counts label — pairs with the Cross-Surface Queue header
+            above so Jessica can see the page is structured: routes (above)
+            then queue (below). */}
+        {(unmatchedPhotos > 0 || missingTickets > 0) && (
+          <div className="flex items-center gap-3 px-2 pt-2">
+            <span className="text-[10px] uppercase tracking-[0.2em] font-black text-on-surface-variant">
+              Validation Queue
+            </span>
+            <div className="flex-1 h-px bg-outline-variant/30" />
           </div>
         )}
 
