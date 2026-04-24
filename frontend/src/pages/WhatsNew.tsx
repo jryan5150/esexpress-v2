@@ -295,23 +295,24 @@ export function WhatsNew() {
           cta={{ label: "Open Discrepancies", to: "/admin/discrepancies" }}
         />
 
-        {/* 05 — Photos rotate */}
+        {/* 05 — Photo rotation for PCS push */}
         <Section
           number="05"
-          title="Photos Display Upright"
-          why="Driver-mobile EXIF orientation tags weren't being honored by every browser, leaving scale tickets sideways in the drawer. Now applied server-side and cached."
+          title="Photo Rotation for PCS Push"
+          why="Driver-mobile photos often carry an EXIF orientation tag that browsers don't reliably honor. When a load goes to PCS, the photo is rotated server-side first so PCS receives an upright BOL ready to read."
           how={
             <div className="space-y-3">
               <p>
-                Every photo render site (Validate row thumbnails, Workbench
-                drawer, BOL Center reconciliation cards, the lightbox) now
-                routes through a proxy that reads the EXIF tag, rotates the
-                bytes, strips the tag, and re-encodes. Cached for 24 hours so
-                second-views are instant.
+                The PCS push pipeline reads each photo, applies the EXIF
+                rotation, strips the tag, and re-encodes before uploading so PCS
+                sees the photo in its true orientation. This is the bytes that
+                go into the BOL attachment field on the PCS load.
               </p>
               <p className="text-xs text-on-surface-variant">
-                When PCS push fires, the upload uses the same rotated bytes
-                &mdash; PCS receives upright BOL attachments, ready to read.
+                Heads-up &mdash; in-app thumbnails and the drawer may still show
+                some photos sideways until we ship the lighter resize-and-rotate
+                variant for the live UI (planned this weekend). What goes to PCS
+                is upright today; what you preview in v2 will catch up shortly.
               </p>
             </div>
           }
