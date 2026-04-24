@@ -17,7 +17,7 @@
  *   3. driver_name + delivery_date + weight (5% tolerance) fuzzy match
  */
 
-import { eq, or, and, between, ilike } from "drizzle-orm";
+import { eq, or, and, between, ilike, sql } from "drizzle-orm";
 import {
   loads,
   jotformImports,
@@ -389,11 +389,22 @@ export async function matchSubmissionToLoad(
     ? validateTicketNumber(fields.bolNo)
     : null;
   if (fields.bolNo && bolValidation?.valid) {
+    // Case-insensitive match — Vision often extracts uppercase ('C10698116')
+    // while DB stores lowercase ('c10698116') depending on ingest source.
+    // sql`LOWER(...)` lets postgres use the lower-cased index path; without
+    // this, ~half of the alpha-prefixed PropX tickets (Hairpin C-prefix
+    // format) fail to match despite existing as identical strings modulo
+    // case. Verified empirically 2026-04-24: 5 of 8 sampled unmatched
+    // bol_submissions had this exact symptom.
+    const lowered = fields.bolNo.toLowerCase();
     const [hit] = await db
       .select({ id: loads.id })
       .from(loads)
       .where(
-        or(eq(loads.ticketNo, fields.bolNo), eq(loads.bolNo, fields.bolNo)),
+        or(
+          sql`LOWER(${loads.ticketNo}) = ${lowered}`,
+          sql`LOWER(${loads.bolNo}) = ${lowered}`,
+        ),
       )
       .limit(1);
 
@@ -407,13 +418,14 @@ export async function matchSubmissionToLoad(
     }
   }
 
-  // --- Tier 2: load_no match ---
+  // --- Tier 2: load_no match (also case-insensitive) ---
   const loadNoCandidate = fields.loadNo ?? fields.bolNo;
   if (loadNoCandidate) {
+    const lowered = loadNoCandidate.toLowerCase();
     const [hit] = await db
       .select({ id: loads.id })
       .from(loads)
-      .where(eq(loads.loadNo, loadNoCandidate))
+      .where(sql`LOWER(${loads.loadNo}) = ${lowered}`)
       .limit(1);
 
     if (hit) {
