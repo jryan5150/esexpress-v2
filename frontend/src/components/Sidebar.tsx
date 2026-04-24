@@ -198,13 +198,26 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
           </span>
         </button>
 
-        {/* Main Nav — Workbench (load-centric) + BOL Queue (photo-centric) */}
+        {/* Main Nav — sequential workflow: Validate → Load Center → BOL Center.
+            "Validate" is the first action: new pending assignments land here for
+            human confirmation. Once validated they move into the dispatcher's
+            Load Center (workbench, ready_to_build filter). This sequencing is
+            Jessica's explicit Apr 15 ask: "in my mind, nothing would go to
+            dispatch desk until it had been validated". */}
         <nav className="flex-1 py-1.5" onClick={handleNavClick}>
           <div className="space-y-px">
             <Link
+              to="/validation"
+              className={navClass("/validation")}
+              title="Validate — confirm pending assignments before they reach the dispatch desk"
+            >
+              <span className={iconClass("/validation")}>fact_check</span>
+              {!collapsed && "Validate"}
+            </Link>
+            <Link
               to="/workbench"
               className={navClass("/workbench")}
-              title="Load Center"
+              title="Load Center — validated assignments ready to build"
             >
               <span className={iconClass("/workbench")}>build</span>
               {!collapsed && "Load Center"}
