@@ -62,10 +62,21 @@ export function usePendingReview() {
   });
 }
 
-export function useValidationSummary() {
+export function useValidationSummary(opts?: {
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  const params = new URLSearchParams();
+  if (opts?.dateFrom) params.set("dateFrom", opts.dateFrom);
+  if (opts?.dateTo) params.set("dateTo", opts.dateTo);
+  const qs = params.toString() ? `?${params.toString()}` : "";
   return useQuery({
-    queryKey: qk.validation.summary(),
-    queryFn: () => api.get<ValidationSummary>("/dispatch/validation/"),
+    queryKey: [
+      ...qk.validation.summary(),
+      opts?.dateFrom ?? "",
+      opts?.dateTo ?? "",
+    ],
+    queryFn: () => api.get<ValidationSummary>(`/dispatch/validation/${qs}`),
     refetchInterval: 30_000,
   });
 }

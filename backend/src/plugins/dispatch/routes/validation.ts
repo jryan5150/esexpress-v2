@@ -15,17 +15,33 @@ const DB_UNAVAILABLE = {
 };
 
 const validationRoutes: FastifyPluginAsync = async (fastify) => {
-  // GET / — tier summary stats
+  // GET / — tier summary stats. Accepts optional dateFrom/dateTo
+  // (YYYY-MM-DD, America/Chicago) so the counts at the top match the
+  // date filter applied below. Per Jessica Apr 15: "I can put in those
+  // dates in".
   fastify.get(
     "/",
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        querystring: {
+          type: "object",
+          properties: {
+            dateFrom: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+            dateTo: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+          },
+        },
+      },
     },
-    async (_request, reply) => {
+    async (request, reply) => {
       const db = fastify.db;
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
-      const data = await getValidationSummary(db);
+      const { dateFrom, dateTo } = request.query as {
+        dateFrom?: string;
+        dateTo?: string;
+      };
+      const data = await getValidationSummary(db, { dateFrom, dateTo });
       return { success: true, data };
     },
   );
@@ -48,6 +64,8 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
           properties: {
             page: { type: "integer", minimum: 1, default: 1 },
             limit: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+            dateFrom: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+            dateTo: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
           },
         },
       },
@@ -57,13 +75,22 @@ const validationRoutes: FastifyPluginAsync = async (fastify) => {
       if (!db) return reply.status(503).send(DB_UNAVAILABLE);
 
       const { n } = request.params as { n: number };
-      const { page = 1, limit = 50 } = request.query as {
+      const {
+        page = 1,
+        limit = 50,
+        dateFrom,
+        dateTo,
+      } = request.query as {
         page?: number;
         limit?: number;
+        dateFrom?: string;
+        dateTo?: string;
       };
       const { data, total } = await getAssignmentsByTier(db, n, {
         page,
         limit,
+        dateFrom,
+        dateTo,
       });
       return {
         success: true,

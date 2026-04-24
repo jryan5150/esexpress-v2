@@ -1,5 +1,33 @@
-import { eq, and, sql, desc, isNull } from "drizzle-orm";
+import { eq, and, sql, desc, isNull, gte, lte } from "drizzle-orm";
 import { assignments, loads, wells } from "../../../db/schema.js";
+
+/**
+ * Build a date-bounded SQL clause for `loads.deliveredOn` based on
+ * dateFrom/dateTo strings (YYYY-MM-DD). Anchors to America/Chicago so
+ * "today" means today in Jessica's local time, not UTC midnight. Per
+ * her Apr 15 ask: "if you actually put in like the 13th to the 15th,
+ * which would be more like what we're working on."
+ */
+function buildDateClause(opts: { dateFrom?: string; dateTo?: string }) {
+  const conditions: ReturnType<typeof gte>[] = [];
+  if (opts.dateFrom) {
+    conditions.push(
+      gte(
+        loads.deliveredOn,
+        sql`${`${opts.dateFrom}T00:00:00-05:00`}::timestamptz`,
+      ),
+    );
+  }
+  if (opts.dateTo) {
+    conditions.push(
+      lte(
+        loads.deliveredOn,
+        sql`${`${opts.dateTo}T23:59:59.999-05:00`}::timestamptz`,
+      ),
+    );
+  }
+  return conditions;
+}
 import { transitionStatus, createAssignment } from "./assignments.service.js";
 import { createLocationMapping } from "./mappings.service.js";
 import { NotFoundError } from "../../../lib/errors.js";
@@ -16,11 +44,14 @@ export interface ValidationSummary {
 
 export async function getValidationSummary(
   db: Database,
+  opts: { dateFrom?: string; dateTo?: string } = {},
 ): Promise<ValidationSummary> {
   // Count pending assignments tier-by-tier, but only where the load is NOT
   // historical_complete. Pre-cutoff loads were already dispatched via PCS
   // during v2 build — their stale pending assignments must not pollute the
-  // validation queue.
+  // validation queue. Date bounds (when supplied) scope to loads.deliveredOn
+  // so the counts at the top match what the operator sees in each tier.
+  const dateConds = buildDateClause(opts);
   const rows = await db
     .select({
       tier: assignments.autoMapTier,
@@ -32,6 +63,7 @@ export async function getValidationSummary(
       and(
         eq(assignments.status, "pending"),
         eq(loads.historicalComplete, false),
+        ...dateConds,
       ),
     )
     .groupBy(assignments.autoMapTier);
@@ -53,7 +85,13 @@ export async function getValidationSummary(
     .select({ count: sql<number>`cast(count(*) as int)` })
     .from(loads)
     .leftJoin(assignments, eq(loads.id, assignments.loadId))
-    .where(and(isNull(assignments.id), eq(loads.historicalComplete, false)));
+    .where(
+      and(
+        isNull(assignments.id),
+        eq(loads.historicalComplete, false),
+        ...dateConds,
+      ),
+    );
 
   tier3 += unmapped?.count ?? 0;
 
@@ -65,11 +103,17 @@ export async function getValidationSummary(
 export async function getAssignmentsByTier(
   db: Database,
   tier: number,
-  opts: { page?: number; limit?: number } = {},
+  opts: {
+    page?: number;
+    limit?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  } = {},
 ) {
   const page = opts.page ?? 1;
   const limit = opts.limit ?? 50;
   const offset = (page - 1) * limit;
+  const dateConds = buildDateClause(opts);
 
   // Tier 3: return unmapped loads (no assignment) for manual resolution
   // Exclude historical_complete — those go to archive, not validation queue
@@ -78,7 +122,13 @@ export async function getAssignmentsByTier(
       .select({ count: sql<number>`cast(count(*) as int)` })
       .from(loads)
       .leftJoin(assignments, eq(loads.id, assignments.loadId))
-      .where(and(isNull(assignments.id), eq(loads.historicalComplete, false)));
+      .where(
+        and(
+          isNull(assignments.id),
+          eq(loads.historicalComplete, false),
+          ...dateConds,
+        ),
+      );
 
     const total = countResult?.count ?? 0;
 
@@ -103,7 +153,13 @@ export async function getAssignmentsByTier(
       })
       .from(loads)
       .leftJoin(assignments, eq(loads.id, assignments.loadId))
-      .where(and(isNull(assignments.id), eq(loads.historicalComplete, false)))
+      .where(
+        and(
+          isNull(assignments.id),
+          eq(loads.historicalComplete, false),
+          ...dateConds,
+        ),
+      )
       .orderBy(desc(loads.createdAt))
       .limit(limit)
       .offset(offset);
@@ -117,6 +173,7 @@ export async function getAssignmentsByTier(
     eq(assignments.status, "pending"),
     eq(assignments.autoMapTier, tier),
     eq(loads.historicalComplete, false),
+    ...dateConds,
   );
 
   const [countResult] = await db

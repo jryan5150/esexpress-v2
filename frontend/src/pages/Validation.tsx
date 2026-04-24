@@ -196,6 +196,55 @@ function ConfidenceBadge({ score }: { score: string | null }) {
   );
 }
 
+/** Format Date as YYYY-MM-DD in America/Chicago local time. */
+function fmtDateChicago(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Today, yesterday, this week, last week, all — preset date filters. */
+type DatePreset =
+  | "today"
+  | "yesterday"
+  | "this-week"
+  | "last-week"
+  | "all"
+  | "custom";
+
+function presetRange(preset: DatePreset): {
+  dateFrom?: string;
+  dateTo?: string;
+} {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const fmt = fmtDateChicago;
+  switch (preset) {
+    case "today":
+      return { dateFrom: fmt(today), dateTo: fmt(today) };
+    case "yesterday": {
+      const y = new Date(today);
+      y.setDate(y.getDate() - 1);
+      return { dateFrom: fmt(y), dateTo: fmt(y) };
+    }
+    case "this-week": {
+      // Sunday → Saturday
+      const start = new Date(today);
+      start.setDate(start.getDate() - start.getDay());
+      return { dateFrom: fmt(start), dateTo: fmt(today) };
+    }
+    case "last-week": {
+      const end = new Date(today);
+      end.setDate(end.getDate() - end.getDay() - 1); // last Saturday
+      const start = new Date(end);
+      start.setDate(start.getDate() - 6);
+      return { dateFrom: fmt(start), dateTo: fmt(end) };
+    }
+    case "all":
+      return {};
+    case "custom":
+      return {};
+  }
+}
+
 export function Validation() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -206,6 +255,17 @@ export function Validation() {
   const [rejectReason, setRejectReason] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Date filter — Jessica's Apr 15 explicit ask: "I can put in those
+  // dates in" / "do a day's worth at a time". Default to TODAY so she
+  // lands on today's work, not all 6000+ pending. Custom range supported.
+  const [datePreset, setDatePreset] = useState<DatePreset>("today");
+  const [customFrom, setCustomFrom] = useState<string>("");
+  const [customTo, setCustomTo] = useState<string>("");
+  const dateFilter =
+    datePreset === "custom"
+      ? { dateFrom: customFrom || undefined, dateTo: customTo || undefined }
+      : presetRange(datePreset);
 
   // Pagination state per tier
   const [tierPages, setTierPages] = useState<Record<number, number>>({
@@ -219,7 +279,7 @@ export function Validation() {
     3: 50,
   });
 
-  const summaryQuery = useValidationSummary();
+  const summaryQuery = useValidationSummary(dateFilter);
   const confirmMutation = useValidationConfirm();
   const rejectMutation = useValidationReject();
 
@@ -238,25 +298,52 @@ export function Validation() {
       ?.meta?.total ?? 0,
   );
 
+  // Build the date qs once and append to every tier call so the page
+  // counts (top) and the row results (below) stay consistent.
+  const dateQs = (() => {
+    const p = new URLSearchParams();
+    if (dateFilter.dateFrom) p.set("dateFrom", dateFilter.dateFrom);
+    if (dateFilter.dateTo) p.set("dateTo", dateFilter.dateTo);
+    const s = p.toString();
+    return s ? `&${s}` : "";
+  })();
   const tier1Query = useQuery({
-    queryKey: [...qk.validation.tier(1), tierPages[1], tierPageSizes[1]],
+    queryKey: [
+      ...qk.validation.tier(1),
+      tierPages[1],
+      tierPageSizes[1],
+      dateFilter.dateFrom ?? "",
+      dateFilter.dateTo ?? "",
+    ],
     queryFn: () =>
       api.get<any>(
-        `/dispatch/validation/tier/1?page=${tierPages[1]}&limit=${tierPageSizes[1]}`,
+        `/dispatch/validation/tier/1?page=${tierPages[1]}&limit=${tierPageSizes[1]}${dateQs}`,
       ),
   });
   const tier2Query = useQuery({
-    queryKey: [...qk.validation.tier(2), tierPages[2], tierPageSizes[2]],
+    queryKey: [
+      ...qk.validation.tier(2),
+      tierPages[2],
+      tierPageSizes[2],
+      dateFilter.dateFrom ?? "",
+      dateFilter.dateTo ?? "",
+    ],
     queryFn: () =>
       api.get<any>(
-        `/dispatch/validation/tier/2?page=${tierPages[2]}&limit=${tierPageSizes[2]}`,
+        `/dispatch/validation/tier/2?page=${tierPages[2]}&limit=${tierPageSizes[2]}${dateQs}`,
       ),
   });
   const tier3Query = useQuery({
-    queryKey: [...qk.validation.tier(3), tierPages[3], tierPageSizes[3]],
+    queryKey: [
+      ...qk.validation.tier(3),
+      tierPages[3],
+      tierPageSizes[3],
+      dateFilter.dateFrom ?? "",
+      dateFilter.dateTo ?? "",
+    ],
     queryFn: () =>
       api.get<any>(
-        `/dispatch/validation/tier/3?page=${tierPages[3]}&limit=${tierPageSizes[3]}`,
+        `/dispatch/validation/tier/3?page=${tierPages[3]}&limit=${tierPageSizes[3]}${dateQs}`,
       ),
   });
 
@@ -386,6 +473,73 @@ export function Validation() {
             )}
           </div>
         </div>
+
+        {/* Date filter row — Jessica Apr 15: "if you actually put in like
+            the 13th to the 15th, which would be more like what we're
+            working on" / "do a day's worth at a time". Default: today.
+            Presets cover the common cases; Custom drops two date inputs. */}
+        <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <span className="text-[10px] uppercase tracking-[0.15em] font-bold text-on-surface-variant mr-1">
+            Showing
+          </span>
+          {(
+            [
+              { id: "today", label: "Today" },
+              { id: "yesterday", label: "Yesterday" },
+              { id: "this-week", label: "This Week" },
+              { id: "last-week", label: "Last Week" },
+              { id: "all", label: "All" },
+              { id: "custom", label: "Custom" },
+            ] as Array<{ id: DatePreset; label: string }>
+          ).map((p) => (
+            <button
+              key={p.id}
+              onClick={() => {
+                setDatePreset(p.id);
+                setTierPages({ 1: 1, 2: 1, 3: 1 });
+              }}
+              className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                datePreset === p.id
+                  ? "bg-primary-container text-on-primary-container shadow-sm"
+                  : "bg-surface-container-lowest border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container-high"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+          {datePreset === "custom" && (
+            <>
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => {
+                  setCustomFrom(e.target.value);
+                  setTierPages({ 1: 1, 2: 1, 3: 1 });
+                }}
+                className="text-[11px] bg-surface-container-lowest border border-outline-variant/40 rounded-md px-2 py-1 text-on-surface"
+                aria-label="From date"
+              />
+              <span className="text-[11px] text-on-surface-variant">to</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => {
+                  setCustomTo(e.target.value);
+                  setTierPages({ 1: 1, 2: 1, 3: 1 });
+                }}
+                className="text-[11px] bg-surface-container-lowest border border-outline-variant/40 rounded-md px-2 py-1 text-on-surface"
+                aria-label="To date"
+              />
+            </>
+          )}
+          {(dateFilter.dateFrom || dateFilter.dateTo) && (
+            <span className="text-[10px] text-on-surface-variant ml-2">
+              {dateFilter.dateFrom === dateFilter.dateTo
+                ? dateFilter.dateFrom
+                : `${dateFilter.dateFrom ?? "—"} → ${dateFilter.dateTo ?? "—"}`}
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-6">
         {/* Quick Action: Bulk Approve Tier 1 */}
@@ -457,7 +611,8 @@ export function Validation() {
                     </span>
                   </div>
                   <p className="text-[10px] text-on-surface-variant mt-0.5">
-                    Photo arrived &mdash; needs to be linked to a load &rarr; BOL Center
+                    Photo arrived &mdash; needs to be linked to a load &rarr;
+                    BOL Center
                   </p>
                 </div>
                 <span
@@ -490,7 +645,8 @@ export function Validation() {
                     </span>
                   </div>
                   <p className="text-[10px] text-on-surface-variant mt-0.5">
-                    Load in system &mdash; no photo arrived yet &rarr; BOL Center
+                    Load in system &mdash; no photo arrived yet &rarr; BOL
+                    Center
                   </p>
                 </div>
                 <span
