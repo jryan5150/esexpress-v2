@@ -698,6 +698,133 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // ─── POST /jotform/rematch-pending — retry stuck submissions ──────
+  // For each pending jotform_imports row, re-run matchSubmissionToLoad
+  // with the stored fields. Picks up matches that work NOW because:
+  //   - New aliases on wells (today's orphan absorb workflow)
+  //   - Loads ingested AFTER the original sync ran
+  //   - Matcher rule changes / Tier 0 BOL validator added 2026-04-14
+  // Doesn't re-run OCR (that would re-call Anthropic Vision per row, 2-3
+  // hr + cost). Instead just re-applies the matcher to extracted fields
+  // already in jotform_imports.
+  //
+  // Idempotent: a row already matched stays matched; only pending rows are
+  // touched. When a match lands:
+  //   - jotform_imports.matchedLoadId / matchMethod / matchedAt / status
+  //   - assignment.photo_status flipped to 'attached' if the load has one
+  //
+  // Bounded batch — pass limit (1-2000) to chunk. Returns remaining count
+  // for incremental drain.
+  fastify.post(
+    "/jotform/rematch-pending",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+      schema: {
+        body: {
+          type: "object",
+          properties: {
+            limit: { type: "integer", minimum: 1, maximum: 2000, default: 500 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+      const { limit = 500 } = (request.body ?? {}) as { limit?: number };
+      const { matchSubmissionToLoad } =
+        await import("../services/jotform.service.js");
+
+      const pending = await db
+        .select({
+          id: jotformImports.id,
+          driverName: jotformImports.driverName,
+          truckNo: jotformImports.truckNo,
+          bolNo: jotformImports.bolNo,
+          weight: jotformImports.weight,
+          photoUrl: jotformImports.photoUrl,
+          imageUrls: jotformImports.imageUrls,
+          submittedAt: jotformImports.submittedAt,
+        })
+        .from(jotformImports)
+        .where(eq(jotformImports.status, "pending"))
+        .limit(limit);
+
+      let newlyMatched = 0;
+      let bridged = 0;
+      const methodCounts: Record<string, number> = {};
+      for (const row of pending) {
+        const fields = {
+          driverName: row.driverName,
+          truckNo: row.truckNo,
+          bolNo: row.bolNo,
+          weight: row.weight != null ? Number(row.weight) : null,
+          loadNo: row.bolNo, // Tier 2 fallback uses bolNo if loadNo absent
+          photoUrl: row.photoUrl,
+          imageUrls: Array.isArray(row.imageUrls) ? row.imageUrls : [],
+          submittedAt: row.submittedAt,
+        };
+        try {
+          const match = await matchSubmissionToLoad(db, fields);
+          if (match.matched && match.loadId) {
+            await db
+              .update(jotformImports)
+              .set({
+                matchedLoadId: match.loadId,
+                matchMethod: match.matchMethod,
+                matchedAt: new Date(),
+                status: "matched",
+              })
+              .where(eq(jotformImports.id, row.id));
+            newlyMatched += 1;
+            methodCounts[match.matchMethod ?? "unknown"] =
+              (methodCounts[match.matchMethod ?? "unknown"] ?? 0) + 1;
+            // Bridge to assignment.photo_status if there's a photo URL
+            const hasPhoto =
+              !!row.photoUrl ||
+              (Array.isArray(row.imageUrls) && row.imageUrls.length > 0);
+            if (hasPhoto) {
+              const r = await db
+                .update(assignments)
+                .set({ photoStatus: "attached", updatedAt: new Date() })
+                .where(eq(assignments.loadId, match.loadId))
+                .returning({ id: assignments.id });
+              if (r.length > 0) bridged += 1;
+            }
+          }
+        } catch {
+          // skip per-row failures so a single bad row doesn't kill the batch
+        }
+      }
+
+      // Remaining count for incremental drain
+      const { sql: sqlOp } = await import("drizzle-orm");
+      const [{ remaining }] = await db
+        .select({ remaining: sqlOp<number>`COUNT(*)::int` })
+        .from(jotformImports)
+        .where(eq(jotformImports.status, "pending"));
+
+      return {
+        success: true,
+        data: {
+          processed: pending.length,
+          newlyMatched,
+          bridged,
+          methodCounts,
+          remaining,
+        },
+      };
+    },
+  );
+
   // ─── GET /jotform/health — pipeline health surface ─────────────────
   // Quantifies every flavor of "data populated but no photo" — the failure
   // mode Jessica specifically called out. Returns counts so the dashboard
