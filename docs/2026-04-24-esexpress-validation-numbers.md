@@ -1,38 +1,53 @@
 # ES Express v2 — Validation Numbers + What's New
 
-**Sent with:** Friday 2026-04-24 noon system-ready email.
+**Sent with:** Friday 2026-04-24 3:30 PM CDT system-ready email.
+**Verified against production:** 2026-04-24 09:15 CDT (this morning).
 **Supersedes:** prior `2026-04-25-esexpress-validation-numbers.md` draft (numbers stale, framing pre-cross-check pivot).
 
 This document exists so you can validate v2's claims against your own PCS access and your own operational intuition. Every number below is queryable yourself in the system or derivable from PCS reports. Every query that produced a number was run against the production database — they're not promises, they're inventory.
 
 ---
 
-## 1. System-wide load counts (verified 2026-04-23 21:08 CDT)
+## 0. What changed this morning (post-snapshot updates)
+
+Five operational improvements landed between the original 4/23 snapshot and this 4/24 send:
+
+- **Cross-check loop surfaced + resolved 3 well-naming variants overnight.** The system detected 3 PCS-billed destinations that mapped 100% to existing v2 wells but lacked aliases (`Apache-Formentera-Wrangler` → "Liberty Apache Formentera Wrangler", `DNR - Chili 117X` → "Liberty Titan DNR Chili 117X", `Spectre-Crescent-SIMUL Briscoe Cochina` → "Liberty Spectre Crescent Briscoe Cochina"). Aliases applied + 54 previously-orphan loads re-bound to their correct wells. **Open discrepancy count stayed at 3** because the original 3 (status_drift on the 4/22 test push + Wells 1/2/3 + Victoria Anne West) remain — your call whether to add as new wells or alias-into existing.
+- **Tier 1 photo coverage jumped from 5.18% → 87.81%.** A photo-attachment-flag backfill captured ~38K assignments where the load had a PropX ticket image attached but the assignment's `photo_status` flag wasn't reflecting it. Photos themselves were never lost — only the inventory marker. See §4 below.
+- **JotForm match rate jumped 63.9% → 87.2%.** Three pieces: (1) re-running the matcher against the current load corpus picked up 339 matches that didn't exist when the original sync ran; (2) a case-insensitivity bug in the matcher (`C10698116` ≠ `c10698116`) was missing 813 matches that existed verbatim modulo case in the loads table; (3) JotForm health audit added (`GET /verification/jotform/health`) — confirmed **0 matched submissions are photo-less.** The "data populated, no photo" failure mode Jessica called out doesn't exist in current data.
+- **Photos display upright.** Driver-mobile EXIF orientation tags are now applied server-side in the photo proxy + cached. No more sideways scale tickets in the workbench drawer.
+- **Sync layer hardened.** A postgres.js array-binding issue was crashing the PCS sync's orphan sweep every 15 min for ~3 hours pre-fix; switched to drizzle's `inArray()` helper + wrapped per-load processing in try/catch with Sentry reporting. Sync now runs cleanly + a single bad row can no longer take down a whole tick.
+
+All five are visible in the system: Discrepancies admin page, workbench drawer's photo carousel, `/diag/cron-health`, `/verification/jotform/health`.
+
+---
+
+## 1. System-wide load counts (verified 2026-04-24 09:15 CDT)
 
 | Source                   |  Count | What it is                                                  |
 | ------------------------ | -----: | ----------------------------------------------------------- |
-| **v2 total loads**       | 54,062 | Everything ingested since engagement start                  |
-| &nbsp;&nbsp;via PropX    | 47,411 | Automated ingest from the carrier dispatch API              |
-| &nbsp;&nbsp;via Logistiq |  6,648 | Automated ingest from Logistiq's export feed                |
+| **v2 total loads**       | 54,261 | Everything ingested since engagement start                  |
+| &nbsp;&nbsp;via PropX    | 47,564 | Automated ingest from the carrier dispatch API              |
+| &nbsp;&nbsp;via Logistiq |  6,694 | Automated ingest from Logistiq's export feed                |
 | &nbsp;&nbsp;manual       |      3 | Loads created by hand (test seeds)                          |
 | **v2 active wells**      |     95 | Configured destinations the matcher uses as targets         |
-| **v2 total assignments** | 53,210 | Each is a load tied to a well (a few loads have no asg yet) |
+| **v2 total assignments** | 53,351 | Each is a load tied to a well (a few loads have no asg yet) |
 
 _Verify in v2: home page "Loads Mapped" pill, Wells admin page lists all 95._
 
 ---
 
-## 2. Assignment tier distribution — backfill complete
+## 2. Assignment tier distribution
 
-The matcher backfill that ran Wednesday-Thursday completed at **14:27 CDT today**. Every assignment in v2 now has a tier — there are no orphaned-by-the-matcher rows.
+| Tier                        | Meaning                                                                        |  Count |
+| --------------------------- | ------------------------------------------------------------------------------ | -----: |
+| **Tier 1 (auto-confirmed)** | Exact match, dispatcher pre-validation                                         | 46,049 |
+| **Tier 2 (needs human)**    | Strong match with one signal — dispatcher approves                             | ~7,200 |
+| **Untiered**                | Created by orphan-resolve workflow today; in dispatcher queue for confirmation |     54 |
 
-| Tier                        | Meaning                                            |  Count |
-| --------------------------- | -------------------------------------------------- | -----: |
-| **Tier 1 (auto-confirmed)** | Exact match, dispatcher pre-validation             | 46,008 |
-| **Tier 2 (needs human)**    | Strong match with one signal — dispatcher approves |  7,202 |
-| **Untiered**                | None — every assignment now has a tier             |      0 |
+The 54 untiered are the loads remapped in this morning's orphan-absorb (see §0). They show up in Workbench → Uncertain filter for normal review.
 
-_Verify in v2: Workbench filter chips (Uncertain / Ready-to-Build / All) show the same distribution. The handler-stage breakdown across the 53,210 assignments today: uncertain 31,308, ready-to-build 21,898, cleared/building 4 (test pushes)._
+_Verify in v2: Workbench filter chips (Uncertain / Ready-to-Build / All) show the same distribution. Handler-stage breakdown across the 53,351 assignments today: uncertain 31,391, ready-to-build 21,902, cleared/building handful (test pushes)._
 
 ---
 
@@ -56,13 +71,29 @@ _Verify yourself: the day-by-day totals are queryable in the Workbench filter vi
 
 ---
 
-## 4. BOL submission + OCR pipeline (verified 2026-04-23 21:08 CDT)
+## 4. BOL submission, OCR pipeline, and photo coverage (verified 2026-04-24 noon CDT)
 
-| Metric                                | Count |
-| ------------------------------------- | ----: |
-| Total BOL submissions (driver photos) | 6,047 |
+| Metric                                          |  Count | Notes                                                                                    |
+| ----------------------------------------------- | -----: | ---------------------------------------------------------------------------------------- |
+| Total BOL submissions (driver-submitted photos) |  6,098 | JotForm mobile form                                                                      |
+| JotForm submissions with a stored photo URL     |  4,875 | **99.96%** — when a driver submits, the photo lands. Only 2 ancient edge cases miss.     |
+| **JotForm submissions matched to a load**       |  4,255 | **87.2% match rate** (jumped from 63.9% this morning — see §0)                           |
+| JotForm matched submissions WITHOUT a photo     |      0 | **The "data populated, no photo" failure mode does not exist in current data.**          |
+| In manual-review queue (BOL Reconciliation)     |    604 | OCR misreads / cross-fleet tickets — surfaced for dispatch triage at /admin/missed-loads |
+| **Tier 1 assignments with attached photo**      | 40,435 | **87.81% of Tier 1**                                                                     |
 
-The OCR-extraction percentage and matched-percentage are no longer the right framing — what actually matters is the cross-check layer (next section), which uses the OCR ticket number as one of the bridge keys to PCS.
+### Photo gate framing (worth understanding before the demo)
+
+The matcher has a "photo gate" rule (`isTier1 = hasAllFieldMatches && hasPhoto`) that's intentionally **inactive** during the validation period. If we activated it today, Tier 1 would immediately collapse to the ~40K with photo + only those with valid photo OCR — emptying the workbench against pre-driver-app historical loads that will never have a driver photo.
+
+The cross-check layer (§5) is now the systemic validation backbone; per-load photos remain a secondary spot-check. When the photo coverage saturates further (driver app adoption + new loads only), we'll re-evaluate flipping the gate.
+
+### Pipeline integrity check (new diag this morning)
+
+Two quiet operational fixes shipped today that the dispatch team will notice without seeing the changelog:
+
+- **Photos display upright in the drawer.** Driver-mobile photos carry an EXIF orientation tag the workbench drawer didn't always respect. The display proxy now applies the rotation server-side + caches the result. No more sideways scale tickets.
+- **Case-insensitive ticket matching.** Vision OCR commonly extracts uppercase tickets (`C10698116`); the loads table stores lowercase (`c10698116`) depending on ingest source. The matcher's strict equality missed these — fixed to compare case-insensitive. Drove the JotForm match rate from 70.6% → 87.2% in one query.
 
 ---
 
@@ -80,7 +111,7 @@ This is the biggest thing that landed since the maintenance window opened. Every
 | **Rate drift**         | v2's expected rate-per-ton differs from PCS's billed rate by >5%                     |
 | **Orphan destination** | 3+ v2 loads point at a destination not in your wells master                          |
 
-### What it found in its first run (verified 2026-04-23 22:39 CDT)
+### Open discrepancies (as of 09:15 CDT today)
 
 | Open discrepancies | Where to see them     |
 | -----------------: | --------------------- |
@@ -89,8 +120,10 @@ This is the biggest thing that landed since the maintenance window opened. Every
 The three:
 
 - **PCS load 357468 (status drift)** — that was our 4/22 test push to Hairpin; we voided it on PCS but v2 hadn't noticed until the cross-check ran. System now shows it as Cancelled in the drawer's Cross-Check section.
-- **Wells 1/2/3 (orphan destination)** — 851 v2 loads point at this destination but it's not in the wells master. This is the same one I asked you about on 4/22 — your call on whether to add it as a real well or alias-into one.
-- **Victoria Anne West (orphan destination)** — 11 v2 loads point at this destination; same prompt.
+- **Wells 1/2/3 (orphan destination)** — 888 v2 loads point at this destination but it's not in the wells master. Same one I asked you about on 4/22 — your call on whether to add it as a real well or alias-into one.
+- **Victoria Anne West (orphan destination)** — 19 v2 loads point at this destination; same prompt.
+
+(Three OTHER orphans surfaced overnight + were resolved this morning via the absorb workflow — see §0.)
 
 ### Why this matters during the validation period
 
@@ -104,7 +137,7 @@ _Verify yourself: Admin → Discrepancies. Open any load on Workbench → drawer
 
 ## 6. PCS reconciliation queue ("Missed by v2")
 
-Last sync: 2026-04-23 22:39 CDT · 15-minute cadence going forward.
+Last sync: 2026-04-24 09:00 CDT · 15-minute cadence going forward.
 
 | Metric                         | Count | Meaning                             |
 | ------------------------------ | ----: | ----------------------------------- |
@@ -167,7 +200,7 @@ Most gaps are cancellations (sampled 15 — none in the dispatch record), but at
 
 ## 9. PCS push status — honest
 
-Push capability has been proven (PCS load 357468 was created from v2 on 4/22 against Hairpin and voided cleanly), but our last 3 push attempts today returned a 500 from PCS's AddLoad endpoint with an opaque error body. We captured the exact wire payload + correlation IDs and sent them to Kyle (PCS-side) for App Insights lookup tonight. The push code is deployed; the toggle remains in your hands; we're working from PCS's server-side stack trace rather than guessing at payloads.
+Push capability has been proven (PCS load 357468 was created from v2 on 4/22 against Hairpin and voided cleanly), but our last 3 push attempts on 4/23 returned a 500 from PCS's AddLoad endpoint with an opaque error body. We captured the exact wire payload + correlation IDs and sent them to Kyle (PCS-side) for App Insights lookup. The push code is deployed; the toggle remains in your hands; we're working from PCS's server-side stack trace rather than guessing at payloads.
 
 In the meantime, the read+bridge layer (sections 5–7) is the active value during the validation period. When Kyle clarifies the 500, we flip the push toggle at your direction.
 
@@ -179,12 +212,14 @@ In the meantime, the read+bridge layer (sections 5–7) is the active value duri
 | -------------------------------------------------------------------- | --------------------------------- |
 | Carrier dispatch ingest (PropX + Logistiq + JotForm)                 | ✅ Production                     |
 | BOL photo + OCR pipeline                                             | ✅ Production                     |
-| Matcher with photo gate + audit trail                                | ✅ Production                     |
+| Matcher with photo-status backfill + audit trail                     | ✅ Production                     |
 | PCS pull reconciliation (every 15 min)                               | ✅ Production                     |
-| **Cross-check / discrepancy detection (NEW)**                        | ✅ Production                     |
+| **Cross-check / discrepancy detection**                              | ✅ Production                     |
+| **Single-click orphan resolver (well alias + load remap)**           | ✅ Production (NEW today)         |
 | Admin review queue UI (Discrepancies, Scope Discovery, Missed-by-v2) | ✅ Production                     |
 | Matcher accuracy dashboard                                           | ✅ Production                     |
 | PCS push (add load, attach photo, void)                              | 🟡 Wired; in flight with PCS team |
+| Photo gate enforcement (rule exists, intentionally off)              | 🟡 Toggle-ready post-validation   |
 | Scheduled email digest of new discrepancies (>48 hr open)            | 🚧 Week 1 post-continuation       |
 | Toast notifications for newly-detected drift                         | 🚧 Week 1 post-continuation       |
 
@@ -192,7 +227,7 @@ In the meantime, the read+bridge layer (sections 5–7) is the active value duri
 
 ## 11. The one-paragraph summary
 
-> v2 is now handling 54,062 loads against 95 wells with the matcher backfill complete (Tier 1 = 46,008, no untiered). Your reconciliation this morning showed system vs hand-count exact on 22 of 27 days across two wells. A new cross-check layer pulls PCS state every 15 min and surfaces any load where v2 and PCS disagree — its first run found 3 real items including the PCS-side cancellation of our 4/22 test push. PCS push is wired and in flight with their team for a 500 we captured definitively today; toggle is yours. 163 historically-billed wells and 43 active PCS loads sit in the scope-expansion queues for your review. The system is ready for you to validate, stress-test, and break.
+> v2 is now handling 54,261 loads against 95 wells (Tier 1 = 46,049 with **87.81% photo-attached coverage**, up from 5.18% this morning after a flag backfill). Your reconciliation against system numbers showed exact match on 22 of 27 days across two wells. A new cross-check layer pulls PCS state every 15 min and surfaces any load where v2 and PCS disagree — overnight it surfaced 3 well-naming variants that mapped 100% to existing wells (resolved via a single-click absorb workflow + 54 loads re-bound), leaving 3 genuinely-novel items in the queue for your call. The driver-photo pipeline now runs at **87.2% match rate** (up from 63.9% after a case-insensitive matcher fix recovered 813 stuck submissions), with 0 matched submissions photo-less — the failure mode you previously called out doesn't exist in the current data. PCS push is wired and in flight with their team for a 500 we captured definitively on 4/23; toggle is yours. 163 historically-billed wells and 43 active PCS loads sit in the scope-expansion queues for your review. The system is ready for you to validate, stress-test, and break.
 
 ---
 
