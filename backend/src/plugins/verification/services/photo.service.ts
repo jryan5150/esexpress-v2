@@ -210,6 +210,96 @@ export async function validateUrlSafe(url: string): Promise<URL> {
 // Photo proxy
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// In-process photo cache (byte-budgeted LRU)
+// ---------------------------------------------------------------------------
+//
+// Sharp re-encode of a 2-3 MB driver photo costs ~3-5 sec wall-clock on
+// Railway. With ~50K photos in the corpus, a workbench browse session can
+// re-fetch the same drawer multiple times — paying that cost each time is
+// wasteful. Cache the post-rotation buffer keyed by the source URL.
+//
+// Eviction: byte-budget LRU. JS Map preserves insertion order, so we get
+// LRU behavior by delete-and-reinsert on access, plus we evict the oldest
+// (first-inserted) when total bytes exceed the budget.
+//
+// Budget: 192 MB. At ~2.5 MB avg per photo that's ~75 cached entries —
+// enough for a multi-page drawer browse without thrashing. Trade off if
+// Railway memory becomes tight.
+//
+// TTL: photos at the source URLs are stable (PropX ticket image, GCS
+// stored copies) so we don't expire by time. The byte-budget eviction
+// keeps the working set bounded under heavy use.
+const PHOTO_CACHE_BUDGET_BYTES = 192 * 1024 * 1024;
+interface PhotoCacheEntry {
+  buffer: Buffer;
+  contentType: string;
+}
+const photoCache = new Map<string, PhotoCacheEntry>();
+let photoCacheBytes = 0;
+let photoCacheHits = 0;
+let photoCacheMisses = 0;
+
+function cachePhotoGet(key: string): PhotoCacheEntry | null {
+  const entry = photoCache.get(key);
+  if (!entry) {
+    photoCacheMisses += 1;
+    return null;
+  }
+  photoCacheHits += 1;
+  // LRU bump: delete + reinsert moves to end (most-recent slot)
+  photoCache.delete(key);
+  photoCache.set(key, entry);
+  return entry;
+}
+
+function cachePhotoSet(key: string, buffer: Buffer, contentType: string): void {
+  const size = buffer.byteLength;
+  // Don't cache absurdly large items (e.g., near MAX_PHOTO_SIZE) — they'd
+  // evict everything else and the next miss would refill them anyway.
+  if (size > PHOTO_CACHE_BUDGET_BYTES / 4) return;
+  // If overwriting an existing entry, free its bytes first.
+  const existing = photoCache.get(key);
+  if (existing) {
+    photoCacheBytes -= existing.buffer.byteLength;
+    photoCache.delete(key);
+  }
+  photoCache.set(key, { buffer, contentType });
+  photoCacheBytes += size;
+  // Evict oldest until under budget
+  while (photoCacheBytes > PHOTO_CACHE_BUDGET_BYTES && photoCache.size > 0) {
+    const oldestKey = photoCache.keys().next().value;
+    if (!oldestKey) break;
+    const oldest = photoCache.get(oldestKey);
+    if (oldest) {
+      photoCacheBytes -= oldest.buffer.byteLength;
+    }
+    photoCache.delete(oldestKey);
+  }
+}
+
+/** Diagnostic snapshot. Used by /diag/photos cache surface. */
+export function photoCacheStats(): {
+  entries: number;
+  bytes: number;
+  bytesPretty: string;
+  budgetBytes: number;
+  hits: number;
+  misses: number;
+  hitRate: number;
+} {
+  const total = photoCacheHits + photoCacheMisses;
+  return {
+    entries: photoCache.size,
+    bytes: photoCacheBytes,
+    bytesPretty: `${(photoCacheBytes / 1024 / 1024).toFixed(1)} MB`,
+    budgetBytes: PHOTO_CACHE_BUDGET_BYTES,
+    hits: photoCacheHits,
+    misses: photoCacheMisses,
+    hitRate: total > 0 ? photoCacheHits / total : 0,
+  };
+}
+
 /**
  * Apply EXIF auto-rotation to a photo buffer if its orientation is not the
  * canonical "1" (top-left). Driver-mobile photos almost always carry a
@@ -269,6 +359,13 @@ export async function proxyPhoto(
 ): Promise<{ buffer: Buffer; contentType: string }> {
   const parsed = await validateUrlSafe(url);
 
+  // Cache key uses the validated URL string so reflected query-param order
+  // doesn't shard cache entries. apiKey is injected later (server-side) and
+  // is constant per host — no need to factor it into the cache key.
+  const cacheKey = parsed.href;
+  const cached = cachePhotoGet(cacheKey);
+  if (cached) return { buffer: cached.buffer, contentType: cached.contentType };
+
   // GCS path: bucket is private (org policy blocks public). Use the storage
   // SDK + service-account creds to download — no signed URL round-trip, no
   // bucket-public exposure. Returns the raw object bytes + an inferred
@@ -284,6 +381,7 @@ export async function proxyPhoto(
     }
     const contentType = contentTypeFromUrlExtension(gcs.object) ?? "image/jpeg";
     const rotated = await autoRotateIfNeeded(buffer, contentType);
+    cachePhotoSet(cacheKey, rotated.buffer, rotated.contentType);
     return { buffer: rotated.buffer, contentType: rotated.contentType };
   }
 
@@ -362,6 +460,7 @@ export async function proxyPhoto(
 
     const rawBuffer = Buffer.from(arrayBuffer);
     const rotated = await autoRotateIfNeeded(rawBuffer, contentType);
+    cachePhotoSet(cacheKey, rotated.buffer, rotated.contentType);
     return {
       buffer: rotated.buffer,
       contentType: rotated.contentType,
