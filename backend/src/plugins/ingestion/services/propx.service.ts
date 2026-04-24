@@ -118,11 +118,14 @@ export class PropxClient {
     this.apiKey = config.apiKey;
     this.baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
 
-    // Rate limiter: 10 requests per 1-second window, 4 concurrent
+    // Rate limiter: 4 requests per 1-second window, 2 concurrent.
+    // Halved from prior 10/1s/4-concurrent after observing 401-throttle
+    // wave on 2026-04-24 manual sync (~80 rapid job-page requests).
+    // Slower steady-state, fewer throttle retries → faster overall.
     this.queue = new PQueue({
-      concurrency: 4,
+      concurrency: 2,
       interval: 1_000,
-      intervalCap: 10,
+      intervalCap: 4,
     });
 
     const { policy } = createPropxBreaker();

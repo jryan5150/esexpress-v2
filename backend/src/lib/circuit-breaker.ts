@@ -14,18 +14,27 @@ function isHttpStatus(err: unknown, status: number): boolean {
   return err instanceof HttpError && err.status === status;
 }
 
-/** PropX: opens on 3 consecutive 429s, 5-minute cooldown */
+/** PropX: opens on 5 consecutive throttle signals, 5-minute cooldown.
+ *
+ *  PropX returns BOTH 429 AND 401 as throttle indicators when the API
+ *  key has been hammered too quickly. Observed empirically 2026-04-24:
+ *  ~80 rapid job-page requests triggered a wave of HTTP 401
+ *  ("Unauthorization Request") instead of 429. The auth key itself is
+ *  fine — verified by subsequent successful requests after a pause.
+ *  Treat both as soft-throttle: retry with backoff.
+ */
 export function createPropxBreaker() {
-  const is429 = (err: unknown) => isHttpStatus(err, 429);
+  const isThrottle = (err: unknown) =>
+    isHttpStatus(err, 429) || isHttpStatus(err, 401);
 
-  const breaker = circuitBreaker(handleWhen(is429), {
+  const breaker = circuitBreaker(handleWhen(isThrottle), {
     halfOpenAfter: 5 * 60 * 1000,
-    breaker: new ConsecutiveBreaker(3),
+    breaker: new ConsecutiveBreaker(5),
   });
 
-  const retryPolicy = retry(handleWhen(is429), {
-    maxAttempts: 3,
-    backoff: new ExponentialBackoff({ initialDelay: 2000, maxDelay: 60_000 }),
+  const retryPolicy = retry(handleWhen(isThrottle), {
+    maxAttempts: 4,
+    backoff: new ExponentialBackoff({ initialDelay: 3000, maxDelay: 60_000 }),
   });
 
   return { policy: wrap(retryPolicy, breaker), breaker };
