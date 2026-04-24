@@ -28,15 +28,63 @@ declare module "@fastify/jwt" {
   }
 }
 
+/**
+ * Single-operator allowlist gate.
+ *
+ * When `MAINTENANCE_ALLOW_EMAILS` is set (comma-separated), authenticated
+ * users whose email is NOT in the list get a 403 with code
+ * `MAINTENANCE_MODE`. This is the "soft maintenance" mode used during
+ * focused validation / single-operator periods — site stays up, login
+ * still works, but only the listed operators see the app behind it.
+ *
+ * Set the env var to enable; unset (or empty) = open to all authenticated
+ * users (default behavior). Comparison is case-insensitive + trims
+ * whitespace per address. Format: `email1@x.com,email2@y.com`.
+ *
+ * Recorded for audit: every blocked attempt logs the requested URL +
+ * the email that was rejected.
+ */
+function parseMaintenanceAllowlist(): Set<string> {
+  const raw = process.env.MAINTENANCE_ALLOW_EMAILS;
+  if (!raw || !raw.trim()) return new Set();
+  return new Set(
+    raw
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
 const guardsPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.decorate(
     "authenticate",
-    async function (request: FastifyRequest, _reply: FastifyReply) {
+    async function (request: FastifyRequest, reply: FastifyReply) {
       try {
         const payload = await request.jwtVerify<JwtPayload>();
         request.user = payload;
       } catch {
         throw new UnauthorizedError("Invalid or expired token");
+      }
+
+      // Soft maintenance gate. Active only when MAINTENANCE_ALLOW_EMAILS
+      // is set; otherwise this is a no-op.
+      const allowlist = parseMaintenanceAllowlist();
+      if (allowlist.size > 0) {
+        const email = (request.user.email ?? "").toLowerCase();
+        if (!allowlist.has(email)) {
+          request.log.info(
+            { email, url: request.url, allowlist: [...allowlist] },
+            "[maintenance-gate] blocked authenticated user",
+          );
+          return reply.status(403).send({
+            success: false,
+            error: {
+              code: "MAINTENANCE_MODE",
+              message:
+                "ES Express v2 is in single-operator validation mode. Access will reopen shortly.",
+            },
+          });
+        }
       }
     },
   );

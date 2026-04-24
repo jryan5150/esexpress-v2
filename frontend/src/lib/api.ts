@@ -36,6 +36,29 @@ async function request<T>(
 
   const json = await res.json().catch(() => ({}));
 
+  // Single-operator soft-maintenance gate. The backend returns 403 with
+  // code MAINTENANCE_MODE when the authenticated user's email isn't in
+  // the MAINTENANCE_ALLOW_EMAILS allowlist. We surface this as a hard
+  // app-level redirect to /maintenance so non-allowlisted users see a
+  // friendly hold-page rather than scattered 403 errors per query.
+  if (res.status === 403 && json.error?.code === "MAINTENANCE_MODE") {
+    if (
+      typeof window !== "undefined" &&
+      window.location.pathname !== "/maintenance"
+    ) {
+      window.location.replace(
+        `/maintenance?reason=${encodeURIComponent(
+          json.error?.message ?? "Single-operator validation mode",
+        )}`,
+      );
+    }
+    throw new ApiError(
+      403,
+      "MAINTENANCE_MODE",
+      json.error?.message ?? "Maintenance",
+    );
+  }
+
   if (!res.ok) {
     throw new ApiError(
       res.status,

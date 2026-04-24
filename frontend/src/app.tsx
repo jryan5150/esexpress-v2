@@ -22,6 +22,11 @@ const MagicLinkLanding = lazy(() =>
     default: m.MagicLinkLanding,
   })),
 );
+const MaintenanceMode = lazy(() =>
+  import("./pages/MaintenanceMode").then((m) => ({
+    default: m.MaintenanceMode,
+  })),
+);
 const Workbench = lazy(() =>
   import("./pages/Workbench").then((m) => ({ default: m.Workbench })),
 );
@@ -106,6 +111,7 @@ export function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/magic-link" element={<MagicLinkLanding />} />
+              <Route path="/maintenance" element={<MaintenanceMode />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<Layout />}>
                   <Route index element={<ExceptionFeed />} />
