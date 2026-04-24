@@ -52,7 +52,42 @@ export async function getValidationSummary(
   // validation queue. Date bounds (when supplied) scope to loads.deliveredOn
   // so the counts at the top match what the operator sees in each tier.
   const dateConds = buildDateClause(opts);
-  const rows = await db
+
+  // Tier 1 invariant: only count rows that actually have a verifiable
+  // photo. Mirrors the EXISTS guard in getAssignmentsByTier(1) so the
+  // top-of-page count agrees with the rows below it. Tier 2/3 counted
+  // separately since they don't carry the photo guarantee.
+  const photoExists = sql`(
+        EXISTS (
+          SELECT 1 FROM jotform_imports ji
+          WHERE ji.matched_load_id = ${loads.id}
+            AND (ji.photo_url IS NOT NULL OR ji.image_urls IS NOT NULL)
+        )
+        OR EXISTS (
+          SELECT 1 FROM photos p
+          WHERE p.load_id = ${loads.id}
+            AND p.source_url IS NOT NULL
+        )
+      )`;
+
+  const [tier1Row] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(assignments)
+    .innerJoin(loads, eq(assignments.loadId, loads.id))
+    .where(
+      and(
+        eq(assignments.status, "pending"),
+        eq(assignments.autoMapTier, 1),
+        eq(loads.historicalComplete, false),
+        photoExists,
+        ...dateConds,
+      ),
+    );
+  let tier1 = tier1Row?.count ?? 0;
+
+  // Tier 2/3 unchanged — no photo invariant, those are the "needs your
+  // eyes" buckets.
+  const tier23Rows = await db
     .select({
       tier: assignments.autoMapTier,
       count: sql<number>`cast(count(*) as int)`,
@@ -62,19 +97,17 @@ export async function getValidationSummary(
     .where(
       and(
         eq(assignments.status, "pending"),
+        sql`${assignments.autoMapTier} IN (2, 3)`,
         eq(loads.historicalComplete, false),
         ...dateConds,
       ),
     )
     .groupBy(assignments.autoMapTier);
 
-  let tier1 = 0;
   let tier2 = 0;
   let tier3 = 0;
-
-  for (const row of rows) {
-    if (row.tier === 1) tier1 = row.count;
-    else if (row.tier === 2) tier2 = row.count;
+  for (const row of tier23Rows) {
+    if (row.tier === 2) tier2 = row.count;
     else if (row.tier === 3) tier3 = row.count;
   }
 
@@ -169,11 +202,39 @@ export async function getAssignmentsByTier(
 
   // Tier 1/2: pending assignments where the load is NOT historical_complete.
   // Historical loads live in the archive, not in the validation queue.
+  //
+  // HARD INVARIANT (added 2026-04-24 PM): a Tier 1 row MUST have a
+  // verifiable photo. Operator caught the morning backfill flagging
+  // photoStatus='attached' on loads with no actual photo bytes anywhere
+  // (neither jotform_imports nor photos table). Returning those as Tier 1
+  // breaks the trust contract — Jess Apr 15: "loads that don't have an
+  // image there, but they're saying they're 100% matched."
+  //
+  // For Tier 1, require EXISTS (jotform_imports.matched_load_id = load.id)
+  // OR EXISTS (photos.load_id = load.id WITH source_url). Tier 2 doesn't
+  // get this guard — it's the explicit "needs your eyes" bucket.
+  const photoExistsGuard =
+    tier === 1
+      ? sql`(
+            EXISTS (
+              SELECT 1 FROM jotform_imports ji
+              WHERE ji.matched_load_id = ${loads.id}
+                AND (ji.photo_url IS NOT NULL OR ji.image_urls IS NOT NULL)
+            )
+            OR EXISTS (
+              SELECT 1 FROM photos p
+              WHERE p.load_id = ${loads.id}
+                AND p.source_url IS NOT NULL
+            )
+          )`
+      : undefined;
+
   const whereClause = and(
     eq(assignments.status, "pending"),
     eq(assignments.autoMapTier, tier),
     eq(loads.historicalComplete, false),
     ...dateConds,
+    ...(photoExistsGuard ? [photoExistsGuard] : []),
   );
 
   const [countResult] = await db
