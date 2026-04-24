@@ -12,7 +12,7 @@
  * Called from pcs-sync.service.ts inside the matched-loop, plus a
  * post-loop sweep for orphan_destination (v2-internal aggregate).
  */
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Database } from "../../../db/client.js";
 import {
   assignments,
@@ -453,7 +453,7 @@ export async function sweepOrphanDestinations(
         resolvedAt: now,
         resolutionNotes: "auto-resolved: destination is now mapped to a well",
       })
-      .where(sql`${discrepancies.id} = ANY(${toResolve})`)
+      .where(inArray(discrepancies.id, toResolve))
       .returning({ id: discrepancies.id });
     resolved = r.length;
   }

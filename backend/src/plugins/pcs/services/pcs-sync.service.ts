@@ -23,6 +23,7 @@ import {
   loads,
   wells,
 } from "../../../db/schema.js";
+import { reportError } from "../../../lib/sentry.js";
 import { getAccessToken } from "./pcs-auth.service.js";
 import {
   computePerLoadDiscrepancies,
@@ -450,12 +451,26 @@ export async function syncPcsLoads(
         pcsRating: pcsRating,
       });
 
-      await persistDiscrepancies(
-        db,
-        `assignment:${hit.assignmentId}`,
-        computed,
-        PER_LOAD_DISCREPANCY_TYPES,
-      );
+      try {
+        await persistDiscrepancies(
+          db,
+          `assignment:${hit.assignmentId}`,
+          computed,
+          PER_LOAD_DISCREPANCY_TYPES,
+        );
+      } catch (err) {
+        const e = err instanceof Error ? err : new Error(String(err));
+        console.error(
+          `[pcs-sync] persistDiscrepancies failed for assignment:${hit.assignmentId} pcsLoad:${pcsLoadId}`,
+          e,
+        );
+        reportError(e, {
+          source: "pcs-sync",
+          op: "persistDiscrepancies",
+          assignmentId: hit.assignmentId,
+          pcsLoadId,
+        });
+      }
     }
 
     matched += hits.length;
@@ -463,7 +478,16 @@ export async function syncPcsLoads(
 
   // Post-loop sweep — orphan_destination is a v2-internal aggregate,
   // independent of PCS sync but runs on the same cadence.
-  await sweepOrphanDestinations(db);
+  try {
+    await sweepOrphanDestinations(db);
+  } catch (err) {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error("[pcs-sync] sweepOrphanDestinations failed", e);
+    reportError(e, {
+      source: "pcs-sync",
+      op: "sweepOrphanDestinations",
+    });
+  }
 
   return {
     ranAt: now.toISOString(),
