@@ -24,9 +24,17 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import PQueue from "p-queue";
+import sharp from "sharp";
 import { eq } from "drizzle-orm";
 import { bolSubmissions } from "../../../db/schema.js";
 import type { Database } from "../../../db/client.js";
+
+// Anthropic Vision rejects images > 5 MB encoded as base64. Driver iPhone
+// photos commonly exceed this (typical 6-10 MB). We resize/recompress
+// down to fit while preserving enough resolution for OCR (text-heavy
+// BOLs need ~1500-2000px on the long edge to stay legible).
+const VISION_MAX_BYTES = 5 * 1024 * 1024 - 64 * 1024; // 4.94 MB safety margin
+const VISION_MAX_DIMENSION = 2000;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -381,8 +389,55 @@ async function fetchImageAsBase64(url: string): Promise<string> {
     else if (path.endsWith(".gif")) contentType = "image/gif";
     else contentType = "image/jpeg";
   }
-  const buffer = Buffer.from(await res.arrayBuffer());
-  return `data:${contentType};base64,${buffer.toString("base64")}`;
+  const rawBuffer = Buffer.from(await res.arrayBuffer());
+
+  // Anthropic Vision base64 cap. Resize+recompress only when over the
+  // limit so canonical small images don't pay a sharp pass.
+  let outBuffer: Buffer = rawBuffer;
+  let outContentType = contentType;
+  if (rawBuffer.byteLength > VISION_MAX_BYTES) {
+    try {
+      const meta = await sharp(rawBuffer).metadata();
+      const longEdge = Math.max(meta.width ?? 0, meta.height ?? 0);
+      let pipeline = sharp(rawBuffer)
+        .rotate() // honor EXIF orientation while we're at it
+        .jpeg({ quality: 82, mozjpeg: true });
+      if (longEdge > VISION_MAX_DIMENSION) {
+        pipeline = pipeline.resize({
+          width:
+            longEdge === (meta.width ?? 0) ? VISION_MAX_DIMENSION : undefined,
+          height:
+            longEdge === (meta.height ?? 0) ? VISION_MAX_DIMENSION : undefined,
+          fit: "inside",
+          withoutEnlargement: true,
+        });
+      }
+      let attempt = await pipeline.toBuffer();
+      // Drop quality further if still over cap
+      let quality = 82;
+      while (attempt.byteLength > VISION_MAX_BYTES && quality > 50) {
+        quality -= 10;
+        attempt = await sharp(rawBuffer)
+          .rotate()
+          .resize({
+            width: VISION_MAX_DIMENSION,
+            height: VISION_MAX_DIMENSION,
+            fit: "inside",
+            withoutEnlargement: true,
+          })
+          .jpeg({ quality, mozjpeg: true })
+          .toBuffer();
+      }
+      outBuffer = attempt;
+      outContentType = "image/jpeg";
+    } catch {
+      // Sharp failed — fall through with the original raw buffer; Vision
+      // will reject it with the same 5 MB error and the per-row catch
+      // upstream will mark it failed.
+    }
+  }
+
+  return `data:${outContentType};base64,${outBuffer.toString("base64")}`;
 }
 
 export async function extractFromPhotos(

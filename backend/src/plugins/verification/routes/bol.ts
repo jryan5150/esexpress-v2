@@ -1082,6 +1082,11 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
               maximum: 6,
               default: 4,
             },
+            mode: {
+              type: "string",
+              enum: ["missing", "unmatched"],
+              default: "missing",
+            },
           },
         },
       },
@@ -1107,11 +1112,13 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
       const body = (request.body ?? {}) as {
         limit?: number;
         concurrency?: number;
+        mode?: "missing" | "unmatched";
       };
       const job = startReOcrJob({
         db,
         limit: body.limit,
         concurrency: body.concurrency,
+        mode: body.mode,
       });
       return reply.status(202).send({ success: true, data: job });
     },

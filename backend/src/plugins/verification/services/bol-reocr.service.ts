@@ -60,11 +60,22 @@ export function stopReOcrJob(): boolean {
  * Concurrency capped 1-6 — Anthropic Vision is the rate-limited side.
  *
  * `limit` lets us cap a run for cost control (default 1000, max 5000).
+ *
+ * `mode`:
+ *   "missing"   — default. bol_submissions with aiExtractedData IS NULL
+ *                 (Vision never ran). Small set, cheap.
+ *   "unmatched" — bol_submissions where matchedLoadId IS NULL AND
+ *                 status != 'failed'. Includes already-OCR'd rows that
+ *                 didn't bind to a load. Re-runs Vision (different model
+ *                 or revised resize/rotate may improve extraction) +
+ *                 re-runs matcher against the current load corpus.
+ *                 BIG cost driver — cap with limit.
  */
 export function startReOcrJob(args: {
   db: Database;
   limit?: number;
   concurrency?: number;
+  mode?: "missing" | "unmatched";
 }): ReOcrJob {
   if (currentJob && currentJob.status === "running") {
     return currentJob;
@@ -72,6 +83,7 @@ export function startReOcrJob(args: {
   const id = `bol-reocr-${Date.now()}`;
   const concurrency = Math.max(1, Math.min(6, args.concurrency ?? 4));
   const limit = Math.max(1, Math.min(5000, args.limit ?? 1000));
+  const mode = args.mode ?? "missing";
   currentJob = {
     id,
     status: "running",
@@ -85,7 +97,7 @@ export function startReOcrJob(args: {
     skipped: 0,
     concurrency,
   };
-  void runReOcrJob(args.db, limit, concurrency).catch((err) => {
+  void runReOcrJob(args.db, limit, concurrency, mode).catch((err) => {
     const e = err instanceof Error ? err : new Error(String(err));
     if (currentJob) {
       currentJob.status = "failed";
@@ -102,11 +114,26 @@ async function runReOcrJob(
   db: Database,
   limit: number,
   concurrency: number,
+  mode: "missing" | "unmatched",
 ): Promise<void> {
-  // Candidate set: rows with no aiExtractedData yet AND non-empty photos.
-  // status='backfilled' is the typical case but we don't gate on status —
-  // we gate on "Vision never ran" (aiExtractedData IS NULL) so a future
-  // pending row that lost its OCR for any reason also gets re-tried.
+  // Candidate predicates:
+  //   "missing"   — Vision never ran (aiExtractedData IS NULL). Small set.
+  //   "unmatched" — Vision did run but matcher didn't bind to a load
+  //                 (matchedLoadId IS NULL AND status != 'failed'). Bigger
+  //                 set; include already-extracted rows so resize/rotate
+  //                 fixes + current load corpus get a fresh shot.
+  const wherePredicate =
+    mode === "unmatched"
+      ? and(
+          isNull(bolSubmissions.matchedLoadId),
+          sql`${bolSubmissions.status} != 'failed'`,
+          sql`jsonb_array_length(${bolSubmissions.photos}) > 0`,
+        )
+      : and(
+          isNull(bolSubmissions.aiExtractedData),
+          sql`jsonb_array_length(${bolSubmissions.photos}) > 0`,
+        );
+
   const candidates = await db
     .select({
       id: bolSubmissions.id,
@@ -115,12 +142,7 @@ async function runReOcrJob(
       loadNumber: bolSubmissions.loadNumber,
     })
     .from(bolSubmissions)
-    .where(
-      and(
-        isNull(bolSubmissions.aiExtractedData),
-        sql`jsonb_array_length(${bolSubmissions.photos}) > 0`,
-      ),
-    )
+    .where(wherePredicate)
     .limit(limit);
 
   if (currentJob) {
