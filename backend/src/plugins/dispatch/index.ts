@@ -12,6 +12,7 @@ import { presenceRoutes } from "./routes/presence.js";
 import breadcrumbRoutes from "./routes/breadcrumbs.js";
 import searchRoutes from "./routes/search.js";
 import { settingsRoutes } from "./routes/settings.js";
+import { photoBackfillRoutes } from "./routes/photo-backfill.js";
 
 const dispatchPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(wellRoutes, { prefix: "/wells" });
@@ -27,6 +28,7 @@ const dispatchPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.register(breadcrumbRoutes, { prefix: "/breadcrumbs" });
   fastify.register(searchRoutes, { prefix: "/search" });
   fastify.register(settingsRoutes, { prefix: "/admin/settings" });
+  fastify.register(photoBackfillRoutes, { prefix: "/admin/photo-backfill" });
 
   // GET /dispatch-readiness — field completeness and readiness metrics
   fastify.get(
