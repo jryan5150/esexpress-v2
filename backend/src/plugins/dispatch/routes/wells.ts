@@ -263,7 +263,14 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
       }
       const { id } = request.params as { id: number };
       const { destinationName } = request.body as { destinationName: string };
-      const result = await absorbDestination(db, id, destinationName);
+      const user = (request as any).user as { id: number; name: string };
+      const result = await absorbDestination(
+        db,
+        id,
+        destinationName,
+        user.id,
+        user.name,
+      );
       if (!result.wellExists) {
         return reply.status(404).send({
           success: false,

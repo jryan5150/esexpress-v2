@@ -155,30 +155,48 @@ export async function updateWell(
 /**
  * Absorb an orphan destination into this well.
  *
- * Two atomic actions performed in sequence (one DB transaction):
- *  1. Append `destinationName` to `wells.aliases` (idempotent — won't duplicate
- *     if the alias is already present, case-insensitive).
+ * Three actions performed in sequence (idempotent across all three):
+ *  1. Append `destinationName` to `wells.aliases` (idempotent — won't
+ *     duplicate if the alias is already present, case-insensitive).
  *  2. Re-map every existing assignment whose load.destination_name matches
  *     `destinationName` AND has no wellId yet, to point at this well.
+ *     Never overwrites an existing wellId.
+ *  3. Create new assignments for loads with matching destination_name that
+ *     have NO assignment row at all. These are the loads the matcher
+ *     skipped because the alias didn't exist yet.
+ *
+ * The orphan_destination discrepancy sweep counts BOTH cases (LEFT JOIN
+ * with assignments.well_id IS NULL covers no-assignment-at-all AND
+ * assignment-with-null-wellId), so the resolver has to handle both.
  *
  * Designed for the "Closest existing well: X (100% match)" workflow on
- * orphan_destination discrepancies — single click, both fixes applied.
+ * orphan_destination discrepancies — single click, all three fixes
+ * applied. Returns granular counts so admin UI / agent can report
+ * cleanly to dispatch.
  *
- * Returns counts of what changed so the caller (admin UI / agent) can
- * report cleanly.
+ * `actorId` and `actorName` are recorded on any newly-created assignments
+ * for audit trail. Pass the request's authenticated user.
  */
 export async function absorbDestination(
   db: Database,
   wellId: number,
   destinationName: string,
+  actorId: number,
+  actorName: string,
 ): Promise<{
   wellExists: boolean;
   aliasAdded: boolean;
   assignmentsRemapped: number;
+  assignmentsCreated: number;
 }> {
   const trimmed = destinationName.trim();
   if (!trimmed) {
-    return { wellExists: false, aliasAdded: false, assignmentsRemapped: 0 };
+    return {
+      wellExists: false,
+      aliasAdded: false,
+      assignmentsRemapped: 0,
+      assignmentsCreated: 0,
+    };
   }
 
   const [well] = await db
@@ -188,7 +206,12 @@ export async function absorbDestination(
     .limit(1);
 
   if (!well) {
-    return { wellExists: false, aliasAdded: false, assignmentsRemapped: 0 };
+    return {
+      wellExists: false,
+      aliasAdded: false,
+      assignmentsRemapped: 0,
+      assignmentsCreated: 0,
+    };
   }
 
   const existingAliases = Array.isArray(well.aliases) ? well.aliases : [];
@@ -209,9 +232,7 @@ export async function absorbDestination(
     aliasAdded = true;
   }
 
-  // Re-map existing orphan assignments. The leading SELECT scopes to
-  // load_ids whose destinationName matches and whose assignment has no
-  // wellId yet — never overwrites an existing wellId.
+  // (2) Re-map existing assignments where well_id IS NULL.
   const remapped = await db
     .update(assignments)
     .set({
@@ -223,9 +244,41 @@ export async function absorbDestination(
     )
     .returning({ id: assignments.id });
 
+  // (3) Create assignments for loads with destination match but NO
+  // assignment row yet (the LEFT-JOIN-NULL case in the orphan sweep).
+  // We use the same createAssignment path so status_history, uncertain
+  // reasons, etc. are populated identically to matcher-created rows.
+  const orphanLoadIds = await db
+    .select({ id: loads.id })
+    .from(loads)
+    .leftJoin(assignments, eq(assignments.loadId, loads.id))
+    .where(
+      sql`${loads.destinationName} = ${trimmed} AND ${assignments.id} IS NULL`,
+    );
+
+  let assignmentsCreated = 0;
+  if (orphanLoadIds.length > 0) {
+    const { createAssignment } = await import("./assignments.service.js");
+    for (const { id } of orphanLoadIds) {
+      try {
+        await createAssignment(db, {
+          wellId,
+          loadId: id,
+          assignedBy: actorId,
+          assignedByName: actorName,
+        });
+        assignmentsCreated += 1;
+      } catch {
+        // skip on per-row failure (likely a unique constraint or load gone);
+        // the bulk operation still succeeds for the other rows
+      }
+    }
+  }
+
   return {
     wellExists: true,
     aliasAdded,
     assignmentsRemapped: remapped.length,
+    assignmentsCreated,
   };
 }
