@@ -347,49 +347,16 @@ function toExtractedBolData(
 async function fetchImageAsBase64(url: string): Promise<string> {
   if (url.startsWith("data:")) return url;
 
-  let fetchUrl = url;
-  try {
-    const parsed = new URL(url);
-    const isJotForm =
-      parsed.hostname === "hairpintrucking.jotform.com" ||
-      parsed.hostname === "www.jotform.com";
-    if (isJotForm && !parsed.searchParams.has("apiKey")) {
-      const jotformKey = process.env.JOTFORM_API_KEY;
-      if (jotformKey) {
-        parsed.searchParams.set("apiKey", jotformKey);
-        fetchUrl = parsed.href;
-      }
-    }
-  } catch {
-    // fall through — use URL as-is
-  }
-
-  const res = await fetch(fetchUrl, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-        "(KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
-    },
-    redirect: "follow",
-  });
-  if (!res.ok) {
-    throw new Error(
-      `Failed to fetch image for Vision extraction: HTTP ${res.status}`,
-    );
-  }
-  let contentType = res.headers.get("content-type") ?? "image/jpeg";
-  if (
-    contentType === "application/octet-stream" ||
-    !contentType.startsWith("image/")
-  ) {
-    // JotForm CDN sometimes returns octet-stream; infer from URL extension
-    const path = new URL(fetchUrl).pathname.toLowerCase();
-    if (path.endsWith(".png")) contentType = "image/png";
-    else if (path.endsWith(".webp")) contentType = "image/webp";
-    else if (path.endsWith(".gif")) contentType = "image/gif";
-    else contentType = "image/jpeg";
-  }
-  const rawBuffer = Buffer.from(await res.arrayBuffer());
+  // Route through proxyPhoto so we get GCS auth (private bucket), JotForm
+  // apiKey injection, EXIF auto-rotation, and the in-process LRU cache —
+  // all of which were either missing or duplicated when this function did
+  // its own raw fetch. Earlier 100-row re-OCR sample hit 100% HTTP 403
+  // because GCS-stored photos can't be fetched without the storage SDK.
+  const { proxyPhoto } = await import("./photo.service.js");
+  const { buffer: rawBuffer, contentType: fetchedType } = await proxyPhoto(url);
+  const contentType = fetchedType.startsWith("image/")
+    ? fetchedType
+    : "image/jpeg";
 
   // Anthropic Vision base64 cap. Resize+recompress only when over the
   // limit so canonical small images don't pay a sharp pass.
