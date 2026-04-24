@@ -184,7 +184,7 @@ export async function getAssignmentsByTier(
 
   const total = countResult?.count ?? 0;
 
-  const { jotformImports } = await import("../../../db/schema.js");
+  const { jotformImports, photos } = await import("../../../db/schema.js");
   const { resolveJotformPhotoUrls } =
     await import("../../verification/lib/photo-urls.js");
   const rows = await db
@@ -227,10 +227,47 @@ export async function getAssignmentsByTier(
     .limit(limit)
     .offset(offset);
 
-  const data = rows.map((r) => ({
-    ...r,
-    photoUrls: resolveJotformPhotoUrls(r.jotformPhotoUrl, r.jotformImageUrls),
-  }));
+  // Batch-fetch PropX photos for these loads. The morning backfill set
+  // assignments.photoStatus='attached' based on EITHER jotform_imports
+  // OR photos table — but the row data above only joins jotform. Without
+  // this, ~78% of Tier 1 rows render as "no photo" thumbnails despite
+  // photoStatus='attached'. Caught 2026-04-24 PM during operator walkthrough.
+  // Photos table URLs are absolute (PropX CDN or GCS); wrap each through
+  // the rotation proxy so the thumbnail server-rotates EXIF for display.
+  const loadIds = rows.map((r) => r.loadId).filter(Boolean) as number[];
+  const photoRows = loadIds.length
+    ? await db
+        .select({
+          loadId: photos.loadId,
+          sourceUrl: photos.sourceUrl,
+        })
+        .from(photos)
+        .where(
+          and(
+            sql`${photos.loadId} = ANY(${loadIds})`,
+            sql`${photos.sourceUrl} IS NOT NULL`,
+          ),
+        )
+    : [];
+  const photosByLoad = new Map<number, string[]>();
+  for (const p of photoRows) {
+    if (!p.loadId || !p.sourceUrl) continue;
+    const proxied = `/api/v1/verification/photos/proxy?url=${encodeURIComponent(p.sourceUrl)}`;
+    const list = photosByLoad.get(p.loadId) ?? [];
+    if (!list.includes(proxied)) list.push(proxied);
+    photosByLoad.set(p.loadId, list);
+  }
+
+  const data = rows.map((r) => {
+    const jotformUrls = resolveJotformPhotoUrls(
+      r.jotformPhotoUrl,
+      r.jotformImageUrls,
+    );
+    const propxUrls = (r.loadId && photosByLoad.get(r.loadId)) || [];
+    // Dedupe (a load may surface the same image via both sources).
+    const merged = Array.from(new Set([...jotformUrls, ...propxUrls]));
+    return { ...r, photoUrls: merged };
+  });
 
   return { data, total };
 }
