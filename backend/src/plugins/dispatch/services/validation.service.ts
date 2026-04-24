@@ -222,6 +222,7 @@ export async function getAssignmentsByTier(
   const total = countResult?.count ?? 0;
 
   const { jotformImports, photos } = await import("../../../db/schema.js");
+  const { inArray, isNotNull } = await import("drizzle-orm");
   const { resolveJotformPhotoUrls } =
     await import("../../verification/lib/photo-urls.js");
   const rows = await db
@@ -271,6 +272,9 @@ export async function getAssignmentsByTier(
   // photoStatus='attached'. Caught 2026-04-24 PM during operator walkthrough.
   // Photos table URLs are absolute (PropX CDN or GCS); wrap each through
   // the rotation proxy so the thumbnail server-rotates EXIF for display.
+  // Use drizzle's inArray() — raw `= ANY(${array})` crashes postgres.js
+  // with prepare:false (same gotcha as pcs-discrepancy.service.ts ANY-array
+  // fix earlier today, documented in feedback memory).
   const loadIds = rows.map((r) => r.loadId).filter(Boolean) as number[];
   const photoRows = loadIds.length
     ? await db
@@ -280,10 +284,7 @@ export async function getAssignmentsByTier(
         })
         .from(photos)
         .where(
-          and(
-            sql`${photos.loadId} = ANY(${loadIds})`,
-            sql`${photos.sourceUrl} IS NOT NULL`,
-          ),
+          and(inArray(photos.loadId, loadIds), isNotNull(photos.sourceUrl)),
         )
     : [];
   const photosByLoad = new Map<number, string[]>();
