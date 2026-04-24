@@ -65,6 +65,124 @@ export function createPcsBreaker() {
   return { policy: wrap(retryPolicy, breaker), breaker };
 }
 
+/** JotForm: opens on 5 consecutive throttle/auth signals, 5-min cooldown.
+ *
+ *  JotForm Enterprise rate-limits at the form-API + uploads level. 429s
+ *  are common during driver shift-change bursts (multiple photos in
+ *  parallel). We treat 429 + 5xx as retryable. The existing manual
+ *  retry loop in jotform.service.ts is replaced by this policy.
+ */
+export function createJotformBreaker() {
+  const isTransient = (err: unknown) =>
+    isHttpStatus(err, 429) || (err instanceof HttpError && err.status >= 500);
+
+  const breaker = circuitBreaker(handleWhen(isTransient), {
+    halfOpenAfter: 5 * 60 * 1000,
+    breaker: new ConsecutiveBreaker(5),
+  });
+
+  const retryPolicy = retry(handleWhen(isTransient), {
+    maxAttempts: 3,
+    backoff: new ExponentialBackoff({ initialDelay: 2000, maxDelay: 30_000 }),
+  });
+
+  return { policy: wrap(retryPolicy, breaker), breaker };
+}
+
+/** Logistiq: opens on 3 consecutive 5xx, 2-min cooldown.
+ *
+ *  Logistiq exports are batch-style (login → role → fetch). A single
+ *  transient 5xx in the middle of the chain killed the whole sync
+ *  pre-fix; with retry we get auto-recovery + the breaker prevents
+ *  cascading failures if Logistiq is genuinely down.
+ */
+export function createLogistiqBreaker() {
+  const isTransient = (err: unknown) => {
+    if (err instanceof HttpError && err.status >= 500) return true;
+    if (err instanceof NetworkError) return true;
+    if (err instanceof Error && err.name === "TimeoutError") return true;
+    return false;
+  };
+
+  const breaker = circuitBreaker(handleWhen(isTransient), {
+    halfOpenAfter: 2 * 60 * 1000,
+    breaker: new ConsecutiveBreaker(3),
+  });
+
+  const retryPolicy = retry(handleWhen(isTransient), {
+    maxAttempts: 3,
+    backoff: new ExponentialBackoff({ initialDelay: 2000, maxDelay: 20_000 }),
+  });
+
+  return { policy: wrap(retryPolicy, breaker), breaker };
+}
+
+/** Anthropic Vision (BOL OCR): opens on 5 consecutive 429/529, 2-min cooldown.
+ *
+ *  Anthropic returns 429 (rate limit) and 529 (overloaded) when their
+ *  API is under stress. Vision specifically can be slow + spiky during
+ *  daytime peaks. The bol_submissions.retry_count provides per-row
+ *  backoff; this breaker provides cross-request circuit protection so a
+ *  burst of failures doesn't cascade into hundreds of retries.
+ *
+ *  Already-running PQueue inside extractFromPhotos provides the
+ *  concurrency cap; this layer adds retry+breaker on top.
+ */
+export function createAnthropicBreaker() {
+  const isTransient = (err: unknown) => {
+    if (err instanceof HttpError && (err.status === 429 || err.status === 529))
+      return true;
+    if (err instanceof HttpError && err.status >= 500) return true;
+    // Anthropic SDK throws errors with .status property too
+    if (err && typeof err === "object" && "status" in err) {
+      const s = (err as { status: unknown }).status;
+      if (typeof s === "number" && (s === 429 || s === 529 || s >= 500))
+        return true;
+    }
+    return false;
+  };
+
+  const breaker = circuitBreaker(handleWhen(isTransient), {
+    halfOpenAfter: 2 * 60 * 1000,
+    breaker: new ConsecutiveBreaker(5),
+  });
+
+  const retryPolicy = retry(handleWhen(isTransient), {
+    maxAttempts: 3,
+    backoff: new ExponentialBackoff({ initialDelay: 2000, maxDelay: 30_000 }),
+  });
+
+  return { policy: wrap(retryPolicy, breaker), breaker };
+}
+
+/** Microsoft Graph (notification email): opens on 3 consecutive 5xx, 1-min cooldown.
+ *
+ *  Used for outbound notification emails (low-volume). Bad credentials
+ *  return 401 → fatal; 5xx + network → transient + retry. Graph token
+ *  endpoint already separates fatal vs retryable in graph-email.service.ts;
+ *  this breaker adds cross-call circuit protection.
+ */
+export function createGraphBreaker() {
+  const isTransient = (err: unknown) => {
+    if (err instanceof HttpError && err.status >= 500) return true;
+    if (err instanceof NetworkError) return true;
+    if (err instanceof Error && err.name === "TimeoutError") return true;
+    return false;
+  };
+
+  const breaker = circuitBreaker(handleWhen(isTransient), {
+    halfOpenAfter: 60_000,
+    breaker: new ConsecutiveBreaker(3),
+  });
+
+  const retryPolicy = retry(handleWhen(isTransient), {
+    maxAttempts: 2,
+    backoff: new ExponentialBackoff({ initialDelay: 1500, maxDelay: 15_000 }),
+  });
+
+  return { policy: wrap(retryPolicy, breaker), breaker };
+}
+
 /** Diagnostic helper for /diag/ endpoint */
 export function getBreakerState(breaker: CircuitBreakerPolicy): {
   state: number;

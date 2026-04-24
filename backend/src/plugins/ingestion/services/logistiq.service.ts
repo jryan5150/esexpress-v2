@@ -1,4 +1,28 @@
 import { HttpError, NetworkError } from "../../../lib/errors.js";
+import { createLogistiqBreaker } from "../../../lib/circuit-breaker.js";
+
+// Module-level breaker + retry policy. Wraps every outbound fetch so a
+// transient 5xx / network blip auto-retries (3 attempts, 2s→20s backoff)
+// and a sustained outage opens the circuit (3 consecutive failures →
+// 2-min cooldown). Replaces the prior no-retry behavior where one
+// transient error killed the whole sync.
+const { policy: logistiqPolicy } = createLogistiqBreaker();
+async function fetchViaBreaker(
+  url: string | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  return logistiqPolicy.execute(async () => {
+    // Use globalThis.fetch to avoid recursion with this module-level fn.
+    const res = await globalThis.fetch(url, init);
+    // Throw on transient codes so policy can retry; 4xx (except auth-related)
+    // passes through as final HttpError for the caller to handle.
+    if (res.status >= 500) {
+      const body = await res.text().catch(() => "");
+      throw new HttpError(res.status, body);
+    }
+    return res;
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -212,7 +236,7 @@ export class LogistiqClient {
 
     let loginRes: Response;
     try {
-      loginRes = await fetch(loginUrl, {
+      loginRes = await fetchViaBreaker(loginUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: loginBody,
@@ -258,7 +282,7 @@ export class LogistiqClient {
 
     let roleRes: Response;
     try {
-      roleRes = await fetch(roleUrl, {
+      roleRes = await fetchViaBreaker(roleUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -334,7 +358,7 @@ export class LogistiqClient {
       const url = `${this.baseUrl}/v2/order/search`;
       let res: Response;
       try {
-        res = await fetch(url, {
+        res = await fetchViaBreaker(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -418,7 +442,7 @@ export class LogistiqClient {
     // Step 1: Request export — returns S3 download URL in export_info
     let res: Response;
     try {
-      res = await fetch(`${CARRIER_EXPORT_URL}?${params}`, {
+      res = await fetchViaBreaker(`${CARRIER_EXPORT_URL}?${params}`, {
         method: "GET",
         headers: {
           "x-api-key": this.apiKey!,
@@ -459,7 +483,7 @@ export class LogistiqClient {
     // Step 2: Download the JSON file from S3
     let s3Res: Response;
     try {
-      s3Res = await fetch(downloadUrl, {
+      s3Res = await fetchViaBreaker(downloadUrl, {
         method: "GET",
         signal: AbortSignal.timeout(S3_DOWNLOAD_TIMEOUT_MS),
       });

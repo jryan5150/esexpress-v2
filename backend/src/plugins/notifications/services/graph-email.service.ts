@@ -1,3 +1,35 @@
+import { createGraphBreaker } from "../../../lib/circuit-breaker.js";
+import { HttpError, NetworkError } from "../../../lib/errors.js";
+
+// Module-level breaker for outbound Graph calls (token + sendMail).
+// Retries 5xx + network/timeout. Opens after 3 consecutive transient
+// failures with a 60s cooldown.
+const { policy: graphPolicy } = createGraphBreaker();
+async function graphFetch(
+  url: string | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  return graphPolicy.execute(async () => {
+    let res: Response;
+    try {
+      res = await globalThis.fetch(url, init);
+    } catch (err) {
+      if (err instanceof Error && err.name === "TimeoutError") {
+        throw new NetworkError("TIMEOUT", `Graph request timed out: ${url}`);
+      }
+      throw new NetworkError(
+        (err as NodeJS.ErrnoException).code ?? "UNKNOWN",
+        `Graph fetch failed: ${(err as Error).message}`,
+      );
+    }
+    if (res.status >= 500) {
+      const body = await res.text().catch(() => "");
+      throw new HttpError(res.status, body);
+    }
+    return res;
+  });
+}
+
 /**
  * Microsoft Graph Email Service
  * =============================
@@ -124,7 +156,7 @@ async function fetchToken(cfg: GraphEnvConfig): Promise<string> {
     scope: "https://graph.microsoft.com/.default",
   });
 
-  const res = await fetch(url, {
+  const res = await graphFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
@@ -209,7 +241,7 @@ export async function sendMail(
 
   let res: Response;
   try {
-    res = await fetch(url, {
+    res = await graphFetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,

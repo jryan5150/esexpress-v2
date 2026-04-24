@@ -25,7 +25,13 @@ import {
   bolSubmissions,
 } from "../../../db/schema.js";
 import { validateTicketNumber } from "../lib/field-validators.js";
+import { createJotformBreaker } from "../../../lib/circuit-breaker.js";
+import { HttpError } from "../../../lib/errors.js";
 import type { Database } from "../../../db/client.js";
+
+// Circuit breaker for JotForm API. Wraps fetchWithRetry below.
+// Initialized at module load so breaker state survives across function calls.
+const { policy: jotformPolicy } = createJotformBreaker();
 import {
   extractFromPhotos,
   validateExtraction,
@@ -295,37 +301,27 @@ export function extractWeightTicketFields(
 // ---------------------------------------------------------------------------
 
 async function fetchWithRetry(url: string, label: string): Promise<unknown> {
-  let lastError: Error | undefined;
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  // Replaced manual retry loop (2026-04-24) with cockatiel policy which
+  // wraps retry + circuit breaker + exponential backoff. Throws HttpError
+  // (not generic Error) so the breaker's status-code detector can fire
+  // correctly on 429 / 5xx vs treating everything as opaque.
+  return jotformPolicy.execute(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
       const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeout);
-
-      if (res.status === 429 || res.status >= 500) {
-        throw new Error(`HTTP ${res.status} from JotForm (${label})`);
-      }
-
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+        const body = await res.text().catch(() => "");
+        throw new HttpError(
+          res.status,
+          `${label}: HTTP ${res.status}${body ? ` ${body.slice(0, 200)}` : ""}`,
+        );
       }
-
       return await res.json();
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-
-      if (attempt < MAX_RETRIES) {
-        const delay =
-          BASE_RETRY_DELAY_MS * Math.pow(2, attempt) + Math.random() * 500;
-        await new Promise((r) => setTimeout(r, delay));
-      }
+    } finally {
+      clearTimeout(timeout);
     }
-  }
-
-  throw lastError ?? new Error(`fetchWithRetry failed for ${label}`);
+  });
 }
 
 async function fetchSubmissions(

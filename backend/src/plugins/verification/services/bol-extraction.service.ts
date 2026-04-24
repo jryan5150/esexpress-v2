@@ -27,7 +27,16 @@ import PQueue from "p-queue";
 import sharp from "sharp";
 import { eq } from "drizzle-orm";
 import { bolSubmissions } from "../../../db/schema.js";
+import { createAnthropicBreaker } from "../../../lib/circuit-breaker.js";
 import type { Database } from "../../../db/client.js";
+
+// Module-level breaker + retry policy for Anthropic Vision. Wraps the
+// messages.create() call so 429 (rate limit) / 529 (overloaded) /
+// 5xx auto-retry with exponential backoff (3 attempts, 2s→30s) and a
+// sustained outage opens the circuit (5 consecutive failures →
+// 2-min cooldown). Per-row retry counter on bol_submissions provides
+// the cross-run backoff layer; this provides the cross-request layer.
+const { policy: anthropicPolicy } = createAnthropicBreaker();
 
 // Anthropic Vision rejects images > 5 MB encoded as base64. Driver iPhone
 // photos commonly exceed this (typical 6-10 MB). We resize/recompress
@@ -450,13 +459,15 @@ export async function extractFromPhotos(
       ...resolvedUrls.map(buildImageContent),
     ];
 
-    const response = await anthropic.messages.create({
-      model,
-      max_tokens: MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      messages: [{ role: "user", content: userContent as any }],
-    });
+    const response = await anthropicPolicy.execute(() =>
+      anthropic.messages.create({
+        model,
+        max_tokens: MAX_TOKENS,
+        system: SYSTEM_PROMPT,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: [{ role: "user", content: userContent as any }],
+      }),
+    );
 
     const text =
       response.content[0]?.type === "text" ? response.content[0].text : null;
