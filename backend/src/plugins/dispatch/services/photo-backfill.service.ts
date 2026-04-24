@@ -29,7 +29,12 @@
 import { and, eq, gte, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { Storage } from "@google-cloud/storage";
 import type { Database } from "../../../db/client.js";
-import { assignments, loads, photos } from "../../../db/schema.js";
+import {
+  assignments,
+  jotformImports,
+  loads,
+  photos,
+} from "../../../db/schema.js";
 import { proxyPhoto } from "../../verification/services/photo.service.js";
 import { reportError } from "../../../lib/sentry.js";
 
@@ -322,13 +327,19 @@ interface PhotoStatusBackfillResult {
 }
 
 /**
- * For every assignment whose load has at least one photos row, flip
- * photo_status to 'attached' if it isn't already. Source-agnostic — counts
- * any photo, including PropX rows backfilled by Phase 1/2.
+ * For every assignment whose load has at least one photos row OR a matched
+ * jotform_import row, flip photo_status to 'attached' if it isn't already.
  *
- * Uses an explicit IN-subquery (non-correlated) so postgres builds the
- * distinct load_id set once and joins. The earlier correlated-EXISTS
- * variant timed out on prod data (53K assignments × per-row EXISTS lookup).
+ * Source-agnostic — counts:
+ *  - photos table rows (PropX ticket images, JotForm-extracted, BOL, manual)
+ *  - jotform_imports rows where matched_load_id is set (driver-submitted
+ *    photos that matched a load via the matcher but didn't materialize a
+ *    `photos` row — happens for Logistiq loads where the match goes
+ *    through the jotform pipeline rather than the carrier-API ingest path)
+ *
+ * Uses non-correlated IN subqueries so postgres can build each distinct
+ * load_id set once and hash-join. The earlier correlated-EXISTS variant
+ * timed out on prod data (53K assignments × per-row EXISTS lookup).
  */
 export async function backfillAssignmentPhotoStatus(
   db: Database,
@@ -337,7 +348,16 @@ export async function backfillAssignmentPhotoStatus(
     .update(assignments)
     .set({ photoStatus: "attached", updatedAt: new Date() })
     .where(
-      sql`${assignments.photoStatus} != 'attached' AND ${assignments.loadId} IN (SELECT DISTINCT ${photos.loadId} FROM ${photos} WHERE ${photos.loadId} IS NOT NULL)`,
+      sql`${assignments.photoStatus} != 'attached' AND (
+        ${assignments.loadId} IN (
+          SELECT DISTINCT ${photos.loadId} FROM ${photos}
+          WHERE ${photos.loadId} IS NOT NULL
+        )
+        OR ${assignments.loadId} IN (
+          SELECT DISTINCT ${jotformImports.matchedLoadId} FROM ${jotformImports}
+          WHERE ${jotformImports.matchedLoadId} IS NOT NULL
+        )
+      )`,
     )
     .returning({ id: assignments.id });
 
