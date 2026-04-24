@@ -124,12 +124,12 @@ export function App() {
                     path="dispatch-desk"
                     element={<Navigate to="/workbench" replace />}
                   />
-                  <Route
-                    path="validation"
-                    element={
-                      <Navigate to="/workbench?filter=uncertain" replace />
-                    }
-                  />
+                  {/* Validate is the canonical route name now (renamed
+                      from Pre-Dispatch Verification surface). The earlier
+                      transitional redirect to /workbench?filter=uncertain
+                      was killed when we melded the BOL queue + tier flow
+                      into a single page on 2026-04-24 PM. */}
+                  <Route path="validation" element={<Validation />} />
                   <Route path="finance" element={<Finance />} />
                   <Route path="wells/:wellId" element={<WellWorkspace />} />
                   <Route path="admin/wells" element={<WellsAdmin />} />
