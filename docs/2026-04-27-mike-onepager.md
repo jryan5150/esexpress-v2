@@ -27,6 +27,10 @@ v2 was started in early April. Twenty-three days of focused build later, the sys
 
 You're not betting on whether the software will get better. You're deciding whether you want a learning loop running indefinitely against your operational data.
 
+### 4. **The pipeline tightened in real time**
+
+A representative example of how the system improves under live use: Friday morning the team identified a case-sensitivity bug where Vision OCR was extracting tickets in uppercase and the loads table stored them in lowercase. Same string, no match — **813 driver-photo submissions had been sitting unmatched for that single reason.** One commit later, the JotForm match rate jumped from 63.9% → **87.2%**. The Tier 1 photo-attached coverage rose from 5.18% → **87.81%** in the same window. None of those numbers required new data — they required the system to keep finding what it had been missing.
+
 ---
 
 ## What we are not asking you to decide

@@ -198,7 +198,7 @@ Yes. Walk through Scout's typical day: see Ready-to-Build, open drawer, check BO
 
 ### "How accurate is the matching?"
 
-Two honest answers. The matcher backfill that completed Thursday produced Tier 1 = 46,008 / Tier 2 = 7,202 with no untiered orphans — that's the system's confidence. The accuracy check is what Jessica did Wednesday: hand-counted two wells, system matched on 22 of 27 days. We can do the same comparison for any well you want — pick one, I'll have the comparison Tuesday.
+Two honest answers. The matcher backfill that completed earlier this week produced Tier 1 = 46,049 with **87.81% photo-attached coverage** (jumped from 5.18% on Friday after a flag backfill) and ~7,200 in Tier 2 — that's the system's confidence. The accuracy check is what Jessica did Wednesday: hand-counted two wells, system matched on 22 of 27 days. We can do the same comparison for any well you want — pick one, I'll have the comparison Tuesday.
 
 ### "What about Jenny's reconciliation?"
 
