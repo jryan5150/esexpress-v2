@@ -151,3 +151,81 @@ export async function updateWell(
     .returning();
   return well ?? null;
 }
+
+/**
+ * Absorb an orphan destination into this well.
+ *
+ * Two atomic actions performed in sequence (one DB transaction):
+ *  1. Append `destinationName` to `wells.aliases` (idempotent — won't duplicate
+ *     if the alias is already present, case-insensitive).
+ *  2. Re-map every existing assignment whose load.destination_name matches
+ *     `destinationName` AND has no wellId yet, to point at this well.
+ *
+ * Designed for the "Closest existing well: X (100% match)" workflow on
+ * orphan_destination discrepancies — single click, both fixes applied.
+ *
+ * Returns counts of what changed so the caller (admin UI / agent) can
+ * report cleanly.
+ */
+export async function absorbDestination(
+  db: Database,
+  wellId: number,
+  destinationName: string,
+): Promise<{
+  wellExists: boolean;
+  aliasAdded: boolean;
+  assignmentsRemapped: number;
+}> {
+  const trimmed = destinationName.trim();
+  if (!trimmed) {
+    return { wellExists: false, aliasAdded: false, assignmentsRemapped: 0 };
+  }
+
+  const [well] = await db
+    .select({ id: wells.id, aliases: wells.aliases })
+    .from(wells)
+    .where(eq(wells.id, wellId))
+    .limit(1);
+
+  if (!well) {
+    return { wellExists: false, aliasAdded: false, assignmentsRemapped: 0 };
+  }
+
+  const existingAliases = Array.isArray(well.aliases) ? well.aliases : [];
+  const lowered = existingAliases.map((a) =>
+    typeof a === "string" ? a.toLowerCase() : "",
+  );
+  const aliasAlreadyPresent = lowered.includes(trimmed.toLowerCase());
+
+  let aliasAdded = false;
+  if (!aliasAlreadyPresent) {
+    await db
+      .update(wells)
+      .set({
+        aliases: [...existingAliases, trimmed],
+        updatedAt: new Date(),
+      })
+      .where(eq(wells.id, wellId));
+    aliasAdded = true;
+  }
+
+  // Re-map existing orphan assignments. The leading SELECT scopes to
+  // load_ids whose destinationName matches and whose assignment has no
+  // wellId yet — never overwrites an existing wellId.
+  const remapped = await db
+    .update(assignments)
+    .set({
+      wellId,
+      updatedAt: new Date(),
+    })
+    .where(
+      sql`${assignments.wellId} IS NULL AND ${assignments.loadId} IN (SELECT ${loads.id} FROM ${loads} WHERE ${loads.destinationName} = ${trimmed})`,
+    )
+    .returning({ id: assignments.id });
+
+  return {
+    wellExists: true,
+    aliasAdded,
+    assignmentsRemapped: remapped.length,
+  };
+}

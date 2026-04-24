@@ -4,6 +4,7 @@ import {
   getWellById,
   createWell,
   updateWell,
+  absorbDestination,
 } from "../services/wells.service.js";
 
 const wellRoutes: FastifyPluginAsync = async (fastify) => {
@@ -211,6 +212,65 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
       return { success: true, data: well };
+    },
+  );
+
+  // POST /wells/:id/absorb-destination — add an alias + re-map orphan loads.
+  // ----------------------------------------------------------------------
+  // Single-click resolution for orphan_destination discrepancies. When the
+  // cross-check sweep surfaces "34 loads point to 'Apache-Formentera-Wrangler'
+  // — closest match Liberty Apache Formentera Wrangler (100%)", the dispatcher
+  // (or admin agent) calls this endpoint to:
+  //   1. Append the destination string to the well's aliases (so future loads
+  //      with that destination auto-bind to this well via the matcher).
+  //   2. Update existing assignments whose load.destination_name matches AND
+  //      whose well_id is currently NULL — pointing them at this well.
+  //
+  // Idempotent: re-calling with the same destination is a no-op for both
+  // alias (case-insensitive de-dup) and remap (only touches null wellIds).
+  fastify.post(
+    "/:id/absorb-destination",
+    {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "dispatcher"]),
+      ],
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" } },
+        },
+        body: {
+          type: "object",
+          required: ["destinationName"],
+          properties: {
+            destinationName: { type: "string", minLength: 1, maxLength: 200 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+      const { id } = request.params as { id: number };
+      const { destinationName } = request.body as { destinationName: string };
+      const result = await absorbDestination(db, id, destinationName);
+      if (!result.wellExists) {
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: `Well ${id} not found` },
+        });
+      }
+      return { success: true, data: result };
     },
   );
 };
