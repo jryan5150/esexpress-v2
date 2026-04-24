@@ -1052,6 +1052,93 @@ const bolRoutes: FastifyPluginAsync = async (fastify) => {
       };
     },
   );
+  // ─── Re-OCR backfilled bol_submissions ────────────────────────────
+  // Async fire-and-forget. Targets bol_submissions where
+  // aiExtractedData IS NULL AND photos[] non-empty (the 805 backfilled
+  // CSV-imported rows that bypassed Vision originally). Each row:
+  //   1. extractFromPhotos(photo URLs) — Anthropic Vision call
+  //   2. Persist aiExtractedData + aiConfidence + aiMetadata
+  //   3. matchSubmissionToLoad — link to a load if extracted ticket # binds
+  //   4. assignment.photo_status = 'attached' on the matched load
+  //
+  // Cost ~$0.01-0.02/row × 805 = ~$8-15. Time ~10-15 min at concurrency=4.
+  fastify.post(
+    "/bol/reocr-backfilled/start",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+      schema: {
+        body: {
+          type: "object",
+          properties: {
+            limit: {
+              type: "integer",
+              minimum: 1,
+              maximum: 5000,
+              default: 1000,
+            },
+            concurrency: {
+              type: "integer",
+              minimum: 1,
+              maximum: 6,
+              default: 4,
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+        });
+      }
+      const { startReOcrJob, getReOcrJob } =
+        await import("../services/bol-reocr.service.js");
+      const existing = getReOcrJob();
+      if (existing && existing.status === "running") {
+        return reply.status(409).send({
+          success: false,
+          error: { code: "CONFLICT", message: "Re-OCR already running" },
+          data: existing,
+        });
+      }
+      const body = (request.body ?? {}) as {
+        limit?: number;
+        concurrency?: number;
+      };
+      const job = startReOcrJob({
+        db,
+        limit: body.limit,
+        concurrency: body.concurrency,
+      });
+      return reply.status(202).send({ success: true, data: job });
+    },
+  );
+
+  fastify.get(
+    "/bol/reocr-backfilled/status",
+    { preHandler: [fastify.authenticate, fastify.requireRole(["admin"])] },
+    async () => {
+      const { getReOcrJob } = await import("../services/bol-reocr.service.js");
+      return { success: true, data: getReOcrJob() ?? { status: "idle" } };
+    },
+  );
+
+  fastify.post(
+    "/bol/reocr-backfilled/stop",
+    { preHandler: [fastify.authenticate, fastify.requireRole(["admin"])] },
+    async () => {
+      const { stopReOcrJob, getReOcrJob } =
+        await import("../services/bol-reocr.service.js");
+      const stopped = stopReOcrJob();
+      return {
+        success: true,
+        data: { stopped, job: getReOcrJob() ?? null },
+      };
+    },
+  );
 };
 
 export default bolRoutes;
