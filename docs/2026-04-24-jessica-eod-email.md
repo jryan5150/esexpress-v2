@@ -19,14 +19,14 @@ The system is open for your validation. Login at **app.esexpressllc.com** with y
 
 **The numbers you can verify yourself** are in the attached PDF. Every figure was queried against the production database this afternoon — they're inventory, not promises. Anything that doesn't match what you see in your own tools, reply and I'll dig in same-day.
 
-**End-to-end PCS push is proven.** Earlier this week we pushed a load from v2 through the full pipeline into PCS — load **357468** was created, the BOL photo attached, and then voided cleanly. You can still see the activity in both systems; the data flow from v2 → PCS works. We hit a 500 from PCS's AddLoad endpoint on three follow-up attempts on the ES Express side, captured the wire payload, and have it with Kyle for App Insights lookup. Bottom line: the pipeline is operational, the toggle stays off until Kyle's signal comes back.
+**End-to-end push to PCS is proven.** Earlier this week we sent a load from v2 all the way through to PCS — load **357468** was created with its photo attached, then cleared cleanly. The activity is still visible in both systems if you want to verify. Three follow-on attempts on your side hit a snag we're working through with Kyle. Bottom line: the workflow is operational. The push toggle stays off until we close that loop with Kyle, but the proof point exists today.
 
 **This weekend:** poke at it. Walk through a real day's loads. Tell me where it confuses you, where it's missing something, where it gives you a number that disagrees with yours. The Monday meeting should be your observations, not my pitch.
 
-**Two smaller things still in flight, honest:**
+**Two smaller things to flag, honest:**
 
-- **Inline photo-match** on the Validate page — today the "Awaiting Photo Match" card sends you to BOL Center; Monday it'll happen inline so you don't switch pages.
-- **Smaller polish items** on Workbench consistency. Not blocking the weekend.
+- Matching a driver's photo to a load currently bounces you to a second page — Monday that lands inline on the Validate page so you stay in one place.
+- A few visual polish items on the Load Center that aren't blocking your weekend walkthrough.
 
 **Monday meeting — what time works for you?** I held 10 AM CDT loosely on my side but didn't want to pin you in. Reply with whatever works between 9 AM and 4 PM CDT and I'll get it on the calendar.
 

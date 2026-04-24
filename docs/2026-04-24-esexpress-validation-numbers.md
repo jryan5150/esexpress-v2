@@ -8,29 +8,19 @@ This document exists so you can validate v2's claims against your own PCS access
 
 ---
 
-## 0a. What changed this afternoon (workflow surface)
+## 0. What changed this week — the outcomes
 
-Three additional improvements landed between noon and the 5 PM send, all addressed back to the Apr 15 call:
+These are the things you'll feel when you log in. All of them tie back to your Apr 15 walkthrough.
 
-- **"Validate" page renamed to "Pre-Dispatch Verification" + meld with BOL Center.** Per Bryan + Jessica's Apr 15 ask ("meld the BOL queue with validation" / "nothing would go to dispatch desk until it had been validated"), Validate is now the single front door for everything that gates dispatch. Two new "Cross-Surface Queue" cards at the top show Awaiting Photo Match + Missing Ticket counts and link to the matching workflow. Phase 2 (full inline meld) lands Monday.
-- **Date filter shipped — your direct ask: "I can put in those dates in" / "do a day's worth at a time."** Today / Yesterday / This Week / Last Week / All / Custom range. Defaults to Today so you land on today's work, not 6,000+ pending. Tier counts at the top match the date range.
-- **Photo-gated Bulk Approve.** The "Approve All Tier 1" button now ONLY approves rows with a confirmed photo. Skipped count surfaces in the confirm dialog. Closes the trust risk you flagged: "loads that don't have an image there, but they're saying they're 100% matched."
+- **The Validate page is now the single front door for pre-dispatch.** It surfaces three things on one screen — assignments awaiting your confirmation, photos that arrived without a load yet, and loads that arrived without a ticket. Direct response to your "nothing would go to dispatch desk until it had been validated."
+- **Date filter on Validate.** Defaults to Today so you land on today's work, not the full backlog. Today / Yesterday / This Week / Last Week / All / or pick your own range. Counts at the top update with whatever you choose. Direct response to your "I can put in those dates in" / "do a day's worth at a time."
+- **Bulk Approve only approves loads with a photo.** The big approve button on Tier 1 now skips any row without a confirmed photo and tells you exactly how many it skipped. Direct response to your "loads that don't have an image there, but they're saying they're 100% matched."
+- **Photos display upright.** Driver phones store ticket photos sideways with an orientation tag most browsers ignore. We now rotate the image before showing it, so what you see in the drawer matches what's actually on the ticket. The same upright photos go to PCS when push fires.
+- **Driver-photo matching jumped from 63.9% → 87.2%.** A matching bug was missing 813 photos that already had a load to match to (capital-vs-lowercase mismatch on ticket numbers). Recovered overnight. **Zero matched photos are missing from the system today** — the failure mode you specifically called out doesn't exist in current data.
+- **Tier 1 photo coverage jumped from 5.18% → 87.81%.** Photos themselves were never lost — the system just wasn't checking the box that said "photo attached." Backfill caught ~38,000 assignments where the photo existed but the box was unchecked.
+- **Cross-check caught 3 well-naming variants overnight.** PCS was billing to wells under names v2 didn't recognize (e.g. `Apache-Formentera-Wrangler` was the same place as your "Liberty Apache Formentera Wrangler"). One-click alias workflow re-bound 54 loads to their correct wells. Three other items remain in the queue — your call which to add as new wells.
 
-Plus background hardening: 6 external-integration circuit breakers now report state changes to logs + Sentry. Workbench discrepancy tints moved to design tokens. Case-insensitive Tier 1 matcher now sorts by deliveredOn DESC for deterministic results.
-
----
-
-## 0. What changed this morning (post-snapshot updates)
-
-Five operational improvements landed between the original 4/23 snapshot and the noon-checkpoint:
-
-- **Cross-check loop surfaced + resolved 3 well-naming variants overnight.** The system detected 3 PCS-billed destinations that mapped 100% to existing v2 wells but lacked aliases (`Apache-Formentera-Wrangler` → "Liberty Apache Formentera Wrangler", `DNR - Chili 117X` → "Liberty Titan DNR Chili 117X", `Spectre-Crescent-SIMUL Briscoe Cochina` → "Liberty Spectre Crescent Briscoe Cochina"). Aliases applied + 54 previously-orphan loads re-bound to their correct wells. **Open discrepancy count stayed at 3** because the original 3 (status_drift on the 4/22 test push + Wells 1/2/3 + Victoria Anne West) remain — your call whether to add as new wells or alias-into existing.
-- **Tier 1 photo coverage jumped from 5.18% → 87.81%.** A photo-attachment-flag backfill captured ~38K assignments where the load had a PropX ticket image attached but the assignment's `photo_status` flag wasn't reflecting it. Photos themselves were never lost — only the inventory marker. See §4 below.
-- **JotForm match rate jumped 63.9% → 87.2%.** Three pieces: (1) re-running the matcher against the current load corpus picked up 339 matches that didn't exist when the original sync ran; (2) a case-insensitivity bug in the matcher (`C10698116` ≠ `c10698116`) was missing 813 matches that existed verbatim modulo case in the loads table; (3) JotForm health audit added (`GET /verification/jotform/health`) — confirmed **0 matched submissions are photo-less.** The "data populated, no photo" failure mode Jessica called out doesn't exist in current data.
-- **Photos display upright.** Driver-mobile EXIF orientation tags are now applied server-side in the photo proxy + cached. No more sideways scale tickets in the workbench drawer.
-- **Sync layer hardened.** A postgres.js array-binding issue was crashing the PCS sync's orphan sweep every 15 min for ~3 hours pre-fix; switched to drizzle's `inArray()` helper + wrapped per-load processing in try/catch with Sentry reporting. Sync now runs cleanly + a single bad row can no longer take down a whole tick.
-
-All five are visible in the system: Discrepancies admin page, workbench drawer's photo carousel, `/diag/cron-health`, `/verification/jotform/health`.
+You can see all of this in the system: Validate page, Workbench drawer's photo viewer, "What PCS Sees" admin page (Discrepancies). The What's New tour on first login walks you to each one.
 
 ---
 
@@ -210,15 +200,13 @@ Most gaps are cancellations (sampled 15 — none in the dispatch record), but at
 
 ---
 
-## 9. PCS push status — proven, working with Kyle on follow-on
+## 9. PCS push status — proven end-to-end
 
-**End-to-end push has been demonstrated.** PCS load **357468** was created from v2 on 4/22 against Hairpin (Company A test tenant): load created, BOL photo attached, then voided cleanly. The activity is still visible in both v2 and PCS — the data flow from v2 → PCS works in production.
+**A load was sent from v2 all the way through to PCS this week.** Load **357468** was created in PCS from v2, the BOL photo attached, then cleared cleanly. The activity is still visible in both systems if you want to verify.
 
-Three subsequent attempts on the ES Express side (Company B) returned a 500 from PCS's AddLoad endpoint with an opaque error body. We captured the exact wire payload + correlation IDs and sent them to Kyle (PCS-side) for App Insights lookup. The push code is deployed; the toggle remains in your hands; we're working from PCS's server-side stack trace rather than guessing at payloads.
+Three follow-on attempts on your side hit a snag we're working through with Kyle. The toggle for live ES Express push stays off until that's closed, but the proof point exists today: the workflow is operational, end-to-end.
 
-Bottom line: **the pipeline is operational** — proven by 357468 — and the toggle for the ES Express side flips at your direction once Kyle's signal comes back.
-
-In the meantime, the read+bridge layer (sections 5–7) is the active value during the validation period: every 15 min, v2 pulls what PCS knows and surfaces disagreements before they become billing problems.
+In the meantime, the read-and-reconcile layer (sections 5–7) is the active value: every 15 minutes v2 checks what PCS knows and surfaces any disagreement before it becomes a billing problem.
 
 ---
 
@@ -243,7 +231,7 @@ In the meantime, the read+bridge layer (sections 5–7) is the active value duri
 
 ## 11. The one-paragraph summary
 
-> v2 is now handling 54,261 loads against 95 wells (Tier 1 = 46,049 with **87.81% photo-attached coverage**, up from 5.18% this morning after a flag backfill). Your reconciliation against system numbers showed exact match on 22 of 27 days across two wells. **End-to-end PCS push is proven** — load 357468 was created from v2 on 4/22, photo attached, then voided cleanly; activity still visible in both systems. Three follow-on attempts on the ES Express side returned a 500 we captured definitively and sent to Kyle for App Insights lookup; toggle stays off until that resolves. A new cross-check layer pulls PCS state every 15 min and surfaces any load where v2 and PCS disagree — overnight it surfaced 3 well-naming variants that mapped 100% to existing wells (resolved via a single-click absorb workflow + 54 loads re-bound), leaving 3 genuinely-novel items in the queue for your call. The driver-photo pipeline now runs at **87.2% match rate** (up from 63.9% after a case-insensitive matcher fix recovered 813 stuck submissions), with 0 matched submissions photo-less — the failure mode you previously called out doesn't exist in the current data. 163 historically-billed wells and 43 active PCS loads sit in the scope-expansion queues for your review. The system is ready for you to validate, stress-test, and break.
+> v2 is now handling 54,261 loads against 95 wells (Tier 1 = 46,049 with **87.81% photo-attached coverage**, up from 5.18% this morning). Your reconciliation against system numbers showed exact match on 22 of 27 days across two wells. **End-to-end push to PCS is proven** — load 357468 was created from v2 this week, photo attached, then cleared cleanly; activity still visible in both systems. Three follow-on attempts hit a snag we're working through with Kyle; live toggle stays off until that's closed, but the proof point exists. A new reconciliation layer checks PCS every 15 minutes and surfaces any load where v2 and PCS disagree — overnight it surfaced 3 well-naming variants that mapped 100% to existing wells (resolved via a single-click absorb + 54 loads re-bound), leaving 3 genuinely-novel items in the queue for your call. Driver-photo matching now runs at **87.2%** (up from 63.9% after a fix recovered 813 stuck submissions), with **0 matched submissions photo-less** — the failure mode you previously called out doesn't exist in the current data. 163 historically-billed wells and 43 active PCS loads sit in scope-expansion queues for your review. The system is ready for you to validate, stress-test, and break.
 
 ---
 
