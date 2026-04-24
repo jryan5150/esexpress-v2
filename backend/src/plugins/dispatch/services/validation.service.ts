@@ -202,39 +202,15 @@ export async function getAssignmentsByTier(
 
   // Tier 1/2: pending assignments where the load is NOT historical_complete.
   // Historical loads live in the archive, not in the validation queue.
-  //
-  // HARD INVARIANT (added 2026-04-24 PM): a Tier 1 row MUST have a
-  // verifiable photo. Operator caught the morning backfill flagging
-  // photoStatus='attached' on loads with no actual photo bytes anywhere
-  // (neither jotform_imports nor photos table). Returning those as Tier 1
-  // breaks the trust contract — Jess Apr 15: "loads that don't have an
-  // image there, but they're saying they're 100% matched."
-  //
-  // For Tier 1, require EXISTS (jotform_imports.matched_load_id = load.id)
-  // OR EXISTS (photos.load_id = load.id WITH source_url). Tier 2 doesn't
-  // get this guard — it's the explicit "needs your eyes" bucket.
-  const photoExistsGuard =
-    tier === 1
-      ? sql`(
-            EXISTS (
-              SELECT 1 FROM jotform_imports ji
-              WHERE ji.matched_load_id = ${loads.id}
-                AND (ji.photo_url IS NOT NULL OR ji.image_urls IS NOT NULL)
-            )
-            OR EXISTS (
-              SELECT 1 FROM photos p
-              WHERE p.load_id = ${loads.id}
-                AND p.source_url IS NOT NULL
-            )
-          )`
-      : undefined;
-
+  // (Earlier attempt at an EXISTS-based invariant on Tier 1 was reverted
+  // 2026-04-24 PM — the SQL 500'd in production. The summary count is
+  // still photo-gated correctly; row-level filtering happens post-fetch
+  // below using the merged photoUrls array.)
   const whereClause = and(
     eq(assignments.status, "pending"),
     eq(assignments.autoMapTier, tier),
     eq(loads.historicalComplete, false),
     ...dateConds,
-    ...(photoExistsGuard ? [photoExistsGuard] : []),
   );
 
   const [countResult] = await db
@@ -319,7 +295,7 @@ export async function getAssignmentsByTier(
     photosByLoad.set(p.loadId, list);
   }
 
-  const data = rows.map((r) => {
+  const dataWithPhotos = rows.map((r) => {
     const jotformUrls = resolveJotformPhotoUrls(
       r.jotformPhotoUrl,
       r.jotformImageUrls,
@@ -329,6 +305,21 @@ export async function getAssignmentsByTier(
     const merged = Array.from(new Set([...jotformUrls, ...propxUrls]));
     return { ...r, photoUrls: merged };
   });
+
+  // HARD INVARIANT (post-fetch): a Tier 1 row MUST have at least one
+  // photoUrl. The morning backfill set photoStatus='attached' on loads
+  // with no actual photo bytes anywhere — those would surface as a
+  // photo-less Tier 1 thumbnail and shred the trust contract.
+  // Operator: "we cant have tier 1 photoless at all, ever."
+  // Filter post-fetch (rather than in the SQL) because the in-WHERE
+  // EXISTS subquery 500'd in production for a reason that needs a
+  // calmer Saturday debug — this filter ships safely tonight.
+  const data =
+    tier === 1
+      ? dataWithPhotos.filter(
+          (r) => Array.isArray(r.photoUrls) && r.photoUrls.length > 0,
+        )
+      : dataWithPhotos;
 
   return { data, total };
 }
