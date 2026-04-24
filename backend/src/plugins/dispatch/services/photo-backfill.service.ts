@@ -253,13 +253,14 @@ async function runGcsBackfill(
 
   // Worker function — handles one photo: fetch from PropX, upload to GCS,
   // update the row. Returns 'uploaded' | 'skipped' | 'error'.
+  // Errors are sampled into job.lastError + logged so we can debug what
+  // PropX/GCS/DB stage is failing.
   async function processOne(
     c: (typeof candidates)[number],
   ): Promise<"uploaded" | "skipped" | "error"> {
     if (!c.sourceUrl) return "skipped";
     try {
       const { buffer, contentType } = await proxyPhoto(c.sourceUrl);
-      // Object path: propx/{loadId}/{photoId}.jpg — stable, idempotent
       const ext = contentType === "image/png" ? "png" : "jpg";
       const objectPath = `propx/${c.loadId}/${c.photoId}.${ext}`;
       await bucket.file(objectPath).save(buffer, {
@@ -272,7 +273,19 @@ async function runGcsBackfill(
         .set({ sourceUrl: newUrl })
         .where(eq(photos.id, c.photoId));
       return "uploaded";
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // Sample 1-in-50 error logs so we don't spam Railway when something
+      // systemic is failing, but we ALWAYS keep the last error visible
+      // on the job state for status calls.
+      if (currentGcsJob) {
+        currentGcsJob.lastError = `photo#${c.photoId} load#${c.loadId}: ${msg.slice(0, 240)}`;
+      }
+      if (Math.random() < 0.02) {
+        console.error(
+          `[photo-backfill] photo#${c.photoId} load#${c.loadId} sourceUrl=${c.sourceUrl} → ${msg}`,
+        );
+      }
       return "error";
     }
   }
