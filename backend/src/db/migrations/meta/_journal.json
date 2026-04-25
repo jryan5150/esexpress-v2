@@ -134,6 +134,20 @@
       "when": 1776983562272,
       "tag": "0018_heavy_loa",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1777130280842,
+      "tag": "0019_aspiring_slayback",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1777135370553,
+      "tag": "0020_stiff_chat",
+      "breakpoints": true
     }
   ]
 }

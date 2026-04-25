@@ -17,6 +17,11 @@ import {
   type PreviewResult,
   type ImportOptions,
 } from "../services/sheets.service.js";
+import {
+  syncLoadCountSheet,
+  computeWeekParity,
+  LOAD_COUNT_SHEET_ID,
+} from "../services/loadcount-sync.service.js";
 
 // ---------------------------------------------------------------------------
 // Routes
@@ -471,6 +476,89 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
           summary: `${result.matched} validated, ${result.alreadyValidated} already done, ${result.unmatched} not found`,
         },
       };
+    },
+  );
+
+  // ─── POST /loadcount/sync — pull Current+Previous tabs into snapshots ─
+  fastify.post(
+    "/loadcount/sync",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+      schema: {
+        body: {
+          type: "object",
+          properties: {
+            tabs: { type: "array", items: { type: "string" } },
+            sampleRows: { type: "integer", minimum: 1, maximum: 100 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+      const body = (request.body ?? {}) as {
+        tabs?: string[];
+        sampleRows?: number;
+      };
+      try {
+        const result = await syncLoadCountSheet(db, {
+          tabs: body.tabs,
+          sampleRows: body.sampleRows,
+        });
+        return { success: true, data: result };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply.status(502).send({
+          success: false,
+          error: { code: "SHEET_SYNC_FAILED", message },
+        });
+      }
+    },
+  );
+
+  // ─── GET /loadcount/parity — sheet vs v2 weekly parity report ─────
+  fastify.get(
+    "/loadcount/parity",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+    },
+    async (_request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+      try {
+        const rows = await computeWeekParity(db);
+        return {
+          success: true,
+          data: rows,
+          meta: {
+            spreadsheetId: LOAD_COUNT_SHEET_ID,
+            weeksReported: rows.length,
+          },
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply.status(502).send({
+          success: false,
+          error: { code: "PARITY_COMPUTE_FAILED", message },
+        });
+      }
     },
   );
 

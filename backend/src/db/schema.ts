@@ -963,6 +963,8 @@ export const DISCREPANCY_TYPES = [
   "photo_gap", // PCS expects BOL but v2 has none, or vice versa
   "rate_drift", // v2 well rate_per_ton vs PCS rating.lineHaulRate
   "orphan_destination", // v2 destination not mapped to any well (3+ loads)
+  "sheet_vs_v2_week_count", // Load Count Sheet "Total Built" ≠ v2 weekly count
+  "sheet_vs_v2_well_count", // Per-well per-week count divergence
 ] as const;
 
 export const DISCREPANCY_SEVERITIES = ["info", "warning", "critical"] as const;
@@ -1013,5 +1015,57 @@ export const discrepancies = pgTable(
       .on(table.discrepancyType)
       .where(sql`${table.resolvedAt} IS NULL`),
     index("idx_discrepancies_detected_at").on(table.detectedAt),
+  ],
+);
+
+// ─── Sheet truth snapshots ────────────────────────────────────────────────
+//
+// Periodically read the Load Count Sheet's Current + Previous tabs and
+// snapshot the per-well-per-week counts they hand-maintain. Drives the
+// sheet-vs-v2 parity surface and the sheet_vs_v2_week_count discrepancy.
+//
+// The "Total Built" + "Discrepancy" cells on their sheet are what Jess
+// reconciles against — this table mirrors that shape so we can compute the
+// same delta automatically and show "we match within ±N."
+
+export const sheetLoadCountSnapshots = pgTable(
+  "sheet_load_count_snapshots",
+  {
+    id: serial("id").primaryKey(),
+    spreadsheetId: text("spreadsheet_id").notNull(),
+    sheetTabName: text("sheet_tab_name").notNull(), // 'Current' | 'Previous' | 'WK of MM/DD/YY'
+    weekStart: text("week_start").notNull(), // 'YYYY-MM-DD' (Sunday)
+    weekEnd: text("week_end").notNull(), // 'YYYY-MM-DD' (Saturday)
+    wellName: text("well_name"), // null for the 'Balance Total' aggregate row
+    billTo: text("bill_to"),
+    sunCount: integer("sun_count"),
+    monCount: integer("mon_count"),
+    tueCount: integer("tue_count"),
+    wedCount: integer("wed_count"),
+    thuCount: integer("thu_count"),
+    friCount: integer("fri_count"),
+    satCount: integer("sat_count"),
+    weekTotal: integer("week_total"), // Column J from sheet
+    loadsLeftOver: integer("loads_left_over"), // Col P (only on Balance row)
+    loadsForWeek: integer("loads_for_week"), // Col Q (Balance row)
+    missedLoad: integer("missed_load"), // Col R (Current tab only)
+    totalToBuild: integer("total_to_build"), // Col S (Balance row)
+    totalBuilt: integer("total_built"), // Col T (Balance row) — THE truth number
+    discrepancy: integer("discrepancy"), // Col U (Balance row) — their hand calc
+    statusColorHint: text("status_color_hint"), // Optional: name from Color Key if visible
+    capturedAt: timestamp("captured_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    rawRow: jsonb("raw_row").$type<string[]>(),
+  },
+  (table) => [
+    index("idx_sheet_snapshots_week").on(table.weekStart, table.weekEnd),
+    index("idx_sheet_snapshots_well").on(table.wellName),
+    uniqueIndex("uq_sheet_snapshots_well_week_tab").on(
+      table.spreadsheetId,
+      table.sheetTabName,
+      table.weekStart,
+      table.wellName,
+    ),
   ],
 );
