@@ -55,6 +55,8 @@ const TYPE_LABEL: Record<string, string> = {
   photo_gap: "Photo missing",
   rate_drift: "Rate differs from PCS",
   orphan_destination: "Destination not mapped",
+  sheet_vs_v2_week_count: "Weekly count differs from your sheet",
+  sheet_vs_v2_well_count: "Well count differs from your sheet",
 };
 
 const TYPE_DESC: Record<string, string> = {
@@ -66,6 +68,10 @@ const TYPE_DESC: Record<string, string> = {
   rate_drift: "v2 expected rate and PCS billed rate differ by more than 5%",
   orphan_destination:
     "3 or more loads point at this destination but it isn't in your wells master",
+  sheet_vs_v2_week_count:
+    "Your Load Count Sheet's Total Built for the week differs from v2's unique load count for the same week",
+  sheet_vs_v2_well_count:
+    "Per-well count for the week differs between your sheet and v2",
 };
 
 const SEVERITY_DOT: Record<Discrepancy["severity"], string> = {

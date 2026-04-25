@@ -117,6 +117,38 @@ export function startScheduler(database: Database) {
     { timezone: TZ },
   );
 
+  // ─── Sheet Load Count Sync (every 30 min during business hours) — reads
+  // ES Express's "Load Count Sheet - Daily (Billing)" Current+Previous tabs
+  // and snapshots per-week-per-well counts, then computes parity vs v2's
+  // unique load count. Writes sheet_vs_v2_week_count discrepancy when delta
+  // exceeds threshold. The sheet IS the team's truth — this is the
+  // automated version of Jenny's manual reconciliation.
+  cron.schedule(
+    "*/30 6-22 * * *",
+    () =>
+      runWithLog(
+        "Sheet Load Count Sync (30m)",
+        (async () => {
+          if (!db) return { status: "skipped" };
+          const { syncLoadCountSheet, computeWeekParity } =
+            await import("./plugins/sheets/services/loadcount-sync.service.js");
+          const syncResult = await syncLoadCountSheet(db);
+          const parity = await computeWeekParity(db);
+          const outOfThreshold = parity.filter((p) => !p.withinThreshold);
+          return {
+            status: "success",
+            recordsProcessed: syncResult.rowsUpserted,
+            tabsScanned: syncResult.tabsScanned,
+            weeksReported: parity.length,
+            weeksOutOfThreshold: outOfThreshold.length,
+            latestDelta: parity[0]?.delta ?? null,
+          };
+        })(),
+        "sheet-loadcount",
+      ),
+    { timezone: TZ },
+  );
+
   console.log("[scheduler] Cron jobs registered (TZ: America/Chicago)");
   console.log("[scheduler]   04:00 — PropX sync (7d)");
   console.log("[scheduler]   04:15 — Logistiq sync (7d)");
@@ -126,6 +158,7 @@ export function startScheduler(database: Database) {
   );
   console.log("[scheduler]   every 30m — JotForm photo sync");
   console.log("[scheduler]   every 15m — PCS sync");
+  console.log("[scheduler]   every 30m (06:00-22:00) — Sheet load count sync");
 
   // ─── Startup catch-up ─────────────────────────────────────────────────
   // Each deploy resets node-cron's in-memory schedule, so any cron slot

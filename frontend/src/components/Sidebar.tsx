@@ -451,6 +451,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 </span>
                 What PCS Sees
               </Link>
+              <Link
+                to="/admin/sheet-truth"
+                className={`${navClass("/admin/sheet-truth")} !pl-9`}
+                title="Your Load Count Sheet, side-by-side with v2's count for the same week — the parity check Jenny does on Fridays, automated."
+              >
+                <span className={iconClass("/admin/sheet-truth")}>
+                  fact_check
+                </span>
+                Sheet Truth
+              </Link>
             </div>
           )}
 

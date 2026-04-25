@@ -76,6 +76,11 @@ const Discrepancies = lazy(() =>
     default: m.Discrepancies,
   })),
 );
+const SheetTruth = lazy(() =>
+  import("./pages/admin/SheetTruth").then((m) => ({
+    default: m.SheetTruth,
+  })),
+);
 const LoadReport = lazy(() =>
   import("./pages/LoadReport").then((m) => ({ default: m.LoadReport })),
 );
@@ -147,6 +152,7 @@ export function App() {
                     path="admin/discrepancies"
                     element={<Discrepancies />}
                   />
+                  <Route path="admin/sheet-truth" element={<SheetTruth />} />
                   <Route path="load-report" element={<LoadReport />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="whats-new" element={<WhatsNew />} />
