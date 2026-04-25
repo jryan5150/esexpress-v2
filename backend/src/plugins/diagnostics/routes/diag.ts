@@ -672,6 +672,222 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /pcs-2026-coverage — pull a date-windowed PCS load list and
+  // measure cross-source identifier coverage. Tests every stable identifier
+  // chain (PCS shipperTicket → v2 ticket_no/bol_no, PCS loadReference →
+  // v2 load_no). Returns a hit-rate matrix to validate the rules corpus.
+  fastify.get("/pcs-2026-coverage", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: {
+          code: "SERVICE_UNAVAILABLE",
+          message: "Database not connected",
+        },
+      });
+
+    const q = (request.query ?? {}) as {
+      from?: string;
+      to?: string;
+      companyLetter?: string;
+    };
+    const fromDate = q.from ?? "2026-01-01";
+    const toDate = q.to ?? "2026-04-25";
+    const companyLetter = q.companyLetter ?? process.env.PCS_COMPANY_LTR ?? "B";
+
+    const { getAccessToken, getPcsBaseUrl } =
+      await import("../../pcs/services/pcs-auth.service.js");
+    const { loads, assignments, bolSubmissions, jotformImports } =
+      await import("../../../db/schema.js");
+    const { sql, inArray } = await import("drizzle-orm");
+
+    const bearer = await getAccessToken(db);
+    const url = `${getPcsBaseUrl()}/dispatching/v1/load?from=${fromDate}&to=${toDate}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${bearer}`,
+        "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
+        "X-Company-Letter": companyLetter,
+        Accept: "application/json",
+      },
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      return reply.status(502).send({
+        success: false,
+        error: {
+          code: "PCS_QUERY_FAILED",
+          message: `PCS ${res.status}: ${body.slice(0, 300)}`,
+        },
+      });
+    }
+    const pcsLoads = (await res.json()) as Array<{
+      loadId?: string;
+      loadReference?: string | null;
+      status?: string | null;
+      shipperTicket?: string | null;
+      shipperCompany?: string | null;
+      consigneeCompany?: string | null;
+      pickupDate?: string | null;
+      totalWeight?: number | string | null;
+    }>;
+
+    // Cross-ref each PCS load against v2 loads/bolSubmissions/jotformImports
+    const tickets = Array.from(
+      new Set(
+        pcsLoads
+          .map((p) => (p.shipperTicket ?? "").trim())
+          .filter((t) => t.length > 0),
+      ),
+    );
+    const refs = Array.from(
+      new Set(
+        pcsLoads
+          .map((p) => (p.loadReference ?? "").trim())
+          .filter((t) => t.length > 0),
+      ),
+    );
+
+    const v2LoadsByTicket = tickets.length
+      ? await db
+          .select({
+            id: loads.id,
+            ticketNo: loads.ticketNo,
+            bolNo: loads.bolNo,
+          })
+          .from(loads)
+          .where(
+            sql`(LOWER(TRIM(${loads.ticketNo})) IN (${sql.join(
+              tickets.map((t) => sql`${t.toLowerCase()}`),
+              sql`, `,
+            )}) OR LOWER(TRIM(${loads.bolNo})) IN (${sql.join(
+              tickets.map((t) => sql`${t.toLowerCase()}`),
+              sql`, `,
+            )}))`,
+          )
+      : [];
+
+    const v2LoadsByRef = refs.length
+      ? await db
+          .select({ id: loads.id, loadNo: loads.loadNo })
+          .from(loads)
+          .where(
+            inArray(
+              loads.loadNo,
+              refs.filter((r) => r.length > 0),
+            ),
+          )
+      : [];
+
+    const bolByTicket = tickets.length
+      ? await db
+          .select({
+            id: bolSubmissions.id,
+            ticketNo: sql<string>`${bolSubmissions.aiExtractedData}->>'ticketNo'`,
+          })
+          .from(bolSubmissions)
+          .where(
+            sql`LOWER(TRIM(${bolSubmissions.aiExtractedData}->>'ticketNo')) IN (${sql.join(
+              tickets.map((t) => sql`${t.toLowerCase()}`),
+              sql`, `,
+            )})`,
+          )
+      : [];
+
+    const jotformByBol = tickets.length
+      ? await db
+          .select({ id: jotformImports.id, bolNo: jotformImports.bolNo })
+          .from(jotformImports)
+          .where(
+            sql`LOWER(TRIM(${jotformImports.bolNo})) IN (${sql.join(
+              tickets.map((t) => sql`${t.toLowerCase()}`),
+              sql`, `,
+            )})`,
+          )
+      : [];
+
+    const ticketsHitInV2Loads = new Set(
+      v2LoadsByTicket
+        .flatMap((r) => [r.ticketNo, r.bolNo])
+        .filter(Boolean)
+        .map((s) => s!.toLowerCase().trim()),
+    );
+    const refsHitInV2Loads = new Set(
+      v2LoadsByRef.map((r) => r.loadNo.toLowerCase()),
+    );
+    const ticketsHitInBol = new Set(
+      bolByTicket.map((r) => r.ticketNo.toLowerCase()),
+    );
+    const ticketsHitInJotform = new Set(
+      jotformByBol
+        .map((r) => r.bolNo)
+        .filter(Boolean)
+        .map((s) => s!.toLowerCase()),
+    );
+
+    let matchedAnyChain = 0;
+    let matchedTicket = 0;
+    let matchedRef = 0;
+    let matchedBol = 0;
+    let matchedJotform = 0;
+    const trulyMissed: typeof pcsLoads = [];
+    const consigneeBuckets = new Map<string, number>();
+
+    for (const pl of pcsLoads) {
+      const t = (pl.shipperTicket ?? "").toLowerCase().trim();
+      const r = (pl.loadReference ?? "").toLowerCase().trim();
+      const tHit = t && ticketsHitInV2Loads.has(t);
+      const rHit = r && refsHitInV2Loads.has(r);
+      const bHit = t && ticketsHitInBol.has(t);
+      const jHit = t && ticketsHitInJotform.has(t);
+      if (tHit) matchedTicket++;
+      if (rHit) matchedRef++;
+      if (bHit) matchedBol++;
+      if (jHit) matchedJotform++;
+      if (tHit || rHit || bHit || jHit) matchedAnyChain++;
+      else {
+        trulyMissed.push(pl);
+        const c = pl.consigneeCompany ?? "(none)";
+        consigneeBuckets.set(c, (consigneeBuckets.get(c) ?? 0) + 1);
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        window: { from: fromDate, to: toDate, companyLetter },
+        pcsLoadCount: pcsLoads.length,
+        identifierMatchRate: {
+          shipperTicket_to_v2_ticketOrBol: matchedTicket,
+          loadReference_to_v2_loadNo: matchedRef,
+          shipperTicket_to_bolOcr: matchedBol,
+          shipperTicket_to_jotform: matchedJotform,
+          anyChain: matchedAnyChain,
+          anyChainPct:
+            pcsLoads.length > 0
+              ? Math.round((matchedAnyChain / pcsLoads.length) * 100)
+              : 0,
+        },
+        trulyMissedCount: trulyMissed.length,
+        trulyMissedByConsignee: Object.fromEntries(
+          [...consigneeBuckets.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 20),
+        ),
+        trulyMissedSample: trulyMissed.slice(0, 5),
+        pcsStatusDistribution: pcsLoads.reduce<Record<string, number>>(
+          (acc, p) => {
+            const s = p.status ?? "(null)";
+            acc[s] = (acc[s] ?? 0) + 1;
+            return acc;
+          },
+          {},
+        ),
+      },
+    };
+  });
+
   // GET /week-counts — count loads delivered in a given Sun-Sat week, in
   // America/Chicago. Used to compare v2 against the Load Count Sheet's
   // "Total Built" cell. Defaults to last completed week if from/to omitted.
