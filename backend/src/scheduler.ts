@@ -126,6 +126,100 @@ export function startScheduler(database: Database) {
   );
   console.log("[scheduler]   every 30m — JotForm photo sync");
   console.log("[scheduler]   every 15m — PCS sync");
+
+  // ─── Startup catch-up ─────────────────────────────────────────────────
+  // Each deploy resets node-cron's in-memory schedule, so any cron slot
+  // that should have fired between the last deploy and now gets silently
+  // skipped (caught us 2026-04-24 — PropX showed 15h stale because every
+  // morning's deploys drifted past the 8am/12pm/4pm slots). Fire once on
+  // startup for any source whose last successful run is older than its
+  // expected interval, so /diag/cron-health self-heals.
+  void runStartupCatchup();
+}
+
+/**
+ * For each scheduled source, check the most recent syncRuns row. If the
+ * last run is older than the source's expected interval, kick a manual
+ * run NOW. Runs in background; errors are logged + Sentry-reported but
+ * don't block scheduler startup.
+ */
+async function runStartupCatchup() {
+  if (!db) return;
+
+  // Source → max age in minutes before we consider it stale and kick.
+  // Slightly larger than the cron interval so a freshly-fired job
+  // doesn't trigger a duplicate.
+  const SOURCES: Array<{
+    source: "propx" | "logistiq" | "automap" | "jotform";
+    maxAgeMin: number;
+    kick: () => Promise<unknown>;
+    label: string;
+  }> = [
+    {
+      source: "propx",
+      maxAgeMin: 300,
+      kick: () => syncPropx(2),
+      label: "PropX Sync (catchup)",
+    },
+    {
+      source: "logistiq",
+      maxAgeMin: 300,
+      kick: () => syncLogistiq(2),
+      label: "Logistiq Sync (catchup)",
+    },
+    {
+      source: "automap",
+      maxAgeMin: 300,
+      kick: () => runAutoMap(),
+      label: "Auto-Map (catchup)",
+    },
+    {
+      source: "jotform",
+      maxAgeMin: 60,
+      kick: () => runJotformSync(200),
+      label: "JotForm Sync (catchup)",
+    },
+  ];
+
+  // Small delay so the rest of the app finishes booting before we start
+  // hammering external APIs.
+  await new Promise((r) => setTimeout(r, 5000));
+
+  for (const { source, maxAgeMin, kick, label } of SOURCES) {
+    try {
+      const { syncRuns: srTable } = await import("./db/schema.js");
+      const { eq, desc } = await import("drizzle-orm");
+      const [last] = await db
+        .select({ startedAt: srTable.startedAt })
+        .from(srTable)
+        .where(eq(srTable.source, source))
+        .orderBy(desc(srTable.startedAt))
+        .limit(1);
+
+      const lastTime = last?.startedAt ? new Date(last.startedAt) : null;
+      const ageMin = lastTime
+        ? (Date.now() - lastTime.getTime()) / 60000
+        : Infinity;
+
+      if (ageMin > maxAgeMin) {
+        console.log(
+          `[scheduler] startup catchup: ${source} is ${Math.round(ageMin)}m stale (budget ${maxAgeMin}m) — kicking`,
+        );
+        // Fire-and-forget; runWithLog handles logging + recordSyncRun.
+        void runWithLog(label, kick(), source);
+      } else {
+        console.log(
+          `[scheduler] startup catchup: ${source} ok (${Math.round(ageMin)}m old)`,
+        );
+      }
+    } catch (err) {
+      console.error(`[scheduler] startup catchup ${source} check failed:`, err);
+      reportError(err instanceof Error ? err : new Error(String(err)), {
+        kind: "scheduler-catchup-check",
+        source,
+      });
+    }
+  }
 }
 
 async function runWithLog(
