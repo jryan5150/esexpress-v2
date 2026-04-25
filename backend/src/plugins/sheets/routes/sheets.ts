@@ -22,6 +22,10 @@ import {
   computeWeekParity,
   LOAD_COUNT_SHEET_ID,
 } from "../services/loadcount-sync.service.js";
+import {
+  syncMasterDispatch,
+  MASTER_DISPATCH_SHEET_ID,
+} from "../services/master-dispatch-sync.service.js";
 
 // ---------------------------------------------------------------------------
 // Routes
@@ -520,6 +524,39 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(502).send({
           success: false,
           error: { code: "SHEET_SYNC_FAILED", message },
+        });
+      }
+    },
+  );
+
+  // ─── POST /master-dispatch/sync — driver_roster + sand_jobs ──────
+  fastify.post(
+    "/master-dispatch/sync",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+    },
+    async (_request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+      try {
+        const result = await syncMasterDispatch(db);
+        return {
+          success: true,
+          data: { ...result, spreadsheetId: MASTER_DISPATCH_SHEET_ID },
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply.status(502).send({
+          success: false,
+          error: { code: "MASTER_DISPATCH_SYNC_FAILED", message },
         });
       }
     },

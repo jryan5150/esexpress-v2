@@ -1018,6 +1018,88 @@ export const discrepancies = pgTable(
   ],
 );
 
+// ─── Driver roster (from Master Dispatch sheet "Driver Codes" tab) ───────
+//
+// 983 rows of (Tractor, Trailer, Driver Code, Driver Name, Company, Notes)
+// curated by the team. Becomes the carrier-attribution lookup table for
+// matcher Tier 3 fuzzy fallback and JotForm pending re-resolution.
+//
+// Identity strategy: driver_code is the stable key when present, falling
+// back to lowercased+trimmed driver_name. Both are indexed.
+
+export const driverRoster = pgTable(
+  "driver_roster",
+  {
+    id: serial("id").primaryKey(),
+    tractor: text("tractor"),
+    trailer: text("trailer"),
+    driverCode: text("driver_code"),
+    driverName: text("driver_name"),
+    company: text("company"),
+    notes: text("notes"),
+    sourceSpreadsheetId: text("source_spreadsheet_id").notNull(),
+    sourceTabName: text("source_tab_name").notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    rawRow: jsonb("raw_row").$type<string[]>(),
+  },
+  (table) => [
+    index("idx_driver_roster_code").on(table.driverCode),
+    index("idx_driver_roster_name").on(table.driverName),
+    index("idx_driver_roster_company").on(table.company),
+    uniqueIndex("uq_driver_roster_source").on(
+      table.sourceSpreadsheetId,
+      table.sourceTabName,
+      table.driverCode,
+      table.driverName,
+    ),
+  ],
+);
+
+// ─── Sand jobs (from Master Dispatch sheet "Sand Tracking" tab) ──────────
+//
+// PO# → location/well metadata: Location Code, Coordinates, Closest City,
+// Sand Type, Loading Facility, Company, Rate, Mileage, PO Amount, Delivered,
+// Remaining. Used by the auto-mapper to resolve PO# → location → well.
+
+export const sandJobs = pgTable(
+  "sand_jobs",
+  {
+    id: serial("id").primaryKey(),
+    poNumber: text("po_number"),
+    locationCode: text("location_code"),
+    locationCoords: text("location_coords"),
+    closestCity: text("closest_city"),
+    sandType: text("sand_type"),
+    loadingFacility: text("loading_facility"),
+    lfCoords: text("lf_coords"),
+    company: text("company"),
+    rate: text("rate"),
+    mileage: text("mileage"),
+    poAmount: text("po_amount"),
+    delivered: text("delivered"),
+    remaining: text("remaining"),
+    sourceSpreadsheetId: text("source_spreadsheet_id").notNull(),
+    sourceTabName: text("source_tab_name").notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    rawRow: jsonb("raw_row").$type<string[]>(),
+  },
+  (table) => [
+    index("idx_sand_jobs_po").on(table.poNumber),
+    index("idx_sand_jobs_location_code").on(table.locationCode),
+    index("idx_sand_jobs_facility").on(table.loadingFacility),
+    uniqueIndex("uq_sand_jobs_source").on(
+      table.sourceSpreadsheetId,
+      table.sourceTabName,
+      table.poNumber,
+      table.locationCode,
+    ),
+  ],
+);
+
 // ─── Sheet truth snapshots ────────────────────────────────────────────────
 //
 // Periodically read the Load Count Sheet's Current + Previous tabs and

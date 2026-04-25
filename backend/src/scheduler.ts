@@ -149,6 +149,32 @@ export function startScheduler(database: Database) {
     { timezone: TZ },
   );
 
+  // ─── Master Dispatch Sync (daily 04:45) — pulls Driver Codes + Sand
+  // Tracking tabs for the matcher Tier 3 fallback. Runs once a day; the
+  // roster doesn't change minute-to-minute.
+  cron.schedule(
+    "45 4 * * *",
+    () =>
+      runWithLog(
+        "Master Dispatch Sync (daily 04:45)",
+        (async () => {
+          if (!db) return { status: "skipped" };
+          const { syncMasterDispatch } =
+            await import("./plugins/sheets/services/master-dispatch-sync.service.js");
+          const result = await syncMasterDispatch(db);
+          return {
+            status: "success",
+            recordsProcessed:
+              result.driverRoster.rowsUpserted + result.sandJobs.rowsUpserted,
+            driverRosterRows: result.driverRoster.rowsUpserted,
+            sandJobRows: result.sandJobs.rowsUpserted,
+          };
+        })(),
+        "master-dispatch-sync",
+      ),
+    { timezone: TZ },
+  );
+
   console.log("[scheduler] Cron jobs registered (TZ: America/Chicago)");
   console.log("[scheduler]   04:00 — PropX sync (7d)");
   console.log("[scheduler]   04:15 — Logistiq sync (7d)");
