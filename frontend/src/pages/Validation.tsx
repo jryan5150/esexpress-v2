@@ -287,14 +287,24 @@ export function Validation() {
   const rejectMutation = useValidationReject();
 
   // Meld bridge (2026-04-24): surface the "photo arrived, needs matching"
-  // and "load exists, no photo yet" counts as header cards so Jessica can
-  // see her full pre-dispatch verification workload on one page. Full
-  // inline merge lands Monday — see
-  // docs/superpowers/specs/2026-04-24-validate-bol-meld-design.md.
+  // and "load exists, no photo yet" counts so Jessica can see her full
+  // pre-dispatch verification workload on one page.
+  //
+  // 2026-04-24 LATE PM bug fix: the bolStats API returns
+  // {byStatus:{matched,pending}} — there's no top-level `unmatched` field.
+  // Reading `data.unmatched` always gave 0, which gated the entire meld
+  // surface to invisible. Now reading byStatus.pending (the actual pending
+  // count) so the section renders.
   const bolStatsQuery = useBolStats();
   const missingTicketsQuery = useMissingTickets({ limit: 1 });
   const unmatchedPhotos = Number(
-    (bolStatsQuery.data as { unmatched?: number } | undefined)?.unmatched ?? 0,
+    (
+      bolStatsQuery.data as
+        | { byStatus?: { pending?: number }; unmatched?: number }
+        | undefined
+    )?.byStatus?.pending ??
+      (bolStatsQuery.data as { unmatched?: number } | undefined)?.unmatched ??
+      0,
   );
   const missingTickets = Number(
     (missingTicketsQuery.data as { meta?: { total?: number } } | undefined)
