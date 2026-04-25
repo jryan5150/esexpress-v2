@@ -180,7 +180,53 @@ export function parseLoadCountTab(
   const colDiscrepancy = findCol("Discrepancy");
 
   const out: ParsedLoadCountRow[] = [];
-  // Skip row 0 (date header) and row 1 (day-of-week header). Data rows from row 2.
+
+  // ROW 1 (day-of-week label row) doubles as the WEEKLY SUMMARY row —
+  // cols P-U on this row hold Loads left over / Loads for week / Missed
+  // load / Total to build / Total Built / Discrepancy. Extract first.
+  const dayLabelRow = allRows[1] ?? [];
+  const summaryFromDayLabel: ParsedLoadCountRow = {
+    wellName: null,
+    billTo: null,
+    sunCount: null,
+    monCount: null,
+    tueCount: null,
+    wedCount: null,
+    thuCount: null,
+    friCount: null,
+    satCount: null,
+    weekTotal: null,
+    loadsLeftOver:
+      colLoadsLeftOver >= 0
+        ? parseIntOrNull(dayLabelRow[colLoadsLeftOver])
+        : null,
+    loadsForWeek:
+      colLoadsForWeek >= 0
+        ? parseIntOrNull(dayLabelRow[colLoadsForWeek])
+        : null,
+    missedLoad:
+      colMissedLoad >= 0 ? parseIntOrNull(dayLabelRow[colMissedLoad]) : null,
+    totalToBuild:
+      colTotalToBuild >= 0
+        ? parseIntOrNull(dayLabelRow[colTotalToBuild])
+        : null,
+    totalBuilt:
+      colTotalBuilt >= 0 ? parseIntOrNull(dayLabelRow[colTotalBuilt]) : null,
+    discrepancy:
+      colDiscrepancy >= 0 ? parseIntOrNull(dayLabelRow[colDiscrepancy]) : null,
+    statusColorHint: null,
+    rawRow: dayLabelRow,
+  };
+  // Only emit the weekly summary if it has at least one populated value
+  if (
+    summaryFromDayLabel.totalBuilt != null ||
+    summaryFromDayLabel.totalToBuild != null ||
+    summaryFromDayLabel.discrepancy != null
+  ) {
+    out.push(summaryFromDayLabel);
+  }
+
+  // Per-well data rows from row 2 onward
   for (let i = 2; i < allRows.length; i++) {
     const row = allRows[i] ?? [];
     const wellName = (row[wellNameIdx] ?? "").trim() || null;
@@ -216,9 +262,12 @@ export function parseLoadCountTab(
     const isBalanceRow =
       wellName.toLowerCase() === "balance" ||
       (billTo ?? "").toLowerCase() === "total:";
+    // Skip the per-day "Balance | Total:" row — its summary cols are blank
+    // and the truth weekly summary already came from row 1 above.
+    if (isBalanceRow) continue;
 
     out.push({
-      wellName: isBalanceRow ? null : wellName,
+      wellName,
       billTo,
       sunCount: sun,
       monCount: mon,
@@ -228,30 +277,12 @@ export function parseLoadCountTab(
       friCount: fri,
       satCount: sat,
       weekTotal,
-      loadsLeftOver:
-        isBalanceRow && colLoadsLeftOver >= 0
-          ? parseIntOrNull(row[colLoadsLeftOver])
-          : null,
-      loadsForWeek:
-        isBalanceRow && colLoadsForWeek >= 0
-          ? parseIntOrNull(row[colLoadsForWeek])
-          : null,
-      missedLoad:
-        isBalanceRow && colMissedLoad >= 0
-          ? parseIntOrNull(row[colMissedLoad])
-          : null,
-      totalToBuild:
-        isBalanceRow && colTotalToBuild >= 0
-          ? parseIntOrNull(row[colTotalToBuild])
-          : null,
-      totalBuilt:
-        isBalanceRow && colTotalBuilt >= 0
-          ? parseIntOrNull(row[colTotalBuilt])
-          : null,
-      discrepancy:
-        isBalanceRow && colDiscrepancy >= 0
-          ? parseIntOrNull(row[colDiscrepancy])
-          : null,
+      loadsLeftOver: null,
+      loadsForWeek: null,
+      missedLoad: null,
+      totalToBuild: null,
+      totalBuilt: null,
+      discrepancy: null,
       statusColorHint: statusHint,
       rawRow: row,
     });
