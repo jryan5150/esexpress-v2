@@ -938,6 +938,141 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
 
     const sumBuckets = Object.values(buckets).reduce((a, b) => a + b.count, 0);
 
+    // Forward-walk diagnostics: rebuild full per-bucket ID lists so we can
+    // characterize the unexplained populations by source + give walkable samples.
+    const allBucketIds: Record<string, number[]> = {
+      cancelled_in_source: [],
+      built_in_pcs: [],
+      built_in_v2_workflow: [],
+      likely_duplicate_ingest: [],
+      unattributed_orphan: [],
+      truly_missed: [],
+    };
+    for (const r of rows) {
+      const status = (
+        (r.rawData as Record<string, unknown> | null)?.status ??
+        (r.rawData as Record<string, unknown> | null)?.load_status ??
+        ""
+      )
+        .toString()
+        .toLowerCase();
+      if (
+        status === "cancelled" ||
+        status === "canceled" ||
+        status === "transfered" ||
+        status === "transferred"
+      ) {
+        allBucketIds.cancelled_in_source.push(r.id);
+        continue;
+      }
+      const ticketKey = (r.bolNo ?? r.ticketNo ?? "").trim().toLowerCase();
+      if (ticketKey && pcsTickets.has(ticketKey)) {
+        allBucketIds.built_in_pcs.push(r.id);
+        continue;
+      }
+      const asgs = asgByLoad.get(r.id) ?? [];
+      const advanced = asgs.some(
+        (s) => s !== "pending" && s !== "cancelled" && s !== "failed",
+      );
+      if (advanced) {
+        allBucketIds.built_in_v2_workflow.push(r.id);
+        continue;
+      }
+      const sig = sigFor(r);
+      if (sig && (sigCount.get(sig) ?? 0) > 1) {
+        allBucketIds.likely_duplicate_ingest.push(r.id);
+        continue;
+      }
+      if (
+        !r.driverName ||
+        r.driverName.trim() === "" ||
+        !r.destinationName ||
+        r.destinationName.trim() === ""
+      ) {
+        allBucketIds.unattributed_orphan.push(r.id);
+        continue;
+      }
+      allBucketIds.truly_missed.push(r.id);
+    }
+
+    const sourceBreakdown = (loadIds: number[]) => {
+      const breakdown: Record<string, number> = {};
+      for (const id of loadIds) {
+        const row = rows.find((r) => r.id === id);
+        if (!row) continue;
+        breakdown[row.source] = (breakdown[row.source] ?? 0) + 1;
+      }
+      return breakdown;
+    };
+
+    // PCS bridge sanity — does the PCS sync actually cover this window?
+    const pcsStatsRow = await db
+      .select({
+        total: sql<number>`cast(count(*) as int)`,
+        earliest: sql<string | null>`min(pickup_date)::text`,
+        latest: sql<string | null>`max(pickup_date)::text`,
+      })
+      .from(pcsKnownTickets);
+    const pcsStats = pcsStatsRow[0] ?? {
+      total: 0,
+      earliest: null,
+      latest: null,
+    };
+
+    // Cluster size distribution for duplicates — confirms PropX↔Logistiq pair pattern
+    const clusterSizes: Record<string, number> = {};
+    for (const sz of sigCount.values()) {
+      if (sz >= 2)
+        clusterSizes[String(sz)] = (clusterSizes[String(sz)] ?? 0) + 1;
+    }
+
+    // Three example duplicate clusters with full member detail
+    const dupClusters: Array<{
+      signature: string;
+      members: Array<{
+        id: number;
+        source: string;
+        bolNo: string | null;
+        ticketNo: string | null;
+        loadNo: string | null;
+      }>;
+    }> = [];
+    const seenSigs = new Set<string>();
+    for (const r of rows) {
+      const s = sigFor(r);
+      if (s && (sigCount.get(s) ?? 0) > 1 && !seenSigs.has(s)) {
+        seenSigs.add(s);
+        const members = rows
+          .filter((x) => sigFor(x) === s)
+          .map((x) => ({
+            id: x.id,
+            source: x.source,
+            bolNo: x.bolNo,
+            ticketNo: x.ticketNo,
+            loadNo: x.loadNo,
+          }));
+        dupClusters.push({ signature: s, members });
+        if (dupClusters.length >= 3) break;
+      }
+    }
+
+    // Five truly_missed rows with full identity for walk-through
+    const trulyMissedSample = allBucketIds.truly_missed
+      .slice(0, 5)
+      .map((id) => {
+        const r = rows.find((x) => x.id === id)!;
+        return {
+          id: r.id,
+          source: r.source,
+          loadNo: r.loadNo,
+          bolNo: r.bolNo,
+          ticketNo: r.ticketNo,
+          driverName: r.driverName,
+          destinationName: r.destinationName,
+          deliveredOn: r.deliveredOn,
+        };
+      });
+
     return {
       success: true,
       data: {
@@ -946,9 +1081,44 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         bucketSum: sumBuckets,
         bucketSumMatchesTotal: sumBuckets === total,
         buckets,
+        bucketBySource: {
+          cancelled_in_source: sourceBreakdown(
+            allBucketIds.cancelled_in_source,
+          ),
+          built_in_pcs: sourceBreakdown(allBucketIds.built_in_pcs),
+          built_in_v2_workflow: sourceBreakdown(
+            allBucketIds.built_in_v2_workflow,
+          ),
+          likely_duplicate_ingest: sourceBreakdown(
+            allBucketIds.likely_duplicate_ingest,
+          ),
+          unattributed_orphan: sourceBreakdown(
+            allBucketIds.unattributed_orphan,
+          ),
+          truly_missed: sourceBreakdown(allBucketIds.truly_missed),
+        },
+        duplicateAnalysis: {
+          clusterSizeDistribution: clusterSizes,
+          sampleClusters: dupClusters,
+        },
+        trulyMissedSample,
+        pcsBridge: {
+          knownTicketsTotal: pcsStats.total,
+          earliestPickupDate: pcsStats.earliest,
+          latestPickupDate: pcsStats.latest,
+          windowCovered: !!(
+            pcsStats.earliest &&
+            pcsStats.latest &&
+            pcsStats.earliest <= toDate &&
+            pcsStats.latest >= fromDate
+          ),
+        },
         compareTo: {
           sheetTotalBuilt: 1509,
           v2Ingested: total,
+          v2EstimatedUniqueAfterDedup: Math.round(
+            total - allBucketIds.likely_duplicate_ingest.length / 2,
+          ),
           gap: total - 1509,
           note: "Bucket counts hierarchical — first-match wins. truly_missed is the actionable residual to walk through with Jessica.",
         },
