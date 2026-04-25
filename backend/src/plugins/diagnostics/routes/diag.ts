@@ -847,19 +847,53 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       pcsRows.map((r) => r.shipperTicket?.trim().toLowerCase()).filter(Boolean),
     );
 
-    // Build duplicate-cluster signature: lowercased driver + delivered_on date + rounded weight
-    const sigCount = new Map<string, number>();
-    const sigFor = (r: (typeof rows)[number]): string | null => {
-      const d = (r.driverName ?? "").trim().toLowerCase();
-      const day = r.deliveredOn ? r.deliveredOn.toISOString().slice(0, 10) : "";
-      const w = r.weightTons ? Math.round(Number(r.weightTons) * 2) / 2 : 0;
-      if (!d || !day) return null;
-      return `${d}|${day}|${w}`;
+    // Tightened duplicate detection — initial signature (driver|day|weight)
+    // collapsed real distinct round-trips into false-positive clusters.
+    // Replacement uses two independent strict signatures, OR'd:
+    //   1. bolSig: same trimmed lowercased bolNo OR ticketNo across records
+    //   2. tightSig: same driver + delivered_on within ±15 minutes
+    // A record is duplicated if either signature has >1 occurrence.
+    const bolKey = (r: (typeof rows)[number]): string | null => {
+      const b = (r.bolNo ?? "").trim().toLowerCase();
+      if (b) return `bol:${b}`;
+      const t = (r.ticketNo ?? "").trim().toLowerCase();
+      return t ? `tk:${t}` : null;
     };
+    const bolCount = new Map<string, number>();
     for (const r of rows) {
-      const s = sigFor(r);
-      if (s) sigCount.set(s, (sigCount.get(s) ?? 0) + 1);
+      const k = bolKey(r);
+      if (k) bolCount.set(k, (bolCount.get(k) ?? 0) + 1);
     }
+    // Tight driver-time signature: driver + 15-min bucket of delivered_on
+    const tightKey = (r: (typeof rows)[number]): string | null => {
+      const d = (r.driverName ?? "").trim().toLowerCase();
+      if (!d || !r.deliveredOn) return null;
+      const ms = r.deliveredOn.getTime();
+      const bucket = Math.floor(ms / (15 * 60 * 1000));
+      return `${d}|${bucket}`;
+    };
+    const tightCount = new Map<string, number>();
+    for (const r of rows) {
+      const k = tightKey(r);
+      if (k) tightCount.set(k, (tightCount.get(k) ?? 0) + 1);
+    }
+    const isDuplicate = (r: (typeof rows)[number]): boolean => {
+      const b = bolKey(r);
+      if (b && (bolCount.get(b) ?? 0) > 1) return true;
+      const t = tightKey(r);
+      if (t && (tightCount.get(t) ?? 0) > 1) return true;
+      return false;
+    };
+    const dupReason = (r: (typeof rows)[number]): string | null => {
+      const b = bolKey(r);
+      if (b && (bolCount.get(b) ?? 0) > 1) return `same-${b.split(":")[0]}`;
+      const t = tightKey(r);
+      if (t && (tightCount.get(t) ?? 0) > 1) return "same-driver-15min";
+      return null;
+    };
+    // Legacy sig retained for backward compatibility in cluster analysis below
+    const sigCount = bolCount;
+    const sigFor = bolKey;
 
     // Bucketize hierarchically: first-match wins
     const buckets = {
@@ -911,8 +945,7 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         continue;
       }
 
-      const sig = sigFor(r);
-      if (sig && (sigCount.get(sig) ?? 0) > 1) {
+      if (isDuplicate(r)) {
         if (buckets.likely_duplicate_ingest.sample.length < 5)
           buckets.likely_duplicate_ingest.sample.push(r.id);
         buckets.likely_duplicate_ingest.count++;
@@ -979,7 +1012,7 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         continue;
       }
       const sig = sigFor(r);
-      if (sig && (sigCount.get(sig) ?? 0) > 1) {
+      if (isDuplicate(r)) {
         allBucketIds.likely_duplicate_ingest.push(r.id);
         continue;
       }
@@ -1019,40 +1052,69 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       latest: null,
     };
 
-    // Cluster size distribution for duplicates — confirms PropX↔Logistiq pair pattern
-    const clusterSizes: Record<string, number> = {};
-    for (const sz of sigCount.values()) {
+    // Cluster size distribution — split by which signature flagged it
+    const bolClusterSizes: Record<string, number> = {};
+    for (const sz of bolCount.values()) {
       if (sz >= 2)
-        clusterSizes[String(sz)] = (clusterSizes[String(sz)] ?? 0) + 1;
+        bolClusterSizes[String(sz)] = (bolClusterSizes[String(sz)] ?? 0) + 1;
     }
+    const tightClusterSizes: Record<string, number> = {};
+    for (const sz of tightCount.values()) {
+      if (sz >= 2)
+        tightClusterSizes[String(sz)] =
+          (tightClusterSizes[String(sz)] ?? 0) + 1;
+    }
+    const clusterSizes = {
+      byBolOrTicket: bolClusterSizes,
+      byDriver15Min: tightClusterSizes,
+    };
 
-    // Three example duplicate clusters with full member detail
+    // Three example duplicate clusters — show why each pair was flagged
     const dupClusters: Array<{
-      signature: string;
+      reason: string;
+      key: string;
       members: Array<{
         id: number;
         source: string;
         bolNo: string | null;
         ticketNo: string | null;
         loadNo: string | null;
+        deliveredOn: Date | null;
       }>;
     }> = [];
-    const seenSigs = new Set<string>();
-    for (const r of rows) {
-      const s = sigFor(r);
-      if (s && (sigCount.get(s) ?? 0) > 1 && !seenSigs.has(s)) {
-        seenSigs.add(s);
+    const seenKeys = new Set<string>();
+    // Pull from bolCount-clusters first (definitive), then tightCount
+    for (const [k, n] of bolCount.entries()) {
+      if (n > 1 && !seenKeys.has(k)) {
+        seenKeys.add(k);
         const members = rows
-          .filter((x) => sigFor(x) === s)
-          .map((x) => ({
-            id: x.id,
-            source: x.source,
-            bolNo: x.bolNo,
-            ticketNo: x.ticketNo,
-            loadNo: x.loadNo,
+          .filter((r) => bolKey(r) === k)
+          .map((r) => ({
+            id: r.id,
+            source: r.source,
+            bolNo: r.bolNo,
+            ticketNo: r.ticketNo,
+            loadNo: r.loadNo,
+            deliveredOn: r.deliveredOn,
           }));
-        dupClusters.push({ signature: s, members });
-        if (dupClusters.length >= 3) break;
+        dupClusters.push({ reason: "same-bol-or-ticket", key: k, members });
+        if (dupClusters.length >= 2) break;
+      }
+    }
+    for (const [k, n] of tightCount.entries()) {
+      if (n > 1 && !seenKeys.has(k) && dupClusters.length < 3) {
+        seenKeys.add(k);
+        const members = rows
+          .filter((r) => tightKey(r) === k)
+          .map((r) => ({
+            id: r.id,
+            source: r.source,
+            bolNo: r.bolNo,
+            ticketNo: r.ticketNo,
+            loadNo: r.loadNo,
+            deliveredOn: r.deliveredOn,
+          }));
+        dupClusters.push({ reason: "same-driver-15min", key: k, members });
       }
     }
 
