@@ -390,6 +390,39 @@ export const driverCrossrefs = pgTable("driver_crossrefs", {
 
 // ─── PHOTOS ───────────────────────────────────────────────────────
 
+/**
+ * PCS-known loads cache. Each PCS sync run upserts the missed-by-v2
+ * entries here so the JotForm matcher can check PCS as a 4th source
+ * (after PropX, Logistiq, and raw_data nested) before declaring "no
+ * match." Without this cache, the matcher only sees what we've ingested,
+ * but PCS knows about loads from a third dispatch source we don't pull.
+ *
+ * Discovered 2026-04-25: operator pushed back — "the matcher should
+ * check the system that historical loads would already be in."
+ */
+export const pcsKnownTickets = pgTable(
+  "pcs_known_tickets",
+  {
+    id: serial("id").primaryKey(),
+    pcsLoadId: text("pcs_load_id").notNull(),
+    shipperTicket: text("shipper_ticket"),
+    loadReference: text("load_reference"),
+    pcsStatus: text("pcs_status"),
+    shipperCompany: text("shipper_company"),
+    consigneeCompany: text("consignee_company"),
+    pickupDate: text("pickup_date"),
+    totalWeight: text("total_weight"),
+    division: text("division"), // 'A' (Hairpin) or 'B' (ES Express)
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_pcs_known_tickets_load").on(table.pcsLoadId),
+    index("idx_pcs_known_tickets_ticket").on(table.shipperTicket),
+  ],
+);
+
 export const photos = pgTable(
   "photos",
   {

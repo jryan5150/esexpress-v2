@@ -489,6 +489,54 @@ export async function syncPcsLoads(
     });
   }
 
+  // Persist missed-by-v2 to pcs_known_tickets so the JotForm matcher
+  // (and other downstream consumers) can query PCS as a 4th match
+  // source. Each sync upserts on pcs_load_id; rows from prior syncs
+  // that aren't seen this run stay (PCS keeps "Arrived" loads around
+  // for a long time — historical_complete loads are still legitimate
+  // matches for old JotForm submissions). Refresh-period semantics
+  // surface via last_seen_at.
+  if (missedByV2.length > 0) {
+    try {
+      const { pcsKnownTickets } = await import("../../../db/schema.js");
+      const { sql: sqlOp } = await import("drizzle-orm");
+      const rows = missedByV2.map((m) => ({
+        pcsLoadId: String(m.pcsLoadId),
+        shipperTicket: m.shipperTicket ?? null,
+        loadReference: m.loadReference ?? null,
+        pcsStatus: m.status ?? null,
+        shipperCompany: m.shipperCompany ?? null,
+        consigneeCompany: m.consigneeCompany ?? null,
+        pickupDate: m.pickupDate ?? null,
+        totalWeight: m.totalWeight != null ? String(m.totalWeight) : null,
+        division: companyLetter,
+        lastSeenAt: now,
+      }));
+      await db
+        .insert(pcsKnownTickets)
+        .values(rows)
+        .onConflictDoUpdate({
+          target: pcsKnownTickets.pcsLoadId,
+          set: {
+            shipperTicket: sqlOp`excluded.shipper_ticket`,
+            loadReference: sqlOp`excluded.load_reference`,
+            pcsStatus: sqlOp`excluded.pcs_status`,
+            shipperCompany: sqlOp`excluded.shipper_company`,
+            consigneeCompany: sqlOp`excluded.consignee_company`,
+            pickupDate: sqlOp`excluded.pickup_date`,
+            totalWeight: sqlOp`excluded.total_weight`,
+            division: sqlOp`excluded.division`,
+            lastSeenAt: sqlOp`excluded.last_seen_at`,
+          },
+        });
+    } catch (err) {
+      // Best-effort persistence — don't fail the sync if upsert errors.
+      console.error(
+        `[pcs-sync] pcs_known_tickets upsert failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   return {
     ranAt: now.toISOString(),
     fromDate: fromDate.toISOString(),

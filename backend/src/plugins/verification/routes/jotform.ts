@@ -743,6 +743,13 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
       const { matchSubmissionToLoad } =
         await import("../services/jotform.service.js");
 
+      // ORDER BY id ASC so the OLDEST pending get processed first.
+      // Without this, postgres returns unordered + LIMIT, which means
+      // when total pending > limit, the oldest never get reached.
+      // Discovered 2026-04-25: row 4844 sat unmatched for days because
+      // every rematch pass picked the same recent 500 and ignored the
+      // older 134.
+      const { asc } = await import("drizzle-orm");
       const pending = await db
         .select({
           id: jotformImports.id,
@@ -756,6 +763,7 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
         })
         .from(jotformImports)
         .where(eq(jotformImports.status, "pending"))
+        .orderBy(asc(jotformImports.id))
         .limit(limit);
 
       let newlyMatched = 0;
@@ -966,6 +974,147 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
             matchedNoPhoto: matchedNoPhotoSamples,
           },
           generatedAt: new Date().toISOString(),
+        },
+      };
+    },
+  );
+
+  // ─── GET /jotform/pending-investigation — driver-grouped pending overview
+  // Discovered 2026-04-25: ~600 pending JotForm submissions are for
+  // loads dispatched outside PropX/Logistiq. Drivers like Fernando
+  // Herrera have 108 pending while having matched ZERO recently. This
+  // endpoint groups pending submissions by driver and surfaces the
+  // pattern: who's the driver, when was their last matched load, when
+  // was their last pending submission, and recommended action.
+  fastify.get(
+    "/jotform/pending-investigation",
+    { preHandler: [fastify.authenticate] },
+    async (_request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: { code: "SERVICE_UNAVAILABLE" },
+        });
+      }
+      const { sql } = await import("drizzle-orm");
+
+      const rows = await db.execute<{
+        driver_name: string | null;
+        pending_count: number;
+        matched_count: number;
+        last_pending: string | null;
+        last_matched: string | null;
+        last_load_in_system: string | null;
+        loads_in_system: number;
+      }>(sql`
+        WITH driver_stats AS (
+          SELECT
+            ji.driver_name,
+            COUNT(*) FILTER (WHERE ji.status = 'pending')::int AS pending_count,
+            COUNT(*) FILTER (WHERE ji.status = 'matched')::int AS matched_count,
+            MAX(CASE WHEN ji.status='pending' THEN ji.submitted_at END)::text AS last_pending,
+            MAX(CASE WHEN ji.status='matched' THEN ji.submitted_at END)::text AS last_matched
+          FROM jotform_imports ji
+          WHERE ji.driver_name IS NOT NULL
+          GROUP BY ji.driver_name
+        ),
+        load_stats AS (
+          SELECT
+            l.driver_name,
+            COUNT(*)::int AS loads_in_system,
+            MAX(l.delivered_on)::text AS last_load_in_system
+          FROM loads l
+          WHERE l.driver_name IS NOT NULL
+          GROUP BY l.driver_name
+        )
+        SELECT
+          ds.driver_name,
+          ds.pending_count,
+          ds.matched_count,
+          ds.last_pending,
+          ds.last_matched,
+          ls.last_load_in_system,
+          COALESCE(ls.loads_in_system, 0) AS loads_in_system
+        FROM driver_stats ds
+        LEFT JOIN load_stats ls ON ls.driver_name = ds.driver_name
+        WHERE ds.pending_count > 0
+        ORDER BY ds.pending_count DESC, ds.driver_name ASC
+      `);
+
+      const driverRows =
+        (rows as unknown as { rows?: Array<Record<string, unknown>> }).rows ??
+        (rows as unknown as Array<Record<string, unknown>>);
+
+      const drivers = driverRows.map((r) => {
+        const lastPending = r.last_pending
+          ? new Date(r.last_pending as string)
+          : null;
+        const lastLoad = r.last_load_in_system
+          ? new Date(r.last_load_in_system as string)
+          : null;
+        const daysGap =
+          lastPending && lastLoad
+            ? Math.round(
+                (lastPending.getTime() - lastLoad.getTime()) /
+                  (1000 * 60 * 60 * 24),
+              )
+            : null;
+
+        // Suggestion logic
+        let suggestion: string;
+        let category: string;
+        if (Number(r.loads_in_system) === 0) {
+          suggestion =
+            "Driver has NO loads in v2 — likely third-source dispatch. Manual create or investigate.";
+          category = "third_source";
+        } else if (daysGap != null && daysGap > 30) {
+          suggestion = `Driver has loads in v2 but last one was ${daysGap} days ago — possibly moved to manual dispatch since then.`;
+          category = "moved_to_manual";
+        } else if (Number(r.matched_count) > 0) {
+          suggestion =
+            "Driver matches sometimes — likely typo or carrier-export lag. Try rematch first.";
+          category = "intermittent";
+        } else {
+          suggestion =
+            "Driver has loads in v2 but never matches — investigate name normalization.";
+          category = "name_mismatch";
+        }
+
+        return {
+          driverName: r.driver_name,
+          pendingCount: Number(r.pending_count),
+          matchedCount: Number(r.matched_count),
+          loadsInSystem: Number(r.loads_in_system),
+          lastPending: r.last_pending,
+          lastMatched: r.last_matched,
+          lastLoadInSystem: r.last_load_in_system,
+          daysGapPendingVsLastLoad: daysGap,
+          suggestion,
+          category,
+        };
+      });
+
+      // Aggregate by category
+      const byCategory: Record<
+        string,
+        { drivers: number; pendingTotal: number }
+      > = {};
+      for (const d of drivers) {
+        if (!byCategory[d.category]) {
+          byCategory[d.category] = { drivers: 0, pendingTotal: 0 };
+        }
+        byCategory[d.category].drivers += 1;
+        byCategory[d.category].pendingTotal += d.pendingCount;
+      }
+
+      return {
+        success: true,
+        data: {
+          totalPending: drivers.reduce((s, d) => s + d.pendingCount, 0),
+          totalDrivers: drivers.length,
+          byCategory,
+          drivers,
         },
       };
     },

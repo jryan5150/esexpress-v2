@@ -149,6 +149,44 @@ export async function preflightManualCreate(
         matchReason: "BOL found in raw_data (matcher missed it)",
       });
     }
+
+    // 2.5. PCS-known check — if PCS sees this ticket on a load we don't
+    //      have, surface that. Operator's pushback 2026-04-25: "the
+    //      matcher should check the system that historical loads would
+    //      already be in." PCS is that system.
+    const pcsRows = await db.execute<{
+      pcs_load_id: string;
+      shipper_ticket: string | null;
+      load_reference: string | null;
+      pcs_status: string | null;
+      shipper_company: string | null;
+      consignee_company: string | null;
+      pickup_date: string | null;
+      division: string | null;
+    }>(sql`
+      SELECT pcs_load_id, shipper_ticket, load_reference, pcs_status,
+             shipper_company, consignee_company, pickup_date, division
+      FROM pcs_known_tickets
+      WHERE shipper_ticket = ${bol}
+      LIMIT 5
+    `);
+    for (const row of (
+      pcsRows as unknown as { rows?: Array<Record<string, unknown>> }
+    ).rows ?? (pcsRows as unknown as Array<Record<string, unknown>>)) {
+      // No v2 loadId — this is a PCS-side load. Use negative id as
+      // a sentinel so frontend can tell "v2 candidate" from
+      // "PCS-only candidate." Operator action differs.
+      candidates.push({
+        loadId: -1 * Number(row.pcs_load_id),
+        loadNo: `PCS#${row.pcs_load_id}`,
+        source: `pcs:${row.division ?? "?"}`,
+        bolNo: (row.load_reference as string) ?? null,
+        ticketNo: (row.shipper_ticket as string) ?? null,
+        driverName: null,
+        deliveredOn: (row.pickup_date as string) ?? null,
+        matchReason: `PCS knows this ticket (${row.shipper_company ?? "?"} → ${row.consignee_company ?? "?"}, status=${row.pcs_status ?? "?"})`,
+      });
+    }
   }
 
   // 3. Same driver + same date (±1 day) + no ticket match — possible typo
