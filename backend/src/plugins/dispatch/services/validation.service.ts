@@ -61,7 +61,10 @@ export async function getValidationSummary(
         EXISTS (
           SELECT 1 FROM jotform_imports ji
           WHERE ji.matched_load_id = ${loads.id}
-            AND (ji.photo_url IS NOT NULL OR ji.image_urls IS NOT NULL)
+            AND (
+              ji.photo_url IS NOT NULL
+              OR (ji.image_urls IS NOT NULL AND jsonb_array_length(ji.image_urls) > 0)
+            )
         )
         OR EXISTS (
           SELECT 1 FROM photos p
@@ -202,15 +205,41 @@ export async function getAssignmentsByTier(
 
   // Tier 1/2: pending assignments where the load is NOT historical_complete.
   // Historical loads live in the archive, not in the validation queue.
-  // (Earlier attempt at an EXISTS-based invariant on Tier 1 was reverted
-  // 2026-04-24 PM — the SQL 500'd in production. The summary count is
-  // still photo-gated correctly; row-level filtering happens post-fetch
-  // below using the merged photoUrls array.)
+  //
+  // HARD INVARIANT: a Tier 1 row MUST have at least one verifiable photo
+  // (either a JotForm submission for this load, or a photos-table row
+  // with a non-null source_url). This mirrors the EXISTS guard in
+  // getValidationSummary so meta.total matches the visible row count.
+  // Tier 2 doesn't get the guard — it's the explicit "needs your eyes"
+  // bucket where missing photos are an acceptable signal.
+  //
+  // Earlier attempt 500'd because of an unrelated ANY-array bind crash
+  // in the same query path; that's now using drizzle inArray().
+  const photoExistsTier1 =
+    tier === 1
+      ? sql`(
+            EXISTS (
+              SELECT 1 FROM jotform_imports ji
+              WHERE ji.matched_load_id = ${loads.id}
+                AND (
+                  ji.photo_url IS NOT NULL
+                  OR (ji.image_urls IS NOT NULL AND jsonb_array_length(ji.image_urls) > 0)
+                )
+            )
+            OR EXISTS (
+              SELECT 1 FROM photos p
+              WHERE p.load_id = ${loads.id}
+                AND p.source_url IS NOT NULL
+            )
+          )`
+      : undefined;
+
   const whereClause = and(
     eq(assignments.status, "pending"),
     eq(assignments.autoMapTier, tier),
     eq(loads.historicalComplete, false),
     ...dateConds,
+    ...(photoExistsTier1 ? [photoExistsTier1] : []),
   );
 
   const [countResult] = await db
