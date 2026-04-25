@@ -15,6 +15,7 @@ import { useToast } from "../components/Toast";
 import { WellPicker } from "../components/WellPicker";
 import { Pagination } from "../components/Pagination";
 import { BOLDisplay } from "../components/BOLDisplay";
+import { AwaitingPhotoMatchSection } from "../components/AwaitingPhotoMatchSection";
 
 /**
  * Inline editable field for the Validation page (O-09 / P2-4).
@@ -600,12 +601,12 @@ export function Validation() {
           </div>
         )}
 
-        {/* Meld bridge (2026-04-24): two cross-surface count chips that
-            gate dispatch. These are SIGNALS pointing at adjacent workflows,
-            visually distinct from the tier cards below (which are the
-            actual queue summary). Section header + slimmer chip layout
-            establishes "these are routes, not tiers."
-            Phase 2 (Monday) inlines these as expandable sections. */}
+        {/* Meld Phase 2 (2026-04-24 PM): Awaiting Photo Match is now an
+            INLINE expandable section — click expands to reveal pending
+            JotForm submissions with embedded ManualMatchPanel, so the
+            operator can match-without-leaving-page. Missing Ticket
+            remains a count chip → BOL Center (no inline edit flow
+            needed; that surface is read-only awareness). */}
         {(unmatchedPhotos > 0 || missingTickets > 0) && (
           <div className="space-y-2">
             <div className="flex items-center gap-3 px-2">
@@ -614,41 +615,8 @@ export function Validation() {
               </span>
               <div className="flex-1 h-px bg-outline-variant/30" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Link
-                to="/bol?tab=reconciliation"
-                className="bg-surface-container-lowest rounded-[10px] px-4 py-3 border border-outline-variant/30 hover:border-primary-container/50 hover:bg-surface-container-high transition-all cursor-pointer flex items-center gap-3"
-              >
-                <span
-                  className="material-symbols-outlined text-primary-container text-xl"
-                  aria-hidden
-                >
-                  add_a_photo
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span
-                      className="font-data text-lg font-bold text-primary-container tabular-nums leading-none"
-                      title="JotForm submissions where the driver uploaded a photo but auto-match could not link it to a load yet"
-                    >
-                      {bolStatsQuery.isLoading ? "..." : unmatchedPhotos}
-                    </span>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-on-surface">
-                      Awaiting Photo Match
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-on-surface-variant mt-0.5">
-                    Photo arrived &mdash; needs to be linked to a load &rarr;
-                    BOL Center
-                  </p>
-                </div>
-                <span
-                  className="material-symbols-outlined text-on-surface-variant text-base shrink-0"
-                  aria-hidden
-                >
-                  arrow_forward
-                </span>
-              </Link>
+            <AwaitingPhotoMatchSection />
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-3">
               <Link
                 to="/bol?tab=missing"
                 className={`bg-surface-container-lowest rounded-[10px] px-4 py-3 border border-outline-variant/30 ${missingTickets > 0 ? "hover:border-error/50" : "hover:border-tertiary/50"} hover:bg-surface-container-high transition-all cursor-pointer flex items-center gap-3`}
