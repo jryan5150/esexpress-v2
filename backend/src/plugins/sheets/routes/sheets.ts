@@ -380,7 +380,7 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
           required: ["id"],
           properties: {
             id: { type: "string", minLength: 10 },
-            sample: { type: "integer", minimum: 1, maximum: 50 },
+            sample: { type: "integer", minimum: 1, maximum: 2000 },
           },
         },
       },
