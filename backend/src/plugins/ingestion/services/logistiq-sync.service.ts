@@ -329,10 +329,19 @@ export function parseDate(value: string | null): Date | null {
 // ---------------------------------------------------------------------------
 
 /**
- * Generate a synthetic source_id for a Logistiq record.
+ * Generate a STABLE synthetic source_id for a Logistiq record.
  *
- * Format: `lgx-{load_no}-{order_no}`
- * Fallback: `lgx-unknown-{sha1(JSON.stringify(raw)).slice(0,12)}`
+ * Cascade — first non-null wins:
+ *   1. `lgx-{load_no}-{order_no}` (canonical, when both present)
+ *   2. `lgx-bol-{bol_no}` (stable when load/order missing — Logistiq AU* IDs)
+ *   3. `lgx-ticket-{ticket_no}` (paper ticket fallback)
+ *   4. `lgx-ref-{reference_no}` (Logistiq reference fallback)
+ *   5. `lgx-unknown-{sha1(JSON.stringify(raw)).slice(0,12)}` (last resort)
+ *
+ * The hash fallback is UNSTABLE — raw record content shifts between syncs
+ * (timestamps, status updates), creating new sourceIds for the same physical
+ * load. Discovered 2026-04-25 via /diag/week-classify: 207 size-3 clusters
+ * of intra-Logistiq triplicates with stable bolNo but shifting hash.
  */
 export function generateSourceId(raw: Record<string, unknown>): string {
   const loadNo = resolveField(
@@ -358,7 +367,28 @@ export function generateSourceId(raw: Record<string, unknown>): string {
     return `lgx-${loadNo}-${orderNo}`;
   }
 
-  // Fallback: hash the entire raw record
+  const bolNo = resolveField(raw, "bol_no", "bolNo", "BOL", "BOL #", "BOL No");
+  if (bolNo != null) return `lgx-bol-${bolNo}`;
+
+  const ticketNo = resolveField(
+    raw,
+    "ticket_no",
+    "ticketNo",
+    "Ticket #",
+    "Ticket No",
+  );
+  if (ticketNo != null) return `lgx-ticket-${ticketNo}`;
+
+  const referenceNo = resolveField(
+    raw,
+    "reference_no",
+    "referenceNo",
+    "Reference #",
+    "Reference No",
+  );
+  if (referenceNo != null) return `lgx-ref-${referenceNo}`;
+
+  // Last-resort fallback: hash the entire raw record (UNSTABLE — see above)
   const hash = createHash("sha1")
     .update(JSON.stringify(raw))
     .digest("hex")
