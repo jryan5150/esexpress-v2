@@ -197,12 +197,17 @@ const photosRoutes: FastifyPluginAsync = async (fastify) => {
           required: ["url"],
           properties: {
             url: { type: "string", format: "uri" },
+            // ?w=200 returns a max-200px-on-longest-side resized + rotated
+            // variant. Used by thumbnail callers (Validate row, Workbench
+            // row) so a 50-row page doesn't fan out 50 × 1.4MB requests.
+            // Full-size (no w param) is the default for drawer + lightbox.
+            w: { type: "integer", minimum: 32, maximum: 2000 },
           },
         },
       },
     },
     async (request, reply) => {
-      const { url } = request.query as { url: string };
+      const { url, w } = request.query as { url: string; w?: number };
 
       // Fast synchronous check before async validation
       if (!isAllowedPhotoHost(url)) {
@@ -216,7 +221,7 @@ const photosRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       try {
-        const { buffer, contentType } = await proxyPhoto(url);
+        const { buffer, contentType } = await proxyPhoto(url, { maxSize: w });
 
         // Force inline display with a filename based on the upstream URL, so
         // window.open()/new-tab navigation renders the image instead of

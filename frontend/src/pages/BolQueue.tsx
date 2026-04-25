@@ -545,7 +545,7 @@ export function BolQueue() {
                   const isExpanded = expandedId === sub.id;
                   const hasPhoto = sub.photoUrls && sub.photoUrls.length > 0;
                   const firstPhoto = hasPhoto
-                    ? resolveUrl(sub.photoUrls[0])
+                    ? resolvePhotoUrl(sub.photoUrls[0], { thumb: true })
                     : null;
                   const matched = sub.status === "matched";
                   const hasCritical = item.discrepancies.some(

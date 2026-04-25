@@ -882,7 +882,9 @@ export function Validation() {
                           {a.photoUrls && a.photoUrls.length > 0 ? (
                             <>
                               <img
-                                src={resolveUrl(a.photoUrls[0])}
+                                src={resolvePhotoUrl(a.photoUrls[0], {
+                                  thumb: true,
+                                })}
                                 alt="Ticket"
                                 className="w-full h-full object-cover"
                                 onError={(e) => {

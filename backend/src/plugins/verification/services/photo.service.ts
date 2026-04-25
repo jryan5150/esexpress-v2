@@ -312,11 +312,21 @@ export function photoCacheStats(): {
  * pay a re-encode cost. Returns the original buffer + content type on any
  * sharp failure (we'd rather serve a raw image than 500 the request).
  */
-async function autoRotateIfNeeded(
+/**
+ * Apply EXIF auto-rotation AND optional resize. The combined operation
+ * is what makes thumbnail rendering safe — without resize, 50 row
+ * thumbnails × 1.4MB each saturated the backend (rolled back 2026-04-24
+ * PM). With a maxSize of e.g. 200px, each thumbnail is ~30KB and
+ * sharp's pipelineable rotate-then-resize stays under 100ms cold.
+ *
+ * Skips processing when image is already canonically oriented AND no
+ * resize is requested. Returns original buffer on any sharp failure.
+ */
+async function autoRotateAndResizeIfNeeded(
   buffer: Buffer,
   contentType: string,
+  maxSize?: number,
 ): Promise<{ buffer: Buffer; contentType: string; rotated: boolean }> {
-  // Only process raster image types we know sharp can decode.
   const isRaster =
     contentType.startsWith("image/") &&
     !contentType.includes("svg") &&
@@ -328,21 +338,42 @@ async function autoRotateIfNeeded(
       meta.orientation !== undefined &&
       meta.orientation !== 1 &&
       meta.orientation !== 0;
-    if (!needsRotate) return { buffer, contentType, rotated: false };
-    const normalized = await sharp(buffer)
-      .rotate() // auto-rotate via EXIF orientation
-      .jpeg({ quality: 90, mozjpeg: true })
+    const needsResize =
+      typeof maxSize === "number" &&
+      maxSize > 0 &&
+      ((meta.width ?? 0) > maxSize || (meta.height ?? 0) > maxSize);
+    if (!needsRotate && !needsResize) {
+      return { buffer, contentType, rotated: false };
+    }
+    let pipeline = sharp(buffer).rotate();
+    if (needsResize && maxSize) {
+      pipeline = pipeline.resize({
+        width: maxSize,
+        height: maxSize,
+        fit: "inside",
+        withoutEnlargement: true,
+      });
+    }
+    const normalized = await pipeline
+      .jpeg({ quality: 85, mozjpeg: true })
       .withMetadata({ orientation: 1 })
       .toBuffer();
     return {
       buffer: normalized,
       contentType: "image/jpeg",
-      rotated: true,
+      rotated: needsRotate,
     };
   } catch {
-    // Never break the proxy on a sharp failure — serve the original bytes.
     return { buffer, contentType, rotated: false };
   }
+}
+
+// Back-compat alias for callers that don't need resize.
+async function autoRotateIfNeeded(
+  buffer: Buffer,
+  contentType: string,
+): Promise<{ buffer: Buffer; contentType: string; rotated: boolean }> {
+  return autoRotateAndResizeIfNeeded(buffer, contentType);
 }
 
 /**
@@ -356,13 +387,16 @@ async function autoRotateIfNeeded(
  */
 export async function proxyPhoto(
   url: string,
+  opts: { maxSize?: number } = {},
 ): Promise<{ buffer: Buffer; contentType: string }> {
   const parsed = await validateUrlSafe(url);
 
-  // Cache key uses the validated URL string so reflected query-param order
-  // doesn't shard cache entries. apiKey is injected later (server-side) and
-  // is constant per host — no need to factor it into the cache key.
-  const cacheKey = parsed.href;
+  // Cache key includes maxSize so resized variants don't collide with
+  // full-size cached entries. apiKey is injected server-side and is
+  // constant per host — no need to factor it into the cache key.
+  const cacheKey = opts.maxSize
+    ? `${parsed.href}|w=${opts.maxSize}`
+    : parsed.href;
   const cached = cachePhotoGet(cacheKey);
   if (cached) return { buffer: cached.buffer, contentType: cached.contentType };
 
@@ -380,9 +414,13 @@ export async function proxyPhoto(
       throw new Error(`Photo exceeds maximum size (${MAX_PHOTO_SIZE} bytes)`);
     }
     const contentType = contentTypeFromUrlExtension(gcs.object) ?? "image/jpeg";
-    const rotated = await autoRotateIfNeeded(buffer, contentType);
-    cachePhotoSet(cacheKey, rotated.buffer, rotated.contentType);
-    return { buffer: rotated.buffer, contentType: rotated.contentType };
+    const processed = await autoRotateAndResizeIfNeeded(
+      buffer,
+      contentType,
+      opts.maxSize,
+    );
+    cachePhotoSet(cacheKey, processed.buffer, processed.contentType);
+    return { buffer: processed.buffer, contentType: processed.contentType };
   }
 
   // JotForm Enterprise gates uploads behind auth. We inject the API key as
@@ -459,11 +497,15 @@ export async function proxyPhoto(
     }
 
     const rawBuffer = Buffer.from(arrayBuffer);
-    const rotated = await autoRotateIfNeeded(rawBuffer, contentType);
-    cachePhotoSet(cacheKey, rotated.buffer, rotated.contentType);
+    const processed = await autoRotateAndResizeIfNeeded(
+      rawBuffer,
+      contentType,
+      opts.maxSize,
+    );
+    cachePhotoSet(cacheKey, processed.buffer, processed.contentType);
     return {
-      buffer: rotated.buffer,
-      contentType: rotated.contentType,
+      buffer: processed.buffer,
+      contentType: processed.contentType,
     };
   } finally {
     clearTimeout(timeout);

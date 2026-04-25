@@ -25,23 +25,42 @@
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
 /**
- * 2026-04-24 EVENING ROLLBACK: routing absolute URLs through the proxy
- * was saturating the backend on Validate page (50 row thumbnails × 1.4MB
- * × 1.8s sharp re-encode) — the page was hanging visibly because of the
- * thumbnail thundering herd, not because of any logic bug. Reverted to
- * direct CDN fetch for absolute URLs. EXIF rotation only applies for
- * URLs explicitly routed through the proxy by the caller (e.g. PCS push
- * normalize step). Browser-side EXIF-aware display follows for
- * upright-stored photos; sideways photos remain a follow-up where we
- * either resize-on-proxy or pre-rotate at ingest time.
+ * Photo URL resolver with optional thumbnail-resize parameter.
+ *
+ * History:
+ *  - 2026-04-24 PM: routing every absolute URL through the proxy (full
+ *    1.4MB EXIF-rotated re-encodes) saturated the backend. Rolled back.
+ *  - 2026-04-24 evening: proxy now supports `?w=200` to resize+rotate
+ *    in one sharp pipeline (~30KB output, sub-100ms cold). Thumbnails
+ *    pass thumb=true; full-size renders (drawer, lightbox) pass
+ *    thumb=false (default), which goes direct to CDN to avoid full-size
+ *    re-encode cost on every drawer open.
+ *
+ * Routing:
+ *  - Relative `/api/v1/...` URL → prefix with API base.
+ *  - Absolute URL + thumb=true → wrap with proxy + ?w=200 for
+ *    EXIF auto-rotation + resize.
+ *  - Absolute URL + thumb=false (default) → return as-is (browser
+ *    fetches direct from CDN, may show sideways but loads instantly).
+ *
+ * Saturday TODO: figure out the right strategy for full-size in-app
+ * rotation without saturating (pre-rotate at ingest? lazy proxy with
+ * hard concurrency cap?).
  */
-export function resolvePhotoUrl(url: string | null | undefined): string {
+export function resolvePhotoUrl(
+  url: string | null | undefined,
+  opts: { thumb?: boolean } = {},
+): string {
   if (!url) return "";
 
   // Relative path — backend route, prefix with API base.
   if (url.startsWith("/")) return `${API_BASE}${url}`;
 
-  // Absolute URL — return as-is (browser fetches directly from CDN).
-  // Bypasses the backend proxy; faster + scalable for thumbnail rendering.
+  // Absolute URL + thumb=true → resize+rotate via proxy.
+  if (opts.thumb && (url.startsWith("http://") || url.startsWith("https://"))) {
+    return `${API_BASE}/api/v1/verification/photos/proxy?url=${encodeURIComponent(url)}&w=200`;
+  }
+
+  // Absolute URL → direct CDN fetch (full size, may be sideways).
   return url;
 }

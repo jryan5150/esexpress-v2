@@ -266,7 +266,7 @@ export const WorkbenchRow = memo(function WorkbenchRow({
               className="relative cursor-zoom-in inline-block"
             >
               <img
-                src={resolvePhotoUrl(row.photoThumbUrl)}
+                src={resolvePhotoUrl(row.photoThumbUrl, { thumb: true })}
                 alt={`Load ${row.loadNo} ticket photo`}
                 className="h-8 w-8 object-cover rounded ring-1 ring-outline-variant hover:ring-primary"
               />
