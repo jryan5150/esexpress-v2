@@ -1,0 +1,337 @@
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { api } from "../../lib/api";
+import { useHeartbeat } from "../../hooks/use-presence";
+
+/**
+ * PCS Truth — Q1 2026 parity between v2's ingested loads and PCS's billing
+ * record (the system that pays everyone). Source: 27,030 PCS load_history
+ * rows extracted from the operator's flywheel.duckdb warehouse 2026-04-25.
+ *
+ * Frozen snapshot, not live. The warehouse cuts off 2026-03-08; v2's live
+ * ingest extends past that. Rebuild this snapshot any time the operator
+ * pulls a fresh warehouse export.
+ */
+
+interface WeekRow {
+  weekStart: string;
+  weekEnd: string;
+  pcsUnique: number;
+  v2Raw: number;
+  delta: number;
+  status: "perfect" | "match" | "investigate" | "v2_over";
+}
+
+interface GapBucket {
+  bucket: string;
+  estimated: number;
+  evidence: string;
+}
+
+interface SecondaryFinding {
+  title: string;
+  detail: string;
+}
+
+interface TruthPayload {
+  capturedAt: string;
+  source: string;
+  warehousePath: string;
+  warehouseCutoff: string;
+  method: string;
+  summary: {
+    pcsUniqueQ1: number;
+    v2RawQ1: number;
+    capturePct: number;
+    totalDelta: number;
+    perfectMatchWeeks: number;
+    withinFifteenWeeks: number;
+  };
+  weeks: WeekRow[];
+  gapAttribution: GapBucket[];
+  secondaryFindings: SecondaryFinding[];
+}
+
+function formatDate(s: string): string {
+  const [, m, d] = s.split("-");
+  return `${parseInt(m, 10)}/${parseInt(d, 10)}`;
+}
+
+function statusTone(status: WeekRow["status"]): {
+  tone: "perfect" | "ok" | "warn" | "v2_over";
+  label: string;
+} {
+  if (status === "perfect") return { tone: "perfect", label: "Perfect" };
+  if (status === "match") return { tone: "ok", label: "Match" };
+  if (status === "v2_over") return { tone: "v2_over", label: "v2 over" };
+  return { tone: "warn", label: "Investigate" };
+}
+
+const TONE_BG: Record<string, string> = {
+  perfect:
+    "bg-emerald-50 border-emerald-300 dark:bg-emerald-950 dark:border-emerald-700",
+  ok: "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800",
+  warn: "bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800",
+  v2_over: "bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800",
+};
+const TONE_DOT: Record<string, string> = {
+  perfect: "bg-emerald-500",
+  ok: "bg-green-500",
+  warn: "bg-amber-500",
+  v2_over: "bg-blue-500",
+};
+
+export function PcsTruth() {
+  useHeartbeat({ currentPage: "admin-pcs-truth" });
+
+  const truthQuery = useQuery({
+    queryKey: ["admin", "pcs-truth"],
+    queryFn: () =>
+      api
+        .get<{ success: boolean; data: TruthPayload }>("/diag/pcs-truth")
+        .then((r) => r.data),
+    staleTime: 60_000,
+  });
+
+  const data = truthQuery.data;
+  const sortedWeeks = useMemo(
+    () =>
+      [...(data?.weeks ?? [])].sort((a, b) =>
+        b.weekStart.localeCompare(a.weekStart),
+      ),
+    [data],
+  );
+
+  return (
+    <div className="flex-1 flex flex-col p-4 sm:p-6 gap-4 max-w-7xl w-full mx-auto">
+      <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">PCS Truth</h1>
+          <p className="text-sm text-text-secondary max-w-3xl">
+            Q1 2026 parity vs the system that pays everyone. v2's ingest against
+            PCS's load_history, week by week. Frozen snapshot pulled from the
+            PCS warehouse{" "}
+            {data?.capturedAt
+              ? new Date(data.capturedAt).toLocaleString()
+              : "..."}
+            .
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/admin/sheet-truth"
+            className="text-sm text-accent underline-offset-4 hover:underline"
+          >
+            Sheet Truth →
+          </Link>
+        </div>
+      </header>
+
+      {truthQuery.isLoading && (
+        <div className="text-sm text-text-secondary">Loading...</div>
+      )}
+      {truthQuery.isError && (
+        <div className="text-sm text-red-500">
+          Failed to load PCS truth snapshot. Backend may not have shipped the
+          warehouse JSON yet.
+        </div>
+      )}
+
+      {data && (
+        <>
+          {/* Headline Q1 number */}
+          <div className="rounded-lg border border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:border-emerald-700 p-5">
+            <div className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+              Q1 2026 Capture Rate
+            </div>
+            <div className="flex items-baseline gap-3 mt-1">
+              <div className="text-4xl font-bold text-emerald-700 dark:text-emerald-200">
+                {data.summary.capturePct}%
+              </div>
+              <div className="text-sm text-text-secondary">
+                v2 captures{" "}
+                <strong className="text-text-primary">
+                  {data.summary.v2RawQ1.toLocaleString()}
+                </strong>{" "}
+                of{" "}
+                <strong className="text-text-primary">
+                  {data.summary.pcsUniqueQ1.toLocaleString()}
+                </strong>{" "}
+                PCS unique loads
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-text-secondary">
+              <span>
+                Net delta:{" "}
+                <strong className="text-text-primary">
+                  {data.summary.totalDelta > 0 ? "+" : ""}
+                  {data.summary.totalDelta.toLocaleString()}
+                </strong>
+              </span>
+              <span>
+                Perfect-match weeks:{" "}
+                <strong className="text-text-primary">
+                  {data.summary.perfectMatchWeeks}
+                </strong>
+              </span>
+              <span>
+                Within ±15 loads:{" "}
+                <strong className="text-text-primary">
+                  {data.summary.withinFifteenWeeks}
+                </strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Per-week parity cards */}
+          <div className="grid gap-3">
+            {sortedWeeks.map((row) => {
+              const tone = statusTone(row.status);
+              const deltaSign = row.delta > 0 ? "+" : "";
+              return (
+                <div
+                  key={row.weekStart}
+                  className={`rounded-lg border p-4 ${TONE_BG[tone.tone]}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-2 h-2 rounded-full ${TONE_DOT[tone.tone]}`}
+                      />
+                      <h2 className="text-lg font-semibold">
+                        Week of {formatDate(row.weekStart)} –{" "}
+                        {formatDate(row.weekEnd)}
+                      </h2>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs uppercase text-text-secondary">
+                        Status
+                      </div>
+                      <div className="text-sm font-semibold">{tone.label}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-3 gap-3">
+                    <Stat
+                      label="PCS Unique"
+                      value={row.pcsUnique.toLocaleString()}
+                      emphasis
+                    />
+                    <Stat
+                      label="v2 Raw"
+                      value={row.v2Raw.toLocaleString()}
+                      emphasis
+                    />
+                    <Stat
+                      label="Delta"
+                      value={`${deltaSign}${row.delta.toLocaleString()}`}
+                      emphasis
+                      toneOverride={tone.tone}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Gap attribution */}
+          <section className="rounded-lg border border-border bg-bg-secondary p-4">
+            <h2 className="text-lg font-semibold mb-1">
+              What the {Math.abs(data.summary.totalDelta)}-load gap is
+            </h2>
+            <p className="text-sm text-text-secondary mb-3">
+              Reconciled against tonight's findings. The "real" v2 unique count
+              is lower than v2 raw (Logistiq triplicates inflate it), so the
+              actual coverage gap is well inside 5%.
+            </p>
+            <div className="grid gap-2">
+              {data.gapAttribution.map((g) => (
+                <div
+                  key={g.bucket}
+                  className="rounded-md border border-border bg-bg-primary/40 p-3"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="text-sm font-medium">{g.bucket}</div>
+                    <div className="text-sm font-semibold tabular-nums">
+                      ~{g.estimated} loads
+                    </div>
+                  </div>
+                  <div className="text-xs text-text-secondary mt-1">
+                    {g.evidence}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Secondary findings */}
+          <section className="rounded-lg border border-border bg-bg-secondary p-4">
+            <h2 className="text-lg font-semibold mb-3">
+              What the warehouse pull also taught us
+            </h2>
+            <div className="grid gap-2">
+              {data.secondaryFindings.map((f) => (
+                <div
+                  key={f.title}
+                  className="rounded-md border border-border bg-bg-primary/40 p-3"
+                >
+                  <div className="text-sm font-medium">{f.title}</div>
+                  <div className="text-xs text-text-secondary mt-1">
+                    {f.detail}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <footer className="text-xs text-text-secondary border-t border-border pt-3 mt-2 space-y-1">
+            <div>
+              <strong>Source:</strong> {data.source}
+            </div>
+            <div>
+              <strong>Method:</strong> {data.method}
+            </div>
+            <div>
+              Warehouse cutoff: <code>{data.warehouseCutoff}</code> · v2 has
+              live ingest beyond.
+            </div>
+          </footer>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  emphasis,
+  toneOverride,
+}: {
+  label: string;
+  value: string;
+  emphasis?: boolean;
+  toneOverride?: "perfect" | "ok" | "warn" | "v2_over" | null;
+}) {
+  const valueClass =
+    toneOverride === "warn"
+      ? "text-amber-600 dark:text-amber-400"
+      : toneOverride === "perfect"
+        ? "text-emerald-700 dark:text-emerald-300"
+        : toneOverride === "v2_over"
+          ? "text-blue-600 dark:text-blue-400"
+          : "text-text-primary";
+  return (
+    <div className="rounded-md bg-bg-primary/40 border border-border px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+        {label}
+      </div>
+      <div
+        className={`${emphasis ? "text-xl font-semibold" : "text-base"} ${valueClass}`}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}

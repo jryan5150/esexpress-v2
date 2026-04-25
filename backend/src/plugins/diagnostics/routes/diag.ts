@@ -672,6 +672,41 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /pcs-truth — frozen Q1 2026 PCS-vs-v2 parity snapshot from the
+  // operator's flywheel.duckdb warehouse pull (2026-04-25). The PCS GetLoads
+  // REST endpoint only returns active operational loads (~44), so the
+  // historical truth check has to come from the warehouse extract. JSON
+  // ships in backend/resources/ via the Dockerfile copy.
+  fastify.get("/pcs-truth", async (_request, reply) => {
+    const { readFile } = await import("node:fs/promises");
+    const { join, dirname } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+
+    const hereDir = dirname(fileURLToPath(import.meta.url));
+    const candidates = [
+      join(process.cwd(), "resources/pcs-q1-2026-truth.json"),
+      join(hereDir, "../../../../resources/pcs-q1-2026-truth.json"),
+      join(hereDir, "../../../../../backend/resources/pcs-q1-2026-truth.json"),
+    ];
+
+    for (const path of candidates) {
+      try {
+        const raw = await readFile(path, "utf8");
+        return { success: true, data: JSON.parse(raw) };
+      } catch {
+        // try next path
+      }
+    }
+
+    return reply.status(404).send({
+      success: false,
+      error: {
+        code: "NOT_FOUND",
+        message: "pcs-q1-2026-truth.json not found in any candidate path",
+      },
+    });
+  });
+
   // GET /pcs-2026-coverage — pull a date-windowed PCS load list and
   // measure cross-source identifier coverage. Tests every stable identifier
   // chain (PCS shipperTicket → v2 ticket_no/bol_no, PCS loadReference →

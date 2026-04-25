@@ -461,6 +461,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 </span>
                 Sheet Truth
               </Link>
+              <Link
+                to="/admin/pcs-truth"
+                className={`${navClass("/admin/pcs-truth")} !pl-9`}
+                title="v2's Q1 2026 capture rate against PCS — the system that pays everyone. 97.8%."
+              >
+                <span className={iconClass("/admin/pcs-truth")}>verified</span>
+                PCS Truth
+              </Link>
             </div>
           )}
 

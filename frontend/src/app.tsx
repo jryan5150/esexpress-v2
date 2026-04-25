@@ -81,6 +81,11 @@ const SheetTruth = lazy(() =>
     default: m.SheetTruth,
   })),
 );
+const PcsTruth = lazy(() =>
+  import("./pages/admin/PcsTruth").then((m) => ({
+    default: m.PcsTruth,
+  })),
+);
 const LoadReport = lazy(() =>
   import("./pages/LoadReport").then((m) => ({ default: m.LoadReport })),
 );
@@ -153,6 +158,7 @@ export function App() {
                     element={<Discrepancies />}
                   />
                   <Route path="admin/sheet-truth" element={<SheetTruth />} />
+                  <Route path="admin/pcs-truth" element={<PcsTruth />} />
                   <Route path="load-report" element={<LoadReport />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="whats-new" element={<WhatsNew />} />
