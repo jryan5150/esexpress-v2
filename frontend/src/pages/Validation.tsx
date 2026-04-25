@@ -16,6 +16,7 @@ import { WellPicker } from "../components/WellPicker";
 import { Pagination } from "../components/Pagination";
 import { BOLDisplay } from "../components/BOLDisplay";
 import { AwaitingPhotoMatchSection } from "../components/AwaitingPhotoMatchSection";
+import { PhotoLightbox } from "../components/PhotoLightbox";
 
 /**
  * Inline editable field for the Validation page (O-09 / P2-4).
@@ -256,6 +257,7 @@ export function Validation() {
   const [rejectReason, setRejectReason] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [lightboxUrls, setLightboxUrls] = useState<string[] | null>(null);
 
   // Date filter — Jessica's Apr 15 explicit ask: "I can put in those
   // dates in" / "do a day's worth at a time". Default to TODAY so she
@@ -615,7 +617,7 @@ export function Validation() {
               </span>
               <div className="flex-1 h-px bg-outline-variant/30" />
             </div>
-            <AwaitingPhotoMatchSection />
+            <AwaitingPhotoMatchSection defaultOpen />
             <div className="grid grid-cols-1 md:grid-cols-1 gap-3">
               <Link
                 to="/bol?tab=missing"
@@ -848,7 +850,16 @@ export function Validation() {
                             bouncing to BOL Queue. */}
                         <div className="relative w-12 h-12 rounded-md overflow-hidden bg-surface-container-highest shrink-0 border border-outline-variant/30">
                           {a.photoUrls && a.photoUrls.length > 0 ? (
-                            <>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLightboxUrls(a.photoUrls ?? null);
+                              }}
+                              className="block w-full h-full cursor-zoom-in hover:opacity-80 transition-opacity"
+                              title="Click to enlarge"
+                              aria-label="Enlarge ticket photo"
+                            >
                               <img
                                 src={resolvePhotoUrl(a.photoUrls[0], {
                                   thumb: true,
@@ -864,12 +875,12 @@ export function Validation() {
                                 <span
                                   className="absolute -top-1 -right-1 bg-primary text-on-primary text-[9px] font-bold leading-none rounded-full px-1 py-0.5 tabular-nums ring-1 ring-surface shadow"
                                   aria-label={`${a.photoUrls.length} photos`}
-                                  title={`${a.photoUrls.length} photos — open in Load Center drawer to cycle`}
+                                  title={`${a.photoUrls.length} photos — click to enlarge + cycle`}
                                 >
                                   {a.photoUrls.length}
                                 </span>
                               )}
-                            </>
+                            </button>
                           ) : (
                             <div
                               className="w-full h-full flex items-center justify-center"
@@ -1156,6 +1167,11 @@ export function Validation() {
           );
         })}
       </div>
+      <PhotoLightbox
+        urls={lightboxUrls ?? undefined}
+        alt="Ticket photo"
+        onClose={() => setLightboxUrls(null)}
+      />
     </div>
   );
 }
