@@ -672,6 +672,106 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /week-counts — count loads delivered in a given Sun-Sat week, in
+  // America/Chicago. Used to compare v2 against the Load Count Sheet's
+  // "Total Built" cell. Defaults to last completed week if from/to omitted.
+  fastify.get("/week-counts", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: {
+          code: "SERVICE_UNAVAILABLE",
+          message: "Database not connected",
+        },
+      });
+
+    const { loads, assignments } = await import("../../../db/schema.js");
+    const { sql } = await import("drizzle-orm");
+
+    const q = (request.query ?? {}) as { from?: string; to?: string };
+    const fromDate = q.from ?? "2026-04-12"; // Sun
+    const toDate = q.to ?? "2026-04-18"; // Sat
+
+    const fromTs = `${fromDate}T00:00:00-05:00`;
+    const toTs = `${toDate}T23:59:59.999-05:00`;
+
+    // Count strategy A: loads delivered in the window (truth-source aligned).
+    // Strategy B: loads with assignment status past 'assigned' that were
+    // touched in the window (work-completed aligned).
+    const [byDeliveredOn, byBuiltStatus, byBuiltStatusAndDelivered] =
+      await Promise.all([
+        db
+          .select({
+            source: loads.source,
+            total: sql<number>`cast(count(*) as int)`,
+          })
+          .from(loads)
+          .where(
+            sql`${loads.deliveredOn} >= ${fromTs}::timestamptz AND ${loads.deliveredOn} <= ${toTs}::timestamptz`,
+          )
+          .groupBy(loads.source),
+
+        db
+          .select({
+            assignmentStatus: assignments.status,
+            total: sql<number>`cast(count(*) as int)`,
+          })
+          .from(assignments)
+          .innerJoin(loads, sql`${loads.id} = ${assignments.loadId}`)
+          .where(
+            sql`${loads.deliveredOn} >= ${fromTs}::timestamptz
+                AND ${loads.deliveredOn} <= ${toTs}::timestamptz
+                AND ${assignments.status} NOT IN ('pending','cancelled','failed')`,
+          )
+          .groupBy(assignments.status),
+
+        db
+          .select({
+            total: sql<number>`cast(count(distinct ${loads.id}) as int)`,
+          })
+          .from(loads)
+          .innerJoin(assignments, sql`${loads.id} = ${assignments.loadId}`)
+          .where(
+            sql`${loads.deliveredOn} >= ${fromTs}::timestamptz
+                AND ${loads.deliveredOn} <= ${toTs}::timestamptz
+                AND ${assignments.status} NOT IN ('pending','cancelled','failed')`,
+          ),
+      ]);
+
+    const sumLoads = byDeliveredOn.reduce((a, r) => a + r.total, 0);
+    const sumAssignments = byBuiltStatus.reduce((a, r) => a + r.total, 0);
+    const distinctLoadsBuilt = byBuiltStatusAndDelivered[0]?.total ?? 0;
+
+    return {
+      success: true,
+      data: {
+        window: { from: fromDate, to: toDate, tz: "America/Chicago" },
+        loadsByDeliveredOn: {
+          total: sumLoads,
+          bySource: byDeliveredOn.reduce<Record<string, number>>((acc, r) => {
+            acc[r.source] = r.total;
+            return acc;
+          }, {}),
+        },
+        assignmentsBuilt: {
+          total: sumAssignments,
+          distinctLoads: distinctLoadsBuilt,
+          byStatus: byBuiltStatus.reduce<Record<string, number>>((acc, r) => {
+            acc[r.assignmentStatus] = r.total;
+            return acc;
+          }, {}),
+        },
+        compareTo: {
+          sheetTotalBuilt: 1509,
+          sheetExpected: 1426,
+          sheetDiscrepancy: 83,
+          note: "Compare loadsByDeliveredOn.total OR assignmentsBuilt.distinctLoads to sheetTotalBuilt for parity check.",
+        },
+      },
+    };
+  });
+
   // GET /missed-loads — pull-style report Jessica runs when she suspects
   // something was missed in sync. Surfaces:
   //   • duplicate BOLs (same BOL appearing in 2+ source rows)
