@@ -177,13 +177,19 @@ let totalImports = 0;
  * Build a GoogleAuth instance from environment variables.
  *
  * Supports two config shapes:
- *   1. GOOGLE_SERVICE_ACCOUNT_KEY — full JSON key (takes precedence)
+ *   1. GOOGLE_SERVICE_ACCOUNT_KEY (or GCS_SERVICE_ACCOUNT_KEY fallback) — full JSON key
  *   2. GOOGLE_SERVICE_ACCOUNT_EMAIL + GOOGLE_PRIVATE_KEY — individual fields
+ *
+ * The GCS_SERVICE_ACCOUNT_KEY fallback lets the photo-pipeline service account
+ * (esexpress-photos@pbx-59376783) double as the Sheets reader without duplicating
+ * the secret on Railway. Same project, same identity, additional Sheets+Drive scopes.
  */
 export async function getGoogleAuth(): Promise<Auth.GoogleAuth> {
   lastAuthAttempt = new Date();
 
-  const fullKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  const fullKey =
+    process.env.GOOGLE_SERVICE_ACCOUNT_KEY ??
+    process.env.GCS_SERVICE_ACCOUNT_KEY;
   if (fullKey) {
     let credentials: Record<string, unknown>;
     try {
@@ -928,6 +934,95 @@ export async function listAccessibleSheets(
 }
 
 // ---------------------------------------------------------------------------
+// Sheet inspection — recon a single spreadsheet (tabs + headers + sample rows)
+// ---------------------------------------------------------------------------
+
+export interface SheetTabInspection {
+  name: string;
+  index: number;
+  rowCount: number;
+  columnCount: number;
+  headers: string[];
+  sampleRows: string[][];
+  error?: string;
+}
+
+export interface SheetInspection {
+  spreadsheetId: string;
+  title: string;
+  url: string;
+  tabs: SheetTabInspection[];
+}
+
+/**
+ * Walk a single spreadsheet and return tab list + headers + first N sample rows
+ * for each tab. Used for reconnaissance — figure out what columns a sheet has
+ * before designing a column map for import.
+ *
+ * Reads up to (sampleRows + 1) rows per tab to limit Sheets API quota usage.
+ */
+export async function inspectSheet(
+  spreadsheetId: string,
+  sampleRows: number = 10,
+): Promise<SheetInspection> {
+  const auth = await getGoogleAuth();
+  const sheetsApi = google.sheets({ version: "v4", auth });
+
+  const meta = await sheetsApi.spreadsheets.get({
+    spreadsheetId,
+    fields: "properties.title,spreadsheetUrl,sheets.properties",
+  });
+
+  const title = meta.data.properties?.title ?? "(untitled)";
+  const url =
+    meta.data.spreadsheetUrl ??
+    `https://docs.google.com/spreadsheets/d/${spreadsheetId}`;
+  const sheetList = meta.data.sheets ?? [];
+
+  const tabs: SheetTabInspection[] = [];
+  for (const s of sheetList) {
+    const props = s.properties ?? {};
+    const tabName = props.title ?? "(unnamed)";
+    const rowCount = props.gridProperties?.rowCount ?? 0;
+    const columnCount = props.gridProperties?.columnCount ?? 0;
+    const index = props.index ?? tabs.length;
+
+    try {
+      const range = `'${tabName.replace(/'/g, "''")}'!A1:ZZ${sampleRows + 1}`;
+      const data = await sheetsApi.spreadsheets.values.get({
+        spreadsheetId,
+        range,
+      });
+      const rows = (data.data.values ?? []) as string[][];
+      const headers = rows[0] ?? [];
+      const sample = rows.slice(1, sampleRows + 1);
+      tabs.push({
+        name: tabName,
+        index,
+        rowCount,
+        columnCount,
+        headers,
+        sampleRows: sample,
+      });
+    } catch (err) {
+      tabs.push({
+        name: tabName,
+        index,
+        rowCount,
+        columnCount,
+        headers: [],
+        sampleRows: [],
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  tabs.sort((a, b) => a.index - b.index);
+
+  return { spreadsheetId, title, url, tabs };
+}
+
+// ---------------------------------------------------------------------------
 // Diagnostics
 // ---------------------------------------------------------------------------
 
@@ -1077,11 +1172,20 @@ export function diagnostics(): {
   stats: Record<string, unknown>;
   checks: Array<{ name: string; ok: boolean; detail?: string | number }>;
 } {
-  const hasFullKey = !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  const hasFullKey =
+    !!process.env.GOOGLE_SERVICE_ACCOUNT_KEY ||
+    !!process.env.GCS_SERVICE_ACCOUNT_KEY;
   const hasEmailKey =
     !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
     !!process.env.GOOGLE_PRIVATE_KEY;
   const authConfigured = hasFullKey || hasEmailKey;
+  const keySource = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
+    ? "google-key"
+    : process.env.GCS_SERVICE_ACCOUNT_KEY
+      ? "gcs-key-fallback"
+      : hasEmailKey
+        ? "email+private-key"
+        : "missing";
 
   return {
     name: "google-sheets",
@@ -1099,11 +1203,7 @@ export function diagnostics(): {
       {
         name: "auth-configured",
         ok: authConfigured,
-        detail: hasFullKey
-          ? "json-key"
-          : hasEmailKey
-            ? "email+private-key"
-            : "missing",
+        detail: keySource,
       },
       {
         name: "last-auth-attempt",

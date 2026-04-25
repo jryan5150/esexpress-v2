@@ -11,6 +11,7 @@ import {
   getGoogleAuth,
   diagnostics,
   validateFromSheet,
+  inspectSheet,
   type ExportFilters,
   type ColumnMap,
   type PreviewResult,
@@ -356,6 +357,40 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
         data: sheets,
         meta: { total: sheets.length },
       };
+    },
+  );
+
+  // ─── GET /inspect — recon a single spreadsheet (tabs + headers + sample) ─
+  fastify.get(
+    "/inspect",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+      schema: {
+        querystring: {
+          type: "object",
+          required: ["id"],
+          properties: {
+            id: { type: "string", minLength: 10 },
+            sample: { type: "integer", minimum: 1, maximum: 50 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id, sample } = request.query as {
+        id: string;
+        sample?: number;
+      };
+      try {
+        const result = await inspectSheet(id, sample ?? 10);
+        return { success: true, data: result };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        return reply.status(502).send({
+          success: false,
+          error: { code: "SHEET_INSPECT_FAILED", message },
+        });
+      }
     },
   );
 
