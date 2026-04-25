@@ -6,6 +6,11 @@ import {
   createLoad,
   duplicateLoad,
 } from "../services/loads.service.js";
+import {
+  createManualLoadFromJotform,
+  preflightManualCreate,
+  ManualCreateBlockedError,
+} from "../services/manual-load.service.js";
 import { AppError } from "../../../lib/errors.js";
 
 const loadRoutes: FastifyPluginAsync = async (fastify) => {
@@ -345,6 +350,125 @@ const loadRoutes: FastifyPluginAsync = async (fastify) => {
         data: results,
         meta: { created: results.length },
       });
+    },
+  );
+
+  // ─── GET /manual-from-jotform/preflight — confidence check before create
+  //    Returns ok=true (safe to create) OR candidates that may be the
+  //    same load. Operator must review + explicitly pass force=true on
+  //    the create call after seeing this.
+  fastify.get<{ Params: { importId: string } }>(
+    "/manual-from-jotform/preflight/:importId",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        params: {
+          type: "object",
+          required: ["importId"],
+          properties: { importId: { type: "string", pattern: "^[0-9]+$" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply
+          .status(503)
+          .send({ success: false, error: { code: "SERVICE_UNAVAILABLE" } });
+      try {
+        const result = await preflightManualCreate(
+          db,
+          parseInt(request.params.importId, 10),
+        );
+        return { success: true, data: result };
+      } catch (err) {
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: "PREFLIGHT_FAILED",
+            message: err instanceof Error ? err.message : String(err),
+          },
+        });
+      }
+    },
+  );
+
+  // ─── POST /manual-from-jotform — create a source='manual' load from a
+  //    pending JotForm submission. Refuses to create if preflight finds
+  //    candidates UNLESS force=true is set. Discovered 2026-04-25:
+  //    Fernando Herrera et al run loads under a third dispatch source.
+  fastify.post(
+    "/manual-from-jotform",
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        body: {
+          type: "object",
+          required: ["importId"],
+          properties: {
+            importId: { type: "integer" },
+            loadNo: { type: "string", maxLength: 64 },
+            weightTons: { type: "string" },
+            deliveredOn: { type: "string", format: "date" },
+            destinationName: { type: "string", maxLength: 200 },
+            carrierName: { type: "string", maxLength: 200 },
+            force: { type: "boolean", default: false },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: { code: "SERVICE_UNAVAILABLE", message: "DB unavailable" },
+        });
+      }
+      const body = request.body as {
+        importId: number;
+        loadNo?: string;
+        weightTons?: string;
+        deliveredOn?: string;
+        destinationName?: string;
+        carrierName?: string;
+        force?: boolean;
+      };
+      const user = (
+        request as unknown as { user: { id: number; name: string } }
+      ).user;
+      try {
+        const result = await createManualLoadFromJotform(db, {
+          importId: body.importId,
+          loadNo: body.loadNo,
+          weightTons: body.weightTons,
+          deliveredOn: body.deliveredOn,
+          destinationName: body.destinationName,
+          carrierName: body.carrierName,
+          actorId: user.id,
+          actorName: user.name,
+          force: body.force,
+        });
+        return reply.status(201).send({ success: true, data: result });
+      } catch (err) {
+        if (err instanceof ManualCreateBlockedError) {
+          return reply.status(409).send({
+            success: false,
+            error: {
+              code: "POSSIBLE_MATCH_EXISTS",
+              message: err.message,
+            },
+            data: { candidates: err.candidates },
+          });
+        }
+        return reply.status(400).send({
+          success: false,
+          error: {
+            code: "MANUAL_CREATE_FAILED",
+            message: err instanceof Error ? err.message : String(err),
+          },
+        });
+      }
     },
   );
 };

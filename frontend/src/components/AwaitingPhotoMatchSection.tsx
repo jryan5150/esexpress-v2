@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useBolQueue } from "../hooks/use-bol";
 import { ManualMatchPanel } from "./ManualMatchPanel";
 import { resolvePhotoUrl } from "../lib/photo-url";
+import { api } from "../lib/api";
+import { useToast } from "./Toast";
 
 /**
  * Inline panel for matching pending JotForm photos to loads, embedded
@@ -26,12 +28,94 @@ export function AwaitingPhotoMatchSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [creatingId, setCreatingId] = useState<number | null>(null);
+  // Per-import preflight result + visible candidates list. When non-null,
+  // the row shows the preflight UI ("review these N possible matches
+  // before creating manual"). Operator either picks one (via the existing
+  // ManualMatchPanel) or clicks "Create anyway — none of these match".
+  const [preflightById, setPreflightById] = useState<
+    Record<number, PreflightResult | null>
+  >({});
+  const { toast } = useToast();
 
   const queueQuery = useBolQueue({
     status: "unmatched",
     limit: 6,
     page: 1,
   });
+
+  type Candidate = {
+    loadId: number;
+    loadNo: string;
+    source: string;
+    bolNo: string | null;
+    ticketNo: string | null;
+    driverName: string | null;
+    deliveredOn: string | null;
+    matchReason: string;
+  };
+  type PreflightResult = { ok: boolean; candidates: Candidate[] };
+
+  /**
+   * Confidence pre-flight before creating a manual load. We refuse to
+   * silently mint a duplicate over an existing load — the operator
+   * must explicitly review any candidate matches we find. This is the
+   * trust contract: if a load could already exist (case-insensitive
+   * BOL, raw_data nested fields, or same driver±1 day), surface it.
+   */
+  const runPreflight = async (importId: number) => {
+    setCreatingId(importId);
+    try {
+      const resp = (await api.get(
+        `/dispatch/loads/manual-from-jotform/preflight/${importId}`,
+      )) as { data?: PreflightResult };
+      const result = resp.data ?? { ok: true, candidates: [] };
+      setPreflightById((prev) => ({ ...prev, [importId]: result }));
+      // If preflight is clean, immediately proceed to create.
+      if (result.ok) {
+        await createManualLoad(importId, false);
+      }
+    } catch (err) {
+      toast(
+        `Preflight failed: ${err instanceof Error ? err.message : String(err)}`,
+        "error",
+      );
+    } finally {
+      setCreatingId(null);
+    }
+  };
+
+  const createManualLoad = async (importId: number, force: boolean) => {
+    setCreatingId(importId);
+    try {
+      const resp = (await api.post("/dispatch/loads/manual-from-jotform", {
+        importId,
+        force,
+      })) as {
+        success?: boolean;
+        data?: { loadId?: number; loadNo?: string; bolNo?: string | null };
+      };
+      const data = resp.data;
+      toast(
+        `Created manual load ${data?.loadNo ?? data?.loadId ?? ""} from BOL ${data?.bolNo ?? "?"}`,
+        "success",
+      );
+      // Clear preflight + refetch the queue so the row disappears.
+      setPreflightById((prev) => {
+        const next = { ...prev };
+        delete next[importId];
+        return next;
+      });
+      queueQuery.refetch();
+    } catch (err) {
+      toast(
+        `Create failed: ${err instanceof Error ? err.message : String(err)}`,
+        "error",
+      );
+    } finally {
+      setCreatingId(null);
+    }
+  };
 
   // The /jotform/queue endpoint returns shape {data, meta}.
   type QueueItem = {
@@ -139,15 +223,28 @@ export function AwaitingPhotoMatchSection({
                             {sub.driverName || "no driver"}
                             {sub.truckNo ? ` · Truck ${sub.truckNo}` : ""}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedId(isExpanded ? null : sub.id)
-                            }
-                            className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-primary hover:underline cursor-pointer"
-                          >
-                            {isExpanded ? "Cancel" : "Match to load"}
-                          </button>
+                          <div className="mt-2 flex flex-wrap gap-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedId(isExpanded ? null : sub.id)
+                              }
+                              className="text-[11px] font-semibold uppercase tracking-wider text-primary hover:underline cursor-pointer"
+                            >
+                              {isExpanded ? "Cancel" : "Match to load"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => runPreflight(sub.id)}
+                              disabled={creatingId === sub.id}
+                              className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant hover:text-on-surface hover:underline cursor-pointer disabled:opacity-50"
+                              title="Create a source='manual' load from this submission. Pre-flight check runs first to verify no existing load matches."
+                            >
+                              {creatingId === sub.id
+                                ? "Checking…"
+                                : "No match → Create manual"}
+                            </button>
+                          </div>
                         </div>
                       </div>
                       {isExpanded && (
@@ -159,6 +256,86 @@ export function AwaitingPhotoMatchSection({
                               queueQuery.refetch();
                             }}
                           />
+                        </div>
+                      )}
+                      {preflightById[sub.id] && !preflightById[sub.id]?.ok && (
+                        <div className="px-3 pb-3 pt-1 bg-amber-50 dark:bg-amber-900/10 border-t border-amber-200/60">
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200 mb-2">
+                            ⚠ Pre-flight found{" "}
+                            {preflightById[sub.id]?.candidates.length} possible
+                            match(es) — review before creating
+                          </div>
+                          <div className="space-y-1.5 mb-3">
+                            {preflightById[sub.id]?.candidates.map((c) => (
+                              <div
+                                key={c.loadId}
+                                className="bg-surface-container-lowest border border-outline-variant/40 rounded-md px-2 py-1.5 text-xs"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold tabular-nums">
+                                    #{c.loadNo}
+                                  </span>
+                                  <span className="text-[10px] uppercase text-outline">
+                                    {c.source}
+                                  </span>
+                                  <span className="ml-auto text-[10px] text-amber-800 dark:text-amber-300">
+                                    {c.matchReason}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-on-surface-variant mt-0.5">
+                                  {c.driverName ?? "no driver"}
+                                  {" · "}BOL {c.bolNo ?? "—"}
+                                  {" · "}ticket {c.ticketNo ?? "—"}
+                                  {" · "}
+                                  {c.deliveredOn
+                                    ? new Date(
+                                        c.deliveredOn,
+                                      ).toLocaleDateString()
+                                    : "no date"}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExpandedId(sub.id);
+                                setPreflightById((p) => {
+                                  const n = { ...p };
+                                  delete n[sub.id];
+                                  return n;
+                                });
+                              }}
+                              className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md bg-primary text-on-primary hover:brightness-110 cursor-pointer"
+                            >
+                              Open Match Panel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => createManualLoad(sub.id, true)}
+                              disabled={creatingId === sub.id}
+                              className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md bg-amber-700 text-white hover:bg-amber-800 cursor-pointer disabled:opacity-50"
+                              title="Force-create a manual load even though candidates exist. Use only after reviewing each candidate."
+                            >
+                              {creatingId === sub.id
+                                ? "Creating…"
+                                : "Create anyway — none of these match"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPreflightById((p) => {
+                                  const n = { ...p };
+                                  delete n[sub.id];
+                                  return n;
+                                })
+                              }
+                              className="text-[11px] font-semibold uppercase tracking-wider px-3 py-1.5 rounded-md text-on-surface-variant hover:text-on-surface cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
