@@ -7,6 +7,10 @@ import {
   normalizeFromLogistiq,
   detectCrossSourceConflicts,
 } from "../services/logistiq-sync.service.js";
+import {
+  syncLogistiqTickets,
+  countLogistiqTicketCandidates,
+} from "../services/logistiq-tickets-sync.service.js";
 import { loads, ingestionConflicts } from "../../../db/schema.js";
 
 // ---------------------------------------------------------------------------
@@ -739,6 +743,65 @@ const logistiqRoutes: FastifyPluginAsync = async (fastify) => {
           lastSyncAt: row.last_sync_at ?? null,
         },
       };
+    },
+  );
+  // ─── POST /sync/logistiq-tickets — pull sand ticket photos ────────
+  // Discovered 2026-04-24 PM: Logistiq's internal /v2/order/{id}/tickets
+  // endpoint exposes ticket photo URLs. Carrier export doesn't. This
+  // endpoint runs the bulk fetch + writes photos table + flips
+  // assignment.photoStatus='attached'. Default limit 200; can pass
+  // ?limit=N to expand.
+  fastify.post(
+    "/sync/logistiq-tickets",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+      schema: {
+        body: {
+          type: "object",
+          properties: {
+            limit: { type: "integer", minimum: 1, maximum: 5000, default: 200 },
+            concurrency: {
+              type: "integer",
+              minimum: 1,
+              maximum: 16,
+              default: 4,
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+      const { limit = 200, concurrency = 4 } = (request.body ?? {}) as {
+        limit?: number;
+        concurrency?: number;
+      };
+      const result = await syncLogistiqTickets(db, { limit, concurrency });
+      return { success: true, data: result };
+    },
+  );
+
+  // ─── GET /sync/logistiq-tickets/status — count of remaining work ──
+  fastify.get(
+    "/sync/logistiq-tickets/status",
+    { preHandler: [fastify.authenticate] },
+    async (_request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply
+          .status(503)
+          .send({ success: false, error: { code: "SERVICE_UNAVAILABLE" } });
+      const counts = await countLogistiqTicketCandidates(db);
+      return { success: true, data: counts };
     },
   );
 };

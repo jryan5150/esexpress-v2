@@ -64,6 +64,12 @@ const ALLOWED_PHOTO_HOSTS = new Set([
   "hairpintrucking.jotform.com",
   "www.jotform.com",
   "storage.googleapis.com",
+  // Logistiq sand ticket photos (S3 bucket). Discovered 2026-04-24 PM —
+  // tickets endpoint returns S3 URLs hosted at automatize-production
+  // bucket. Public S3 URLs, no auth needed for fetch.
+  "s3-us-east-2.amazonaws.com",
+  "automatize-production.s3-us-east-2.amazonaws.com",
+  "automatize-production.s3.us-east-2.amazonaws.com",
 ]);
 
 /**

@@ -53,6 +53,29 @@ export interface LogistiqOrder {
   [key: string]: unknown;
 }
 
+/**
+ * Ticket photo attached to a Logistiq order. Returned by
+ * GET /v2/order/{order_id}/tickets. The `url` is an S3 link to the
+ * uploaded sand ticket image; `qrData` is the ticket text encoded in
+ * the QR code (origin, ticket#, weight, etc).
+ */
+export interface LogistiqTicket {
+  id: number;
+  url: string;
+  ticketNumber: string | null;
+  ticketType: number;
+  uploadedAt: string;
+  ocrGross?: number;
+  orcTare?: number;
+  orcNet?: number;
+  ocrTicketNumber?: string | null;
+  ocrArrival?: string | null;
+  ocrDeparture?: string | null;
+  rotation?: number;
+  qrData?: string | null;
+  isDeleted: number;
+}
+
 interface TokenState {
   token: string;
   expiresAt: number;
@@ -400,6 +423,58 @@ export class LogistiqClient {
     }
 
     return allOrders;
+  }
+
+  // -------------------------------------------------------------------------
+  // Order Tickets — fetches sand ticket photos for an order
+  // -------------------------------------------------------------------------
+
+  /**
+   * Get the ticket attachments (photos) for a Logistiq order. Returns
+   * the array of tickets with S3 URLs + ticket metadata.
+   *
+   * The carrier-export API doesn't expose ticket photos — this internal
+   * dispatcher endpoint does. Discovered 2026-04-24 PM after operator
+   * pushed back on "Logistiq doesn't carry photos" — they DO, we just
+   * never built the integration.
+   *
+   * Auth: requires session JWT (NOT API key). Caller must have called
+   * authenticate() with email/password creds.
+   */
+  async getOrderTickets(orderId: number): Promise<LogistiqTicket[]> {
+    const token = await this.getToken();
+    const url = `${this.baseUrl}/v2/order/${orderId}/tickets`;
+
+    let res: Response;
+    try {
+      res = await fetchViaBreaker(url, {
+        method: "GET",
+        headers: { Authorization: `jwt ${token}` },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      this.requestCount++;
+    } catch (err: unknown) {
+      this.lastError = `Order tickets fetch failed: ${(err as Error).message}`;
+      if (err instanceof Error && err.name === "TimeoutError") {
+        throw new NetworkError("TIMEOUT", `Logistiq order tickets timed out`);
+      }
+      throw new NetworkError(
+        (err as NodeJS.ErrnoException).code ?? "UNKNOWN",
+        `Logistiq order tickets failed: ${(err as Error).message}`,
+      );
+    }
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      this.lastError = `Order tickets HTTP ${res.status}`;
+      throw new HttpError(res.status, text);
+    }
+
+    const data = (await res.json()) as {
+      status?: number;
+      data?: { tickets?: LogistiqTicket[] };
+    };
+    return data.data?.tickets ?? [];
   }
 
   // -------------------------------------------------------------------------

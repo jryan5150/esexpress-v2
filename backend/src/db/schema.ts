@@ -397,7 +397,7 @@ export const photos = pgTable(
     loadId: integer("load_id").references(() => loads.id),
     assignmentId: integer("assignment_id").references(() => assignments.id),
     source: text("source", {
-      enum: ["propx", "jotform", "bol", "manual"],
+      enum: ["propx", "jotform", "bol", "manual", "logistiq"],
     }).notNull(),
     sourceUrl: text("source_url"),
     type: text("type", {
