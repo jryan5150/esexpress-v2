@@ -14,7 +14,7 @@
  * integration.
  */
 
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Database } from "../../../db/client.js";
 import { assignments, loads, photos } from "../../../db/schema.js";
 import { LogistiqClient } from "./logistiq.service.js";
@@ -174,23 +174,25 @@ export async function syncLogistiqTickets(
 
     if (flippedLoadIds.length > 0) {
       try {
+        // Use drizzle inArray() — raw `= ANY(${array})` crashes
+        // postgres.js with prepare:false (this is the THIRD time the
+        // same gotcha has bitten us today; needs a lint rule).
         const updated = await db
           .update(assignments)
           .set({ photoStatus: "attached" })
           .where(
             and(
-              sql`${assignments.loadId} = ANY(${flippedLoadIds})`,
+              inArray(assignments.loadId, flippedLoadIds),
               isNull(assignments.photoStatus),
             ),
           )
           .returning({ id: assignments.id });
-        // Also flip rows currently set to 'pending' or 'missing'.
         const updatedNonNull = await db
           .update(assignments)
           .set({ photoStatus: "attached" })
           .where(
             and(
-              sql`${assignments.loadId} = ANY(${flippedLoadIds})`,
+              inArray(assignments.loadId, flippedLoadIds),
               sql`${assignments.photoStatus} IN ('pending','missing')`,
             ),
           )
