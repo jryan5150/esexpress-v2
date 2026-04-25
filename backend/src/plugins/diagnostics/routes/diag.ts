@@ -772,6 +772,190 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /week-classify — for every load delivered in the window, walk back
+  // through every signal we have (PropX status, PCS bridge, assignment state,
+  // duplicate cluster, attribution) and bucket the load into one cause class.
+  // Mutually-exclusive buckets, sum equals total ingested. The "truly missed"
+  // bucket is the demo-actionable residual.
+  fastify.get("/week-classify", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: {
+          code: "SERVICE_UNAVAILABLE",
+          message: "Database not connected",
+        },
+      });
+
+    const { loads, assignments, pcsKnownTickets } =
+      await import("../../../db/schema.js");
+    const { sql, eq, and, inArray } = await import("drizzle-orm");
+
+    const q = (request.query ?? {}) as { from?: string; to?: string };
+    const fromDate = q.from ?? "2026-04-12";
+    const toDate = q.to ?? "2026-04-18";
+    const fromTs = `${fromDate}T00:00:00-05:00`;
+    const toTs = `${toDate}T23:59:59.999-05:00`;
+
+    // Pull every load in the window (full row, we need raw_data for status check)
+    const rows = await db
+      .select({
+        id: loads.id,
+        source: loads.source,
+        loadNo: loads.loadNo,
+        bolNo: loads.bolNo,
+        ticketNo: loads.ticketNo,
+        driverName: loads.driverName,
+        destinationName: loads.destinationName,
+        weightTons: loads.weightTons,
+        deliveredOn: loads.deliveredOn,
+        rawData: loads.rawData,
+      })
+      .from(loads)
+      .where(
+        sql`${loads.deliveredOn} >= ${fromTs}::timestamptz AND ${loads.deliveredOn} <= ${toTs}::timestamptz`,
+      );
+
+    const total = rows.length;
+    const ids = rows.map((r) => r.id);
+
+    // Pull assignment status for all loads in window
+    const asgRows = ids.length
+      ? await db
+          .select({
+            loadId: assignments.loadId,
+            status: assignments.status,
+          })
+          .from(assignments)
+          .where(inArray(assignments.loadId, ids))
+      : [];
+    const asgByLoad = new Map<number, string[]>();
+    for (const a of asgRows) {
+      const arr = asgByLoad.get(a.loadId) ?? [];
+      arr.push(a.status);
+      asgByLoad.set(a.loadId, arr);
+    }
+
+    // Pull PCS known tickets — match by bolNo or ticketNo
+    const pcsRows = await db
+      .select({
+        shipperTicket: pcsKnownTickets.shipperTicket,
+      })
+      .from(pcsKnownTickets);
+    const pcsTickets = new Set(
+      pcsRows.map((r) => r.shipperTicket?.trim().toLowerCase()).filter(Boolean),
+    );
+
+    // Build duplicate-cluster signature: lowercased driver + delivered_on date + rounded weight
+    const sigCount = new Map<string, number>();
+    const sigFor = (r: (typeof rows)[number]): string | null => {
+      const d = (r.driverName ?? "").trim().toLowerCase();
+      const day = r.deliveredOn ? r.deliveredOn.toISOString().slice(0, 10) : "";
+      const w = r.weightTons ? Math.round(Number(r.weightTons) * 2) / 2 : 0;
+      if (!d || !day) return null;
+      return `${d}|${day}|${w}`;
+    };
+    for (const r of rows) {
+      const s = sigFor(r);
+      if (s) sigCount.set(s, (sigCount.get(s) ?? 0) + 1);
+    }
+
+    // Bucketize hierarchically: first-match wins
+    const buckets = {
+      cancelled_in_source: { count: 0, sample: [] as number[] },
+      built_in_pcs: { count: 0, sample: [] as number[] },
+      built_in_v2_workflow: { count: 0, sample: [] as number[] },
+      likely_duplicate_ingest: { count: 0, sample: [] as number[] },
+      unattributed_orphan: { count: 0, sample: [] as number[] },
+      truly_missed: { count: 0, sample: [] as number[] },
+    };
+
+    for (const r of rows) {
+      const status = (
+        (r.rawData as Record<string, unknown> | null)?.status ??
+        (r.rawData as Record<string, unknown> | null)?.load_status ??
+        ""
+      )
+        .toString()
+        .toLowerCase();
+
+      if (
+        status === "cancelled" ||
+        status === "canceled" ||
+        status === "transfered" ||
+        status === "transferred"
+      ) {
+        if (buckets.cancelled_in_source.sample.length < 5)
+          buckets.cancelled_in_source.sample.push(r.id);
+        buckets.cancelled_in_source.count++;
+        continue;
+      }
+
+      const ticketKey = (r.bolNo ?? r.ticketNo ?? "").trim().toLowerCase();
+      if (ticketKey && pcsTickets.has(ticketKey)) {
+        if (buckets.built_in_pcs.sample.length < 5)
+          buckets.built_in_pcs.sample.push(r.id);
+        buckets.built_in_pcs.count++;
+        continue;
+      }
+
+      const asgs = asgByLoad.get(r.id) ?? [];
+      const advanced = asgs.some(
+        (s) => s !== "pending" && s !== "cancelled" && s !== "failed",
+      );
+      if (advanced) {
+        if (buckets.built_in_v2_workflow.sample.length < 5)
+          buckets.built_in_v2_workflow.sample.push(r.id);
+        buckets.built_in_v2_workflow.count++;
+        continue;
+      }
+
+      const sig = sigFor(r);
+      if (sig && (sigCount.get(sig) ?? 0) > 1) {
+        if (buckets.likely_duplicate_ingest.sample.length < 5)
+          buckets.likely_duplicate_ingest.sample.push(r.id);
+        buckets.likely_duplicate_ingest.count++;
+        continue;
+      }
+
+      if (
+        !r.driverName ||
+        r.driverName.trim() === "" ||
+        !r.destinationName ||
+        r.destinationName.trim() === ""
+      ) {
+        if (buckets.unattributed_orphan.sample.length < 5)
+          buckets.unattributed_orphan.sample.push(r.id);
+        buckets.unattributed_orphan.count++;
+        continue;
+      }
+
+      if (buckets.truly_missed.sample.length < 10)
+        buckets.truly_missed.sample.push(r.id);
+      buckets.truly_missed.count++;
+    }
+
+    const sumBuckets = Object.values(buckets).reduce((a, b) => a + b.count, 0);
+
+    return {
+      success: true,
+      data: {
+        window: { from: fromDate, to: toDate, tz: "America/Chicago" },
+        total,
+        bucketSum: sumBuckets,
+        bucketSumMatchesTotal: sumBuckets === total,
+        buckets,
+        compareTo: {
+          sheetTotalBuilt: 1509,
+          v2Ingested: total,
+          gap: total - 1509,
+          note: "Bucket counts hierarchical — first-match wins. truly_missed is the actionable residual to walk through with Jessica.",
+        },
+      },
+    };
+  });
+
   // GET /missed-loads — pull-style report Jessica runs when she suspects
   // something was missed in sync. Surfaces:
   //   • duplicate BOLs (same BOL appearing in 2+ source rows)
