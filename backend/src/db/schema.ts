@@ -423,6 +423,38 @@ export const pcsKnownTickets = pgTable(
   ],
 );
 
+// pcs_load_history — bulk PCS warehouse extract (NOT just active loads).
+// Initial population: operator-supplied flywheel.duckdb extract loaded as
+// CSV (27,030 Q1 2026 rows). Future: PCS Invoice API write path will
+// populate ongoing weeks. Used by /diag/pcs-truth to compute LIVE parity
+// against v2's loads table — the page recomputes every request, so as
+// discrepancies resolve and v2 ingest grows, the capture % ticks up.
+export const pcsLoadHistory = pgTable(
+  "pcs_load_history",
+  {
+    id: serial("id").primaryKey(),
+    pcsLoadNo: text("pcs_load_no").notNull(),
+    pickupDate: timestamp("pickup_date", { withTimezone: true }),
+    customer: text("customer"),
+    origin: text("origin"),
+    destinationCity: text("destination_city"),
+    pcsStatus: text("pcs_status"),
+    weightLbs: integer("weight_lbs"),
+    miles: integer("miles"),
+    sourceSnapshot: text("source_snapshot"), // e.g. 'flywheel-2026-04-25'
+    rawData: jsonb("raw_data"),
+    importedAt: timestamp("imported_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_pcs_load_history_loadno").on(table.pcsLoadNo),
+    index("idx_pcs_load_history_pickup").on(table.pickupDate),
+    index("idx_pcs_load_history_customer").on(table.customer),
+    index("idx_pcs_load_history_dest_city").on(table.destinationCity),
+  ],
+);
+
 export const photos = pgTable(
   "photos",
   {

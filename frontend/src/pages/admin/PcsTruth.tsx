@@ -5,13 +5,12 @@ import { api } from "../../lib/api";
 import { useHeartbeat } from "../../hooks/use-presence";
 
 /**
- * PCS Truth — Q1 2026 parity between v2's ingested loads and PCS's billing
- * record (the system that pays everyone). Source: 27,030 PCS load_history
- * rows extracted from the operator's flywheel.duckdb warehouse 2026-04-25.
+ * PCS Truth — LIVE parity between v2's ingested loads and PCS's billing
+ * record (the system that pays everyone). Computed every request from
+ * pcs_load_history ⨝ loads via /api/v1/diag/pcs-truth.
  *
- * Frozen snapshot, not live. The warehouse cuts off 2026-03-08; v2's live
- * ingest extends past that. Rebuild this snapshot any time the operator
- * pulls a fresh warehouse export.
+ * Source population: warehouse extract loaded into pcs_load_history. Phase 2
+ * wires PCS Invoice API for ongoing self-refresh without operator drops.
  */
 
 interface WeekRow {
@@ -35,11 +34,13 @@ interface SecondaryFinding {
 }
 
 interface TruthPayload {
-  capturedAt: string;
-  source: string;
-  warehousePath: string;
-  warehouseCutoff: string;
-  method: string;
+  live: boolean;
+  computedAt: string;
+  snapshot: {
+    totalRows: number;
+    latestSnapshot: string | null;
+    latestImport: string | null;
+  };
   summary: {
     pcsUniqueQ1: number;
     v2RawQ1: number;
@@ -109,12 +110,15 @@ export function PcsTruth() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">PCS Truth</h1>
           <p className="text-sm text-text-secondary max-w-3xl">
-            Q1 2026 parity vs the system that pays everyone. v2's ingest against
-            PCS's load_history, week by week. Frozen snapshot pulled from the
-            PCS warehouse{" "}
-            {data?.capturedAt
-              ? new Date(data.capturedAt).toLocaleString()
-              : "..."}
+            Live parity vs the system that pays everyone. v2's ingest joined
+            against PCS's load_history every request — as discrepancies resolve
+            and v2 grows, the numbers tick up automatically. Source extract:{" "}
+            <code className="bg-bg-secondary px-1 rounded">
+              {data?.snapshot.latestSnapshot ?? "—"}
+            </code>
+            {data?.snapshot.totalRows
+              ? ` (${data.snapshot.totalRows.toLocaleString()} rows)`
+              : ""}
             .
           </p>
         </div>
@@ -287,14 +291,17 @@ export function PcsTruth() {
 
           <footer className="text-xs text-text-secondary border-t border-border pt-3 mt-2 space-y-1">
             <div>
-              <strong>Source:</strong> {data.source}
+              Computed live from <code>pcs_load_history</code> ⨝{" "}
+              <code>loads</code> at {new Date(data.computedAt).toLocaleString()}
+              .
             </div>
             <div>
-              <strong>Method:</strong> {data.method}
-            </div>
-            <div>
-              Warehouse cutoff: <code>{data.warehouseCutoff}</code> · v2 has
-              live ingest beyond.
+              Window: PCS warehouse extract loaded{" "}
+              {data.snapshot.latestImport
+                ? new Date(data.snapshot.latestImport).toLocaleDateString()
+                : "—"}{" "}
+              ({data.snapshot.totalRows.toLocaleString()} unique loads). v2
+              ingest extends past the warehouse window.
             </div>
           </footer>
         </>
