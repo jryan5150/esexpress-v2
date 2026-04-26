@@ -19,26 +19,45 @@ This document defines the **twelve canonical roles** every load carries, which f
 
 ---
 
-## The twelve roles
+## The data-flow rule (anchor for everything below)
 
-The original framing had six. A schema audit added six more that exist in real data but weren't articulated as discrete roles. The full set:
+```
+Sources (PropX, Logistiq, JotForm, BOL OCR, Manual)
+         ↓
+Sheet (Load Count Sheet column headers = canonical team vocabulary)
+         ↓
+PCS (fields are downstream representations of what's on the sheet)
+```
 
-| #   | Role             | One-line definition                                                  |
-| --- | ---------------- | -------------------------------------------------------------------- |
-| 1   | Customer         | Who pays the bill (PCS billTo)                                       |
-| 2   | Carrier          | Who physically hauls the load (owns the truck)                       |
-| 3   | Shipper          | Where the load picks up (sandplant / loader)                         |
-| 4   | Consignee (Well) | Where the load delivers (the well being fracked)                     |
-| 5   | Builder-company  | Which dispatch-team person owns the workflow (Scout/Steph/Keli)      |
-| 6   | Source / Feed    | Where v2 learned about the load                                      |
-| 7   | Driver           | The human who hauls the load                                         |
-| 8   | Truck / Trailer  | The equipment used                                                   |
-| 9   | Operator         | The oil & gas company that owns/operates the well (Apache, Comstock) |
-| 10  | Job              | PropX's grouping of loads under one work order                       |
-| 11  | Product          | What's being hauled (sand grade — 100 mesh, 40/70)                   |
-| 12  | Pad / Site       | The physical site that may contain multiple wells                    |
+**The sheet is the truth-bridge.** Its column headers are the team's actual mental model — built by Jess, used daily for 4+ years. v2 should mirror those header names verbatim in UI labels, not invent new ones. Where v2 has internal terms that don't appear on the sheet (Operator, Job, Pad), surface them as engineering metadata, not as primary labels.
 
-Each is detailed below with its fields across upstream systems and its current state in v2.
+## The fourteen roles
+
+After auditing v2's schema AND the Load Count Sheet (`docs/2026-04-25-load-count-sheet-analysis.md`), there are 14 discrete roles. The first six were operator-defined; six more came from schema audit; two more (Workflow Status, Job Category) came from the sheet itself.
+
+| #   | Role            | Sheet label / where it lives                                         | One-line definition                                                  |
+| --- | --------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 1   | Customer        | "Bill To" (col B on Current/Previous)                                | Who pays the bill (PCS billTo)                                       |
+| 2   | Carrier         | (NOT on sheet — implicit ES Express; JRT inferred via builder=Keli)  | Who physically hauls the load (owns the truck)                       |
+| 3   | Shipper         | (NOT on sheet — sheet is well-centric)                               | Where the load picks up (sandplant / loader)                         |
+| 4   | Consignee       | "Well Name" (col A — they say WELL not consignee)                    | Where the load delivers (the well being fracked)                     |
+| 5   | Builder         | "Order of Invoicing" matrix at bottom (Scout/Steph/Keli/Crystal)     | Dispatch-team person who owns the workflow                           |
+| 6   | Source / Feed   | (v2-internal — not on sheet)                                         | Where v2 learned about the load                                      |
+| 7   | Driver          | Master Dispatch → "Driver Codes" tab                                 | The human who hauls the load                                         |
+| 8   | Truck / Trailer | Master Dispatch → "Driver Codes" tab (Tractor/Trailer per driver)    | The equipment used                                                   |
+| 9   | Operator        | (NOT on sheet — embedded in well name as prefix)                     | The oil & gas company that owns/operates the well                    |
+| 10  | Job             | (PropX-internal — not on sheet)                                      | PropX's grouping of loads under one work order                       |
+| 11  | Product         | "Sand Tracking" tab (Master Dispatch)                                | What's being hauled (sand grade — 100 mesh, 40/70)                   |
+| 12  | Pad / Site      | (Encoded in well name — "Wells 1/2/3", "1HU/2HU/3HU")                | The physical site that may contain multiple wells                    |
+| 13  | Workflow Status | **Cell BACKGROUND COLOR** — 8-stage paint pipeline + exception state | What stage the load is at in the dispatch→cleared→invoiced pipeline  |
+| 14  | Job Category    | "Other Jobs to be Invoiced (Jenny)" section                          | Non-standard work category (Truck Pusher, Equipment Move, Frac Chem) |
+
+**Two roles I had wrong before this rev:**
+
+- I had Crystal absent — she's the **fourth builder** (~300 loads/week, ~25% of throughput). She's a floater (no fixed customer pairing per the sheet).
+- I had Operator listed as a primary role. The sheet doesn't track operator. v2 has it internally (Apache/Comstock/Chesapeake) but the team's primary view is well-name; operator is engineering metadata.
+
+Each role is detailed below with sheet labels and v2 storage state.
 
 ---
 
@@ -260,7 +279,59 @@ Multiple wells often share one pad. Tonight's work created Falcon Wells 1/2/3 �
 
 ---
 
-## How the twelve compose on a single load
+### 13. Workflow Status — what stage the load is at
+
+**This role lives entirely in cell background color** on the Load Count Sheet, not in any cell value. The Color Key tab is a literal paint legend with 8 swatches + workflow phase names. To read state from this sheet via API we have to call `sheets.spreadsheets.get({ includeGridData: true })` and map RGB to legend.
+
+The 8 canonical pipeline states (in order):
+
+| #   | State                                           | What it means in their workflow                   |
+| --- | ----------------------------------------------- | ------------------------------------------------- |
+| 1   | Missing Tickets                                 | Load record exists, no ticket number captured yet |
+| 2   | Missing Driver                                  | Ticket captured, no driver attribution yet        |
+| 3   | Loads being built                               | In-progress in the dispatch-desk build workflow   |
+| 4   | Loads Completed                                 | Built; ready for clearing                         |
+| 5   | Loads Being cleared                             | In the PCS clearing workflow                      |
+| 6   | Loads cleared                                   | Cleared in PCS, awaiting invoice                  |
+| 7   | Export (Transfers) Completed                    | Transfers exported to billing system              |
+| 8   | Invoiced                                        | Final state — invoice issued                      |
+| —   | Need Well Rate Info / New Loading Facility Rate | EXCEPTION — blocks pipeline; needs human          |
+
+**v2 storage today:**
+
+- `loads.status` text + `assignments.status` enum — has its OWN vocabulary ("active", "pending", "built", "reconciled", "billed") that doesn't match the sheet's
+- We do NOT yet read sheet color
+- Phase 2.5: ingest sheet color + map to a canonical `workflow_status` enum that mirrors the 8 stages exactly. Then v2 can say "this load is at 'Loads Being cleared' per your sheet" instead of "v2 status: built."
+
+The renaming-to-match-sheet payoff: when Jess looks at the workbench, the status pills should read in HER vocabulary, not v2's.
+
+---
+
+### 14. Job Category — non-standard work
+
+The Load Count Sheet has a separate section labeled **"Other Jobs to be Invoiced (Jenny)"** below the well grid. This is for work that doesn't fit the well-centric grid because it has no well destination.
+
+Categories observed (across historical tabs + Current):
+
+| Category        | Example bill-tos                        |
+| --------------- | --------------------------------------- |
+| Truck Pushers   | Liberty, Logistix                       |
+| Equipment Moves | (varies)                                |
+| Flatbed Loads   | (varies)                                |
+| Frac Chem       | (varies)                                |
+| Finoric         | Finoric (the customer is also the type) |
+| JoeTex          | JoeTex                                  |
+| Panel Truss     | (varies)                                |
+
+**v2 storage today:** NONE. v2 has `loads.source = 'manual'` for hand-entered loads and a JotForm-pending bucket for unmatched submissions. Both lump non-standard work in with regular loads.
+
+**The renaming insight:** v2's "manual load" path should be reframed as **"Jenny's Queue"** in the UI, with a `category` enum (Truck Pusher / Equipment Move / Flatbed / Frac Chem / Other). This converts a "no-match problem" v2 created into a "category v2 understands" — exactly how Jess thinks about it.
+
+Phase 2.5: add `loads.job_category` enum + UI surface `/admin/jenny-queue` mirroring the sheet's section.
+
+---
+
+## How the fourteen compose on a single load
 
 Real load delivered Jan 15, 2026:
 

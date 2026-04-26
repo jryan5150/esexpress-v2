@@ -86,6 +86,11 @@ const PcsTruth = lazy(() =>
     default: m.PcsTruth,
   })),
 );
+const BuilderMatrix = lazy(() =>
+  import("./pages/admin/BuilderMatrix").then((m) => ({
+    default: m.BuilderMatrix,
+  })),
+);
 const LoadReport = lazy(() =>
   import("./pages/LoadReport").then((m) => ({ default: m.LoadReport })),
 );
@@ -159,6 +164,10 @@ export function App() {
                   />
                   <Route path="admin/sheet-truth" element={<SheetTruth />} />
                   <Route path="admin/pcs-truth" element={<PcsTruth />} />
+                  <Route
+                    path="admin/builder-matrix"
+                    element={<BuilderMatrix />}
+                  />
                   <Route path="load-report" element={<LoadReport />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="whats-new" element={<WhatsNew />} />

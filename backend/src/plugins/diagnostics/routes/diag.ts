@@ -672,6 +672,168 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /builder-matrix — Reproduces the Load Count Sheet's "Order of
+  // Invoicing" matrix exactly. Each row = (customer → builder), each cell
+  // = daily count for the requested week. Mirrors what Jess hand-builds
+  // every Friday at the bottom of the Current/Previous tabs.
+  //
+  // Source of truth: builder_routing table (builder→customer mapping) +
+  // loads.customer_id + loads.delivered_on. Sun-Sat week per Chicago TZ.
+  //
+  // Output shape mirrors the sheet rows:
+  //   [
+  //     { customer: "Liberty Energy Services, LLC", builder: "Scout",
+  //       counts: { mon: 175, tue: 165, ..., total: 641 } },
+  //     ...
+  //     { customer: null, builder: "Crystal",  // floater
+  //       counts: { mon: 119, ..., total: 299 } }
+  //   ]
+  fastify.get("/builder-matrix", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: {
+          code: "SERVICE_UNAVAILABLE",
+          message: "Database not connected",
+        },
+      });
+    const { sql } = await import("drizzle-orm");
+
+    // Default to current week (Sun-Sat in Chicago). User can override.
+    const q = (request.query ?? {}) as { weekStart?: string };
+    const weekStartStr = q.weekStart;
+
+    // Compute the Sunday-of-this-week in America/Chicago. Postgres
+    // date_trunc('week') returns Monday; we want Sunday-start so we
+    // subtract 1 day.
+    const computed = await db.execute(sql`
+      SELECT
+        (date_trunc('week', (now() AT TIME ZONE 'America/Chicago')::date + interval '1 day') - interval '1 day')::date AS sunday
+    `);
+    const defaultSunday = (
+      computed as unknown as Array<{ sunday: string | Date }>
+    )[0]?.sunday;
+    const sundayDate = weekStartStr
+      ? new Date(weekStartStr + "T00:00:00")
+      : new Date(defaultSunday as unknown as string);
+    const sundayIso = sundayDate.toISOString().slice(0, 10);
+    const saturdayIso = new Date(sundayDate.getTime() + 6 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+
+    // Per-day per-customer counts for the window
+    const cellsRow = await db.execute(sql`
+      SELECT
+        l.customer_id,
+        c.name AS customer_name,
+        EXTRACT(DOW FROM (l.delivered_on AT TIME ZONE 'America/Chicago'))::int AS dow,
+        COUNT(*)::int AS n
+      FROM loads l
+      LEFT JOIN customers c ON c.id = l.customer_id
+      WHERE l.delivered_on >= (${sundayIso}::date AT TIME ZONE 'America/Chicago')
+        AND l.delivered_on < ((${sundayIso}::date + interval '7 days') AT TIME ZONE 'America/Chicago')
+      GROUP BY l.customer_id, c.name, dow
+      ORDER BY l.customer_id NULLS LAST, dow
+    `);
+
+    interface CellRow {
+      customer_id: number | null;
+      customer_name: string | null;
+      dow: number;
+      n: number;
+    }
+    const cells = cellsRow as unknown as CellRow[];
+
+    // Aggregate per-customer day counts
+    interface CustomerCounts {
+      customerId: number | null;
+      customerName: string | null;
+      counts: Record<string, number>;
+      total: number;
+    }
+    const byCustomer = new Map<string, CustomerCounts>();
+    const dowToKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    for (const row of cells) {
+      const key = `${row.customer_id ?? "null"}`;
+      let bucket = byCustomer.get(key);
+      if (!bucket) {
+        bucket = {
+          customerId: row.customer_id,
+          customerName: row.customer_name,
+          counts: { sun: 0, mon: 0, tue: 0, wed: 0, thu: 0, fri: 0, sat: 0 },
+          total: 0,
+        };
+        byCustomer.set(key, bucket);
+      }
+      const dayKey = dowToKey[row.dow];
+      if (dayKey) {
+        bucket.counts[dayKey] = row.n;
+        bucket.total += row.n;
+      }
+    }
+
+    // Pull builder routing
+    const routingRow = await db.execute(sql`
+      SELECT br.builder_name, br.customer_id, br.is_primary, br.notes,
+             c.name AS customer_name
+      FROM builder_routing br
+      LEFT JOIN customers c ON c.id = br.customer_id
+      ORDER BY br.is_primary DESC NULLS LAST, br.builder_name
+    `);
+    interface RoutingRow {
+      builder_name: string;
+      customer_id: number | null;
+      is_primary: boolean | null;
+      notes: string | null;
+      customer_name: string | null;
+    }
+    const routing = routingRow as unknown as RoutingRow[];
+
+    // Compose matrix: one row per (builder, customer) pair from routing,
+    // joined to the day-counts. Floater rows (no customer) get the rest.
+    const matrix = routing.map((r) => {
+      const key = r.customer_id != null ? `${r.customer_id}` : "null";
+      const bucket = byCustomer.get(key);
+      return {
+        builder: r.builder_name,
+        customer: r.customer_name,
+        customerId: r.customer_id,
+        isPrimary: r.is_primary ?? false,
+        notes: r.notes,
+        counts: bucket?.counts ?? {
+          sun: 0,
+          mon: 0,
+          tue: 0,
+          wed: 0,
+          thu: 0,
+          fri: 0,
+          sat: 0,
+        },
+        total: bucket?.total ?? 0,
+      };
+    });
+
+    // Grand total for the week
+    const grandTotal = Array.from(byCustomer.values()).reduce(
+      (a, b) => a + b.total,
+      0,
+    );
+
+    return {
+      success: true,
+      data: {
+        weekStart: sundayIso,
+        weekEnd: saturdayIso,
+        tz: "America/Chicago",
+        matrix,
+        grandTotal,
+        sourceLabel:
+          'Mirrors the "Order of Invoicing" matrix from the Load Count Sheet (Current/Previous tabs).',
+      },
+    };
+  });
+
   // GET /pcs-truth — LIVE PCS-vs-v2 parity. Computes every request from
   // pcs_load_history (operator-supplied warehouse extract, refreshable) ⨝
   // loads (live v2 ingest). As discrepancies resolve and v2 grows, the

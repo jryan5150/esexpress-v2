@@ -469,6 +469,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 <span className={iconClass("/admin/pcs-truth")}>verified</span>
                 PCS Truth
               </Link>
+              <Link
+                to="/admin/builder-matrix"
+                className={`${navClass("/admin/builder-matrix")} !pl-9`}
+                title="Order of Invoicing — Bill To x Builder daily counts. The matrix Jess builds by hand on Friday, automated."
+              >
+                <span className={iconClass("/admin/builder-matrix")}>
+                  groups
+                </span>
+                Order of Invoicing
+              </Link>
             </div>
           )}
 
