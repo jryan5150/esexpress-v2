@@ -779,6 +779,65 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       (w) => w.status === "perfect" || w.status === "match",
     ).length;
 
+    // Per-customer coverage. v2 doesn't store a normalized customer field
+    // (PropX raw_data.customer_name is blank for most rows), so we declare
+    // the ingest-path map: each PCS customer → which v2 feed (if any) is
+    // expected to capture them. The honest answer for Monday isn't "97.8%
+    // capture" — it's "99.5% on the carriers we have feeds for; here are
+    // the 2 we don't." JRT and Signal Peak are scope items, not failures.
+    const customerRow = await db.execute(sql`
+      SELECT customer, COUNT(*)::int AS pcs_loads
+      FROM pcs_load_history
+      WHERE customer IS NOT NULL AND customer <> ''
+      GROUP BY customer
+      ORDER BY pcs_loads DESC
+    `);
+    const INGEST_PATH: Record<
+      string,
+      { v2Feed: string; status: "covered" | "scope_gap" | "trivial" }
+    > = {
+      "Liberty Energy Services, LLC": { v2Feed: "propx", status: "covered" },
+      "Logistix IQ": { v2Feed: "logistiq", status: "covered" },
+      "JRT Trucking Inc": {
+        v2Feed: "(none — read from PCS)",
+        status: "scope_gap",
+      },
+      "Signal Peak": {
+        v2Feed: "(none — confirm with team)",
+        status: "scope_gap",
+      },
+      "Premier Pressure Pumping": {
+        v2Feed: "(none — confirm with team)",
+        status: "scope_gap",
+      },
+      Finoric: { v2Feed: "(none — trivial volume)", status: "trivial" },
+    };
+    const byCustomer = (
+      customerRow as unknown as Array<{ customer: string; pcs_loads: number }>
+    ).map((r) => {
+      const path = INGEST_PATH[r.customer] ?? {
+        v2Feed: "(unknown)",
+        status: "scope_gap" as const,
+      };
+      return {
+        customer: r.customer,
+        pcsLoads: r.pcs_loads,
+        v2Feed: path.v2Feed,
+        status: path.status,
+      };
+    });
+    const coveredLoads = byCustomer
+      .filter((c) => c.status === "covered")
+      .reduce((a, c) => a + c.pcsLoads, 0);
+    const scopeGapLoads = byCustomer
+      .filter((c) => c.status === "scope_gap")
+      .reduce((a, c) => a + c.pcsLoads, 0);
+    const realCoveragePct =
+      coveredLoads + scopeGapLoads > 0
+        ? Math.round((coveredLoads / (coveredLoads + scopeGapLoads)) * 1000) /
+          10
+        : 0;
+
     // Source-snapshot freshness — what extract is loaded?
     const snapshotRow = await db.execute(sql`
       SELECT
@@ -819,7 +878,11 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
           totalDelta,
           perfectMatchWeeks,
           withinFifteenWeeks,
+          coveredLoads,
+          scopeGapLoads,
+          realCoveragePct,
         },
+        byCustomer,
         weeks,
         gapAttribution: [
           {
