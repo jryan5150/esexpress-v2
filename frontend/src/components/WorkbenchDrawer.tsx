@@ -96,6 +96,13 @@ export interface CellContext {
   loadCount: number;
   derivedStatus: string;
   paintedStatus?: string | null;
+  // Real action wiring (Phase 1.5 #1). When the parent loads the
+  // cell's loads via /diag/well-grid/cell, it passes these IDs in so
+  // the drawer's Confirm button can fire bulk-confirm without a
+  // second round-trip.
+  assignmentIds?: number[];
+  isConfirming?: boolean;
+  confirmResult?: string | null; // success/error message after bulk-confirm
   onConfirm?: () => void;
   onMatchBol?: () => void;
   onAssignDriver?: () => void;
@@ -454,9 +461,20 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
             <button
               type="button"
               onClick={cellContext.onConfirm}
-              className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90"
+              disabled={
+                cellContext.isConfirming ||
+                (cellContext.assignmentIds?.length ?? 0) === 0
+              }
+              className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={
+                cellContext.assignmentIds?.length
+                  ? `Bulk-advance ${cellContext.assignmentIds.length} loads to built`
+                  : "No loads to advance"
+              }
             >
-              Confirm
+              {cellContext.isConfirming
+                ? "Confirming..."
+                : `Confirm (${cellContext.assignmentIds?.length ?? 0})`}
             </button>
           )}
           {cellContext.derivedStatus === "loads_completed" && (
@@ -485,6 +503,11 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
             Add Comment
           </button>
         </div>
+        {cellContext.confirmResult && (
+          <div className="mt-3 px-3 py-2 rounded-md text-xs bg-bg-primary border border-border">
+            {cellContext.confirmResult}
+          </div>
+        )}
       </div>
       <div className="p-4 text-xs text-text-secondary">
         Per-load drill-down for this cell will appear here in Phase 1.5.

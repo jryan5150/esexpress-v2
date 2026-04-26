@@ -1312,6 +1312,85 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /well-grid/cell — fetch the load list + assignment IDs for a single
+  // (well, day) cell. Used by the worksurface drawer when a cell is opened
+  // to power: (a) the per-load list rendering and (b) bulk-confirm action
+  // (needs assignmentIds[] to advance the cell's loads at once).
+  // Required: wellId, dow, weekStart.
+  fastify.get("/well-grid/cell", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const { sql } = await import("drizzle-orm");
+    const q = (request.query ?? {}) as {
+      wellId?: string;
+      dow?: string;
+      weekStart?: string;
+    };
+    const wellId = parseInt(q.wellId ?? "", 10);
+    const dow = parseInt(q.dow ?? "", 10);
+    const weekStart = q.weekStart;
+    if (!Number.isFinite(wellId) || !Number.isFinite(dow) || !weekStart) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "BAD_REQUEST",
+          message: "wellId, dow, weekStart required",
+        },
+      });
+    }
+
+    const rows = (await db.execute(sql`
+      SELECT
+        l.id AS load_id,
+        a.id AS assignment_id,
+        a.status AS assignment_status,
+        a.photo_status,
+        l.load_no,
+        l.driver_name,
+        l.driver_id,
+        l.bol_no,
+        l.ticket_no,
+        l.weight_tons,
+        l.weight_lbs,
+        l.delivered_on
+      FROM loads l
+      JOIN assignments a ON a.load_id = l.id
+      WHERE a.well_id = ${wellId}
+        AND (l.delivered_on AT TIME ZONE 'America/Chicago')::date
+            = (${weekStart}::date + (${dow} || ' days')::interval)::date
+      ORDER BY l.delivered_on
+    `)) as unknown as Array<{
+      load_id: number;
+      assignment_id: number;
+      assignment_status: string;
+      photo_status: string | null;
+      load_no: string | null;
+      driver_name: string | null;
+      driver_id: string | null;
+      bol_no: string | null;
+      ticket_no: string | null;
+      weight_tons: string | null;
+      weight_lbs: string | null;
+      delivered_on: string | null;
+    }>;
+
+    return {
+      success: true,
+      data: {
+        wellId,
+        dow,
+        weekStart,
+        loadCount: rows.length,
+        assignmentIds: rows.map((r) => r.assignment_id),
+        loads: rows,
+      },
+    };
+  });
+
   // GET /inbox — "needs you" items filtered by builder→customer mapping.
   // Workflow-first urgency order (per spec sub-question B):
   //   1. missing_photos     — delivered loads with no BOL photo, age >4hr
