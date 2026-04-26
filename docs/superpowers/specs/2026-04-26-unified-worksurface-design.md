@@ -90,7 +90,7 @@ Difference: -1 [click to flag]
 | `loads_being_cleared` | (read-only, monitoring state) |
 | `loads_cleared` | (read-only, awaiting invoice) |
 | `invoiced` | (read-only, terminal) |
-| any | "Add Comment" (per-cell), "Mark as Need Rate Info" (writes `cell_status_overrides`) |
+| any | "Add Comment" (per-cell). NO "Mark as Need Rate Info" button — that state is auto-derived from `wells.needs_rate_info OR wells.rate_per_ton IS NULL`. Drawer surfaces a "→ Set rate on Well page" link when the cell is `need_rate_info`. |
 
 The action bar text changes verbatim with the painted color. The work IS the status change — no separate "set status" UI.
 
@@ -165,16 +165,16 @@ URL state: `/workbench?highlight=liberty` so links are shareable.
 
 All actions write to v2's load tables directly. The cell color updates next render because the rule reads from `assignments.status / photo_status / pcs_dispatch.cleared_at / pcs_invoice.status`.
 
-| Drawer action          | Writes to                                                                  |
-| ---------------------- | -------------------------------------------------------------------------- |
-| Confirm                | `assignments.status = 'built'` (bulk for cell loads)                       |
-| Match BOL              | `bol_submissions.matched_load_id`, `assignments.photo_status = 'attached'` |
-| Assign Driver          | `loads.driver_id`, `loads.driver_name`                                     |
-| Push to PCS            | `pcs_dispatch` row, gated by feature flag                                  |
-| Add Comment            | `load_comments` row                                                        |
-| Mark as Need Rate Info | `cell_status_overrides` row                                                |
-| Inline edit field      | `loads.<field>` direct                                                     |
-| Route uncertain        | `assignments.status = 'flagged'` + `match_decisions` row                   |
+| Drawer action     | Writes to                                                                  |
+| ----------------- | -------------------------------------------------------------------------- |
+| Confirm           | `assignments.status = 'built'` (bulk for cell loads)                       |
+| Match BOL         | `bol_submissions.matched_load_id`, `assignments.photo_status = 'attached'` |
+| Assign Driver     | `loads.driver_id`, `loads.driver_name`                                     |
+| Push to PCS       | `pcs_dispatch` row, gated by feature flag                                  |
+| Add Comment       | `load_comments` row                                                        |
+| (Need Rate Info)  | n/a — auto-derived from `wells.needs_rate_info` / `wells.rate_per_ton`     |
+| Inline edit field | `loads.<field>` direct                                                     |
+| Route uncertain   | `assignments.status = 'flagged'` + `match_decisions` row                   |
 
 ### Sheet sync (read continues; write deferred to Wave 2)
 
@@ -196,7 +196,7 @@ loads_in_cell = SELECT loads WHERE
   AND delivered_on::date = absolute_date (in America/Chicago)
 
 if loads_in_cell is empty → no color (gray)
-if cell_status_overrides has matching row → use override.status
+if any load's well.needs_rate_info = true OR well.rate_per_ton IS NULL → 'need_rate_info' (orange)
 else "laggard wins" (the latest stage ALL loads have reached):
   if any load has photo_status = 'missing' → 'missing_tickets'
   elif any load has driver_name IS NULL → 'missing_driver'
@@ -213,11 +213,17 @@ The rule is wrong on day 1 in places. The dual-color split-cell visualization ma
 
 ---
 
-## Schema additions (small, additive only)
+## Schema additions (none — Wave 1 is fully derivable)
 
-**New table: `cell_status_overrides`**
+**Update 2026-04-26 (post sub-question C):** the only schema addition the original spec called for was `cell_status_overrides` to capture "Need Rate Info" exception state. Operator pointed out that `wells.needs_rate_info` (boolean) and `wells.rate_per_ton` (numeric) ALREADY exist on the wells table — the well page is where Jess sets the rate. The "need_rate_info" state is therefore fully derivable from existing columns, no override table needed.
+
+If a future case surfaces where a manual cell override is the right answer (e.g., manager wants to lock a week's colors after reconciliation), revisit `cell_status_overrides` then. Wave 1 ships with **zero schema changes**.
+
+<details>
+<summary>(Original spec for the deferred override table — preserved for future reference)</summary>
 
 ```sql
+-- DEFERRED — see note above. Not building in Wave 1.
 CREATE TABLE cell_status_overrides (
   id serial PRIMARY KEY,
   well_id integer NOT NULL REFERENCES wells(id),
@@ -231,19 +237,27 @@ CREATE TABLE cell_status_overrides (
 );
 ```
 
-No other schema changes. The lifecycle rule uses existing columns.
+UNIQUE (well_id, week_start, dow)
+);
+
+```
+</details>
+
+No schema changes for Wave 1. The lifecycle rule uses existing columns only.
 
 ---
 
 ## URL & state
 
 ```
-/workbench                              — default (your customer highlighted, today's week)
-/workbench?week=2026-04-12              — historical week
-/workbench?highlight=liberty            — explicit highlight
-/workbench?filter=mine_only             — filter to your customer
-/workbench?cell=well-78-day-3           — deep-link to drawer open
-/workbench?inbox=open                   — Inbox section expanded
+
+/workbench — default (your customer highlighted, today's week)
+/workbench?week=2026-04-12 — historical week
+/workbench?highlight=liberty — explicit highlight
+/workbench?filter=mine_only — filter to your customer
+/workbench?cell=well-78-day-3 — deep-link to drawer open
+/workbench?inbox=open — Inbox section expanded
+
 ```
 
 All state in URL so links are shareable + browser back/forward works.
@@ -281,18 +295,17 @@ Wave 1 ships when ALL of the following pass on Sunday evening:
 
 ---
 
-## Sunday Build Sequence (8 steps, ~14 hrs estimated)
+## Sunday Build Sequence (7 steps, ~13.5 hrs estimated)
 
 | #   | Step                                                                                                                | Estimate | Dependencies |
 | --- | ------------------------------------------------------------------------------------------------------------------- | -------: | ------------ |
-| 1   | Schema migration: `cell_status_overrides` table                                                                     |    30min | None         |
-| 2   | NEW endpoint `GET /diag/well-grid?week=...` — computes per-cell v2 aggregate + lifecycle-derived color              |      2hr | #1           |
-| 3   | NEW endpoint `GET /diag/inbox?customerIds=...` — pulls "needs you" items per builder's customer                     |    1.5hr | None         |
-| 4   | Frontend: rewrite `Workbench.tsx` shell — top strip + well grid + drawer mount points + URL state                   |      3hr | #2           |
-| 5   | Frontend: extend `WorkbenchDrawer.tsx` — context-aware action bar based on cell status; cell-summary header         |      2hr | #4           |
-| 6   | Frontend: Inbox section component (filter by builder→customer; urgency sort)                                        |    1.5hr | #3           |
-| 7   | Frontend: Today's Intake section (lift BolQueue's recent-feed query into a card list + manual-match modal)          |      2hr | #4           |
-| 8   | Frontend: Jenny's Queue section (reuse existing endpoint; drawer link); user-filter highlight strip; route redirect |    1.5hr | #4           |
+| 1   | NEW endpoint `GET /diag/well-grid?week=...` — computes per-cell v2 aggregate + lifecycle-derived color              |      2hr | None         |
+| 2   | NEW endpoint `GET /diag/inbox?customerIds=...` — pulls "needs you" items per builder's customer                     |    1.5hr | None         |
+| 3   | Frontend: rewrite `Workbench.tsx` shell — top strip + well grid + drawer mount points + URL state                   |      3hr | #1           |
+| 4   | Frontend: extend `WorkbenchDrawer.tsx` — context-aware action bar based on cell status; cell-summary header         |      2hr | #3           |
+| 5   | Frontend: Inbox section component (filter by builder→customer; urgency sort)                                        |    1.5hr | #2           |
+| 6   | Frontend: Today's Intake section (lift BolQueue's recent-feed query into a card list + manual-match modal)          |      2hr | #3           |
+| 7   | Frontend: Jenny's Queue section (reuse existing endpoint; drawer link); user-filter highlight strip; route redirect |    1.5hr | #3           |
 
 Total: ~14hr. With ~30hr until Monday morning that's a ~2x safety buffer.
 
@@ -330,7 +343,7 @@ Before kickoff, walk these through with operator (15 min):
 
 1. Drawer's per-load detail view — replace drawer body or open nested? (current spec: replace body, no nested)
 2. Inbox urgency order — confirm PCS discrepancy first, then photos, then matches, then drift (or different order?)
-3. "Mark as Need Rate Info" — does this just paint the cell, or does it also surface in Inbox for Jess to action?
+3. (RESOLVED 2026-04-26: "Need Rate Info" is auto-derived from `wells.needs_rate_info` / `wells.rate_per_ton`; no drawer button or override table.)
 4. Should the user filter highlight persist across sessions or reset to default each login?
 5. Wave 2 BolQueue migration — fold into Today's Intake section or build a separate "BOL Center" expand?
 
@@ -340,9 +353,7 @@ Before kickoff, walk these through with operator (15 min):
 
 ### New files
 
-- `backend/src/db/migrations/0029_cell_status_overrides.sql`
-- `backend/src/db/schema.ts` — append `cellStatusOverrides` table + relevant types
-- `backend/src/plugins/diagnostics/routes/diag.ts` — append `/well-grid` and `/inbox` endpoints
+- `backend/src/plugins/diagnostics/routes/diag.ts` — append `/well-grid` and `/inbox` endpoints (no schema migration in Wave 1)
 - `frontend/src/components/WellGrid.tsx` — new component
 - `frontend/src/components/WellGridCell.tsx` — dual-color cell renderer
 - `frontend/src/components/UserHighlightStrip.tsx` — filter pills
@@ -371,3 +382,4 @@ Before kickoff, walk these through with operator (15 min):
 - `docs/2026-04-25-load-count-sheet-analysis.md` — sheet structure deep dive
 - `docs/superpowers/specs/2026-04-15-workbench-design.md` — earlier Workbench spec (will be partially superseded)
 - `docs/superpowers/specs/2026-04-02-validation-editing-pagination-design.md` — Validation page spec (page itself goes away in Wave 1)
+```
