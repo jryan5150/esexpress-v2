@@ -39,9 +39,6 @@ const DispatchDesk = lazy(() =>
 const BolQueue = lazy(() =>
   import("./pages/BolQueue").then((m) => ({ default: m.BolQueue })),
 );
-const Validation = lazy(() =>
-  import("./pages/Validation").then((m) => ({ default: m.Validation })),
-);
 const Finance = lazy(() =>
   import("./pages/Finance").then((m) => ({ default: m.Finance })),
 );
@@ -149,12 +146,15 @@ export function App() {
                     path="dispatch-desk"
                     element={<Navigate to="/workbench" replace />}
                   />
-                  {/* Validate is the canonical route name now (renamed
-                      from Pre-Dispatch Verification surface). The earlier
-                      transitional redirect to /workbench?filter=uncertain
-                      was killed when we melded the BOL queue + tier flow
-                      into a single page on 2026-04-24 PM. */}
-                  <Route path="validation" element={<Validation />} />
+                  {/* /validation now redirects to /workbench. Wave 1 of the
+                      unified Worksurface (2026-04-26) absorbs the Validation
+                      page into the Worksurface drawer + Inbox. The standalone
+                      Validation page is deprecated; redirect preserves any
+                      bookmarks. */}
+                  <Route
+                    path="validation"
+                    element={<Navigate to="/workbench" replace />}
+                  />
                   <Route path="finance" element={<Finance />} />
                   <Route path="wells/:wellId" element={<WellWorkspace />} />
                   <Route path="admin/wells" element={<WellsAdmin />} />

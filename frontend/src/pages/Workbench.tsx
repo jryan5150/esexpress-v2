@@ -225,7 +225,13 @@ export function Workbench() {
         }}
       />
       <TodayIntakeSection />
-      <JennyQueueSection />
+      <JennyQueueSection
+        onLoadClick={(loadId) => {
+          // Phase 1.5: lookup load → cell context → open drawer.
+          // For Wave 1, just show alert; Phase 2.5 wires the click.
+          alert(`Load ${loadId} — drawer-open from Jenny's Queue is Phase 1.5`);
+        }}
+      />
 
       {/* Cell-mode drawer — opens when a Worksurface grid cell is clicked.
           Per-load drilldown wires in Phase 1.5. */}

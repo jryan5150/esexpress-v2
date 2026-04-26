@@ -198,26 +198,17 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
           </span>
         </button>
 
-        {/* Main Nav — sequential workflow: Validate → Load Center → BOL Center.
-            "Validate" is the first action: new pending assignments land here for
-            human confirmation. Once validated they move into the dispatcher's
-            Load Center (workbench, ready_to_build filter). This sequencing is
-            Jessica's explicit Apr 15 ask: "in my mind, nothing would go to
-            dispatch desk until it had been validated". */}
+        {/* Main Nav — Load Center is the unified Worksurface (Wave 1,
+            2026-04-26). The previous "Validate → Load Center → BOL Center"
+            sequence collapsed when the Validation surface was absorbed into
+            the Worksurface drawer + Inbox. /validation now redirects to
+            /workbench. */}
         <nav className="flex-1 py-1.5" onClick={handleNavClick}>
           <div className="space-y-px">
             <Link
-              to="/validation"
-              className={navClass("/validation")}
-              title="Validate — pre-dispatch verification: confirm assignments, see photos awaiting match, catch missing tickets"
-            >
-              <span className={iconClass("/validation")}>fact_check</span>
-              {!collapsed && "Validate"}
-            </Link>
-            <Link
               to="/workbench"
               className={navClass("/workbench")}
-              title="Load Center — validated assignments ready to build"
+              title="Load Center — the unified worksurface: well grid, inbox, intake, and Jenny's queue"
             >
               <span className={iconClass("/workbench")}>build</span>
               {!collapsed && "Load Center"}
