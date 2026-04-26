@@ -156,6 +156,60 @@ export const LOAD_SOURCES = ["propx", "logistiq", "manual"] as const;
 // section. Default 'standard' = well-bound load (the common case). The rest
 // are non-standard work the team tracks in Jenny's Queue.
 // See docs/2026-04-25-canonical-vocabulary.md role #14.
+// Workflow status — the team's 8-stage paint pipeline + exception state
+// from the Load Count Sheet. Source: Color Key tab, hex→label captured
+// 2026-04-25 via /diag/sheet-color-key.
+//
+// Snake_case enum values for v2; the UI surfaces the original sheet
+// labels verbatim for vocabulary parity.
+export const WORKFLOW_STATUSES = [
+  "loads_being_built", // #00ff00 green
+  "loads_completed", // #ff00ff magenta — "Loads Completed/ Load Count complete"
+  "loads_being_cleared", // #f46fa2 light pink
+  "loads_cleared", // #da3876 deep pink
+  "export_transfers_completed", // #ffff00 yellow
+  "invoiced", // #4a86e8 blue
+  "missing_tickets", // #9900ff purple — "Missing Tickets/ Not Arrived"
+  "missing_driver", // #00ffff cyan
+  "need_rate_info", // #e69138 orange — "Need Well Rate Info / New Loading Facility Rate" (exception)
+  "unknown", // catch-all for un-painted or off-legend cells
+] as const;
+export type WorkflowStatus = (typeof WORKFLOW_STATUSES)[number];
+
+// Workflow-status snapshots from the sheet. One row per (week, well,
+// day-of-week) cell that has a non-default background color. Refreshed
+// on each sheet sync; rows replaced on re-sync of a week.
+export const sheetWellStatus = pgTable(
+  "sheet_well_status",
+  {
+    id: serial("id").primaryKey(),
+    spreadsheetId: text("spreadsheet_id").notNull(),
+    sheetTabName: text("sheet_tab_name").notNull(),
+    weekStart: text("week_start").notNull(), // 'YYYY-MM-DD' Sunday
+    rowIndex: integer("row_index").notNull(), // 0-based within tab
+    wellName: text("well_name"),
+    billTo: text("bill_to"),
+    colIndex: integer("col_index").notNull(), // 0-based — 2..8 = Sun..Sat
+    cellValue: text("cell_value"),
+    cellHex: text("cell_hex"),
+    status: text("status", { enum: [...WORKFLOW_STATUSES] }).notNull(),
+    capturedAt: timestamp("captured_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_sheet_well_status_unique").on(
+      table.spreadsheetId,
+      table.sheetTabName,
+      table.weekStart,
+      table.rowIndex,
+      table.colIndex,
+    ),
+    index("idx_sheet_well_status_status").on(table.status),
+    index("idx_sheet_well_status_week").on(table.weekStart),
+  ],
+);
+
 export const JOB_CATEGORIES = [
   "standard",
   "truck_pusher",

@@ -672,6 +672,135 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // POST /sheet-color-sync — Run color-sync for a tab+week. Persists
+  // per-cell status into sheet_well_status. Idempotent on (spreadsheet,
+  // tab, week) — replaces existing rows.
+  fastify.post(
+    "/sheet-color-sync",
+    { preHandler: [fastify.authenticate, fastify.requireRole(["admin"])] },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+        });
+      const body = (request.body ?? {}) as {
+        spreadsheetId?: string;
+        tabName?: string;
+        weekStart?: string;
+        range?: string;
+      };
+      const spreadsheetId =
+        body.spreadsheetId ?? "1ZBzcSEFRfX8J6x0wj_836xnGwzgCSSVFe7QU2SRgtQM";
+      const tabName = body.tabName ?? "Current";
+      // Compute current Sunday if no weekStart passed
+      let weekStart = body.weekStart;
+      if (!weekStart) {
+        const { sql } = await import("drizzle-orm");
+        const r = (await db.execute(sql`
+          SELECT (date_trunc('week', (now() AT TIME ZONE 'America/Chicago')::date + interval '1 day') - interval '1 day')::date AS sunday
+        `)) as unknown as Array<{ sunday: string | Date }>;
+        weekStart = String(r[0]?.sunday ?? "").slice(0, 10);
+      }
+      try {
+        const { syncSheetColorStatus } =
+          await import("../../sheets/services/sheet-color-sync.service.js");
+        const result = await syncSheetColorStatus(db, {
+          spreadsheetId,
+          tabName,
+          weekStart,
+          range: body.range,
+        });
+        return { success: true, data: { weekStart, tabName, ...result } };
+      } catch (e) {
+        return reply.status(500).send({
+          success: false,
+          error: {
+            code: "SHEET_COLOR_SYNC_FAILED",
+            message: e instanceof Error ? e.message : String(e),
+          },
+        });
+      }
+    },
+  );
+
+  // GET /sheet-status — Read the persisted sheet_well_status. Returns
+  // status counts + per-cell rows for a given week. Surface for the
+  // /admin/sheet-status page that mirrors the painted grid.
+  fastify.get("/sheet-status", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const q = (request.query ?? {}) as {
+      weekStart?: string;
+      tab?: string;
+    };
+    const { sql } = await import("drizzle-orm");
+    let weekStart = q.weekStart;
+    if (!weekStart) {
+      const r = (await db.execute(sql`
+        SELECT (date_trunc('week', (now() AT TIME ZONE 'America/Chicago')::date + interval '1 day') - interval '1 day')::date AS sunday
+      `)) as unknown as Array<{ sunday: string | Date }>;
+      weekStart = String(r[0]?.sunday ?? "").slice(0, 10);
+    }
+    const tab = q.tab ?? "Current";
+
+    const cells = (await db.execute(sql`
+      SELECT row_index, col_index, well_name, bill_to, cell_value, cell_hex, status
+      FROM sheet_well_status
+      WHERE spreadsheet_id = '1ZBzcSEFRfX8J6x0wj_836xnGwzgCSSVFe7QU2SRgtQM'
+        AND sheet_tab_name = ${tab}
+        AND week_start = ${weekStart}
+      ORDER BY row_index, col_index
+    `)) as unknown as Array<{
+      row_index: number;
+      col_index: number;
+      well_name: string | null;
+      bill_to: string | null;
+      cell_value: string | null;
+      cell_hex: string | null;
+      status: string;
+    }>;
+
+    const counts = (await db.execute(sql`
+      SELECT status, COUNT(*)::int AS n
+      FROM sheet_well_status
+      WHERE spreadsheet_id = '1ZBzcSEFRfX8J6x0wj_836xnGwzgCSSVFe7QU2SRgtQM'
+        AND sheet_tab_name = ${tab}
+        AND week_start = ${weekStart}
+      GROUP BY status
+      ORDER BY n DESC
+    `)) as unknown as Array<{ status: string; n: number }>;
+
+    const { getColorLegend } =
+      await import("../../sheets/services/sheet-color-sync.service.js");
+    const legend = getColorLegend();
+
+    const lastSyncRow = (await db.execute(sql`
+      SELECT MAX(captured_at) AS last_sync
+      FROM sheet_well_status
+      WHERE spreadsheet_id = '1ZBzcSEFRfX8J6x0wj_836xnGwzgCSSVFe7QU2SRgtQM'
+        AND sheet_tab_name = ${tab}
+        AND week_start = ${weekStart}
+    `)) as unknown as Array<{ last_sync: string | null }>;
+
+    return {
+      success: true,
+      data: {
+        weekStart,
+        tab,
+        legend,
+        counts,
+        cells,
+        lastSync: lastSyncRow[0]?.last_sync ?? null,
+      },
+    };
+  });
+
   // GET /sheet-color-key — Read the Color Key tab from the Load Count
   // Sheet to learn the painter's legend. Returns hex → workflow-stage
   // mappings. Used to build the canonical workflow_status enum and its

@@ -489,6 +489,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 </span>
                 Jenny's Queue
               </Link>
+              <Link
+                to="/admin/sheet-status"
+                className={`${navClass("/admin/sheet-status")} !pl-9`}
+                title="Sheet Status — v2 reads the workflow status the team paints into cell colors on the Load Count Sheet. Same hex, same labels."
+              >
+                <span className={iconClass("/admin/sheet-status")}>
+                  palette
+                </span>
+                Sheet Status
+              </Link>
             </div>
           )}
 
