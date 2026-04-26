@@ -13,6 +13,19 @@ import { TodayIntakeSection } from "../components/TodayIntakeSection";
 import { JennyQueueSection } from "../components/JennyQueueSection";
 import { WorkbenchDrawer } from "../components/WorkbenchDrawer";
 
+interface CellLoad {
+  load_id: number;
+  assignment_id: number;
+  assignment_status: string;
+  photo_status: string | null;
+  load_no: string | null;
+  driver_name: string | null;
+  bol_no: string | null;
+  ticket_no: string | null;
+  weight_tons: string | null;
+  weight_lbs: string | null;
+  delivered_on: string | null;
+}
 interface CellContextPayload {
   wellId: number;
   wellName: string;
@@ -20,6 +33,7 @@ interface CellContextPayload {
   loadCount: number;
   derivedStatus: string;
   assignmentIds: number[];
+  loads: CellLoad[];
 }
 interface WellGridResponse {
   weekStart: string;
@@ -215,10 +229,11 @@ export function Workbench() {
       const row = grid.rows.find((x) => x.wellId === openCell.wellId);
       if (!row) return null;
       const cell = row.days[openCell.dow];
-      // Get cell loads (assignmentIds) from the dedicated endpoint
+      // Get cell loads (assignmentIds + load list) from the dedicated endpoint
       const cellDetail = await api.get<{
         assignmentIds: number[];
         loadCount: number;
+        loads: CellLoad[];
       }>(
         `/diag/well-grid/cell?wellId=${openCell.wellId}&dow=${openCell.dow}&weekStart=${effectiveWeekStart}`,
       );
@@ -229,6 +244,7 @@ export function Workbench() {
         loadCount: cell?.loadCount ?? cellDetail.loadCount,
         derivedStatus: cell?.derivedStatus ?? "unknown",
         assignmentIds: cellDetail.assignmentIds,
+        loads: cellDetail.loads,
       };
     },
     enabled: !!openCell,
@@ -346,6 +362,7 @@ export function Workbench() {
             loadCount: cellContextQuery.data.loadCount,
             derivedStatus: cellContextQuery.data.derivedStatus,
             assignmentIds: cellContextQuery.data.assignmentIds,
+            loads: cellContextQuery.data.loads,
             paintedStatus: paintedStatusByCell.get(
               `${cellContextQuery.data.wellId}-${openCell.dow}`,
             ),

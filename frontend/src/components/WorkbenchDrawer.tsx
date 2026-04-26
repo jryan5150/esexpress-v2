@@ -101,6 +101,20 @@ export interface CellContext {
   // the drawer's Confirm button can fire bulk-confirm without a
   // second round-trip.
   assignmentIds?: number[];
+  // Loads list for the cell — rendered as the drawer body.
+  loads?: Array<{
+    load_id: number;
+    assignment_id: number;
+    assignment_status: string;
+    photo_status: string | null;
+    load_no: string | null;
+    driver_name: string | null;
+    bol_no: string | null;
+    ticket_no: string | null;
+    weight_tons: string | null;
+    weight_lbs: string | null;
+    delivered_on: string | null;
+  }>;
   isConfirming?: boolean;
   confirmResult?: string | null; // success/error message after bulk-confirm
   onConfirm?: () => void;
@@ -509,8 +523,70 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
           </div>
         )}
       </div>
-      <div className="p-4 text-xs text-text-secondary">
-        Per-load drill-down for this cell will appear here in Phase 1.5.
+      <div
+        className="p-4 overflow-y-auto"
+        style={{ maxHeight: "calc(100vh - 320px)" }}
+      >
+        {(cellContext.loads ?? []).length === 0 ? (
+          <div className="text-xs text-text-secondary text-center py-6">
+            No loads in this cell.
+          </div>
+        ) : (
+          <table className="w-full text-xs">
+            <thead className="text-text-secondary uppercase tracking-wide">
+              <tr className="border-b border-border">
+                <th className="text-left py-1.5 pr-2">Driver</th>
+                <th className="text-left py-1.5 pr-2">Ticket</th>
+                <th className="text-left py-1.5 pr-2">BOL</th>
+                <th className="text-right py-1.5 pr-2">Wt</th>
+                <th className="text-left py-1.5 pr-2">Status</th>
+                <th className="text-left py-1.5">Photo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(cellContext.loads ?? []).map((l) => (
+                <tr key={l.load_id} className="border-b border-border/40">
+                  <td className="py-1.5 pr-2">
+                    {l.driver_name ?? <span className="text-amber-600">—</span>}
+                  </td>
+                  <td className="py-1.5 pr-2 tabular-nums">
+                    {l.ticket_no ?? "—"}
+                  </td>
+                  <td className="py-1.5 pr-2 tabular-nums">
+                    {l.bol_no ?? "—"}
+                  </td>
+                  <td className="py-1.5 pr-2 text-right tabular-nums">
+                    {l.weight_tons
+                      ? Number(l.weight_tons).toFixed(2)
+                      : l.weight_lbs
+                        ? `${(Number(l.weight_lbs) / 2000).toFixed(2)}`
+                        : "—"}
+                  </td>
+                  <td className="py-1.5 pr-2">
+                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-bg-primary border border-border">
+                      {l.assignment_status}
+                    </span>
+                  </td>
+                  <td className="py-1.5">
+                    {l.photo_status === "attached" ? (
+                      <span className="text-green-600" title="Attached">
+                        ●
+                      </span>
+                    ) : l.photo_status === "pending" ? (
+                      <span className="text-amber-500" title="Pending">
+                        ○
+                      </span>
+                    ) : (
+                      <span className="text-red-500" title="Missing">
+                        ✕
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
