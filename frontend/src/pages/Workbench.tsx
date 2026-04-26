@@ -209,7 +209,21 @@ export function Workbench() {
         onBadgeClick={handleBadgeClick}
       />
 
-      <InboxSection customerIds={inboxCustomerIds} />
+      <InboxSection
+        customerIds={inboxCustomerIds}
+        onItemClick={(item) => {
+          if (item.well_id != null && item.day) {
+            const itemDate = new Date(item.day);
+            const week = weekStart ? new Date(weekStart) : new Date();
+            const dow = Math.floor(
+              (itemDate.getTime() - week.getTime()) / (24 * 60 * 60 * 1000),
+            );
+            if (dow >= 0 && dow < 7) {
+              setOpenCell({ wellId: item.well_id, dow });
+            }
+          }
+        }}
+      />
       <TodayIntakeSection />
       <JennyQueueSection />
 
