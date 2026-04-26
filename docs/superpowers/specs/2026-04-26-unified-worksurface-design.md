@@ -121,7 +121,7 @@ Last 4hr BOL/JotForm landings. Each row:
 - Click matched → drawer opens for that load's cell
 - Click unmatched → manual-match modal (existing BolQueue jotform-match logic, lifted into modal)
 
-Auto-refreshes every 30s. Replaces today's BolQueue feel **for the "what just landed?" question only** (recent-feed view). Older items, search, and the deeper BolQueue mental-model stay at `/bol` until Wave 2 fully absorbs them. Section footer shows: `→ See all in BolQueue (847 items)` link.
+Auto-refreshes every 30s. Replaces today's BolQueue feel **for the "what just landed?" question only** (recent-feed view). Older items, search, and the PropX queue stay at `/bol` (Wave 1) and become `/admin/bol-center` (Wave 2 — admin-style page like sheet-truth/pcs-truth). Section footer shows: `→ All BOL items (847) →` link.
 
 **Section C: Jenny's Queue**
 Same shape as `/admin/jenny-queue` but actionable:
@@ -328,7 +328,7 @@ Total: ~14hr. With ~30hr until Monday morning that's a ~2x safety buffer.
 
 Captured here so it doesn't surface as scope creep on Sunday:
 
-- Absorb BolQueue (1,729 lines) — JotForm + PropX manual-match flows fold into drawer + Today's Intake section
+- Rename `/bol` → `/admin/bol-center` (admin-style page for deep search + history + PropX queue). Today's Intake section keeps the daily-work recent-feed view; admin page handles lookup/PropX-queue management. Splits "today's work" from "look up something old" cleanly. JotForm + PropX manual-match modals stay accessible from both surfaces.
 - v2 → sheet color writeback — Jess's sheet shows v2's lifecycle-derived calls
 - Sheet-color discrepancy auto-surface in `/admin/discrepancies`
 - Per-week notes editable in v2 (write back to sheet's Notes section)
@@ -345,7 +345,7 @@ Before kickoff, walk these through with operator (15 min):
 2. Inbox urgency order — confirm PCS discrepancy first, then photos, then matches, then drift (or different order?)
 3. (RESOLVED 2026-04-26: "Need Rate Info" is auto-derived from `wells.needs_rate_info` / `wells.rate_per_ton`; no drawer button or override table.)
 4. Should the user filter highlight persist across sessions or reset to default each login?
-5. Wave 2 BolQueue migration — fold into Today's Intake section or build a separate "BOL Center" expand?
+5. (RESOLVED 2026-04-26: Wave 2 renames `/bol` → `/admin/bol-center` admin-style page. Worksurface stays focused on today; deep history/PropX queue moves to admin pattern.)
 
 ---
 
