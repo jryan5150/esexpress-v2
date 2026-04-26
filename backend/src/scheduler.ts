@@ -304,13 +304,28 @@ async function runWithLog(
           : rec?.status === "failed"
             ? "failed"
             : "success";
+      // Sync services use heterogeneous result shapes. Cover all of them:
+      //   PropX:    { fetched, inserted, updated, skippedFinalized, ... }
+      //   Logistiq: { stored } / { rowsUpserted }
+      //   Sheets:   { rowsUpserted, weekStarts: [...] }
+      //   PCS:      { pcsLoadCount }
+      //   Generic:  { recordsProcessed, mapped, total }
+      // Pick whichever non-zero count best represents work done. Falling
+      // through to 0 gave a misleading "success but did nothing" reading
+      // on PropX runs that actually fetched 18K+ rows (2026-04-25 audit).
+      const insertedOrUpdated =
+        ((rec?.inserted as number) || 0) + ((rec?.updated as number) || 0);
       await recordSyncRun(source, startedAt, {
         status,
         recordsProcessed:
+          insertedOrUpdated ||
           (rec?.recordsProcessed as number) ||
-          (rec?.mapped as number) ||
+          (rec?.rowsUpserted as number) ||
           (rec?.stored as number) ||
+          (rec?.mapped as number) ||
+          (rec?.pcsLoadCount as number) ||
           (rec?.total as number) ||
+          (rec?.fetched as number) ||
           0,
         metadata: rec as Record<string, unknown>,
       });
