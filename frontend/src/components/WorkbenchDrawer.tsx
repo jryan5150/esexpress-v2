@@ -73,7 +73,33 @@ import { PhotoStateBadge } from "./PhotoStateBadge";
 import type { WorkbenchRow, UncertainReason } from "../types/api";
 
 interface WorkbenchDrawerProps {
-  row: WorkbenchRow;
+  row?: WorkbenchRow;
+  onClose: () => void;
+  cellContext?: CellContext;
+}
+
+/**
+ * Optional cell-mode context for opening the drawer from a Worksurface
+ * grid cell (well + day) instead of a single load. When provided, the
+ * drawer renders a cell-summary header + context-aware action bar driven
+ * by the v2-derived workflow status (Wave 1 of unified worksurface).
+ *
+ * Action handlers are stubs in Wave 1 — actual write-throughs land in
+ * Phase 1.5 once the cell-summary surface is validated with the team.
+ */
+export interface CellContext {
+  wellId: number;
+  wellName: string;
+  billTo: string | null;
+  weekStart: string;
+  dow: number; // 0..6 (Sun-Sat)
+  loadCount: number;
+  derivedStatus: string;
+  paintedStatus?: string | null;
+  onConfirm?: () => void;
+  onMatchBol?: () => void;
+  onAssignDriver?: () => void;
+  onAddComment?: () => void;
   onClose: () => void;
 }
 
@@ -318,14 +344,161 @@ function RerunOcrButton({ assignmentId }: { assignmentId: number }) {
 }
 
 export function WorkbenchDrawer(props: WorkbenchDrawerProps) {
+  // Cell-mode: opened from a Worksurface grid cell (well + day) instead of
+  // a single load row. Renders the cell-summary header + action bar only.
+  // Per-load drill-down list is deferred to Phase 1.5.
+  if (props.cellContext && !props.row) {
+    return (
+      <DrawerErrorBoundary onReset={props.cellContext.onClose}>
+        <CellSummaryDrawerBody cellContext={props.cellContext} />
+      </DrawerErrorBoundary>
+    );
+  }
+  // Existing load-mode (per-load drawer) — unchanged behavior.
+  if (!props.row) return null;
   return (
     <DrawerErrorBoundary onReset={props.onClose}>
-      <WorkbenchDrawerBody {...props} />
+      <WorkbenchDrawerBody row={props.row} onClose={props.onClose} />
     </DrawerErrorBoundary>
   );
 }
 
-function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerProps) {
+/**
+ * Cell-mode drawer body: renders a fixed-position right-side panel showing
+ * the cell summary (well + bill-to + day + v2 status / count) and a
+ * context-aware action bar whose primary CTA changes verbatim with the
+ * v2-derived workflow status.
+ *
+ * Action handlers are stubs in Wave 1 — actual write-throughs land in
+ * Phase 1.5 once the surface is validated with the dispatch team.
+ */
+function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
+  const dayLabel = (() => {
+    const d = new Date(cellContext.weekStart + "T00:00:00");
+    d.setDate(d.getDate() + cellContext.dow);
+    return d.toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  })();
+
+  return (
+    <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md bg-bg-primary border-l border-border shadow-2xl overflow-y-auto">
+      <div className="border-b border-border bg-bg-secondary p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs text-text-secondary">
+              {cellContext.billTo ?? "—"}
+            </div>
+            <h2 className="text-lg font-semibold">{cellContext.wellName}</h2>
+            <div className="text-xs text-text-secondary mt-1">{dayLabel}</div>
+          </div>
+          <button
+            type="button"
+            onClick={cellContext.onClose}
+            className="text-text-secondary hover:text-text-primary"
+            aria-label="Close drawer"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+          <div className="rounded-md border border-border bg-bg-primary/40 px-2 py-1.5">
+            <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+              v2 status
+            </div>
+            <div className="font-semibold">
+              {cellContext.derivedStatus.replace(/_/g, " ")}
+            </div>
+          </div>
+          <div className="rounded-md border border-border bg-bg-primary/40 px-2 py-1.5">
+            <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+              v2 count
+            </div>
+            <div className="font-semibold">{cellContext.loadCount}</div>
+          </div>
+          {cellContext.paintedStatus && (
+            <div className="col-span-2 rounded-md border border-border bg-bg-primary/40 px-2 py-1.5">
+              <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+                sheet-painted
+              </div>
+              <div className="font-semibold">
+                {cellContext.paintedStatus.replace(/_/g, " ")}
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Action bar — context-aware on derivedStatus */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {cellContext.derivedStatus === "missing_tickets" && (
+            <button
+              type="button"
+              onClick={cellContext.onMatchBol}
+              className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90"
+            >
+              Match BOL
+            </button>
+          )}
+          {cellContext.derivedStatus === "missing_driver" && (
+            <button
+              type="button"
+              onClick={cellContext.onAssignDriver}
+              className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90"
+            >
+              Assign Driver
+            </button>
+          )}
+          {cellContext.derivedStatus === "loads_being_built" && (
+            <button
+              type="button"
+              onClick={cellContext.onConfirm}
+              className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90"
+            >
+              Confirm
+            </button>
+          )}
+          {cellContext.derivedStatus === "loads_completed" && (
+            <button
+              type="button"
+              disabled
+              className="px-3 py-1.5 text-sm rounded-md bg-bg-tertiary text-text-secondary border border-border opacity-60 cursor-not-allowed"
+              title="PCS push awaiting enablement"
+            >
+              Push to PCS
+            </button>
+          )}
+          {cellContext.derivedStatus === "need_rate_info" && (
+            <a
+              href={`/wells/${cellContext.wellId}`}
+              className="px-3 py-1.5 text-sm rounded-md bg-amber-500 text-white hover:opacity-90"
+            >
+              → Set rate on Well page
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={cellContext.onAddComment}
+            className="px-3 py-1.5 text-sm rounded-md border border-border bg-bg-primary hover:bg-bg-tertiary"
+          >
+            Add Comment
+          </button>
+        </div>
+      </div>
+      <div className="p-4 text-xs text-text-secondary">
+        Per-load drill-down for this cell will appear here in Phase 1.5.
+      </div>
+    </div>
+  );
+}
+
+interface WorkbenchDrawerBodyProps {
+  row: WorkbenchRow;
+  onClose: () => void;
+}
+
+function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerBodyProps) {
   const update = useUpdateLoadField();
   const bol = useBolReconciliation(row.loadId);
   const advance = useAdvanceStage();

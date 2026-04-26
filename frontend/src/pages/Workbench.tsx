@@ -10,6 +10,29 @@ import { WellGrid } from "../components/WellGrid";
 import { InboxSection } from "../components/InboxSection";
 import { TodayIntakeSection } from "../components/TodayIntakeSection";
 import { JennyQueueSection } from "../components/JennyQueueSection";
+import { WorkbenchDrawer } from "../components/WorkbenchDrawer";
+
+interface CellContextPayload {
+  wellId: number;
+  wellName: string;
+  billTo: string | null;
+  loadCount: number;
+  derivedStatus: string;
+}
+interface WellGridResponse {
+  weekStart: string;
+  weekEnd: string;
+  rows: Array<{
+    wellId: number;
+    wellName: string;
+    billTo: string | null;
+    days: Array<{
+      dow: number;
+      loadCount: number;
+      derivedStatus: string;
+    } | null>;
+  }>;
+}
 
 interface Customer {
   id: number;
@@ -123,6 +146,40 @@ export function Workbench() {
     setOpenCell({ wellId, dow });
   };
 
+  // Look up the active cell's context once openCell is set. Direct-typed
+  // unwrap pattern: api.get<T>(url) already returns the envelope's data
+  // payload (api.ts request() unwraps json.data), so we type T to match
+  // that inner shape, NOT the {success, data} envelope.
+  const cellContextQuery = useQuery({
+    queryKey: [
+      "worksurface",
+      "cell-context",
+      openCell?.wellId,
+      openCell?.dow,
+      weekStart,
+    ],
+    queryFn: async (): Promise<CellContextPayload | null> => {
+      if (!openCell) return null;
+      const r = await api.get<WellGridResponse>(
+        weekStart
+          ? `/diag/well-grid?weekStart=${weekStart}`
+          : `/diag/well-grid`,
+      );
+      const row = r.rows.find((x) => x.wellId === openCell.wellId);
+      if (!row) return null;
+      const cell = row.days[openCell.dow];
+      return {
+        wellId: row.wellId,
+        wellName: row.wellName,
+        billTo: row.billTo,
+        loadCount: cell?.loadCount ?? 0,
+        derivedStatus: cell?.derivedStatus ?? "unknown",
+      };
+    },
+    enabled: !!openCell,
+    staleTime: 30_000,
+  });
+
   return (
     <div className="flex-1 flex flex-col p-4 sm:p-6 gap-3 max-w-[1600px] w-full mx-auto">
       <header className="flex items-center justify-between">
@@ -156,18 +213,26 @@ export function Workbench() {
       <TodayIntakeSection />
       <JennyQueueSection />
 
-      {/* Drawer mounted in Task 4 */}
-      {openCell && (
-        <div className="fixed bottom-4 right-4 px-3 py-2 rounded-md bg-bg-secondary border border-border text-xs">
-          Cell {openCell.wellId}/{openCell.dow} clicked — drawer in Task 4
-          <button
-            type="button"
-            onClick={() => setOpenCell(null)}
-            className="ml-2 text-accent"
-          >
-            close
-          </button>
-        </div>
+      {/* Cell-mode drawer — opens when a Worksurface grid cell is clicked.
+          Per-load drilldown wires in Phase 1.5. */}
+      {openCell && cellContextQuery.data && (
+        <WorkbenchDrawer
+          onClose={() => setOpenCell(null)}
+          cellContext={{
+            wellId: cellContextQuery.data.wellId,
+            wellName: cellContextQuery.data.wellName,
+            billTo: cellContextQuery.data.billTo,
+            weekStart: weekStart ?? new Date().toISOString().slice(0, 10),
+            dow: openCell.dow,
+            loadCount: cellContextQuery.data.loadCount,
+            derivedStatus: cellContextQuery.data.derivedStatus,
+            onConfirm: () => alert("Confirm — wired in Phase 1.5"),
+            onMatchBol: () => alert("Match BOL — wired in Phase 1.5"),
+            onAssignDriver: () => alert("Assign Driver — wired in Phase 1.5"),
+            onAddComment: () => alert("Add Comment — wired in Phase 1.5"),
+            onClose: () => setOpenCell(null),
+          }}
+        />
       )}
     </div>
   );
