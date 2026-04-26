@@ -24,6 +24,34 @@ You can see all of this in the system: Validate page, Workbench drawer's photo v
 
 ---
 
+## 0b. What changed this weekend — your sheet, compiled (added 2026-04-26)
+
+The friction this week wasn't about features missing. It was about v2 not speaking your team's vocabulary. This weekend we closed that gap. v2 now reads what your team has been painting in your sheet for four years and surfaces it as the same vocabulary, on the same axes, with the same labels.
+
+- **Your Load Count Sheet is now the design document v2 is compiling against.** Read live every 30 minutes via service-account share. Your "Current" and "Previous" tabs, the Order of Invoicing matrix, the painted cell colors, the Notes section, the "Other Jobs to be Invoiced (Jenny)" queue — v2 reads all of it now.
+
+- **PCS Truth: 96.2% live capture rate** of what PCS bills you for, on the carrier feeds we have. The 3.8% gap is two named carriers (JRT 447 loads, Signal Peak 58 loads) that don't have a feed yet — discrete engineering items, not matcher gaps. Two perfect-match weeks (12/29 +8, 2/16 +1) and one within ±14 (2/02). Live at `/admin/pcs-truth`.
+
+- **Sheet Truth.** Side-by-side per-week count of your sheet's "Total Built" vs v2's count for the same week. The same `Discrepancy` column you compute manually every Friday — automated. Live at `/admin/sheet-truth`.
+
+- **Order of Invoicing matrix.** The Bill To × Builder × daily-counts grid you build at the bottom of every weekly tab — automated. Scout / Steph / Keli / Crystal (the 4th builder we'd missed) / Katie (backup) / Jenny. Live at `/admin/builder-matrix`.
+
+- **Sheet Status mirror.** v2 now reads the cell BACKGROUND COLORS from your sheet via the Sheets API (your 8-stage paint pipeline + the "Need Rate Info" exception). The legend is captured live from your Color Key tab. Side-by-side dual-color reconciliation lives at `/admin/sheet-status`.
+
+- **Jenny's Queue category.** Truck Pushers, Equipment Moves, Frac Chem, Finoric, JoeTex, Panel Truss — non-standard work that doesn't fit the well-day grid. v2 had no concept of this category before. Live at `/admin/jenny-queue`.
+
+- **Worksurface (new dispatch front door).** `/workbench` is now the unified daily-work surface that mirrors your sheet's structure: top strip = Order of Invoicing matrix, main canvas = Bill To × Wells × Sun-Sat grid with v2-derived colored cells, three expand-down sections (Your Inbox / Today's Intake / Jenny's Queue). Each cell click opens a drawer showing the loads in that cell with a context-aware action button driven by the cell's workflow status. Cells show **two colors**: top half = what your sheet paints, bottom half = what v2 derives from underlying load lifecycle. Mismatches surface as a flag for refinement.
+
+- **The Confirm action is real.** Click a `loads_being_built` cell, hit Confirm, and v2 bulk-advances all the loads in that cell to `built`. The cell re-renders with the new color within seconds. The work IS the status change.
+
+- **JRT mythology busted.** We kept calling JRT a "no v2 feed" gap. Your team has been entering 894 JRT loads to PCS manually each quarter. v2 will read JRT FROM PCS in Phase 2 — the gap is an ingest path, not coverage.
+
+- **Sand provider conflation fixed.** 6,940 Logistiq loads were mistagged with `Alpine Silica LLC` (the sand provider, not your billing customer). Re-attributed to `Logistix IQ` (the actual PCS bill-to). Steph's row now correctly shows ~914 loads/week instead of being split.
+
+The reframe for Monday: **your team has been specifying this software since 2022 — the sheet was the spec, the painted colors were the state machine, the Order of Invoicing matrix was the team-routing model.** v2 read all of it this weekend and became the compiler.
+
+---
+
 ## 1. System-wide load counts (verified 2026-04-24 09:15 CDT)
 
 | Source                   |  Count | What it is                                                  |
