@@ -3069,6 +3069,22 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       return { success: true, data: updated };
     },
   );
+
+  // GET /diag/customers — list active customers for UI selectors
+  // (worksurface highlight strip, etc.). Lightweight, no joins.
+  fastify.get("/customers", async (_request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const { sql } = await import("drizzle-orm");
+    const rows = (await db.execute(sql`
+      SELECT id, name FROM customers WHERE active = true ORDER BY name
+    `)) as unknown as Array<{ id: number; name: string }>;
+    return { success: true, data: { customers: rows } };
+  });
 };
 
 export default diagRoutes;
