@@ -32,12 +32,34 @@ interface CellRow {
   cell_hex: string | null;
   status: string;
 }
+interface CellWithV2 {
+  row_index: number;
+  col_index: number;
+  well_name: string | null;
+  bill_to: string | null;
+  cell_value: string | null;
+  cell_hex: string | null;
+  status: string;
+  dow: number;
+  well_id: number | null;
+  v2_count_for_day: number;
+}
+interface Reconciliation {
+  cellsAgree: number;
+  cellsDelta: number;
+  cellsNoV2Well: number;
+  totalSheetCount: number;
+  totalV2Count: number;
+  weekDelta: number;
+}
 interface StatusPayload {
   weekStart: string;
   tab: string;
   legend: LegendEntry[];
   counts: StatusCount[];
   cells: CellRow[];
+  cellsWithV2: CellWithV2[];
+  reconciliation: Reconciliation;
   lastSync: string | null;
 }
 
@@ -90,6 +112,16 @@ export function SheetStatus() {
   });
 
   const data = statusQuery.data;
+
+  // Build a lookup from cellsWithV2 so we can render v2 counts per cell.
+  const v2ByCell = useMemo(() => {
+    const m = new Map<string, CellWithV2>();
+    if (!data) return m;
+    for (const c of data.cellsWithV2) {
+      m.set(`${c.row_index}-${c.col_index}`, c);
+    }
+    return m;
+  }, [data]);
 
   // Group cells into a grid for rendering. We only display the well-grid
   // cells (col_index 2-8 = Sun-Sat) per row.
@@ -205,6 +237,65 @@ export function SheetStatus() {
             </div>
           </section>
 
+          {/* Reconciliation summary — sheet vs v2 per-cell agreement */}
+          {data.reconciliation && (
+            <section className="rounded-lg border border-border bg-bg-secondary p-4">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary mb-3">
+                Sheet ↔ v2 Reconciliation
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-md border border-border bg-bg-primary/40 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+                    Cells agree
+                  </div>
+                  <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {data.reconciliation.cellsAgree}
+                  </div>
+                </div>
+                <div className="rounded-md border border-border bg-bg-primary/40 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+                    Cells differ
+                  </div>
+                  <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                    {data.reconciliation.cellsDelta}
+                  </div>
+                </div>
+                <div className="rounded-md border border-border bg-bg-primary/40 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+                    No v2 well match
+                  </div>
+                  <div className="text-2xl font-bold text-slate-500">
+                    {data.reconciliation.cellsNoV2Well}
+                  </div>
+                </div>
+                <div className="rounded-md border border-border bg-bg-primary/40 px-3 py-2">
+                  <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+                    Week delta (v2 − sheet)
+                  </div>
+                  <div
+                    className={`text-2xl font-bold ${
+                      data.reconciliation.weekDelta === 0
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : Math.abs(data.reconciliation.weekDelta) <= 5
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-red-600 dark:text-red-400"
+                    }`}
+                  >
+                    {data.reconciliation.weekDelta > 0 ? "+" : ""}
+                    {data.reconciliation.weekDelta.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-text-secondary mt-3">
+                Sheet total:{" "}
+                <strong>{data.reconciliation.totalSheetCount}</strong> · v2
+                total: <strong>{data.reconciliation.totalV2Count}</strong> ·
+                Per-cell agreement only counts cells where v2 has a well bound
+                to the sheet's well_name (via wells.aliases match).
+              </p>
+            </section>
+          )}
+
           {/* Painted grid mirror — well rows × day cols, colored cells */}
           {grid.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border bg-bg-secondary p-8 text-center text-sm text-text-secondary">
@@ -242,26 +333,49 @@ export function SheetStatus() {
                       <td className="py-1.5 pr-3 text-xs text-text-secondary">
                         {row.billTo ?? "—"}
                       </td>
-                      {row.days.map((cell, idx) => (
-                        <td
-                          key={`${row.rowIndex}-${idx}`}
-                          className="py-1.5 pr-2 text-center text-xs"
-                        >
-                          {cell?.cell_hex ? (
-                            <div
-                              className="w-8 h-6 mx-auto rounded border border-border"
-                              style={{ backgroundColor: cell.cell_hex }}
-                              title={`${cell.cell_value ?? ""} · ${statusLabel(data.legend, cell.status)}`}
-                            >
-                              <span className="sr-only">
-                                {cell.cell_value} {cell.status}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-text-secondary">·</span>
-                          )}
-                        </td>
-                      ))}
+                      {row.days.map((cell, idx) => {
+                        const v2 = cell
+                          ? v2ByCell.get(`${row.rowIndex}-${cell.col_index}`)
+                          : undefined;
+                        const sheetN =
+                          parseInt(cell?.cell_value ?? "0", 10) || 0;
+                        const v2N = v2?.v2_count_for_day ?? 0;
+                        const delta = v2N - sheetN;
+                        const hasV2Match = v2?.well_id != null;
+                        const tip = cell
+                          ? `Sheet: ${cell.cell_value ?? ""} · ${statusLabel(data.legend, cell.status)}\nv2: ${v2N}${hasV2Match ? "" : " (no well match)"}\nDelta: ${delta > 0 ? "+" : ""}${delta}`
+                          : "";
+                        return (
+                          <td
+                            key={`${row.rowIndex}-${idx}`}
+                            className="py-1.5 pr-2 text-center text-xs relative"
+                          >
+                            {cell?.cell_hex ? (
+                              <div
+                                className="w-10 h-7 mx-auto rounded border border-border relative flex items-center justify-center text-[10px] font-semibold text-black/70"
+                                style={{ backgroundColor: cell.cell_hex }}
+                                title={tip}
+                              >
+                                {cell.cell_value || ""}
+                                {hasV2Match && delta !== 0 && (
+                                  <span
+                                    className={`absolute -top-1.5 -right-1.5 px-1 rounded-full text-[9px] leading-tight font-bold border ${
+                                      delta > 0
+                                        ? "bg-blue-500 text-white border-blue-700"
+                                        : "bg-amber-500 text-white border-amber-700"
+                                    }`}
+                                  >
+                                    {delta > 0 ? "+" : ""}
+                                    {delta}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-text-secondary">·</span>
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>

@@ -197,6 +197,13 @@
       "when": 1777172295803,
       "tag": "0027_sheet_well_status",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1777173167523,
+      "tag": "0028_weekly_notes",
+      "breakpoints": true
     }
   ]
 }

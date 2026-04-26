@@ -672,6 +672,100 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // POST /weekly-notes-sync — Pull the per-week Notes section from a tab
+  // and persist. Idempotent on (spreadsheet, tab, week_start).
+  fastify.post(
+    "/weekly-notes-sync",
+    { preHandler: [fastify.authenticate, fastify.requireRole(["admin"])] },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+        });
+      const body = (request.body ?? {}) as {
+        spreadsheetId?: string;
+        tabName?: string;
+        weekStart?: string;
+      };
+      const spreadsheetId =
+        body.spreadsheetId ?? "1ZBzcSEFRfX8J6x0wj_836xnGwzgCSSVFe7QU2SRgtQM";
+      const tabName = body.tabName ?? "Current";
+      let weekStart = body.weekStart;
+      if (!weekStart) {
+        const { sql } = await import("drizzle-orm");
+        const r = (await db.execute(sql`
+          SELECT (date_trunc('week', (now() AT TIME ZONE 'America/Chicago')::date + interval '1 day') - interval '1 day')::date AS sunday
+        `)) as unknown as Array<{ sunday: string | Date }>;
+        weekStart = String(r[0]?.sunday ?? "").slice(0, 10);
+      }
+      try {
+        const { syncWeeklyNotes } =
+          await import("../../sheets/services/weekly-notes-sync.service.js");
+        const result = await syncWeeklyNotes(db, {
+          spreadsheetId,
+          tabName,
+          weekStart,
+        });
+        return {
+          success: true,
+          data: { weekStart, tabName, ...result },
+        };
+      } catch (e) {
+        return reply.status(500).send({
+          success: false,
+          error: {
+            code: "WEEKLY_NOTES_SYNC_FAILED",
+            message: e instanceof Error ? e.message : String(e),
+          },
+        });
+      }
+    },
+  );
+
+  // GET /weekly-notes — Read persisted notes. Returns most-recent first
+  // across all spreadsheets/tabs.
+  fastify.get("/weekly-notes", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const q = (request.query ?? {}) as { weekStart?: string; limit?: string };
+    const limit = Math.min(parseInt(q.limit ?? "20", 10) || 20, 100);
+    const { sql } = await import("drizzle-orm");
+    const rows = q.weekStart
+      ? ((await db.execute(sql`
+          SELECT id, spreadsheet_id, sheet_tab_name, week_start, body, captured_at
+          FROM weekly_notes
+          WHERE week_start = ${q.weekStart}
+          ORDER BY captured_at DESC
+        `)) as unknown as Array<{
+          id: number;
+          spreadsheet_id: string;
+          sheet_tab_name: string;
+          week_start: string;
+          body: string;
+          captured_at: string;
+        }>)
+      : ((await db.execute(sql`
+          SELECT id, spreadsheet_id, sheet_tab_name, week_start, body, captured_at
+          FROM weekly_notes
+          ORDER BY week_start DESC, captured_at DESC
+          LIMIT ${limit}
+        `)) as unknown as Array<{
+          id: number;
+          spreadsheet_id: string;
+          sheet_tab_name: string;
+          week_start: string;
+          body: string;
+          captured_at: string;
+        }>);
+    return { success: true, data: { notes: rows } };
+  });
+
   // POST /sheet-color-sync — Run color-sync for a tab+week. Persists
   // per-cell status into sheet_well_status. Idempotent on (spreadsheet,
   // tab, week) — replaces existing rows.
@@ -788,6 +882,84 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         AND week_start = ${weekStart}
     `)) as unknown as Array<{ last_sync: string | null }>;
 
+    // Per-cell v2 reconciliation: for each painted cell that lives in the
+    // well-grid (col_index 2..8 = Sun..Sat), pull the v2 load count for
+    // the same (well, day-of-week within week_start). Sheet vs v2 delta
+    // surfaces whether the team's painted state agrees with v2's ingest.
+    //
+    // Well-name match: case-insensitive exact OR contained in any
+    // wells.aliases jsonb element. Cheap join, single query for all cells.
+    const cellsWithV2 = (await db.execute(sql`
+      WITH cells AS (
+        SELECT
+          row_index, col_index, well_name, bill_to, cell_value, cell_hex, status,
+          (col_index - 2) AS dow,
+          (${weekStart}::date + ((col_index - 2) || ' day')::interval)::date AS load_date
+        FROM sheet_well_status
+        WHERE spreadsheet_id = '1ZBzcSEFRfX8J6x0wj_836xnGwzgCSSVFe7QU2SRgtQM'
+          AND sheet_tab_name = ${tab}
+          AND week_start = ${weekStart}
+          AND col_index BETWEEN 2 AND 8
+          AND well_name IS NOT NULL
+      ),
+      well_lookup AS (
+        SELECT c.row_index, c.col_index, c.load_date, c.well_name,
+          (
+            SELECT w.id FROM wells w
+            WHERE LOWER(TRIM(w.name)) = LOWER(TRIM(c.well_name))
+               OR EXISTS (
+                 SELECT 1 FROM jsonb_array_elements_text(w.aliases) a
+                 WHERE LOWER(TRIM(a)) = LOWER(TRIM(c.well_name))
+               )
+            ORDER BY w.id LIMIT 1
+          ) AS well_id
+        FROM cells c
+      )
+      SELECT
+        c.row_index, c.col_index, c.well_name, c.bill_to, c.cell_value,
+        c.cell_hex, c.status, c.dow,
+        wl.well_id,
+        (
+          SELECT COUNT(*)::int FROM loads l
+          JOIN assignments a ON a.load_id = l.id
+          WHERE a.well_id = wl.well_id
+            AND l.delivered_on >= (c.load_date AT TIME ZONE 'America/Chicago')
+            AND l.delivered_on < ((c.load_date + interval '1 day') AT TIME ZONE 'America/Chicago')
+        ) AS v2_count_for_day
+      FROM cells c
+      LEFT JOIN well_lookup wl ON wl.row_index = c.row_index AND wl.col_index = c.col_index
+    `)) as unknown as Array<{
+      row_index: number;
+      col_index: number;
+      well_name: string | null;
+      bill_to: string | null;
+      cell_value: string | null;
+      cell_hex: string | null;
+      status: string;
+      dow: number;
+      well_id: number | null;
+      v2_count_for_day: number;
+    }>;
+
+    // Compute reconciliation summary
+    let cellsAgree = 0;
+    let cellsDelta = 0;
+    let cellsNoV2Well = 0;
+    let totalSheetCount = 0;
+    let totalV2Count = 0;
+    for (const c of cellsWithV2) {
+      const sheetN = parseInt(c.cell_value || "0", 10) || 0;
+      totalSheetCount += sheetN;
+      totalV2Count += c.v2_count_for_day;
+      if (c.well_id == null) {
+        cellsNoV2Well++;
+      } else if (sheetN === c.v2_count_for_day) {
+        cellsAgree++;
+      } else {
+        cellsDelta++;
+      }
+    }
+
     return {
       success: true,
       data: {
@@ -796,6 +968,15 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         legend,
         counts,
         cells,
+        cellsWithV2,
+        reconciliation: {
+          cellsAgree,
+          cellsDelta,
+          cellsNoV2Well,
+          totalSheetCount,
+          totalV2Count,
+          weekDelta: totalV2Count - totalSheetCount,
+        },
         lastSync: lastSyncRow[0]?.last_sync ?? null,
       },
     };

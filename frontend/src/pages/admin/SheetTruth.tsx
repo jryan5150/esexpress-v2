@@ -263,6 +263,8 @@ export function SheetTruth() {
         </div>
       )}
 
+      <WeeklyNotesPanel />
+
       <footer className="text-xs text-text-secondary border-t border-border pt-3 mt-2">
         Source sheet:{" "}
         <a
@@ -314,5 +316,111 @@ function Stat({
         {value}
       </div>
     </div>
+  );
+}
+
+// Weekly Notes panel — surfaces the per-week human notes Jess writes at
+// the bottom of each weekly tab. Mirrors the Notes section convention
+// the team has used since 2022.
+interface WeeklyNote {
+  id: number;
+  spreadsheet_id: string;
+  sheet_tab_name: string;
+  week_start: string;
+  body: string;
+  captured_at: string;
+}
+
+function WeeklyNotesPanel() {
+  const qc = useQueryClient();
+  const notesQuery = useQuery({
+    queryKey: ["admin", "weekly-notes"],
+    queryFn: () =>
+      api
+        .get<{
+          success: boolean;
+          data: { notes: WeeklyNote[] };
+        }>("/diag/weekly-notes?limit=10")
+        .then((r) => r.data.notes),
+    staleTime: 60_000,
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () =>
+      api
+        .post<
+          {},
+          {
+            success: boolean;
+            data: {
+              weekStart: string;
+              tabName: string;
+              found: boolean;
+              body: string | null;
+              upserted: boolean;
+            };
+          }
+        >("/diag/weekly-notes-sync", {})
+        .then((r) => r),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ["admin", "weekly-notes"] }),
+  });
+
+  const notes = notesQuery.data ?? [];
+
+  return (
+    <section className="rounded-lg border border-border bg-bg-secondary p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">
+          Weekly Notes (from sheet)
+        </h2>
+        <button
+          type="button"
+          onClick={() => syncMutation.mutate()}
+          disabled={syncMutation.isPending}
+          className="px-2.5 py-1 text-xs rounded-md border border-border bg-bg-primary hover:bg-bg-tertiary disabled:opacity-50"
+        >
+          {syncMutation.isPending ? "Syncing..." : "Sync this week"}
+        </button>
+      </div>
+
+      {syncMutation.isSuccess && syncMutation.data && (
+        <div className="text-xs px-2.5 py-1.5 rounded-md bg-bg-primary/40 border border-border mb-2">
+          {syncMutation.data.data.found
+            ? syncMutation.data.data.upserted
+              ? `Captured notes from ${syncMutation.data.data.tabName} (${syncMutation.data.data.weekStart})`
+              : `Notes header found but body empty for ${syncMutation.data.data.tabName}`
+            : `No "Notes" section found in ${syncMutation.data.data.tabName}`}
+        </div>
+      )}
+
+      {notes.length === 0 ? (
+        <div className="text-xs text-text-secondary py-3 text-center border border-dashed border-border rounded-md">
+          No weekly notes captured yet. Click <strong>Sync this week</strong> to
+          pull the Notes section from the Current tab.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {notes.map((n) => (
+            <div
+              key={n.id}
+              className="rounded-md border border-border bg-bg-primary/40 p-3"
+            >
+              <div className="flex items-baseline justify-between gap-3 mb-1">
+                <div className="text-xs font-semibold">
+                  Week of {n.week_start} · {n.sheet_tab_name}
+                </div>
+                <div className="text-[10px] text-text-secondary">
+                  {new Date(n.captured_at).toLocaleString()}
+                </div>
+              </div>
+              <pre className="text-sm whitespace-pre-wrap font-sans text-text-primary">
+                {n.body}
+              </pre>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

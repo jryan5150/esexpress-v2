@@ -1179,6 +1179,8 @@ export const DISCREPANCY_TYPES = [
   "orphan_destination", // v2 destination not mapped to any well (3+ loads)
   "sheet_vs_v2_week_count", // Load Count Sheet "Total Built" ≠ v2 weekly count
   "sheet_vs_v2_well_count", // Per-well per-week count divergence
+  "sheet_status_drift", // Sheet's painted workflow status != v2's lifecycle for same (well, week)
+  "sheet_cell_count_drift", // Sheet's per-cell count != v2's count for that (well, day)
 ] as const;
 
 export const DISCREPANCY_SEVERITIES = ["info", "warning", "critical"] as const;
@@ -1240,6 +1242,34 @@ export const discrepancies = pgTable(
 //
 // Identity strategy: driver_code is the stable key when present, falling
 // back to lowercased+trimmed driver_name. Both are indexed.
+
+// Weekly notes — per-week human metadata Jess writes at the bottom of
+// each weekly tab on the Load Count Sheet. These explain anomalies in
+// the numbers ("Bulk loads finalize Monday", "Equipment moves waiting
+// on ATMZ billing"). v2 has no per-load equivalent, so this gives
+// dispatch context that doesn't fit anywhere else.
+export const weeklyNotes = pgTable(
+  "weekly_notes",
+  {
+    id: serial("id").primaryKey(),
+    spreadsheetId: text("spreadsheet_id").notNull(),
+    sheetTabName: text("sheet_tab_name").notNull(),
+    weekStart: text("week_start").notNull(), // 'YYYY-MM-DD' Sunday
+    body: text("body").notNull(),
+    rowIndex: integer("row_index"), // approximate row in source tab
+    capturedAt: timestamp("captured_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_weekly_notes_unique").on(
+      table.spreadsheetId,
+      table.sheetTabName,
+      table.weekStart,
+    ),
+    index("idx_weekly_notes_week").on(table.weekStart),
+  ],
+);
 
 export const driverRoster = pgTable(
   "driver_roster",
