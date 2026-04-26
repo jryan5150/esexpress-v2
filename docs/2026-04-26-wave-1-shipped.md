@@ -62,6 +62,19 @@ d542554 feat(diag): /diag/well-grid endpoint — per-cell v2 aggregate + derived
 
 The plan's code blocks used `api.get<{success, data: T}>(...).then(r => r.data)` pattern. This double-unwraps because `frontend/src/lib/api.ts:request()` already unwraps the `{success, data}` envelope. Every subagent caught this and applied the direct-typed pattern (`api.get<DirectPayload>(url)`) used by existing hooks (use-workbench, use-finance, etc.). Documented in commit messages.
 
+## Polish window completed (Sunday morning, post-Wave 1)
+
+After the 7-task Wave 1 build, the following polish was shipped:
+
+- ✅ **Phase 1.5 #1 — Confirm action wired live.** Drawer's Confirm button on `loads_being_built` cells now calls `useBulkConfirm` against the cell's actual `assignmentIds[]`, advancing all loads to `built` and re-rendering the cell with updated derived color within seconds. The "work IS the status change" property the spec promised. (commit `5997b9d`)
+- ✅ **Phase 1.5 #6 — Dual-color cells live.** `Workbench` fetches `/diag/sheet-status` and passes `paintedStatusByCell` to `WellGrid` → `WellGridCell`. Cells render top-half = sheet-painted color, bottom-half = v2-derived. Mismatch badge appears when `stage_distance > 1` (per spec sub-question 2 rule). Drawer cell-summary header shows the painted-status tile when present. (commit `dba30fd`)
+- ✅ **Phase 1.5 #5 — Per-load drilldown in drawer body.** Drawer body now renders the cell's loads as a compact table (driver, ticket, BOL, weight, status pill, photo dot) instead of the placeholder. Photo dots: green=attached, amber=pending, red=missing. (commit `cf9df40`)
+- ✅ **New endpoint `/diag/well-grid/cell?wellId&dow&weekStart`** — returns load list + assignmentIds for a single cell. Powers the Confirm action + drilldown. (commit `5997b9d`)
+- ✅ **Doc updates.** `validation-numbers.md` §0b added (weekend reframe + worksurface walkthrough). `docs/2026-04-27-jessica-monday-email.md` written (Monday opening email — your-sheet-as-spec frame, 3 concrete pre-meeting clicks). (commit `b16be53`)
+- ✅ **Persona stress test (API smoke).** All 11 worksurface endpoints respond 200. Per-customer inbox filtering verified: manager (jryan) = 317 missing photos / 3,753 uncertain; Scout (Liberty) = 204 / 2,038; Steph (Logistix) = 18 / 1,617. Numbers are live and per-customer correctly scoped.
+
+**Acceptance criterion update:** spec §"Acceptance criteria" now passes 10/10 (criterion #10 — sheet-painted overlay + mismatch badge — moved from ⚠️ Wave 1 cut to ✅ shipped).
+
 ## Phase 1.5 follow-ups (carry into the polish window)
 
 Real-action wiring (currently `alert()` stubs in the drawer):
