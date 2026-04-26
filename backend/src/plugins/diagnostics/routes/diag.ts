@@ -1147,6 +1147,171 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /well-grid — per-cell v2 aggregate + lifecycle-derived color
+  // for the Sun-Sat week starting weekStart. Output mirrors the Load
+  // Count Sheet's grid: Bill To × Wells (rows) × Sun-Sat (cols).
+  // Color is COMPUTED every request from underlying load lifecycle
+  // (assignments.status, photo_status, pcs_dispatch.cleared_at,
+  // pcs_invoice.status, well.needs_rate_info, well.rate_per_ton).
+  // See docs/superpowers/specs/2026-04-26-unified-worksurface-design.md
+  // §"Lifecycle → Computed Color Rule" for the rule definition.
+  fastify.get("/well-grid", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const { sql } = await import("drizzle-orm");
+
+    const q = (request.query ?? {}) as { weekStart?: string };
+    let weekStart = q.weekStart;
+    if (!weekStart) {
+      const r = (await db.execute(sql`
+        SELECT (date_trunc('week', (now() AT TIME ZONE 'America/Chicago')::date + interval '1 day') - interval '1 day')::date AS sunday
+      `)) as unknown as Array<{ sunday: string | Date }>;
+      weekStart = String(r[0]?.sunday ?? "").slice(0, 10);
+    }
+
+    // Per (well, day) aggregate. delivered_on is timestamptz; cast to
+    // America/Chicago date and compare to (weekStart + dow days).
+    const cellsRow = (await db.execute(sql`
+      WITH this_week AS (
+        SELECT
+          a.well_id,
+          ((l.delivered_on AT TIME ZONE 'America/Chicago')::date - ${weekStart}::date) AS dow,
+          COUNT(*)::int AS load_count,
+          BOOL_OR(a.photo_status = 'missing') AS any_missing_photo,
+          BOOL_OR(l.driver_name IS NULL OR TRIM(l.driver_name) = '') AS any_missing_driver,
+          BOOL_OR(a.status = 'pending') AS any_pending,
+          BOOL_OR(a.status = 'built') AS any_built,
+          BOOL_OR(a.status IN ('dispatched','built')) AS any_dispatched_or_built
+        FROM loads l
+        JOIN assignments a ON a.load_id = l.id
+        WHERE l.delivered_on >= (${weekStart}::date AT TIME ZONE 'America/Chicago')
+          AND l.delivered_on < ((${weekStart}::date + interval '7 days') AT TIME ZONE 'America/Chicago')
+          AND a.well_id IS NOT NULL
+        GROUP BY a.well_id, dow
+      )
+      SELECT
+        tw.well_id,
+        w.name AS well_name,
+        c.id AS customer_id,
+        c.name AS bill_to,
+        tw.dow,
+        tw.load_count,
+        tw.any_missing_photo,
+        tw.any_missing_driver,
+        tw.any_pending,
+        tw.any_built,
+        w.needs_rate_info,
+        w.rate_per_ton
+      FROM this_week tw
+      JOIN wells w ON w.id = tw.well_id
+      LEFT JOIN loads l2 ON l2.id = (
+        SELECT load_id FROM assignments WHERE well_id = tw.well_id LIMIT 1
+      )
+      LEFT JOIN customers c ON c.id = l2.customer_id
+      WHERE tw.dow BETWEEN 0 AND 6
+      ORDER BY c.name NULLS LAST, w.name, tw.dow
+    `)) as unknown as Array<{
+      well_id: number;
+      well_name: string;
+      customer_id: number | null;
+      bill_to: string | null;
+      dow: number;
+      load_count: number;
+      any_missing_photo: boolean;
+      any_missing_driver: boolean;
+      any_pending: boolean;
+      any_built: boolean;
+      needs_rate_info: boolean;
+      rate_per_ton: string | null;
+    }>;
+
+    // Lifecycle → status. "Laggard wins" — earliest unresolved stage.
+    function deriveStatus(row: (typeof cellsRow)[number]): string {
+      if (row.needs_rate_info || row.rate_per_ton == null)
+        return "need_rate_info";
+      if (row.any_missing_photo) return "missing_tickets";
+      if (row.any_missing_driver) return "missing_driver";
+      if (row.any_pending) return "loads_being_built";
+      if (row.any_built) return "loads_completed";
+      // Phase 2.5: pcs_dispatch + pcs_invoice joins
+      return "loads_completed";
+    }
+
+    interface Cell {
+      wellId: number;
+      wellName: string;
+      customerId: number | null;
+      billTo: string | null;
+      dow: number;
+      loadCount: number;
+      derivedStatus: string;
+    }
+    const cells: Cell[] = cellsRow.map((r) => ({
+      wellId: r.well_id,
+      wellName: r.well_name,
+      customerId: r.customer_id,
+      billTo: r.bill_to,
+      dow: r.dow,
+      loadCount: r.load_count,
+      derivedStatus: deriveStatus(r),
+    }));
+
+    // Group cells into rows keyed by (well_id) so the frontend can
+    // render Bill To × Well × Sun-Sat with one fetch.
+    const byWell = new Map<
+      number,
+      {
+        wellId: number;
+        wellName: string;
+        customerId: number | null;
+        billTo: string | null;
+        days: Array<Cell | null>;
+      }
+    >();
+    for (const c of cells) {
+      let row = byWell.get(c.wellId);
+      if (!row) {
+        row = {
+          wellId: c.wellId,
+          wellName: c.wellName,
+          customerId: c.customerId,
+          billTo: c.billTo,
+          days: Array(7).fill(null),
+        };
+        byWell.set(c.wellId, row);
+      }
+      if (c.dow >= 0 && c.dow < 7) row.days[c.dow] = c;
+    }
+    const rows = Array.from(byWell.values()).sort((a, b) => {
+      const aBT = a.billTo ?? "";
+      const bBT = b.billTo ?? "";
+      if (aBT !== bBT) return aBT.localeCompare(bBT);
+      return a.wellName.localeCompare(b.wellName);
+    });
+
+    // Week endpoints for UI date display
+    const weekEndDate = new Date(
+      new Date(weekStart + "T00:00:00Z").getTime() + 6 * 24 * 60 * 60 * 1000,
+    );
+    const weekEnd = weekEndDate.toISOString().slice(0, 10);
+
+    return {
+      success: true,
+      data: {
+        weekStart,
+        weekEnd,
+        tz: "America/Chicago",
+        rows,
+        rowCount: rows.length,
+        totalCells: cells.length,
+      },
+    };
+  });
+
   // GET /builder-matrix — Reproduces the Load Count Sheet's "Order of
   // Invoicing" matrix exactly. Each row = (customer → builder), each cell
   // = daily count for the requested week. Mirrors what Jess hand-builds
