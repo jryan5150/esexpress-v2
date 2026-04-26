@@ -151,6 +151,23 @@ export const wells = pgTable(
 );
 
 export const LOAD_SOURCES = ["propx", "logistiq", "manual"] as const;
+
+// Job category — captures the sheet's "Other Jobs to be Invoiced (Jenny)"
+// section. Default 'standard' = well-bound load (the common case). The rest
+// are non-standard work the team tracks in Jenny's Queue.
+// See docs/2026-04-25-canonical-vocabulary.md role #14.
+export const JOB_CATEGORIES = [
+  "standard",
+  "truck_pusher",
+  "equipment_move",
+  "flatbed",
+  "frac_chem",
+  "finoric",
+  "joetex",
+  "panel_truss",
+  "other",
+] as const;
+export type JobCategory = (typeof JOB_CATEGORIES)[number];
 export type LoadSource = (typeof LOAD_SOURCES)[number];
 
 export const LOAD_PHASE_STATES = [
@@ -179,6 +196,11 @@ export const loads = pgTable(
     customerId: integer("customer_id"),
     carrierIdFk: integer("carrier_id_fk"),
     shipperId: integer("shipper_id"),
+    // Job category — defaults to 'standard'. Non-standard categories
+    // populate Jenny's Queue. See JOB_CATEGORIES above.
+    jobCategory: text("job_category", { enum: [...JOB_CATEGORIES] })
+      .notNull()
+      .default("standard"),
     // (Drizzle infers FK from .references() in entity table; the constraints
     // were intentionally added separately to allow backfill before enforcement.)
     customerName: text("customer_name"),

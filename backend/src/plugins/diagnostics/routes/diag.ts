@@ -672,6 +672,97 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /jenny-queue — Mirrors the Load Count Sheet's "Other Jobs to be
+  // Invoiced (Jenny)" section. All loads with job_category != 'standard',
+  // grouped by category, with Bill To and load count. The team treats
+  // this as a separate work-stream from the main well-grid because these
+  // jobs don't have a well destination.
+  fastify.get("/jenny-queue", async (_request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: {
+          code: "SERVICE_UNAVAILABLE",
+          message: "Database not connected",
+        },
+      });
+    const { sql } = await import("drizzle-orm");
+
+    // Per-category totals + recent samples
+    const totalsRow = await db.execute(sql`
+      SELECT
+        l.job_category,
+        c.name AS bill_to,
+        COUNT(*)::int AS load_count,
+        MAX(l.delivered_on)::text AS last_seen
+      FROM loads l
+      LEFT JOIN customers c ON c.id = l.customer_id
+      WHERE l.job_category <> 'standard'
+      GROUP BY l.job_category, c.name
+      ORDER BY l.job_category, load_count DESC
+    `);
+
+    const sampleRow = await db.execute(sql`
+      SELECT
+        l.id, l.job_category, l.load_no, l.delivered_on,
+        l.driver_name, l.product_description, l.weight_tons,
+        c.name AS bill_to
+      FROM loads l
+      LEFT JOIN customers c ON c.id = l.customer_id
+      WHERE l.job_category <> 'standard'
+      ORDER BY l.delivered_on DESC NULLS LAST
+      LIMIT 30
+    `);
+
+    interface Total {
+      job_category: string;
+      bill_to: string | null;
+      load_count: number;
+      last_seen: string | null;
+    }
+    interface Sample {
+      id: number;
+      job_category: string;
+      load_no: string | null;
+      delivered_on: string | null;
+      driver_name: string | null;
+      product_description: string | null;
+      weight_tons: string | null;
+      bill_to: string | null;
+    }
+    const totals = totalsRow as unknown as Total[];
+    const samples = sampleRow as unknown as Sample[];
+
+    // Group totals by category
+    const byCategory = new Map<
+      string,
+      { category: string; total: number; rows: Total[] }
+    >();
+    for (const t of totals) {
+      let bucket = byCategory.get(t.job_category);
+      if (!bucket) {
+        bucket = { category: t.job_category, total: 0, rows: [] };
+        byCategory.set(t.job_category, bucket);
+      }
+      bucket.total += t.load_count;
+      bucket.rows.push(t);
+    }
+
+    return {
+      success: true,
+      data: {
+        totalNonStandard: totals.reduce((a, t) => a + t.load_count, 0),
+        categories: Array.from(byCategory.values()).sort(
+          (a, b) => b.total - a.total,
+        ),
+        samples,
+        sourceLabel:
+          'Mirrors "Other Jobs to be Invoiced (Jenny)" from the Load Count Sheet — non-standard work that doesn\'t fit the well-day grid.',
+      },
+    };
+  });
+
   // GET /builder-matrix — Reproduces the Load Count Sheet's "Order of
   // Invoicing" matrix exactly. Each row = (customer → builder), each cell
   // = daily count for the requested week. Mirrors what Jess hand-builds

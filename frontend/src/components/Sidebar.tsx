@@ -479,6 +479,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 </span>
                 Order of Invoicing
               </Link>
+              <Link
+                to="/admin/jenny-queue"
+                className={`${navClass("/admin/jenny-queue")} !pl-9`}
+                title="Jenny's Queue — non-standard work (Truck Pushers, Equipment Moves, Frac Chem, Finoric, etc.) that doesn't fit the well-day grid."
+              >
+                <span className={iconClass("/admin/jenny-queue")}>
+                  inventory_2
+                </span>
+                Jenny's Queue
+              </Link>
             </div>
           )}
 

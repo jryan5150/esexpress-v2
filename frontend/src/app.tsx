@@ -91,6 +91,11 @@ const BuilderMatrix = lazy(() =>
     default: m.BuilderMatrix,
   })),
 );
+const JennyQueue = lazy(() =>
+  import("./pages/admin/JennyQueue").then((m) => ({
+    default: m.JennyQueue,
+  })),
+);
 const LoadReport = lazy(() =>
   import("./pages/LoadReport").then((m) => ({ default: m.LoadReport })),
 );
@@ -168,6 +173,7 @@ export function App() {
                     path="admin/builder-matrix"
                     element={<BuilderMatrix />}
                   />
+                  <Route path="admin/jenny-queue" element={<JennyQueue />} />
                   <Route path="load-report" element={<LoadReport />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="whats-new" element={<WhatsNew />} />
