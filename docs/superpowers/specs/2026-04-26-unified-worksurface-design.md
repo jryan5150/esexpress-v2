@@ -211,6 +211,14 @@ else "laggard wins" (the latest stage ALL loads have reached):
 
 The rule is wrong on day 1 in places. The dual-color split-cell visualization makes EACH mismatch a clickable discrepancy. Refine the rule with Jess over week 1 by walking through the discrepancy queue.
 
+### Mismatch badge suppression (item 2 deepening)
+
+Lifecycle stages have a natural order: `missing_tickets → missing_driver → loads_being_built → loads_completed → loads_being_cleared → loads_cleared → invoiced` (with `need_rate_info` and `export_transfers_completed` as side branches). Adjacent-stage mismatches are usually timing artifacts (v2 hasn't ticked over yet, or sheet hasn't been repainted) — not real divergence.
+
+**Rule:** compute integer `stage_distance = abs(stage_index(sheet) - stage_index(v2))`. Show mismatch badge only when `stage_distance > 1`. Adjacent (1-stage) gaps render with no badge but the dual-color stripe still shows. Strong divergence (>1 stage) gets the visible badge.
+
+**Fallback (D):** if Sunday smoke shows the badge density is still too noisy after suppression, hide all mismatch badges on the worksurface and surface them only on `/admin/sheet-status` (existing). Worksurface renders single-color v2-derived cells; reconciliation lives at the admin page.
+
 ---
 
 ## Schema additions (none — Wave 1 is fully derivable)
@@ -304,7 +312,7 @@ Wave 1 ships when ALL of the following pass on Sunday evening:
 | 3   | Frontend: rewrite `Workbench.tsx` shell — top strip + well grid + drawer mount points + URL state                   |      3hr | #1           |
 | 4   | Frontend: extend `WorkbenchDrawer.tsx` — context-aware action bar based on cell status; cell-summary header         |      2hr | #3           |
 | 5   | Frontend: Inbox section component (filter by builder→customer; urgency sort)                                        |    1.5hr | #2           |
-| 6   | Frontend: Today's Intake section (lift BolQueue's recent-feed query into a card list + manual-match modal)          |      2hr | #3           |
+| 6   | Frontend: Today's Intake section. Card list using existing `useBolQueue` hook (filter to last 4hr). Manual-match: import existing `ManualMatchPanel` component as-is — no rebuild. ~5min wiring per pattern in `AwaitingPhotoMatchSection.tsx`. |      1.5hr | #3           |
 | 7   | Frontend: Jenny's Queue section (reuse existing endpoint; drawer link); user-filter highlight strip; route redirect |    1.5hr | #3           |
 
 Total: ~14hr. With ~30hr until Monday morning that's a ~2x safety buffer.
