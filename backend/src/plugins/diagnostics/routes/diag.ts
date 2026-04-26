@@ -1312,6 +1312,147 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /inbox — "needs you" items filtered by builder→customer mapping.
+  // Workflow-first urgency order (per spec sub-question B):
+  //   1. missing_photos     — delivered loads with no BOL photo, age >4hr
+  //   2. uncertain_matches  — assignment.status='pending' with no recent decision
+  //   3. pcs_discrepancies  — discrepancies on this customer's loads
+  //   4. sheet_drift        — sheet_status_drift discrepancies on this customer's wells
+  //
+  // Query: ?customerIds=1,2,3 (numeric, comma-separated). Empty/no
+  // param = no filter (manager view = sees everything).
+  fastify.get("/inbox", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const { sql } = await import("drizzle-orm");
+
+    const q = (request.query ?? {}) as { customerIds?: string };
+    const customerIds = (q.customerIds ?? "")
+      .split(",")
+      .map((s) => parseInt(s, 10))
+      .filter((n) => Number.isFinite(n));
+    const customerFilter =
+      customerIds.length > 0
+        ? sql`AND l.customer_id IN (${sql.join(
+            customerIds.map((id) => sql`${id}`),
+            sql`, `,
+          )})`
+        : sql``;
+
+    // Missing photos: delivered >4hr ago, no attached photo
+    const missingPhotos = (await db.execute(sql`
+        SELECT
+          'missing_photo' AS kind,
+          l.id AS load_id, a.id AS assignment_id, a.well_id,
+          w.name AS well_name, c.name AS bill_to,
+          l.delivered_on::date AS day,
+          l.driver_name, l.bol_no, l.ticket_no
+        FROM loads l
+        JOIN assignments a ON a.load_id = l.id
+        LEFT JOIN wells w ON w.id = a.well_id
+        LEFT JOIN customers c ON c.id = l.customer_id
+        WHERE a.photo_status = 'missing'
+          AND l.delivered_on < now() - interval '4 hours'
+          AND l.delivered_on > now() - interval '14 days'
+          ${customerFilter}
+        ORDER BY l.delivered_on DESC
+        LIMIT 50
+      `)) as unknown as Array<Record<string, unknown>>;
+
+    // Uncertain matches: pending assignments with no recent decision
+    const uncertainMatches = (await db.execute(sql`
+        SELECT
+          'uncertain_match' AS kind,
+          l.id AS load_id, a.id AS assignment_id, a.well_id,
+          w.name AS well_name, c.name AS bill_to,
+          l.delivered_on::date AS day,
+          l.driver_name, l.bol_no, l.ticket_no
+        FROM assignments a
+        JOIN loads l ON l.id = a.load_id
+        LEFT JOIN wells w ON w.id = a.well_id
+        LEFT JOIN customers c ON c.id = l.customer_id
+        WHERE a.status = 'pending'
+          AND l.delivered_on > now() - interval '14 days'
+          ${customerFilter}
+        ORDER BY l.delivered_on DESC
+        LIMIT 50
+      `)) as unknown as Array<Record<string, unknown>>;
+
+    // PCS discrepancies on this customer's loads
+    const pcsDiscrepancies = (await db.execute(sql`
+        SELECT
+          'pcs_discrepancy' AS kind,
+          d.id AS discrepancy_id, d.discrepancy_type, d.severity, d.message,
+          l.id AS load_id, a.id AS assignment_id, a.well_id,
+          w.name AS well_name, c.name AS bill_to,
+          l.delivered_on::date AS day
+        FROM discrepancies d
+        LEFT JOIN assignments a ON a.id = d.assignment_id
+        LEFT JOIN loads l ON l.id = COALESCE(d.load_id, a.load_id)
+        LEFT JOIN wells w ON w.id = a.well_id
+        LEFT JOIN customers c ON c.id = l.customer_id
+        WHERE d.resolved_at IS NULL
+          AND d.discrepancy_type IN ('status_drift','weight_drift','well_mismatch','rate_drift','photo_gap')
+          ${customerFilter}
+        ORDER BY d.severity DESC, d.detected_at DESC
+        LIMIT 50
+      `)) as unknown as Array<Record<string, unknown>>;
+
+    // Sheet-drift discrepancies (sheet_status_drift type)
+    const sheetDrift = (await db.execute(sql`
+        SELECT
+          'sheet_drift' AS kind,
+          d.id AS discrepancy_id, d.message, d.severity,
+          l.id AS load_id, a.id AS assignment_id, a.well_id,
+          w.name AS well_name, c.name AS bill_to,
+          l.delivered_on::date AS day
+        FROM discrepancies d
+        LEFT JOIN assignments a ON a.id = d.assignment_id
+        LEFT JOIN loads l ON l.id = COALESCE(d.load_id, a.load_id)
+        LEFT JOIN wells w ON w.id = a.well_id
+        LEFT JOIN customers c ON c.id = l.customer_id
+        WHERE d.resolved_at IS NULL
+          AND d.discrepancy_type IN ('sheet_status_drift','sheet_cell_count_drift','sheet_vs_v2_well_count')
+          ${customerFilter}
+        ORDER BY d.detected_at DESC
+        LIMIT 50
+      `)) as unknown as Array<Record<string, unknown>>;
+
+    return {
+      success: true,
+      data: {
+        customerIds,
+        urgencyOrder: [
+          "missing_photo",
+          "uncertain_match",
+          "pcs_discrepancy",
+          "sheet_drift",
+        ],
+        items: {
+          missing_photos: missingPhotos,
+          uncertain_matches: uncertainMatches,
+          pcs_discrepancies: pcsDiscrepancies,
+          sheet_drift: sheetDrift,
+        },
+        counts: {
+          missing_photos: missingPhotos.length,
+          uncertain_matches: uncertainMatches.length,
+          pcs_discrepancies: pcsDiscrepancies.length,
+          sheet_drift: sheetDrift.length,
+          total:
+            missingPhotos.length +
+            uncertainMatches.length +
+            pcsDiscrepancies.length +
+            sheetDrift.length,
+        },
+      },
+    };
+  });
+
   // GET /builder-matrix — Reproduces the Load Count Sheet's "Order of
   // Invoicing" matrix exactly. Each row = (customer → builder), each cell
   // = daily count for the requested week. Mirrors what Jess hand-builds
