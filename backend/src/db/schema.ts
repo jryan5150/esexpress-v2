@@ -124,6 +124,11 @@ export const wells = pgTable(
     carrierId: integer("carrier_id").references(() => carriers.id, {
       onDelete: "set null",
     }),
+    // Phase 2 (added 2026-04-25): operator = the oil & gas company that
+    // owns/operates the well (Apache, Comstock, Chesapeake). Distinct from
+    // customer (who pays the bill). Was embedded in well.name as a prefix
+    // until now.
+    operatorId: integer("operator_id"),
     loaderSandplant: text("loader_sandplant"),
     matchFeedback: jsonb("match_feedback")
       .$type<
@@ -167,6 +172,12 @@ export const loads = pgTable(
     truckNo: text("truck_no"),
     trailerNo: text("trailer_no"),
     carrierName: text("carrier_name"),
+    // Phase 2 normalized FKs (added 2026-04-25). The text columns above
+    // remain authoritative for now — these FKs are populated by backfill
+    // and matcher-time normalization. See docs/2026-04-25-canonical-vocabulary.md
+    customerId: integer("customer_id"),
+    carrierIdFk: integer("carrier_id_fk"),
+    shipperId: integer("shipper_id"),
     customerName: text("customer_name"),
     productDescription: text("product_description"),
     originName: text("origin_name"),
@@ -353,6 +364,68 @@ export const assignments = pgTable(
   ],
 );
 
+// ─── CANONICAL ENTITY TABLES (added 2026-04-25, Phase 2 vocab work) ───
+//
+// The original schema had loads.customer_name / carrier_name / origin_name
+// as raw text — leading to the conflations documented in
+// docs/2026-04-25-canonical-vocabulary.md. These tables give us
+// canonical PKs for the four roles that didn't yet have them. The naming
+// bridges (customer_mappings, location_mappings, product_mappings,
+// driver_crossrefs) feed into these via canonical_*_id FKs added below.
+//
+// Carriers already had a table — we just add loads.carrier_id_fk so
+// LOADS (not just wells) can be filtered by carrier.
+
+export const customers = pgTable("customers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  pcsBillToId: text("pcs_bill_to_id"),
+  active: boolean("active").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// The oil & gas companies (Apache, Comstock, Chesapeake, Exco, Civitas).
+// NOT the customer (Liberty pays the bill; Comstock owns the well).
+// Embedded in well names today; this table makes the role queryable.
+export const operators = pgTable("operators", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  shortCodes: jsonb("short_codes").$type<string[]>().default([]).notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// Sandplants and other origin/loader facilities. Multiple naming variants
+// per physical loader currently aren't reconciled — shipper_mappings is
+// the bridge.
+export const shippers = pgTable("shippers", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  city: text("city"),
+  state: text("state"),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const shipperMappings = pgTable("shipper_mappings", {
+  id: serial("id").primaryKey(),
+  sourceName: text("source_name").notNull().unique(),
+  shipperId: integer("shipper_id").references(() => shippers.id),
+  confidence: numeric("confidence", { precision: 4, scale: 3 }).default("0"),
+  confirmed: boolean("confirmed").default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
 // ─── MAPPING TABLES ───────────────────────────────────────────────
 
 export const locationMappings = pgTable("location_mappings", {
@@ -368,6 +441,11 @@ export const customerMappings = pgTable("customer_mappings", {
   id: serial("id").primaryKey(),
   sourceName: text("source_name").notNull().unique(),
   canonicalName: text("canonical_name").notNull(),
+  // Phase 2: bridge points at the customers PK so the matcher can return
+  // a canonical customer_id, not just a string.
+  canonicalCustomerId: integer("canonical_customer_id").references(
+    () => customers.id,
+  ),
   confirmed: boolean("confirmed").default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
