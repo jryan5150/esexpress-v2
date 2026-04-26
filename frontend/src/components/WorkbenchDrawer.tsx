@@ -120,7 +120,7 @@ export interface CellContext {
   onConfirm?: () => void;
   onMatchBol?: () => void;
   onAssignDriver?: () => void;
-  onAddComment?: () => void;
+  onAddComment?: (body: string) => void;
   onClose: () => void;
 }
 
@@ -394,6 +394,9 @@ export function WorkbenchDrawer(props: WorkbenchDrawerProps) {
  * Phase 1.5 once the surface is validated with the dispatch team.
  */
 function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
+  const [showCommentForm, setShowCommentForm] = useState(false);
+  const [commentBody, setCommentBody] = useState("");
+
   const dayLabel = (() => {
     const d = new Date(cellContext.weekStart + "T00:00:00");
     d.setDate(d.getDate() + cellContext.dow);
@@ -511,12 +514,40 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
           )}
           <button
             type="button"
-            onClick={cellContext.onAddComment}
+            onClick={() => setShowCommentForm((v) => !v)}
             className="px-3 py-1.5 text-sm rounded-md border border-border bg-bg-primary hover:bg-bg-tertiary"
           >
-            Add Comment
+            {showCommentForm ? "Cancel comment" : "Add Comment"}
           </button>
         </div>
+        {showCommentForm && (
+          <div className="mt-3 space-y-2">
+            <textarea
+              value={commentBody}
+              onChange={(e) => setCommentBody(e.target.value)}
+              placeholder={`Comment on this cell (${cellContext.wellName})…`}
+              rows={3}
+              className="w-full px-2 py-1.5 text-sm rounded-md border border-border bg-bg-primary"
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (commentBody.trim()) {
+                    cellContext.onAddComment?.(commentBody.trim());
+                    setCommentBody("");
+                    setShowCommentForm(false);
+                  }
+                }}
+                disabled={!commentBody.trim()}
+                className="px-3 py-1 text-xs rounded-md bg-accent text-white disabled:opacity-50"
+              >
+                Save comment
+              </button>
+            </div>
+          </div>
+        )}
         {cellContext.confirmResult && (
           <div className="mt-3 px-3 py-2 rounded-md text-xs bg-bg-primary border border-border">
             {cellContext.confirmResult}

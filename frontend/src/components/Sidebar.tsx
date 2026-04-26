@@ -208,10 +208,10 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
             <Link
               to="/workbench"
               className={navClass("/workbench")}
-              title="Load Center — the unified worksurface: well grid, inbox, intake, and Jenny's queue"
+              title="Today — the unified worksurface: builder matrix, well grid (with painted colors), your inbox, today's intake, and Jenny's queue"
             >
-              <span className={iconClass("/workbench")}>build</span>
-              {!collapsed && "Load Center"}
+              <span className={iconClass("/workbench")}>today</span>
+              {!collapsed && "Today"}
             </Link>
             <Link
               to="/bol"

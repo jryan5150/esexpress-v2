@@ -294,7 +294,7 @@ export function Workbench() {
   return (
     <div className="flex-1 flex flex-col p-4 sm:p-6 gap-3 max-w-[1600px] w-full mx-auto">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Worksurface</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
         <div className="text-xs text-text-secondary">
           {me?.email ? `Signed in as ${me.email}` : ""}
         </div>
@@ -369,9 +369,40 @@ export function Workbench() {
             isConfirming: bulkConfirmMutation.isPending,
             confirmResult,
             onConfirm: handleConfirm,
-            onMatchBol: () => alert("Match BOL — wired in Phase 1.5"),
-            onAssignDriver: () => alert("Assign Driver — wired in Phase 1.5"),
-            onAddComment: () => alert("Add Comment — wired in Phase 1.5"),
+            // Match BOL → navigate to BolQueue (the deeper match surface).
+            // Cell-level inline match-modal is Phase 2 (needs reverse-search:
+            // given a load, find candidate BOL submissions).
+            onMatchBol: () => {
+              window.location.href = `/bol`;
+            },
+            // Assign Driver → navigate to the Well page where the driver
+            // roster lives. Inline cell-level driver picker is Phase 2
+            // (driver_roster needs canonical sheet from Jess first).
+            onAssignDriver: () => {
+              window.location.href = `/wells/${cellContextQuery.data?.wellId}`;
+            },
+            // Add Comment → real POST to first load in the cell, with a
+            // cell-context prefix so it's findable per-load.
+            onAddComment: async (body: string) => {
+              const firstLoad = cellContextQuery.data?.loads?.[0];
+              if (!firstLoad) {
+                setConfirmResult("No load to attach comment to.");
+                return;
+              }
+              try {
+                await api.post(
+                  `/dispatch/loads/${firstLoad.load_id}/comments`,
+                  {
+                    body: `[cell: ${cellContextQuery.data?.wellName} · day ${openCell.dow}] ${body}`,
+                  },
+                );
+                setConfirmResult(`Comment saved on load ${firstLoad.load_id}.`);
+              } catch (err) {
+                setConfirmResult(
+                  `Comment failed: ${err instanceof Error ? err.message : String(err)}`,
+                );
+              }
+            },
             onClose: () => {
               setOpenCell(null);
               setConfirmResult(null);
