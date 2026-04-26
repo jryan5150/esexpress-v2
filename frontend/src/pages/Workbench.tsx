@@ -156,6 +156,37 @@ export function Workbench() {
   const bulkConfirmMutation = useBulkConfirm();
   const [confirmResult, setConfirmResult] = useState<string | null>(null);
 
+  // Painted-status overlay (Phase 1.5 #6, the headline dual-color visual).
+  // Pull /diag/sheet-status for the active week, build a Map keyed by
+  // `${wellId}-${dow}` → painted status. WellGridCell will render the
+  // sheet-painted color as the top half stripe and badge mismatches when
+  // stage_distance > 1.
+  const sheetStatusQuery = useQuery({
+    queryKey: ["worksurface", "sheet-status", weekStart],
+    queryFn: () =>
+      api.get<{
+        cellsWithV2: Array<{
+          well_id: number | null;
+          dow: number;
+          status: string;
+        }>;
+      }>(
+        weekStart
+          ? `/diag/sheet-status?weekStart=${weekStart}`
+          : `/diag/sheet-status`,
+      ),
+    refetchInterval: 5 * 60_000,
+    staleTime: 60_000,
+  });
+  const paintedStatusByCell = useMemo(() => {
+    const m = new Map<string, string>();
+    const cells = sheetStatusQuery.data?.cellsWithV2 ?? [];
+    for (const c of cells) {
+      if (c.well_id != null) m.set(`${c.well_id}-${c.dow}`, c.status);
+    }
+    return m;
+  }, [sheetStatusQuery.data]);
+
   // Effective weekStart for queries: use URL ?week if present, else compute
   // current Sunday in Chicago (matches backend default).
   const effectiveWeekStart = useMemo(() => {
@@ -271,6 +302,7 @@ export function Workbench() {
         myCustomerId={myCustomerId}
         onCellClick={handleCellClick}
         onBadgeClick={handleBadgeClick}
+        paintedStatusByCell={paintedStatusByCell}
       />
 
       <InboxSection
@@ -314,6 +346,9 @@ export function Workbench() {
             loadCount: cellContextQuery.data.loadCount,
             derivedStatus: cellContextQuery.data.derivedStatus,
             assignmentIds: cellContextQuery.data.assignmentIds,
+            paintedStatus: paintedStatusByCell.get(
+              `${cellContextQuery.data.wellId}-${openCell.dow}`,
+            ),
             isConfirming: bulkConfirmMutation.isPending,
             confirmResult,
             onConfirm: handleConfirm,
