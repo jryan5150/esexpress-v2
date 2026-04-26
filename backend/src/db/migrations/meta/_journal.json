@@ -169,6 +169,20 @@
       "when": 1777169001856,
       "tag": "0023_optimal_spacker_dave",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777169701900,
+      "tag": "0024_burly_leader",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777169866322,
+      "tag": "0025_phase2_constraints",
+      "breakpoints": true
     }
   ]
 }

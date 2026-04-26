@@ -175,9 +175,12 @@ export const loads = pgTable(
     // Phase 2 normalized FKs (added 2026-04-25). The text columns above
     // remain authoritative for now — these FKs are populated by backfill
     // and matcher-time normalization. See docs/2026-04-25-canonical-vocabulary.md
+    // FK constraints added in migration 0025 after initial backfill landed.
     customerId: integer("customer_id"),
     carrierIdFk: integer("carrier_id_fk"),
     shipperId: integer("shipper_id"),
+    // (Drizzle infers FK from .references() in entity table; the constraints
+    // were intentionally added separately to allow backfill before enforcement.)
     customerName: text("customer_name"),
     productDescription: text("product_description"),
     originName: text("origin_name"),
@@ -413,6 +416,31 @@ export const shippers = pgTable("shippers", {
   state: text("state"),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+// Builder-routing: who on the dispatch team owns each customer's workflow.
+// Scout owns Liberty; Steph owns Logistix; Keli owns JRT. The team thinks
+// in builder-first ("Scout's loads are slow today" = Liberty loads).
+// One row per (builder, customer). Multiple builders per customer allowed
+// for backup/handoff scenarios.
+//
+// Note: column is `is_primary` not `primary` — `primary` is a Postgres
+// reserved word and would require quoting in every query. Caught in audit
+// 2026-04-25 immediately after first INSERT.
+export const builderRouting = pgTable("builder_routing", {
+  id: serial("id").primaryKey(),
+  builderName: text("builder_name").notNull(),
+  customerId: integer("customer_id").references(() => customers.id, {
+    onDelete: "cascade",
+  }),
+  isPrimary: boolean("is_primary").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
 });
