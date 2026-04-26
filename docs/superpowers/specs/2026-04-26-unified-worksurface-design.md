@@ -54,8 +54,8 @@ Bill To × Wells (rows) × Sun-Sat (cols). Each cell is a 40×28px tile renderin
 - **Cell value** (count for that well-day from v2): centered, large
 - **Top half color stripe**: sheet-painted color (read from `sheet_well_status` via existing color sync)
 - **Bottom half color stripe**: v2-derived color (computed every page load via the lifecycle rule below)
-- **Mismatch indicator**: 8px badge in top-right corner if top ≠ bottom; click → flags as `sheet_status_drift` discrepancy
-- **Click anywhere on cell** → drawer opens with loads for that (well, day)
+- **Mismatch indicator**: 8px badge in top-right corner if top ≠ bottom; click on badge BOTH flags as `sheet_status_drift` discrepancy AND opens drawer (composite action)
+- **Click anywhere else on cell** → drawer opens with loads for that (well, day)
 
 Empty cells (no v2 loads) show as gray. If sheet has a color but v2 has zero loads → orange-bordered cell ("sheet says here, v2 doesn't see them yet").
 
@@ -80,13 +80,13 @@ Difference: -1 [click to flag]
 - Each row clickable → in-drawer load detail (no nested drawer; replaces body)
 - Per-load actions (route uncertain, edit fields) preserved from current Workbench/Validation
 
-**Drawer action bar — context-aware** based on cell's v2-derived status:
+**Drawer action bar — context-aware** based on cell's **v2-derived** status (not sheet-painted; we act on v2's view of reality, sheet-painted is informational only):
 | Cell status | Primary action button |
 | --- | --- |
 | `missing_tickets` | "Match BOL" → opens BOL picker (modal) |
 | `missing_driver` | "Assign Driver" → driver picker from `driver_roster` |
 | `loads_being_built` | "Confirm" → bulk-advances all matching loads to `built` |
-| `loads_completed` | "Push to PCS" (gated by `PCS_DISPATCH_ENABLED` flag) |
+| `loads_completed` | "Push to PCS" (gated by `PCS_DISPATCH_ENABLED`; if flag false, button shows disabled with tooltip "PCS push awaiting enablement") |
 | `loads_being_cleared` | (read-only, monitoring state) |
 | `loads_cleared` | (read-only, awaiting invoice) |
 | `invoiced` | (read-only, terminal) |
@@ -121,7 +121,7 @@ Last 4hr BOL/JotForm landings. Each row:
 - Click matched → drawer opens for that load's cell
 - Click unmatched → manual-match modal (existing BolQueue jotform-match logic, lifted into modal)
 
-Auto-refreshes every 30s. Replaces today's BolQueue feel for the "what just landed?" question. The deeper BolQueue stays at `/bol` for Wave 2.
+Auto-refreshes every 30s. Replaces today's BolQueue feel **for the "what just landed?" question only** (recent-feed view). Older items, search, and the deeper BolQueue mental-model stay at `/bol` until Wave 2 fully absorbs them. Section footer shows: `→ See all in BolQueue (847 items)` link.
 
 **Section C: Jenny's Queue**
 Same shape as `/admin/jenny-queue` but actionable:
@@ -188,12 +188,12 @@ Phase 3 (when team trusts): writeback stops, sheet becomes view-only legacy.
 
 ## Lifecycle → Computed Color Rule
 
-For each cell `(well, day)`:
+For each cell `(well, absolute_date)` where absolute_date = `week_start + dow days` (Sun-Sat in America/Chicago):
 
 ```
 loads_in_cell = SELECT loads WHERE
   assignment.well_id = this well
-  AND delivered_on::date = this day (in America/Chicago)
+  AND delivered_on::date = absolute_date (in America/Chicago)
 
 if loads_in_cell is empty → no color (gray)
 if cell_status_overrides has matching row → use override.status
