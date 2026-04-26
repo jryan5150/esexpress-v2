@@ -790,35 +790,66 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     }
     const routing = routingRow as unknown as RoutingRow[];
 
-    // Compose matrix: one row per (builder, customer) pair from routing,
-    // joined to the day-counts. Floater rows (no customer) get the rest.
+    // Sheet shows ONE row per builder, NOT per (builder, customer) pair.
+    // Each customer is owned by exactly one PRIMARY builder; backups don't
+    // get the count duplicated. Build the matrix accordingly:
+    //   1. Primary rows credited with their customer's full count
+    //   2. Floater rows (NULL customer — Crystal) get NULL-customer loads
+    //      (which today is mostly an empty bucket; future: derive from
+    //      match_decisions when we have per-load builder attribution)
+    //   3. Backup rows (Katie) shown with 0 loads — their work is implicit
+    //      handoff; no automated attribution yet
+    const emptyCounts = (): Record<string, number> => ({
+      sun: 0,
+      mon: 0,
+      tue: 0,
+      wed: 0,
+      thu: 0,
+      fri: 0,
+      sat: 0,
+    });
+    const claimedCustomerKeys = new Set<string>();
     const matrix = routing.map((r) => {
       const key = r.customer_id != null ? `${r.customer_id}` : "null";
-      const bucket = byCustomer.get(key);
+      const isPrimary = r.is_primary ?? false;
+      // Only primary builders claim their customer's bucket. Backups + non-
+      // primary floaters get zeros so the totals never double-count.
+      const claimsBucket = isPrimary && !claimedCustomerKeys.has(key);
+      let counts = emptyCounts();
+      let total = 0;
+      if (claimsBucket) {
+        const bucket = byCustomer.get(key);
+        if (bucket) {
+          counts = bucket.counts;
+          total = bucket.total;
+          claimedCustomerKeys.add(key);
+        }
+      }
       return {
         builder: r.builder_name,
         customer: r.customer_name,
         customerId: r.customer_id,
-        isPrimary: r.is_primary ?? false,
+        isPrimary,
         notes: r.notes,
-        counts: bucket?.counts ?? {
-          sun: 0,
-          mon: 0,
-          tue: 0,
-          wed: 0,
-          thu: 0,
-          fri: 0,
-          sat: 0,
-        },
-        total: bucket?.total ?? 0,
+        counts,
+        total,
       };
     });
 
-    // Grand total for the week
+    // Grand total for the week — sum of all distinct customer buckets
+    // (NOT sum of matrix rows, because backup builders are zeroed)
     const grandTotal = Array.from(byCustomer.values()).reduce(
       (a, b) => a + b.total,
       0,
     );
+
+    // Surface unattributed loads: anything not claimed by a primary row
+    // (e.g., NULL-customer loads with no floater claiming them, or loads
+    // for customers without a routing row). Phase 2.5 should attribute
+    // these via match_decisions or a fallback rule.
+    const unclaimedTotal = Array.from(byCustomer.entries())
+      .filter(([k]) => !claimedCustomerKeys.has(k))
+      .reduce((a, [, v]) => a + v.total, 0);
 
     return {
       success: true,
@@ -828,6 +859,7 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         tz: "America/Chicago",
         matrix,
         grandTotal,
+        unclaimedTotal,
         sourceLabel:
           'Mirrors the "Order of Invoicing" matrix from the Load Count Sheet (Current/Previous tabs).',
       },
