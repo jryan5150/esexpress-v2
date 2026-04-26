@@ -954,6 +954,103 @@ export interface SheetInspection {
   tabs: SheetTabInspection[];
 }
 
+// ─── COLOR-LEGEND READING ──────────────────────────────────────────
+// The Load Count Sheet uses cell BACKGROUND COLOR as the workflow-status
+// indicator. The Color Key tab is a literal painter's legend mapping
+// hex colors → 8-stage canonical names + 1 exception state. v2 must
+// read both the legend AND the colored cells to mirror the team's
+// workflow vocabulary instead of inventing its own.
+
+export interface ColorKeyEntry {
+  label: string;
+  hex: string;
+  rgb: { r: number; g: number; b: number };
+}
+
+export async function inspectColorKey(
+  spreadsheetId: string,
+  tabName: string = "Color Key",
+): Promise<ColorKeyEntry[]> {
+  const auth = await getGoogleAuth();
+  const sheetsApi = google.sheets({ version: "v4", auth });
+  const data = await sheetsApi.spreadsheets.get({
+    spreadsheetId,
+    ranges: [`'${tabName.replace(/'/g, "''")}'!A1:B30`],
+    includeGridData: true,
+    fields:
+      "sheets(data(rowData(values(formattedValue,effectiveFormat.backgroundColor))))",
+  });
+  const rows = data.data.sheets?.[0]?.data?.[0]?.rowData ?? [];
+  const out: ColorKeyEntry[] = [];
+  for (const row of rows) {
+    const cellA = row.values?.[0];
+    const cellB = row.values?.[1];
+    const label = (cellB?.formattedValue ?? "").trim();
+    const bg = cellA?.effectiveFormat?.backgroundColor;
+    if (!label || !bg) continue;
+    const r = Math.round((bg.red ?? 0) * 255);
+    const g = Math.round((bg.green ?? 0) * 255);
+    const b = Math.round((bg.blue ?? 0) * 255);
+    if (r === 255 && g === 255 && b === 255) continue;
+    if (
+      r === 0 &&
+      g === 0 &&
+      b === 0 &&
+      bg.red == null &&
+      bg.green == null &&
+      bg.blue == null
+    )
+      continue;
+    const hex = `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}`;
+    out.push({ label, hex, rgb: { r, g, b } });
+  }
+  return out;
+}
+
+export interface ColoredCell {
+  value: string | null;
+  hex: string | null;
+  rgb: { r: number; g: number; b: number } | null;
+}
+
+export async function readColoredGrid(
+  spreadsheetId: string,
+  tabName: string,
+  a1Range: string = "A1:Z200",
+): Promise<ColoredCell[][]> {
+  const auth = await getGoogleAuth();
+  const sheetsApi = google.sheets({ version: "v4", auth });
+  const data = await sheetsApi.spreadsheets.get({
+    spreadsheetId,
+    ranges: [`'${tabName.replace(/'/g, "''")}'!${a1Range}`],
+    includeGridData: true,
+    fields:
+      "sheets(data(rowData(values(formattedValue,effectiveFormat.backgroundColor))))",
+  });
+  const rows = data.data.sheets?.[0]?.data?.[0]?.rowData ?? [];
+  return rows.map((row) =>
+    (row.values ?? []).map((cell) => {
+      const value = cell?.formattedValue ?? null;
+      const bg = cell?.effectiveFormat?.backgroundColor;
+      if (!bg) return { value, hex: null, rgb: null };
+      const r = Math.round((bg.red ?? 0) * 255);
+      const g = Math.round((bg.green ?? 0) * 255);
+      const b = Math.round((bg.blue ?? 0) * 255);
+      const isWhite = r === 255 && g === 255 && b === 255;
+      const noFill =
+        r === 0 &&
+        g === 0 &&
+        b === 0 &&
+        bg.red == null &&
+        bg.green == null &&
+        bg.blue == null;
+      if (isWhite || noFill) return { value, hex: null, rgb: null };
+      const hex = `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}`;
+      return { value, hex, rgb: { r, g, b } };
+    }),
+  );
+}
+
 /**
  * Walk a single spreadsheet and return tab list + headers + first N sample rows
  * for each tab. Used for reconnaissance — figure out what columns a sheet has

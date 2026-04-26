@@ -672,6 +672,80 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /sheet-color-key — Read the Color Key tab from the Load Count
+  // Sheet to learn the painter's legend. Returns hex → workflow-stage
+  // mappings. Used to build the canonical workflow_status enum and its
+  // RGB-to-status map for cell-color reading elsewhere in the sheet.
+  fastify.get("/sheet-color-key", async (request, reply) => {
+    const q = (request.query ?? {}) as { id?: string; tab?: string };
+    const id = q.id ?? "1ZBzcSEFRfX8J6x0wj_836xnGwzgCSSVFe7QU2SRgtQM";
+    const tab = q.tab ?? "Color Key";
+    try {
+      const { inspectColorKey } =
+        await import("../../sheets/services/sheets.service.js");
+      const entries = await inspectColorKey(id, tab);
+      return { success: true, data: { spreadsheetId: id, tab, entries } };
+    } catch (e) {
+      return reply.status(500).send({
+        success: false,
+        error: {
+          code: "COLOR_KEY_READ_FAILED",
+          message: e instanceof Error ? e.message : String(e),
+        },
+      });
+    }
+  });
+
+  // GET /sheet-colored-grid — Read a tab + range with cell background
+  // colors. For Phase 2.5 sheet-color reading: lets us map each cell of
+  // the Current/Previous tabs to its workflow stage via the legend.
+  fastify.get("/sheet-colored-grid", async (request, reply) => {
+    const q = (request.query ?? {}) as {
+      id?: string;
+      tab?: string;
+      range?: string;
+    };
+    const id = q.id ?? "1ZBzcSEFRfX8J6x0wj_836xnGwzgCSSVFe7QU2SRgtQM";
+    const tab = q.tab ?? "Current";
+    const range = q.range ?? "A1:Z200";
+    try {
+      const { readColoredGrid } =
+        await import("../../sheets/services/sheets.service.js");
+      const grid = await readColoredGrid(id, tab, range);
+      // Compute color frequency
+      const colorCount = new Map<string, number>();
+      for (const row of grid) {
+        for (const cell of row) {
+          if (cell.hex)
+            colorCount.set(cell.hex, (colorCount.get(cell.hex) ?? 0) + 1);
+        }
+      }
+      const distinctColors = Array.from(colorCount.entries())
+        .map(([hex, n]) => ({ hex, count: n }))
+        .sort((a, b) => b.count - a.count);
+      return {
+        success: true,
+        data: {
+          spreadsheetId: id,
+          tab,
+          range,
+          rowCount: grid.length,
+          colCount: grid[0]?.length ?? 0,
+          distinctColors,
+          gridSample: grid.slice(0, 5),
+        },
+      };
+    } catch (e) {
+      return reply.status(500).send({
+        success: false,
+        error: {
+          code: "GRID_READ_FAILED",
+          message: e instanceof Error ? e.message : String(e),
+        },
+      });
+    }
+  });
+
   // GET /jenny-queue — Mirrors the Load Count Sheet's "Other Jobs to be
   // Invoiced (Jenny)" section. All loads with job_category != 'standard',
   // grouped by category, with Bill To and load count. The team treats
