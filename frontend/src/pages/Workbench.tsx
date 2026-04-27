@@ -18,6 +18,10 @@ interface CellLoad {
   assignment_id: number;
   assignment_status: string;
   photo_status: string | null;
+  // Backend-computed truth: 'attached' if a photo exists in either the
+  // photos table OR a matched JotForm bol_submission, regardless of
+  // whether assignment.photo_status was ever updated. Use this for UI.
+  effective_photo_status?: string | null;
   load_no: string | null;
   driver_name: string | null;
   bol_no: string | null;

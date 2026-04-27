@@ -1385,6 +1385,15 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         a.id AS assignment_id,
         a.status AS assignment_status,
         a.photo_status,
+        -- Effective photo status: 'attached' if a photo exists in either
+        -- the photos table OR a matched JotForm bol_submission, regardless
+        -- of whether the assignment.photo_status field was ever updated.
+        -- Closes the loop where historical matches left the field stale.
+        CASE
+          WHEN EXISTS (SELECT 1 FROM photos p WHERE p.load_id = l.id) THEN 'attached'
+          WHEN EXISTS (SELECT 1 FROM bol_submissions b WHERE b.matched_load_id = l.id) THEN 'attached'
+          ELSE COALESCE(a.photo_status, 'missing')
+        END AS effective_photo_status,
         l.load_no,
         l.driver_name,
         l.driver_id,
@@ -1404,6 +1413,7 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       assignment_id: number;
       assignment_status: string;
       photo_status: string | null;
+      effective_photo_status: string;
       load_no: string | null;
       driver_name: string | null;
       driver_id: string | null;

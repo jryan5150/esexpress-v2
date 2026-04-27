@@ -5,7 +5,7 @@ import {
   Fragment,
   type ReactNode,
 } from "react";
-import { EditableField } from "./EditableField";
+import { EditableField as InlineEditField } from "./EditableField";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -644,19 +644,32 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
                           </span>
                         </td>
                         <td className="py-1.5 pr-2">
-                          {l.photo_status === "attached" ? (
-                            <span className="text-green-600" title="Attached">
-                              ●
-                            </span>
-                          ) : l.photo_status === "pending" ? (
-                            <span className="text-amber-500" title="Pending">
-                              ○
-                            </span>
-                          ) : (
-                            <span className="text-red-500" title="Missing">
-                              ✕
-                            </span>
-                          )}
+                          {(() => {
+                            // Prefer the backend's effective_photo_status,
+                            // which checks for photos in BOTH the photos
+                            // table AND matched bol_submissions. Falls back
+                            // to the stored photo_status when not present
+                            // (older deploys).
+                            const eff =
+                              (l as { effective_photo_status?: string | null })
+                                .effective_photo_status ?? l.photo_status;
+                            return eff === "attached" ? (
+                              <span
+                                className="text-green-600"
+                                title="Photo attached (effective)"
+                              >
+                                ●
+                              </span>
+                            ) : eff === "pending" ? (
+                              <span className="text-amber-500" title="Pending">
+                                ○
+                              </span>
+                            ) : (
+                              <span className="text-red-500" title="Missing">
+                                ✕
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="py-1.5 text-right text-text-secondary text-[10px]">
                           {expanded ? "▾" : "▸"}
@@ -1455,7 +1468,24 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
     ? resolvePhotoUrl(l.photos[0].source_url, { auth: true })
     : null;
   const bolSubId = l.bolSubmissions?.[0]?.id;
-  const photoMissing = l.photo_status === "missing" || !photoUrl;
+  // Photo is genuinely missing only when there's no URL at all (covers
+  // both stale assignment.photo_status='missing' loads where the photo
+  // actually exists, and the truly-missing case).
+  const photoMissing = !photoUrl;
+  // Detect the stale-status case so we can flag it to the user — they
+  // see the photo but the underlying field still says missing.
+  const photoStatusStale = l.photo_status === "missing" && !!photoUrl;
+  // OCR extracted fields, if any
+  const extracted = (l.bolSubmissions?.[0]?.extracted ?? null) as null | {
+    ticketNo?: string | null;
+    loadNumber?: string | null;
+    weight?: number | null;
+    truckNo?: string | null;
+    trailerNo?: string | null;
+    carrier?: string | null;
+    driverName?: string | null;
+    overallConfidence?: number;
+  };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1525,48 +1555,118 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
         </Link>
       </div>
 
-      {/* Right: editable fields */}
-      <div className="space-y-1.5">
-        <div className="text-[10px] uppercase tracking-wide text-text-secondary mb-1">
+      {/* Right: editable fields (with stale-status warning + OCR panel) */}
+      <div className="space-y-2">
+        {photoStatusStale && (
+          <div className="text-[10px] px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-800">
+            <strong>Note:</strong> photo IS attached but the load's photo_status
+            field still reads "missing" (legacy match before the auto-update
+            shipped). The display now uses the live photo check; underlying
+            field will be backfilled.
+          </div>
+        )}
+
+        {extracted && (
+          <div className="rounded border border-accent/30 bg-accent/5 p-2 space-y-1">
+            <div className="flex items-baseline justify-between mb-1">
+              <span className="text-[10px] uppercase tracking-wide text-accent font-semibold">
+                OCR extracted
+              </span>
+              {typeof extracted.overallConfidence === "number" && (
+                <span className="text-[10px] text-text-secondary tabular-nums">
+                  {extracted.overallConfidence}% confidence
+                </span>
+              )}
+            </div>
+            <ExtractedRow
+              label="Ticket"
+              ocr={extracted.ticketNo}
+              current={l.ticket_no}
+              onApply={(v) => update.mutateAsync({ ticketNo: v })}
+            />
+            <ExtractedRow
+              label="Load #"
+              ocr={extracted.loadNumber}
+              current={l.load_no}
+              onApply={null}
+            />
+            <ExtractedRow
+              label="Driver"
+              ocr={extracted.driverName}
+              current={l.driver_name}
+              onApply={(v) => update.mutateAsync({ driverName: v })}
+            />
+            <ExtractedRow
+              label="Truck"
+              ocr={extracted.truckNo}
+              current={l.truck_no}
+              onApply={(v) => update.mutateAsync({ truckNo: v })}
+            />
+            <ExtractedRow
+              label="Trailer"
+              ocr={extracted.trailerNo}
+              current={l.trailer_no}
+              onApply={(v) => update.mutateAsync({ trailerNo: v })}
+            />
+            <ExtractedRow
+              label="Carrier"
+              ocr={extracted.carrier}
+              current={l.carrier_name}
+              onApply={(v) => update.mutateAsync({ carrierName: v })}
+            />
+            <ExtractedRow
+              label="Wt (lbs)"
+              ocr={extracted.weight ? String(extracted.weight) : null}
+              current={l.weight_lbs}
+              onApply={(v) =>
+                update.mutateAsync({
+                  weightTons: (Number(v) / 2000).toFixed(4),
+                })
+              }
+            />
+          </div>
+        )}
+
+        <div className="text-[10px] uppercase tracking-wide text-text-secondary mb-1 mt-2">
           Edit values · click any to change
         </div>
-        <EditableField
+        <InlineEditField
           label="Driver"
           value={l.driver_name}
           onSave={(v) => update.mutateAsync({ driverName: v || null })}
           size="sm"
         />
-        <EditableField
+        <InlineEditField
           label="Truck #"
           value={l.truck_no}
           onSave={(v) => update.mutateAsync({ truckNo: v || null })}
           size="sm"
         />
-        <EditableField
+        <InlineEditField
           label="Trailer #"
           value={l.trailer_no}
           onSave={(v) => update.mutateAsync({ trailerNo: v || null })}
           size="sm"
         />
-        <EditableField
+        <InlineEditField
           label="Carrier"
           value={l.carrier_name}
           onSave={(v) => update.mutateAsync({ carrierName: v || null })}
           size="sm"
         />
-        <EditableField
+        <InlineEditField
           label="Ticket #"
           value={l.ticket_no}
           onSave={(v) => update.mutateAsync({ ticketNo: v || null })}
           size="sm"
         />
-        <EditableField
+        <InlineEditField
           label="BOL #"
           value={l.bol_no}
           onSave={(v) => update.mutateAsync({ bolNo: v || null })}
           size="sm"
         />
-        <EditableField
+        <InlineEditField
           label="Wt (tons)"
           value={
             l.weight_tons
@@ -1579,21 +1679,21 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           type="decimal"
           size="sm"
         />
-        <EditableField
+        <InlineEditField
           label="Net wt"
           value={l.net_weight_tons}
           onSave={(v) => update.mutateAsync({ netWeightTons: v || null })}
           type="decimal"
           size="sm"
         />
-        <EditableField
+        <InlineEditField
           label="Mileage"
           value={l.mileage}
           onSave={(v) => update.mutateAsync({ mileage: v || null })}
           type="decimal"
           size="sm"
         />
-        <EditableField
+        <InlineEditField
           label="Rate"
           value={l.rate}
           prefix="$"
@@ -1601,7 +1701,7 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           type="decimal"
           size="sm"
         />
-        <EditableField
+        <InlineEditField
           label="Delivered"
           value={l.delivered_on ? l.delivered_on.slice(0, 10) : ""}
           onSave={(v) => update.mutateAsync({ deliveredOn: v || null })}
@@ -1617,6 +1717,47 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           <div className="text-[10px] text-emerald-600 mt-1">Saved.</div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ExtractedRow — single OCR-extracted field with current-value comparison
+ * + apply button. onApply=null means read-only (e.g. load_no doesnt have
+ * a writable column). */
+function ExtractedRow({
+  label,
+  ocr,
+  current,
+  onApply,
+}: {
+  label: string;
+  ocr: string | null | undefined;
+  current: string | null | undefined;
+  onApply: ((value: string) => Promise<unknown>) | null;
+}) {
+  if (!ocr) return null;
+  const matches = (current ?? "").trim() === ocr.trim();
+  return (
+    <div className="grid grid-cols-[60px_1fr_auto] gap-2 items-baseline text-[11px]">
+      <div className="text-text-secondary">{label}</div>
+      <div
+        className={`font-mono truncate ${matches ? "text-emerald-700" : "text-text-primary"}`}
+      >
+        {ocr}
+        {matches && (
+          <span className="ml-1 text-emerald-600 text-[10px]">✓ matches</span>
+        )}
+      </div>
+      {!matches && onApply && (
+        <button
+          type="button"
+          onClick={() => onApply(ocr)}
+          className="text-[10px] px-1.5 py-0.5 rounded bg-accent text-white hover:opacity-90"
+          title={`Apply OCR value to load: ${ocr}`}
+        >
+          use →
+        </button>
+      )}
     </div>
   );
 }
