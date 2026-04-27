@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useHeartbeat } from "../hooks/use-presence";
 import { resolvePhotoUrl } from "../lib/photo-url";
 import { EditableField } from "../components/EditableField";
+import { PhotoLightbox } from "../components/PhotoLightbox";
 
 interface LoadDetail {
   id: number;
@@ -41,6 +43,7 @@ interface LoadsListRow {
   bill_to: string | null;
   assignment_status: string | null;
   photo_status: string | null;
+  effective_photo_status?: string | null;
   well_name: string | null;
 }
 
@@ -65,6 +68,7 @@ export function LoadCenter() {
   useHeartbeat({ currentPage: "load-center" });
   const [params, setParams] = useSearchParams();
   const loadId = params.get("load");
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const detailQuery = useQuery({
     queryKey: ["load-center", loadId],
@@ -284,18 +288,36 @@ export function LoadCenter() {
               Photo
             </div>
             {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt={`BOL for load ${l.id}`}
-                className="w-full max-h-96 object-contain rounded border border-border bg-black/10"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(true)}
+                className="block w-full p-0 border-0 bg-transparent cursor-zoom-in group"
+                title="Click to view full size"
+              >
+                <img
+                  src={photoUrl}
+                  alt={`BOL for load ${l.id}`}
+                  className="w-full max-h-96 object-contain rounded border border-border bg-black/10 group-hover:opacity-90 transition-opacity"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+                <div className="text-[10px] text-text-secondary mt-0.5 group-hover:text-accent">
+                  click to zoom ⤢
+                </div>
+              </button>
             ) : (
               <div className="text-xs text-text-secondary p-6 text-center border border-dashed border-border rounded">
                 No photo on file
               </div>
+            )}
+            {lightboxOpen && photoUrl && (
+              <PhotoLightbox
+                urls={(l.photos ?? []).map((p) => p.source_url)}
+                initialIndex={0}
+                alt={`BOL for load ${l.id}`}
+                onClose={() => setLightboxOpen(false)}
+              />
             )}
           </div>
         </section>
@@ -394,13 +416,26 @@ export function LoadCenter() {
                           {row.assignment_status ?? "—"}
                         </td>
                         <td className="py-1.5 px-3">
-                          {row.photo_status === "attached" ? (
-                            <span className="text-green-600">●</span>
-                          ) : row.photo_status === "pending" ? (
-                            <span className="text-amber-500">○</span>
-                          ) : (
-                            <span className="text-red-500">✕</span>
-                          )}
+                          {(() => {
+                            const eff =
+                              row.effective_photo_status ?? row.photo_status;
+                            return eff === "attached" ? (
+                              <span
+                                className="text-green-600"
+                                title="Photo attached"
+                              >
+                                ●
+                              </span>
+                            ) : eff === "pending" ? (
+                              <span className="text-amber-500" title="Pending">
+                                ○
+                              </span>
+                            ) : (
+                              <span className="text-red-500" title="Missing">
+                                ✕
+                              </span>
+                            );
+                          })()}
                         </td>
                       </tr>
                     );

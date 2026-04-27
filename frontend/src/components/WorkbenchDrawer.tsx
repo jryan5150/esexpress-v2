@@ -1423,6 +1423,7 @@ interface LoadDetailShape {
 
 function LoadInlinePanel({ loadId }: { loadId: number }) {
   const qc = useQueryClient();
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const detailQuery = useQuery({
     queryKey: ["cell-drawer-load", loadId],
     queryFn: () => api.get<LoadDetailShape>(`/diag/load-detail?load=${loadId}`),
@@ -1495,18 +1496,36 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           Photo
         </div>
         {photoUrl ? (
-          <img
-            src={photoUrl}
-            alt={`BOL for load ${l.id}`}
-            className="w-full max-h-72 object-contain rounded border border-border bg-black/5"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            className="block w-full p-0 border-0 bg-transparent cursor-zoom-in group"
+            title="Click to view full size"
+          >
+            <img
+              src={photoUrl}
+              alt={`BOL for load ${l.id}`}
+              className="w-full max-h-72 object-contain rounded border border-border bg-black/5 group-hover:opacity-90 transition-opacity"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+            <div className="text-[10px] text-text-secondary mt-0.5 group-hover:text-accent">
+              click to zoom ⤢
+            </div>
+          </button>
         ) : (
           <div className="text-xs text-text-secondary p-6 text-center border border-dashed border-border rounded">
             No photo on file
           </div>
+        )}
+        {lightboxOpen && photoUrl && (
+          <PhotoLightbox
+            urls={(l.photos ?? []).map((p) => p.source_url)}
+            initialIndex={0}
+            alt={`BOL for load ${l.id}`}
+            onClose={() => setLightboxOpen(false)}
+          />
         )}
 
         {/* Action buttons — shown contextually */}

@@ -3299,6 +3299,14 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         l.weight_tons::text AS weight_tons,
         l.source, c.name AS bill_to,
         a.status AS assignment_status, a.photo_status, a.handler_stage,
+        -- Effective photo status: prefers live evidence (photos table OR
+        -- matched bol_submissions) over the stored field which can be
+        -- stale on legacy matches. Same logic as /diag/well-grid/cell.
+        CASE
+          WHEN EXISTS (SELECT 1 FROM photos p WHERE p.load_id = l.id) THEN 'attached'
+          WHEN EXISTS (SELECT 1 FROM bol_submissions b WHERE b.matched_load_id = l.id) THEN 'attached'
+          ELSE COALESCE(a.photo_status, 'missing')
+        END AS effective_photo_status,
         w.name AS well_name
       FROM loads l
       LEFT JOIN customers c ON c.id = l.customer_id
