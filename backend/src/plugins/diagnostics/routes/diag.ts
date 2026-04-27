@@ -1166,6 +1166,18 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
 
     const q = (request.query ?? {}) as { weekStart?: string };
     let weekStart = q.weekStart;
+    // Validate weekStart is a sane YYYY-MM-DD before passing to SQL.
+    // Without this, a typo'd URL (?weekStart=bogus) returns 500 from
+    // the date::date cast.
+    if (weekStart && !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "BAD_REQUEST",
+          message: `weekStart must be YYYY-MM-DD; got ${weekStart}`,
+        },
+      });
+    }
     if (!weekStart) {
       const r = (await db.execute(sql`
         SELECT (date_trunc('week', (now() AT TIME ZONE 'America/Chicago')::date + interval '1 day') - interval '1 day')::date AS sunday
@@ -1340,6 +1352,21 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
           code: "BAD_REQUEST",
           message: "wellId, dow, weekStart required",
         },
+      });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+      return reply.status(400).send({
+        success: false,
+        error: {
+          code: "BAD_REQUEST",
+          message: `weekStart must be YYYY-MM-DD; got ${weekStart}`,
+        },
+      });
+    }
+    if (dow < 0 || dow > 6) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: "BAD_REQUEST", message: "dow must be 0-6" },
       });
     }
 
