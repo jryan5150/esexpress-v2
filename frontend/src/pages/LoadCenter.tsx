@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useHeartbeat } from "../hooks/use-presence";
 import { resolvePhotoUrl } from "../lib/photo-url";
@@ -90,6 +91,16 @@ export function LoadCenter() {
     staleTime: 30_000,
   });
 
+  // Inline edit mutation — PATCH /loads/:id with the field that changed.
+  const qc = useQueryClient();
+  const updateMutation = useMutation({
+    mutationFn: (patch: Record<string, string | null>) =>
+      api.patch(`/dispatch/loads/${loadId}`, patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["load-center", loadId] });
+    },
+  });
+
   if (!loadId) {
     return (
       <div className="flex-1 min-h-0 overflow-y-auto p-6 max-w-4xl">
@@ -156,30 +167,67 @@ export function LoadCenter() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Editable fields panel — read-only display for now; click "Edit"
-            on a field to enable inline edit (wires to existing
-            PATCH /loads/:id endpoints in a Tuesday follow-up). */}
+        {/* Editable fields panel — click any value to edit, save on Enter
+            or blur, cancel on Escape. Wires to PATCH /dispatch/loads/:id. */}
         <section className="rounded-lg border border-border bg-bg-secondary p-4 space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide">
-            Load values
-          </h2>
-          <Field label="Driver" value={l.driver_name} />
-          <Field label="Truck #" value={l.truck_no} />
-          <Field label="Ticket #" value={l.ticket_no} />
+          <div className="flex items-baseline justify-between mb-1">
+            <h2 className="text-sm font-semibold uppercase tracking-wide">
+              Load values
+            </h2>
+            <span className="text-[10px] text-text-secondary">
+              click any value to edit
+            </span>
+          </div>
+          <EditableField
+            label="Driver"
+            value={l.driver_name}
+            onSave={(v) =>
+              updateMutation.mutateAsync({ driverName: v || null })
+            }
+          />
+          <EditableField
+            label="Truck #"
+            value={l.truck_no}
+            onSave={(v) => updateMutation.mutateAsync({ truckNo: v || null })}
+          />
+          <EditableField
+            label="Ticket #"
+            value={l.ticket_no}
+            onSave={(v) => updateMutation.mutateAsync({ ticketNo: v || null })}
+          />
           <Field label="Load #" value={l.load_no} />
-          <Field
+          <EditableField
             label="Weight (tons)"
             value={
               l.weight_tons
                 ? Number(l.weight_tons).toFixed(2)
                 : l.weight_lbs
-                  ? `${(Number(l.weight_lbs) / 2000).toFixed(2)}`
-                  : "—"
+                  ? (Number(l.weight_lbs) / 2000).toFixed(2)
+                  : ""
             }
+            onSave={(v) =>
+              updateMutation.mutateAsync({ weightTons: v || null })
+            }
+            type="decimal"
           />
-          <Field label="Rate" value={l.rate ? `$${l.rate}` : "—"} />
+          <EditableField
+            label="Rate"
+            value={l.rate ?? ""}
+            prefix="$"
+            onSave={(v) => updateMutation.mutateAsync({ rate: v || null })}
+            type="decimal"
+          />
           <Field label="Origin" value={l.origin_name} />
           <Field label="Destination" value={l.destination_name} />
+          {updateMutation.isError && (
+            <div className="text-xs text-red-500">
+              Save failed:{" "}
+              {(updateMutation.error as Error)?.message ?? "unknown error"}
+            </div>
+          )}
+          {updateMutation.isSuccess && (
+            <div className="text-xs text-emerald-600">Saved.</div>
+          )}
         </section>
 
         <section className="rounded-lg border border-border bg-bg-secondary p-4 space-y-3">
@@ -340,6 +388,97 @@ function Field({
       </div>
       <div className="col-span-2 font-medium">
         {value ?? <span className="text-text-secondary">—</span>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * EditableField — click-to-edit value with Save on Enter or blur,
+ * Cancel on Escape. Wires to a parent-supplied async onSave that
+ * receives the new string (empty → caller decides null vs empty).
+ */
+function EditableField({
+  label,
+  value,
+  onSave,
+  prefix,
+  type,
+}: {
+  label: string;
+  value: string | null | undefined;
+  onSave: (next: string) => Promise<unknown>;
+  prefix?: string;
+  type?: "text" | "decimal";
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  const [saving, setSaving] = useState(false);
+
+  // Keep draft in sync if the underlying value changes (e.g. switched
+  // focused load via the same-week table).
+  useEffect(() => {
+    if (!editing) setDraft(value ?? "");
+  }, [value, editing]);
+
+  const commit = async () => {
+    if (saving) return;
+    const next = draft.trim();
+    if ((value ?? "") === next) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      await onSave(next);
+      setEditing(false);
+    } catch {
+      // parent surfaces the error; keep editing open
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-3 gap-2 items-baseline text-sm">
+      <div className="text-[10px] text-text-secondary uppercase tracking-wide">
+        {label}
+      </div>
+      <div className="col-span-2">
+        {editing ? (
+          <input
+            autoFocus
+            type={type === "decimal" ? "number" : "text"}
+            step={type === "decimal" ? "0.01" : undefined}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit();
+              else if (e.key === "Escape") {
+                setDraft(value ?? "");
+                setEditing(false);
+              }
+            }}
+            onBlur={commit}
+            disabled={saving}
+            className="w-full px-2 py-0.5 rounded border border-accent bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-left font-medium hover:bg-bg-tertiary rounded px-1 -mx-1 transition-colors"
+            title="Click to edit"
+          >
+            {value ? (
+              `${prefix ?? ""}${value}`
+            ) : (
+              <span className="text-text-secondary italic font-normal">
+                click to add
+              </span>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

@@ -49,16 +49,24 @@ const API_BASE = import.meta.env.VITE_API_URL || "";
  */
 export function resolvePhotoUrl(
   url: string | null | undefined,
-  opts: { thumb?: boolean } = {},
+  opts: { thumb?: boolean; auth?: boolean } = {},
 ): string {
   if (!url) return "";
 
   // Relative path — backend route, prefix with API base.
   if (url.startsWith("/")) return `${API_BASE}${url}`;
 
-  // Absolute URL + thumb=true → resize+rotate via proxy.
-  if (opts.thumb && (url.startsWith("http://") || url.startsWith("https://"))) {
-    return `${API_BASE}/api/v1/verification/photos/proxy?url=${encodeURIComponent(url)}&w=200`;
+  const isAbsolute = url.startsWith("http://") || url.startsWith("https://");
+
+  // PropX URLs (publicapis.propx.com/...) require an API key as an
+  // authorization header. Direct browser fetch returns 401. Always
+  // route those through the proxy so the backend injects the key.
+  const needsAuth = opts.auth || /publicapis\.propx\.com/.test(url);
+
+  // thumb=true → proxy with resize. auth=true (or PropX) → proxy without resize.
+  if (isAbsolute && (opts.thumb || needsAuth)) {
+    const w = opts.thumb ? "&w=200" : "";
+    return `${API_BASE}/api/v1/verification/photos/proxy?url=${encodeURIComponent(url)}${w}`;
   }
 
   // Absolute URL → direct CDN fetch (full size, may be sideways).
