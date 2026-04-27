@@ -95,7 +95,11 @@ These three answers unblock the next development cycle. Everything else the team
 
 **2. Liberty(FSC) vs Liberty** — your sheet has the customer name spelled five different ways totaling 16,666 Q1 loads. PCS shows 12,362 under "Liberty Energy Services, LLC." Same customer different rate sheet, or different billing entity? Once we know, v2 either consolidates them in reporting or keeps them separate.
 
-**3. The canonical Driver Codes sheet** — the Master Dispatch tab we sync has 45 rows. The real roster is closer to 983. Which sheet has the canonical list? Once we have it, the matcher's third-tier fallback (driver + date + weight) becomes available.
+**3. The canonical Driver Codes sheet** — the "Driver Codes" tab on the Master Dispatch sheet we currently sync has only 45 rows. The real roster is closer to 983. Which sheet has the canonical list?
+
+The sheet we're reading right now: [Master Dispatch](https://docs.google.com/spreadsheets/d/1VFTH6-f-7CvQJElLTs5od_SMiMaaHZ-i69D5Qh-x2Sk/edit) — open the "Driver Codes" tab to see what we have. If this is the right sheet but wrong tab, point us at the right tab. If it's the wrong sheet entirely, share the right one with the service account email above and tell us the tab name.
+
+Once we have the canonical roster, the matcher's third-tier fallback (driver + date + weight) becomes available.
 
 **One additional follow-up:**
 

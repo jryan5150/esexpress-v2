@@ -214,6 +214,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               {!collapsed && "Today"}
             </Link>
             <Link
+              to="/load-center"
+              className={navClass("/load-center")}
+              title="Load Center — single-load workspace. Open a load from any cell drawer to land here with that load preselected."
+            >
+              <span className={iconClass("/load-center")}>local_shipping</span>
+              {!collapsed && "Load Center"}
+            </Link>
+            <Link
               to="/bol"
               className={navClass("/bol")}
               title={
