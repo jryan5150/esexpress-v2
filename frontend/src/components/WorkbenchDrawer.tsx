@@ -520,12 +520,18 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
               </button>
             )}
             {cellContext.derivedStatus === "need_rate_info" && (
-              <a
-                href={`/wells/${cellContext.wellId}`}
+              <button
+                type="button"
+                onClick={() =>
+                  window.open(
+                    `/admin/wells?well=${cellContext.wellId}`,
+                    "_blank",
+                  )
+                }
                 className="px-3 py-1.5 text-sm rounded-md bg-amber-500 text-white hover:opacity-90"
               >
                 → Set rate on Well page
-              </a>
+              </button>
             )}
             <button
               type="button"
@@ -579,16 +585,23 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
               <thead className="text-text-secondary uppercase tracking-wide">
                 <tr className="border-b border-border">
                   <th className="text-left py-1.5 pr-2">Driver</th>
-                  <th className="text-left py-1.5 pr-2">Ticket</th>
-                  <th className="text-left py-1.5 pr-2">BOL</th>
+                  <th className="text-left py-1.5 pr-2">Ticket #</th>
                   <th className="text-right py-1.5 pr-2">Wt</th>
                   <th className="text-left py-1.5 pr-2">Status</th>
-                  <th className="text-left py-1.5">Photo</th>
+                  <th className="text-left py-1.5 pr-2">Photo</th>
+                  <th className="text-right py-1.5"></th>
                 </tr>
               </thead>
               <tbody>
                 {(cellContext.loads ?? []).map((l) => (
-                  <tr key={l.load_id} className="border-b border-border/40">
+                  <tr
+                    key={l.load_id}
+                    className="border-b border-border/40 cursor-pointer hover:bg-bg-tertiary/50"
+                    onClick={() =>
+                      window.open(`/load-report?load=${l.load_id}`, "_blank")
+                    }
+                    title="Open load detail (driver, photo, audit log)"
+                  >
                     <td className="py-1.5 pr-2">
                       {l.driver_name ?? (
                         <span className="text-amber-600">—</span>
@@ -596,9 +609,6 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
                     </td>
                     <td className="py-1.5 pr-2 tabular-nums">
                       {l.ticket_no ?? "—"}
-                    </td>
-                    <td className="py-1.5 pr-2 tabular-nums">
-                      {l.bol_no ?? "—"}
                     </td>
                     <td className="py-1.5 pr-2 text-right tabular-nums">
                       {l.weight_tons
@@ -612,7 +622,7 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
                         {l.assignment_status}
                       </span>
                     </td>
-                    <td className="py-1.5">
+                    <td className="py-1.5 pr-2">
                       {l.photo_status === "attached" ? (
                         <span className="text-green-600" title="Attached">
                           ●
@@ -626,6 +636,9 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
                           ✕
                         </span>
                       )}
+                    </td>
+                    <td className="py-1.5 text-right text-text-secondary text-[10px]">
+                      open →
                     </td>
                   </tr>
                 ))}
