@@ -86,7 +86,7 @@ export function ScopeDiscovery() {
           success: boolean;
           data: ScopeDiscoveryResponse;
         }>("/diag/scope-discovery")
-        .then((r) => r.data),
+        ,
     staleTime: 5 * 60_000,
   });
 
@@ -302,7 +302,7 @@ function PcsTab() {
           success: boolean;
           data: PcsSyncResponse;
         }>("/pcs/sync-loads", { sinceDays: 7 })
-        .then((r) => r.data),
+        ,
   });
 
   const data = syncMutation.data;

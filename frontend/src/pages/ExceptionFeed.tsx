@@ -33,7 +33,7 @@ export function ExceptionFeed() {
             summary: { openTotal: number; byType: Record<string, number> };
           };
         }>("/diag/discrepancies?limit=1")
-        .then((r) => r.data),
+        ,
     refetchInterval: 60_000,
     staleTime: 30_000,
   });

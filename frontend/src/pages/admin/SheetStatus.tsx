@@ -84,7 +84,7 @@ export function SheetStatus() {
     queryFn: () =>
       api
         .get<{ success: boolean; data: StatusPayload }>("/diag/sheet-status")
-        .then((r) => r.data),
+        ,
     staleTime: 60_000,
   });
 

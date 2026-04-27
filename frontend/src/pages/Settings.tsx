@@ -46,7 +46,7 @@ function PcsSection() {
           success: boolean;
           data: AppSetting[];
         }>("/dispatch/admin/settings")
-        .then((r) => r.data),
+        ,
     refetchInterval: 30_000,
   });
 

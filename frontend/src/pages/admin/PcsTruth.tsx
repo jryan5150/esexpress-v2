@@ -100,7 +100,7 @@ export function PcsTruth() {
     queryFn: () =>
       api
         .get<{ success: boolean; data: TruthPayload }>("/diag/pcs-truth")
-        .then((r) => r.data),
+        ,
     staleTime: 60_000,
   });
 

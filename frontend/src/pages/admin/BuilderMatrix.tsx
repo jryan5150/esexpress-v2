@@ -86,7 +86,7 @@ export function BuilderMatrix() {
             ? `/diag/builder-matrix?weekStart=${weekStart}`
             : `/diag/builder-matrix`,
         )
-        .then((r) => r.data),
+        ,
     staleTime: 60_000,
   });
 

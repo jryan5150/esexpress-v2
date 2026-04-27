@@ -68,7 +68,7 @@ export function JennyQueue() {
     queryFn: () =>
       api
         .get<{ success: boolean; data: QueuePayload }>("/diag/jenny-queue")
-        .then((r) => r.data),
+        ,
     staleTime: 60_000,
   });
 

@@ -104,7 +104,7 @@ export function Discrepancies() {
           success: boolean;
           data: DiscrepancyResponse;
         }>(`/diag/discrepancies?${params.toString()}`)
-        .then((r) => r.data);
+        ;
     },
     refetchInterval: 5 * 60_000,
     staleTime: 60_000,
