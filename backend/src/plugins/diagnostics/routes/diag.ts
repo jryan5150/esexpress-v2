@@ -3240,6 +3240,91 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // GET /diag/loads-list — paginated, searchable load list for Load Center
+  // browsing. Returns lightweight rows; click into one for full detail via
+  // /diag/load-detail?load=ID. Defaults to last 30 days; pass since= to widen.
+  fastify.get("/loads-list", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const { sql } = await import("drizzle-orm");
+    const q = (request.query ?? {}) as {
+      q?: string;
+      since?: string;
+      until?: string;
+      limit?: string;
+    };
+    const search = (q.q ?? "").trim();
+    const limit = Math.min(parseInt(q.limit ?? "200", 10) || 200, 1000);
+    const since =
+      q.since && /^\d{4}-\d{2}-\d{2}$/.test(q.since) ? q.since : null;
+    const until =
+      q.until && /^\d{4}-\d{2}-\d{2}$/.test(q.until) ? q.until : null;
+
+    const sinceFilter = since
+      ? sql`AND l.delivered_on >= ${since}::date`
+      : sql`AND l.delivered_on >= now() - interval '30 days'`;
+    const untilFilter = until
+      ? sql`AND l.delivered_on < ${until}::date`
+      : sql``;
+    const searchFilter = search
+      ? sql`AND (
+          l.bol_no ILIKE ${"%" + search + "%"} OR
+          l.ticket_no ILIKE ${"%" + search + "%"} OR
+          l.driver_name ILIKE ${"%" + search + "%"} OR
+          l.truck_no ILIKE ${"%" + search + "%"} OR
+          l.load_no ILIKE ${"%" + search + "%"} OR
+          w.name ILIKE ${"%" + search + "%"} OR
+          c.name ILIKE ${"%" + search + "%"}
+        )`
+      : sql``;
+
+    const rows = (await db.execute(sql`
+      SELECT
+        l.id, l.load_no, l.ticket_no, l.driver_name, l.truck_no,
+        l.delivered_on::text AS delivered_on,
+        l.weight_tons::text AS weight_tons,
+        l.source, c.name AS bill_to,
+        a.status AS assignment_status, a.photo_status, a.handler_stage,
+        w.name AS well_name
+      FROM loads l
+      LEFT JOIN customers c ON c.id = l.customer_id
+      LEFT JOIN assignments a ON a.load_id = l.id
+      LEFT JOIN wells w ON w.id = a.well_id
+      WHERE 1=1
+        ${sinceFilter}
+        ${untilFilter}
+        ${searchFilter}
+      ORDER BY l.delivered_on DESC NULLS LAST, l.id DESC
+      LIMIT ${limit}`)) as unknown as Array<Record<string, unknown>>;
+
+    const totalRow = (await db.execute(sql`
+      SELECT COUNT(*)::int AS n
+      FROM loads l
+      LEFT JOIN customers c ON c.id = l.customer_id
+      LEFT JOIN assignments a ON a.load_id = l.id
+      LEFT JOIN wells w ON w.id = a.well_id
+      WHERE 1=1
+        ${sinceFilter}
+        ${untilFilter}
+        ${searchFilter}`)) as unknown as Array<{ n: number }>;
+
+    return {
+      success: true,
+      data: {
+        loads: rows,
+        total: totalRow[0]?.n ?? 0,
+        returned: rows.length,
+        limit,
+        search,
+        since: since ?? "(last 30d)",
+      },
+    };
+  });
+
   // GET /diag/load-detail?load=ID — single-load workspace fetch
   // Powers the /load-center page: pulls a single load with all the
   // ancillary context (assignment, well, customer, photos) needed to

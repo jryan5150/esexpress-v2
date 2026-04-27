@@ -70,14 +70,18 @@
      was never defined here. Result: drawer rendered transparent,
      grid bled through. Aliasing those tokens onto the existing Material
      surface palette so all generated utilities work without touching
-     20+ component files in the next 30 minutes. */
-  --color-bg-primary: #f7f5ef;
-  --color-bg-secondary: #ece8df;
-  --color-bg-tertiary: #e4ded3;
-  --color-border: #d1cac0;
-  --color-text-primary: #1e1b18;
-  --color-text-secondary: #4a4540;
-  --color-accent: #2323c7;
+     20+ component files.
+
+     2026-04-27 (later) — bumped contrast: cards now visibly distinct
+     from page background, borders darker for legibility, secondary
+     text deeper for readability against parchment palette. */
+  --color-bg-primary: #ffffff; /* card / panel — pure white pops on parchment */
+  --color-bg-secondary: #ede7d8; /* secondary surface — sand-tone for clear separation */
+  --color-bg-tertiary: #d8d0bd; /* elevated / hover */
+  --color-border: #a89e8b; /* visible border on parchment */
+  --color-text-primary: #1c1814; /* near-black, max contrast */
+  --color-text-secondary: #524940; /* deeper brown for legibility */
+  --color-accent: #2323c7; /* primary cobalt */
 }
 
 body {
