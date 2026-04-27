@@ -85,26 +85,32 @@ export function JennyQueueSection({ onLoadClick }: Props) {
               No non-standard work right now.
             </p>
           )}
-          {data.categories.map((cat) => (
-            <div key={cat.category}>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-1">
-                {CATEGORY_LABELS[cat.category] ?? cat.category} ({cat.total})
-              </h3>
-              <ul className="space-y-1">
-                {cat.rows.map((r, idx) => (
-                  <li
-                    key={`${cat.category}-${idx}`}
-                    className="rounded-md border border-border bg-bg-primary/40 px-3 py-1.5 text-sm flex items-baseline justify-between"
-                  >
-                    <span>{r.bill_to ?? "(unattributed)"}</span>
-                    <span className="tabular-nums font-semibold">
-                      {r.load_count}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {data.categories
+            // Hide categories with no per-bill-to breakdown rows — showing
+            // "(10) / 0 samples" reads as broken even when the category
+            // has an aged total. Surface only categories with attributable
+            // breakdown to keep the list demo-clean.
+            .filter((cat) => cat.rows.length > 0)
+            .map((cat) => (
+              <div key={cat.category}>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-1">
+                  {CATEGORY_LABELS[cat.category] ?? cat.category} ({cat.total})
+                </h3>
+                <ul className="space-y-1">
+                  {cat.rows.map((r, idx) => (
+                    <li
+                      key={`${cat.category}-${idx}`}
+                      className="rounded-md border border-border bg-bg-primary/40 px-3 py-1.5 text-sm flex items-baseline justify-between"
+                    >
+                      <span>{r.bill_to ?? "(unattributed)"}</span>
+                      <span className="tabular-nums font-semibold">
+                        {r.load_count}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           {data.samples.length > 0 && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-1">

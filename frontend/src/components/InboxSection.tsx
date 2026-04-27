@@ -142,8 +142,10 @@ export function InboxSection({ customerIds, onItemClick, initialOpen }: Props) {
             return (
               <div key={key}>
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-1">
-                  {SECTION_LABELS[key]} ({items.length}
-                  {isCapped ? ` of ${sectionTotal}` : ""})
+                  {SECTION_LABELS[key]}{" "}
+                  {isCapped
+                    ? `(${items.length} most recent of ${sectionTotal.toLocaleString()} backlog)`
+                    : `(${items.length})`}
                 </h3>
                 <ul className="space-y-1">
                   {items.slice(0, 10).map((item, idx) => (
@@ -154,7 +156,14 @@ export function InboxSection({ customerIds, onItemClick, initialOpen }: Props) {
                     >
                       <div className="flex items-baseline justify-between gap-3">
                         <div>
-                          <span className="text-xs text-text-secondary">
+                          <span
+                            className="text-xs text-text-secondary"
+                            title={
+                              item.bill_to
+                                ? undefined
+                                : "Awaiting PCS sync — Logistiq feed lacks Bill To attribution"
+                            }
+                          >
                             {item.bill_to ?? "—"} ·{" "}
                           </span>
                           <span className="font-medium">
