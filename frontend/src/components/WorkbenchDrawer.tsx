@@ -1405,6 +1405,7 @@ interface LoadDetailShape {
   well_name: string | null;
   bill_to: string | null;
   photos: Array<{ id: number; source_url: string; source: string }>;
+  bolSubmissions?: Array<{ id: number; extracted: unknown }>;
 }
 
 function LoadInlinePanel({ loadId }: { loadId: number }) {
@@ -1420,6 +1421,16 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cell-drawer-load", loadId] });
       qc.invalidateQueries({ queryKey: ["worksurface", "cell-context"] });
+    },
+  });
+
+  // Manual OCR re-run on the matched bol_submission. Useful when the
+  // first Vision pass missed text or returned a junk BOL number.
+  const reocr = useMutation({
+    mutationFn: (submissionId: number) =>
+      api.post(`/verification/bol/submissions/${submissionId}/retry`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cell-drawer-load", loadId] });
     },
   });
 
@@ -1443,10 +1454,12 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
   const photoUrl = l.photos?.[0]?.source_url
     ? resolvePhotoUrl(l.photos[0].source_url, { auth: true })
     : null;
+  const bolSubId = l.bolSubmissions?.[0]?.id;
+  const photoMissing = l.photo_status === "missing" || !photoUrl;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {/* Left: photo */}
+      {/* Left: photo + action buttons */}
       <div className="flex flex-col gap-2">
         <div className="text-[10px] uppercase tracking-wide text-text-secondary">
           Photo
@@ -1465,6 +1478,44 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
             No photo on file
           </div>
         )}
+
+        {/* Action buttons — shown contextually */}
+        <div className="flex flex-wrap gap-1.5 mt-1">
+          {bolSubId && (
+            <button
+              type="button"
+              onClick={() => reocr.mutate(bolSubId)}
+              disabled={reocr.isPending}
+              className="px-2 py-1 text-[11px] rounded border border-border bg-bg-primary hover:bg-bg-tertiary disabled:opacity-50"
+              title="Re-run AI extraction on this load's BOL photo"
+            >
+              {reocr.isPending ? "Running OCR…" : "↻ Run OCR"}
+            </button>
+          )}
+          {photoMissing && (
+            <a
+              href={`/bol?load=${l.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2 py-1 text-[11px] rounded border border-amber-500 bg-amber-500/10 text-amber-700 hover:bg-amber-500/20"
+              title="Match a BOL photo to this load in BOL Center"
+            >
+              📋 Match in BOL Center →
+            </a>
+          )}
+        </div>
+
+        {reocr.isError && (
+          <div className="text-[10px] text-red-500">
+            OCR failed: {(reocr.error as Error)?.message ?? "unknown"}
+          </div>
+        )}
+        {reocr.isSuccess && (
+          <div className="text-[10px] text-emerald-600">
+            OCR re-run queued — refresh in a few seconds.
+          </div>
+        )}
+
         <Link
           to={`/load-center?load=${l.id}`}
           className="text-[10px] text-accent underline-offset-4 hover:underline self-start"
