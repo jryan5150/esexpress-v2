@@ -3369,11 +3369,50 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         error: { code: "NOT_FOUND", message: "load not found" },
       });
 
-    const photos = (await db.execute(sql`
+    // Photos can land via two paths:
+    //   1. photos table — PropX ticket-image URLs auto-materialized at ingest
+    //   2. bol_submissions table — JotForm driver-uploaded photos (Vision OCR)
+    // Merge both sources so the Load Center shows whatever's available.
+    const photoTablePhotos = (await db.execute(sql`
       SELECT id, source_url, source FROM photos WHERE load_id = ${loadId} LIMIT 5
     `)) as unknown as Array<{ id: number; source_url: string; source: string }>;
 
-    return { success: true, data: { ...rows[0], photos } };
+    const bolSubPhotos = (await db.execute(sql`
+      SELECT id, photos, ai_extracted_data
+      FROM bol_submissions
+      WHERE matched_load_id = ${loadId}
+      ORDER BY created_at DESC LIMIT 3
+    `)) as unknown as Array<{
+      id: number;
+      photos: Array<{
+        url: string;
+        cloudinaryId: string;
+        filename: string;
+      }> | null;
+      ai_extracted_data: Record<string, unknown> | null;
+    }>;
+
+    const jotformPhotos = bolSubPhotos.flatMap((s) =>
+      (s.photos ?? []).map((p, i) => ({
+        id: -1 * (s.id * 10 + i), // negative ids to avoid collisions with photos.id
+        source_url: p.url,
+        source: "jotform" as const,
+      })),
+    );
+
+    const photos = [...photoTablePhotos, ...jotformPhotos];
+
+    return {
+      success: true,
+      data: {
+        ...rows[0],
+        photos,
+        bolSubmissions: bolSubPhotos.map((s) => ({
+          id: s.id,
+          extracted: s.ai_extracted_data,
+        })),
+      },
+    };
   });
 
   // ─── Aliases admin (customer + well) ────────────────────────────────

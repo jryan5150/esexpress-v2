@@ -28,9 +28,41 @@ interface LoadDetail {
   photos: Array<{ id: number; source_url: string; source: string }>;
 }
 
+interface LoadsListRow {
+  id: number;
+  load_no: string | null;
+  ticket_no: string | null;
+  driver_name: string | null;
+  truck_no: string | null;
+  delivered_on: string | null;
+  weight_tons: string | null;
+  source: string;
+  bill_to: string | null;
+  assignment_status: string | null;
+  photo_status: string | null;
+  well_name: string | null;
+}
+
+// Sun-start week boundaries for a given delivered_on (UTC).
+function weekBounds(
+  deliveredOn: string | null,
+): { since: string; until: string } | null {
+  if (!deliveredOn) return null;
+  const d = new Date(deliveredOn);
+  if (Number.isNaN(d.getTime())) return null;
+  const sun = new Date(d);
+  sun.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  sun.setUTCHours(0, 0, 0, 0);
+  const sat = new Date(sun.getTime() + 7 * 24 * 60 * 60 * 1000);
+  return {
+    since: sun.toISOString().slice(0, 10),
+    until: sat.toISOString().slice(0, 10),
+  };
+}
+
 export function LoadCenter() {
   useHeartbeat({ currentPage: "load-center" });
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const loadId = params.get("load");
 
   const detailQuery = useQuery({
@@ -38,6 +70,24 @@ export function LoadCenter() {
     queryFn: () => api.get<LoadDetail>(`/diag/load-detail?load=${loadId}`),
     enabled: !!loadId,
     staleTime: 15_000,
+  });
+
+  // Once we know the focused load's delivered_on, fetch every other load
+  // from the same Sun-Sat week so the user can browse siblings without
+  // bouncing back to the worksurface. Fires only after detail lands.
+  const week = weekBounds(detailQuery.data?.delivered_on ?? null);
+  const weekListQuery = useQuery({
+    queryKey: ["load-center", "week", week?.since, week?.until],
+    queryFn: () =>
+      api.get<{
+        loads: LoadsListRow[];
+        total: number;
+        returned: number;
+      }>(
+        `/diag/loads-list?since=${week!.since}&until=${week!.until}&limit=500`,
+      ),
+    enabled: !!week,
+    staleTime: 30_000,
   });
 
   if (!loadId) {
@@ -172,6 +222,106 @@ export function LoadCenter() {
         </Link>{" "}
         until inline edit ships.
       </div>
+
+      {/* Other loads from the same week — click any row to switch focus */}
+      {week && (
+        <section className="rounded-lg border border-border bg-bg-primary">
+          <div className="px-4 py-3 border-b border-border flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide">
+              Other loads this week
+              <span className="ml-2 text-xs text-text-secondary normal-case font-normal">
+                ({week.since} → {week.until})
+              </span>
+            </h2>
+            {weekListQuery.data && (
+              <span className="text-xs text-text-secondary">
+                {weekListQuery.data.returned} of {weekListQuery.data.total}{" "}
+                total
+              </span>
+            )}
+          </div>
+          {weekListQuery.isLoading && (
+            <div className="px-4 py-6 text-xs text-text-secondary text-center">
+              Loading…
+            </div>
+          )}
+          {weekListQuery.data && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="text-text-secondary uppercase tracking-wide">
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 px-3">Date</th>
+                    <th className="text-left py-2 px-3">Driver</th>
+                    <th className="text-left py-2 px-3">Ticket #</th>
+                    <th className="text-left py-2 px-3">Well</th>
+                    <th className="text-right py-2 px-3">Tons</th>
+                    <th className="text-left py-2 px-3">Status</th>
+                    <th className="text-left py-2 px-3">Photo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weekListQuery.data.loads.map((row) => {
+                    const focused = row.id === l.id;
+                    return (
+                      <tr
+                        key={row.id}
+                        className={`border-b border-border/40 cursor-pointer transition-colors ${
+                          focused
+                            ? "bg-accent/10 font-semibold"
+                            : "hover:bg-bg-tertiary/40"
+                        }`}
+                        onClick={() => {
+                          const next = new URLSearchParams(params);
+                          next.set("load", String(row.id));
+                          setParams(next);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        <td className="py-1.5 px-3 tabular-nums text-text-secondary">
+                          {row.delivered_on
+                            ? new Date(row.delivered_on).toLocaleDateString()
+                            : "—"}
+                        </td>
+                        <td className="py-1.5 px-3">
+                          {row.driver_name ?? "—"}
+                          {focused && (
+                            <span className="ml-2 text-[10px] text-accent">
+                              ← viewing
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-3 tabular-nums">
+                          {row.ticket_no ?? "—"}
+                        </td>
+                        <td className="py-1.5 px-3 truncate max-w-[16rem]">
+                          {row.well_name ?? "—"}
+                        </td>
+                        <td className="py-1.5 px-3 text-right tabular-nums">
+                          {row.weight_tons
+                            ? Number(row.weight_tons).toFixed(2)
+                            : "—"}
+                        </td>
+                        <td className="py-1.5 px-3 text-text-secondary">
+                          {row.assignment_status ?? "—"}
+                        </td>
+                        <td className="py-1.5 px-3">
+                          {row.photo_status === "attached" ? (
+                            <span className="text-green-600">●</span>
+                          ) : row.photo_status === "pending" ? (
+                            <span className="text-amber-500">○</span>
+                          ) : (
+                            <span className="text-red-500">✕</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
