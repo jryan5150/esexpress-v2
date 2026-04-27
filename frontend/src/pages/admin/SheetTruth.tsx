@@ -66,40 +66,25 @@ export function SheetTruth() {
 
   const parityQuery = useQuery({
     queryKey: ["admin", "sheet-truth", "parity"],
-    queryFn: () =>
-      api
-        .get<{
-          success: boolean;
-          data: WeekParityRow[];
-          meta: { spreadsheetId: string; weeksReported: number };
-        }>("/sheets/loadcount/parity")
-        .then((r) => r),
+    queryFn: () => api.get<WeekParityRow[]>("/sheets/loadcount/parity"),
     refetchInterval: 5 * 60_000,
     staleTime: 60_000,
   });
 
   const syncMutation = useMutation({
     mutationFn: () =>
-      api
-        .post<
-          {},
-          {
-            success: boolean;
-            data: {
-              spreadsheetId: string;
-              tabsScanned: number;
-              rowsUpserted: number;
-              weekStarts: string[];
-              errors: { tab: string; error: string }[];
-            };
-          }
-        >("/sheets/loadcount/sync", {})
-        .then((r) => r),
+      api.post<{
+        spreadsheetId: string;
+        tabsScanned: number;
+        rowsUpserted: number;
+        weekStarts: string[];
+        errors: { tab: string; error: string }[];
+      }>("/sheets/loadcount/sync", {}),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["admin", "sheet-truth"] }),
   });
 
-  const data = parityQuery.data?.data ?? [];
+  const data = parityQuery.data ?? [];
   const sortedRows = useMemo(
     () => [...data].sort((a, b) => b.weekStart.localeCompare(a.weekStart)),
     [data],
@@ -135,11 +120,11 @@ export function SheetTruth() {
 
       {syncMutation.isSuccess && syncMutation.data && (
         <div className="text-xs px-3 py-2 rounded-md bg-bg-secondary border border-border">
-          Synced <strong>{syncMutation.data.data.rowsUpserted}</strong> rows
-          from <strong>{syncMutation.data.data.tabsScanned}</strong> tabs
-          {syncMutation.data.data.errors.length > 0 ? (
+          Synced <strong>{syncMutation.data.rowsUpserted}</strong> rows from{" "}
+          <strong>{syncMutation.data.tabsScanned}</strong> tabs
+          {syncMutation.data.errors.length > 0 ? (
             <span className="text-amber-500 ml-2">
-              ({syncMutation.data.data.errors.length} parse errors)
+              ({syncMutation.data.errors.length} parse errors)
             </span>
           ) : null}
         </div>
@@ -337,31 +322,20 @@ function WeeklyNotesPanel() {
     queryKey: ["admin", "weekly-notes"],
     queryFn: () =>
       api
-        .get<{
-          success: boolean;
-          data: { notes: WeeklyNote[] };
-        }>("/diag/weekly-notes?limit=10")
-        .then((r) => r.data.notes),
+        .get<{ notes: WeeklyNote[] }>("/diag/weekly-notes?limit=10")
+        .then((r) => r.notes),
     staleTime: 60_000,
   });
 
   const syncMutation = useMutation({
     mutationFn: () =>
-      api
-        .post<
-          {},
-          {
-            success: boolean;
-            data: {
-              weekStart: string;
-              tabName: string;
-              found: boolean;
-              body: string | null;
-              upserted: boolean;
-            };
-          }
-        >("/diag/weekly-notes-sync", {})
-        .then((r) => r),
+      api.post<{
+        weekStart: string;
+        tabName: string;
+        found: boolean;
+        body: string | null;
+        upserted: boolean;
+      }>("/diag/weekly-notes-sync", {}),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["admin", "weekly-notes"] }),
   });
