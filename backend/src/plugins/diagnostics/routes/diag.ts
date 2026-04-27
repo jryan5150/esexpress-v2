@@ -843,18 +843,27 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     }
     const tab = q.tab ?? "Current";
 
+    // bill_to is freeform text in the sheet — same customer appears under
+    // multiple spellings (5 Liberty variants, 4 Logistix IQ variants).
+    // LEFT JOIN customer_mappings to surface the canonical name alongside
+    // the raw sheet value. Frontend can show canonical_bill_to for
+    // grouping while still displaying the raw text on each row.
     const cells = (await db.execute(sql`
-      SELECT row_index, col_index, well_name, bill_to, cell_value, cell_hex, status
-      FROM sheet_well_status
-      WHERE spreadsheet_id = '1ZBzcSEFRfX8J6x0wj_836xnGwzgCSSVFe7QU2SRgtQM'
-        AND sheet_tab_name = ${tab}
-        AND week_start = ${weekStart}
-      ORDER BY row_index, col_index
+      SELECT s.row_index, s.col_index, s.well_name, s.bill_to,
+             COALESCE(cm.canonical_name, s.bill_to) AS canonical_bill_to,
+             s.cell_value, s.cell_hex, s.status
+      FROM sheet_well_status s
+      LEFT JOIN customer_mappings cm ON cm.source_name = s.bill_to
+      WHERE s.spreadsheet_id = '1ZBzcSEFRfX8J6x0wj_836xnGwzgCSSVFe7QU2SRgtQM'
+        AND s.sheet_tab_name = ${tab}
+        AND s.week_start = ${weekStart}
+      ORDER BY s.row_index, s.col_index
     `)) as unknown as Array<{
       row_index: number;
       col_index: number;
       well_name: string | null;
       bill_to: string | null;
+      canonical_bill_to: string | null;
       cell_value: string | null;
       cell_hex: string | null;
       status: string;
@@ -3228,6 +3237,206 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       return { success: true, data: updated };
+    },
+  );
+
+  // ─── Aliases admin (customer + well) ────────────────────────────────
+  // Sheet uses freeform spellings of customer/well names. These endpoints
+  // expose the canonical-mapping tables (customer_mappings, wells.aliases)
+  // for the admin UI to view/add/remove without redeploys. Read-only by
+  // default; mutations require admin role.
+
+  fastify.get("/aliases", async (_request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const { sql } = await import("drizzle-orm");
+    const customers = (await db.execute(sql`
+      SELECT cm.id, cm.source_name, cm.canonical_name, cm.canonical_customer_id,
+             cm.confirmed, c.name AS canonical_customer_name
+      FROM customer_mappings cm
+      LEFT JOIN customers c ON c.id = cm.canonical_customer_id
+      ORDER BY cm.canonical_name, cm.source_name`)) as unknown as Array<{
+      id: number;
+      source_name: string;
+      canonical_name: string;
+      canonical_customer_id: number | null;
+      confirmed: boolean;
+      canonical_customer_name: string | null;
+    }>;
+    const wells = (await db.execute(sql`
+      SELECT id, name, aliases
+      FROM wells
+      WHERE aliases IS NOT NULL AND jsonb_array_length(aliases) > 0
+      ORDER BY name`)) as unknown as Array<{
+      id: number;
+      name: string;
+      aliases: string[];
+    }>;
+    return { success: true, data: { customers, wells } };
+  });
+
+  // POST /diag/aliases/customer — upsert. Body: { sourceName, canonicalName, canonicalCustomerId?, confirmed? }
+  fastify.post<{
+    Body: {
+      sourceName: string;
+      canonicalName: string;
+      canonicalCustomerId?: number;
+      confirmed?: boolean;
+    };
+  }>(
+    "/aliases/customer",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+      schema: {
+        body: {
+          type: "object",
+          required: ["sourceName", "canonicalName"],
+          properties: {
+            sourceName: { type: "string", minLength: 1 },
+            canonicalName: { type: "string", minLength: 1 },
+            canonicalCustomerId: { type: "number" },
+            confirmed: { type: "boolean" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+        });
+      const { sql } = await import("drizzle-orm");
+      const b = request.body;
+      const inserted = (await db.execute(sql`
+        INSERT INTO customer_mappings (source_name, canonical_name, canonical_customer_id, confirmed)
+        VALUES (${b.sourceName}, ${b.canonicalName}, ${b.canonicalCustomerId ?? null}, ${b.confirmed ?? false})
+        ON CONFLICT (source_name) DO UPDATE
+          SET canonical_name = EXCLUDED.canonical_name,
+              canonical_customer_id = EXCLUDED.canonical_customer_id,
+              confirmed = EXCLUDED.confirmed
+        RETURNING id, source_name, canonical_name, canonical_customer_id, confirmed`)) as unknown as Array<
+        Record<string, unknown>
+      >;
+      return { success: true, data: inserted[0] };
+    },
+  );
+
+  fastify.delete<{ Params: { id: string } }>(
+    "/aliases/customer/:id",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+        });
+      const { sql } = await import("drizzle-orm");
+      const id = parseInt(request.params.id, 10);
+      if (!Number.isFinite(id))
+        return reply.status(400).send({
+          success: false,
+          error: { code: "BAD_REQUEST", message: "id must be numeric" },
+        });
+      await db.execute(sql`DELETE FROM customer_mappings WHERE id = ${id}`);
+      return { success: true, data: { deleted: id } };
+    },
+  );
+
+  // POST /diag/aliases/well — add an alias to wells.aliases array.
+  // Body: { wellId, alias }
+  fastify.post<{ Body: { wellId: number; alias: string } }>(
+    "/aliases/well",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+      schema: {
+        body: {
+          type: "object",
+          required: ["wellId", "alias"],
+          properties: {
+            wellId: { type: "number" },
+            alias: { type: "string", minLength: 1 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+        });
+      const { sql } = await import("drizzle-orm");
+      const { wellId, alias } = request.body;
+      // Use COALESCE to handle NULL aliases column. Use jsonb || to append
+      // and then dedupe via a subquery — simpler: just do read-merge-write.
+      const existing = (await db.execute(sql`
+        SELECT aliases FROM wells WHERE id = ${wellId}`)) as unknown as Array<{
+        aliases: string[] | null;
+      }>;
+      if (!existing[0])
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: "well not found" },
+        });
+      const current = new Set(existing[0].aliases ?? []);
+      current.add(alias);
+      const merged = JSON.stringify([...current]);
+      await db.execute(sql`
+        UPDATE wells SET aliases = ${merged}::jsonb WHERE id = ${wellId}`);
+      return {
+        success: true,
+        data: { wellId, aliases: [...current] },
+      };
+    },
+  );
+
+  fastify.delete<{ Params: { wellId: string; alias: string } }>(
+    "/aliases/well/:wellId/:alias",
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(["admin"])],
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db)
+        return reply.status(503).send({
+          success: false,
+          error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+        });
+      const { sql } = await import("drizzle-orm");
+      const wellId = parseInt(request.params.wellId, 10);
+      const alias = decodeURIComponent(request.params.alias);
+      if (!Number.isFinite(wellId))
+        return reply.status(400).send({
+          success: false,
+          error: { code: "BAD_REQUEST", message: "wellId must be numeric" },
+        });
+      const existing = (await db.execute(sql`
+        SELECT aliases FROM wells WHERE id = ${wellId}`)) as unknown as Array<{
+        aliases: string[] | null;
+      }>;
+      if (!existing[0])
+        return reply.status(404).send({
+          success: false,
+          error: { code: "NOT_FOUND", message: "well not found" },
+        });
+      const filtered = (existing[0].aliases ?? []).filter((a) => a !== alias);
+      const merged = JSON.stringify(filtered);
+      await db.execute(sql`
+        UPDATE wells SET aliases = ${merged}::jsonb WHERE id = ${wellId}`);
+      return {
+        success: true,
+        data: { wellId, alias, remaining: filtered },
+      };
     },
   );
 

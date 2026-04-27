@@ -98,6 +98,11 @@ const SheetStatus = lazy(() =>
     default: m.SheetStatus,
   })),
 );
+const Aliases = lazy(() =>
+  import("./pages/admin/Aliases").then((m) => ({
+    default: m.Aliases,
+  })),
+);
 const LoadReport = lazy(() =>
   import("./pages/LoadReport").then((m) => ({ default: m.LoadReport })),
 );
@@ -180,6 +185,7 @@ export function App() {
                   />
                   <Route path="admin/jenny-queue" element={<JennyQueue />} />
                   <Route path="admin/sheet-status" element={<SheetStatus />} />
+                  <Route path="admin/aliases" element={<Aliases />} />
                   <Route path="load-report" element={<LoadReport />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="whats-new" element={<WhatsNew />} />

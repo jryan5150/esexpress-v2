@@ -490,6 +490,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 </span>
                 Sheet Status
               </Link>
+              <Link
+                to="/admin/aliases"
+                className={`${navClass("/admin/aliases")} !pl-9`}
+                title="Aliases — sheet uses freeform spellings (Liberty/Liberty(FSC)/LIberty). Map them to canonical customers and wells so reconciliation lines up."
+              >
+                <span className={iconClass("/admin/aliases")}>label</span>
+                Aliases
+              </Link>
             </div>
           )}
 
