@@ -103,6 +103,11 @@ const Aliases = lazy(() =>
     default: m.Aliases,
   })),
 );
+const LoadCenter = lazy(() =>
+  import("./pages/LoadCenter").then((m) => ({
+    default: m.LoadCenter,
+  })),
+);
 const LoadReport = lazy(() =>
   import("./pages/LoadReport").then((m) => ({ default: m.LoadReport })),
 );
@@ -187,6 +192,7 @@ export function App() {
                   <Route path="admin/sheet-status" element={<SheetStatus />} />
                   <Route path="admin/aliases" element={<Aliases />} />
                   <Route path="load-report" element={<LoadReport />} />
+                  <Route path="load-center" element={<LoadCenter />} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="whats-new" element={<WhatsNew />} />
                   <Route

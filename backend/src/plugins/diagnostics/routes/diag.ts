@@ -3240,6 +3240,57 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // GET /diag/load-detail?load=ID — single-load workspace fetch
+  // Powers the /load-center page: pulls a single load with all the
+  // ancillary context (assignment, well, customer, photos) needed to
+  // render an editable workspace.
+  fastify.get("/load-detail", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const { sql } = await import("drizzle-orm");
+    const q = (request.query ?? {}) as { load?: string };
+    const loadId = parseInt(q.load ?? "", 10);
+    if (!Number.isFinite(loadId))
+      return reply.status(400).send({
+        success: false,
+        error: { code: "BAD_REQUEST", message: "load query param required" },
+      });
+
+    const rows = (await db.execute(sql`
+      SELECT
+        l.id, l.load_no, l.bol_no, l.ticket_no, l.driver_name, l.truck_no,
+        l.delivered_on::text AS delivered_on,
+        l.weight_tons::text AS weight_tons, l.weight_lbs::text AS weight_lbs,
+        l.rate::text AS rate, l.source, l.origin_name, l.destination_name,
+        l.customer_name, l.status,
+        c.name AS bill_to,
+        a.status AS assignment_status,
+        a.handler_stage,
+        a.photo_status,
+        w.name AS well_name
+      FROM loads l
+      LEFT JOIN customers c ON c.id = l.customer_id
+      LEFT JOIN assignments a ON a.load_id = l.id
+      LEFT JOIN wells w ON w.id = a.well_id
+      WHERE l.id = ${loadId}
+      LIMIT 1`)) as unknown as Array<Record<string, unknown>>;
+    if (rows.length === 0)
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "load not found" },
+      });
+
+    const photos = (await db.execute(sql`
+      SELECT id, source_url, source FROM photos WHERE load_id = ${loadId} LIMIT 5
+    `)) as unknown as Array<{ id: number; source_url: string; source: string }>;
+
+    return { success: true, data: { ...rows[0], photos } };
+  });
+
   // ─── Aliases admin (customer + well) ────────────────────────────────
   // Sheet uses freeform spellings of customer/well names. These endpoints
   // expose the canonical-mapping tables (customer_mappings, wells.aliases)

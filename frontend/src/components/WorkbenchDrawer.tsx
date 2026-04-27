@@ -598,9 +598,9 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
                     key={l.load_id}
                     className="border-b border-border/40 cursor-pointer hover:bg-bg-tertiary/50"
                     onClick={() =>
-                      window.open(`/bol?load=${l.load_id}`, "_blank")
+                      window.open(`/load-center?load=${l.load_id}`, "_blank")
                     }
-                    title="Open in Load Center to edit driver / ticket / weight / status"
+                    title="Open in Load Center — load values + photo + status"
                   >
                     <td className="py-1.5 pr-2">
                       {l.driver_name ?? (
