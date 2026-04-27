@@ -160,6 +160,19 @@ The site stays up while we keep building. Specifically:
 - **If you find a bug, the fastest path is text or email** with the URL you're on and what you saw. We instrument every page so we can see what state you were in when something failed.
 - **Inline editing in the Load Center workspace** ships next — probably within the day. Other refinements (consolidating the five admin sheets into one view, surfacing the colors-learning suggestions, etc.) roll out through the week.
 
+### What landed in the hours since the call
+
+While you've been testing, we've been shipping. As of this update:
+
+- **Load Center now shows every other load from the same week** below the focused load. Click any row to switch focus; the photo and status panel re-render. You can browse a whole week's worth of loads without bouncing back to the worksurface.
+- **Driver photos (JotForm uploads) now surface in Load Center.** Previously only PropX ticket-image URLs were visible; now both sources merge so whatever's available shows up. If the driver uploaded a BOL, you see it.
+- **Wells management page** is back online (a schema change for the FSC toggle column needed a migration; that's applied).
+- **Load Center now appears in the sidebar** between Today and BOL Center.
+- **Scroll fixes** on Sheet Truth, PCS Truth, Builder Matrix, Jenny Queue, Sheet Status. All admin pages now scroll properly when content overflows.
+- **Contrast bumped** across admin surfaces — cards/panels are now visibly distinct from the page background, borders are more visible, secondary text is more legible against the parchment palette.
+
+This pace continues as long as you're testing. Every fix or improvement you flag rolls into the same continuous-ship cycle — usually within minutes, never with downtime.
+
 ---
 
 ## Open items beyond today's call

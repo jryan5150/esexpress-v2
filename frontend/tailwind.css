@@ -75,13 +75,18 @@
      2026-04-27 (later) — bumped contrast: cards now visibly distinct
      from page background, borders darker for legibility, secondary
      text deeper for readability against parchment palette. */
-  --color-bg-primary: #ffffff; /* card / panel — pure white pops on parchment */
-  --color-bg-secondary: #ede7d8; /* secondary surface — sand-tone for clear separation */
-  --color-bg-tertiary: #d8d0bd; /* elevated / hover */
-  --color-border: #a89e8b; /* visible border on parchment */
-  --color-text-primary: #1c1814; /* near-black, max contrast */
-  --color-text-secondary: #524940; /* deeper brown for legibility */
-  --color-accent: #2323c7; /* primary cobalt */
+  /* 2026-04-27 (third pass) — Jess flagged Sheet Truth + PCS Truth as
+     unreadable. Card surfaces were too close to parchment background.
+     Now: panels are pure white, secondary surface is also white
+     (rely on borders + shadow for separation), borders darker for
+     visibility on parchment. */
+  --color-bg-primary: #ffffff; /* card / panel — pure white */
+  --color-bg-secondary: #ffffff; /* secondary surface — also white */
+  --color-bg-tertiary: #f0ebde; /* hover state — slight warm tint */
+  --color-border: #6b6256; /* darker border for clear card edges on parchment */
+  --color-text-primary: #14110e; /* near-black, max contrast */
+  --color-text-secondary: #3d352c; /* deep brown — strong legibility */
+  --color-accent: #1a1aae; /* primary cobalt — slightly darker for AAA on white */
 }
 
 body {
