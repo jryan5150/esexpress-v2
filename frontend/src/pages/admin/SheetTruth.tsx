@@ -47,11 +47,11 @@ function deltaTone(
 }
 
 const TONE_BG: Record<string, string> = {
-  ok: "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800",
-  warn: "bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800",
-  bad: "bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800",
+  ok: "bg-green-50 border-green-200",
+  warn: "bg-amber-50 border-amber-200",
+  bad: "bg-red-50 border-red-200",
   pending:
-    "bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-700",
+    "bg-slate-50 border-slate-200",
 };
 const TONE_DOT: Record<string, string> = {
   ok: "bg-green-500",

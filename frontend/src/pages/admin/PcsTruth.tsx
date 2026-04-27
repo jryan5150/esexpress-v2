@@ -80,10 +80,10 @@ function statusTone(status: WeekRow["status"]): {
 
 const TONE_BG: Record<string, string> = {
   perfect:
-    "bg-emerald-50 border-emerald-300 dark:bg-emerald-950 dark:border-emerald-700",
-  ok: "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800",
-  warn: "bg-amber-50 border-amber-200 dark:bg-amber-950 dark:border-amber-800",
-  v2_over: "bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800",
+    "bg-emerald-50 border-emerald-300",
+  ok: "bg-green-50 border-green-200",
+  warn: "bg-amber-50 border-amber-200",
+  v2_over: "bg-blue-50 border-blue-200",
 };
 const TONE_DOT: Record<string, string> = {
   perfect: "bg-emerald-500",
@@ -154,12 +154,12 @@ export function PcsTruth() {
       {data && (
         <>
           {/* Headline — real coverage on the carriers we have feeds for */}
-          <div className="rounded-lg border border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:border-emerald-700 p-5">
-            <div className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+          <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-5">
+            <div className="text-xs uppercase tracking-wide text-emerald-700">
               Q1 2026 Coverage — feeds we have
             </div>
             <div className="flex items-baseline gap-3 mt-1">
-              <div className="text-4xl font-bold text-emerald-700 dark:text-emerald-200">
+              <div className="text-4xl font-bold text-emerald-700">
                 {data.summary.realCoveragePct}%
               </div>
               <div className="text-sm text-text-secondary">
@@ -233,19 +233,19 @@ export function PcsTruth() {
                       </td>
                       <td className="py-2">
                         {c.status === "covered" && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-100 text-emerald-800 border border-emerald-300">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                             Covered
                           </span>
                         )}
                         {c.status === "scope_gap" && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-300">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                             Scope gap
                           </span>
                         )}
                         {c.status === "trivial" && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300 border border-slate-300 dark:border-slate-700">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700 border border-slate-300">
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
                             Trivial
                           </span>
@@ -393,11 +393,11 @@ function Stat({
 }) {
   const valueClass =
     toneOverride === "warn"
-      ? "text-amber-600 dark:text-amber-400"
+      ? "text-amber-600"
       : toneOverride === "perfect"
-        ? "text-emerald-700 dark:text-emerald-300"
+        ? "text-emerald-700"
         : toneOverride === "v2_over"
-          ? "text-blue-600 dark:text-blue-400"
+          ? "text-blue-600"
           : "text-text-primary";
   return (
     <div className="rounded-md bg-bg-primary/40 border border-border px-3 py-2">

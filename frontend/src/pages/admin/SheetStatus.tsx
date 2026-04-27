@@ -248,7 +248,7 @@ export function SheetStatus() {
                   <div className="text-[10px] uppercase tracking-wide text-text-secondary">
                     Cells agree
                   </div>
-                  <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  <div className="text-2xl font-bold text-emerald-600">
                     {data.reconciliation.cellsAgree}
                   </div>
                 </div>
@@ -256,7 +256,7 @@ export function SheetStatus() {
                   <div className="text-[10px] uppercase tracking-wide text-text-secondary">
                     Cells differ
                   </div>
-                  <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                  <div className="text-2xl font-bold text-amber-600">
                     {data.reconciliation.cellsDelta}
                   </div>
                 </div>
@@ -275,10 +275,10 @@ export function SheetStatus() {
                   <div
                     className={`text-2xl font-bold ${
                       data.reconciliation.weekDelta === 0
-                        ? "text-emerald-600 dark:text-emerald-400"
+                        ? "text-emerald-600"
                         : Math.abs(data.reconciliation.weekDelta) <= 5
-                          ? "text-amber-600 dark:text-amber-400"
-                          : "text-red-600 dark:text-red-400"
+                          ? "text-amber-600"
+                          : "text-red-600"
                     }`}
                   >
                     {data.reconciliation.weekDelta > 0 ? "+" : ""}

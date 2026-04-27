@@ -209,7 +209,7 @@ export function JennyQueue() {
                           {formatDate(s.delivered_on)}
                         </td>
                         <td className="py-1.5 pr-3 text-xs">
-                          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                          <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
                             {formatCategory(s.job_category)}
                           </span>
                         </td>
