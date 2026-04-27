@@ -367,11 +367,34 @@ export function generateSourceId(raw: Record<string, unknown>): string {
     return `lgx-${loadNo}-${orderNo}`;
   }
 
-  const bolNo = resolveField(raw, "bol_no", "bolNo", "BOL", "BOL #", "BOL No");
+  // order_id alone is stable per the Logistiq feed (verified 2026-04-27
+  // — order_id stays constant across billing-state transitions). Use it
+  // before falling through to BOL.
+  if (orderNo != null) {
+    return `lgx-order-${orderNo}`;
+  }
+
+  // 2026-04-27: added "bol" + "order_id" to the field lookups. The
+  // Logistiq HTTP feed uses lowercase `bol` and `order_id` (NOT bol_no /
+  // order_no). Without these names matching, generateSourceId fell
+  // through to the unstable hash fallback and produced 1,023 duplicate
+  // load rows across 625 unique loads (~3 rows each — one per billing
+  // state: New → ReadyToBill → Billed). Adding "bol" pins the source_id
+  // to the BOL number which IS stable across billing-state transitions.
+  const bolNo = resolveField(
+    raw,
+    "bol",
+    "bol_no",
+    "bolNo",
+    "BOL",
+    "BOL #",
+    "BOL No",
+  );
   if (bolNo != null) return `lgx-bol-${bolNo}`;
 
   const ticketNo = resolveField(
     raw,
+    "sand_ticket_no",
     "ticket_no",
     "ticketNo",
     "Ticket #",

@@ -115,14 +115,30 @@ describe("Logistiq Sync — generateSourceId", () => {
     expect(generateSourceId(raw)).toBe("lgx-L-102-12345");
   });
 
-  it("falls back to hash when load_no is null", () => {
+  it("uses lgx-order-{order_no} when load_no is null but order_no is present", () => {
+    // 2026-04-27: changed behavior — order_id is stable in the Logistiq
+    // feed across billing-state transitions, so it's safe as a stable
+    // sourceId on its own (was previously falling through to hash and
+    // creating dups every time billing_status shifted).
     const raw = { order_no: "ORD-300", driver_name: "Smith" };
-    const result = generateSourceId(raw);
-    expect(result).toMatch(/^lgx-unknown-[a-f0-9]{12}$/);
+    expect(generateSourceId(raw)).toBe("lgx-order-ORD-300");
   });
 
-  it("falls back to hash when order_no is null", () => {
-    const raw = { load_no: "L-103" };
+  it("uses lgx-bol-{bol} when load/order are missing but bol is present", () => {
+    // 2026-04-27: Logistiq HTTP feed uses lowercase `bol` (not bol_no).
+    // Adding to the resolveField list pinned source_id to BOL across
+    // billing-state shifts; eliminated 1,023 duplicate load rows.
+    const raw = { bol: "AU2604192554264", driver_name: "Smith" };
+    expect(generateSourceId(raw)).toBe("lgx-bol-AU2604192554264");
+  });
+
+  it("uses lgx-ticket-{sand_ticket_no} when sand_ticket_no is present", () => {
+    const raw = { sand_ticket_no: "1121914" };
+    expect(generateSourceId(raw)).toBe("lgx-ticket-1121914");
+  });
+
+  it("falls back to hash when load_no AND order AND bol AND ticket are all null", () => {
+    const raw = { load_no: "L-103", driver_name: "Smith" };
     const result = generateSourceId(raw);
     expect(result).toMatch(/^lgx-unknown-[a-f0-9]{12}$/);
   });
