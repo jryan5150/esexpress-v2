@@ -1,0 +1,142 @@
+{
+  "generatedAt": "2026-04-27T17:33:51.919Z",
+  "truthSources": {
+    "sheet": [
+      {
+        "weekStart": "2026-04-26",
+        "sheetLoadCount": 1287,
+        "v2LoadCount": 375,
+        "delta": -912,
+        "matchPct": 29.1
+      },
+      {
+        "weekStart": "2026-04-19",
+        "sheetLoadCount": 1287,
+        "v2LoadCount": 1488,
+        "delta": 201,
+        "matchPct": 84.4
+      },
+      {
+        "weekStart": "2026-04-12",
+        "sheetLoadCount": 1509,
+        "v2LoadCount": 1375,
+        "delta": -134,
+        "matchPct": 91.1
+      },
+      {
+        "weekStart": "2026-04-05",
+        "sheetLoadCount": 1387,
+        "v2LoadCount": 1279,
+        "delta": -108,
+        "matchPct": 92.2
+      },
+      {
+        "weekStart": "2026-03-29",
+        "sheetLoadCount": 1837,
+        "v2LoadCount": 1744,
+        "delta": -93,
+        "matchPct": 94.9
+      },
+      {
+        "weekStart": "2026-03-22",
+        "sheetLoadCount": 1495,
+        "v2LoadCount": 1482,
+        "delta": -13,
+        "matchPct": 99.1
+      }
+    ],
+    "pcs": {
+      "q1Pcs": 13515,
+      "q1V2Raw": 18194,
+      "coveredLoads": 13010,
+      "scopeGapLoads": 505,
+      "realCoveragePct": 96.3,
+      "perfectMatchWeeks": 0,
+      "withinFifteenWeeks": 0,
+      "byCustomer": [
+        {
+          "customer": "Liberty Energy Services, LLC",
+          "pcsLoads": 12362
+        },
+        {
+          "customer": "Logistix IQ",
+          "pcsLoads": 639
+        },
+        {
+          "customer": "JRT Trucking Inc",
+          "pcsLoads": 447
+        },
+        {
+          "customer": "Signal Peak",
+          "pcsLoads": 58
+        },
+        {
+          "customer": "Premier Pressure Pumping",
+          "pcsLoads": 8
+        },
+        {
+          "customer": "Finoric ",
+          "pcsLoads": 1
+        }
+      ]
+    },
+    "builderMatrix": [
+      {
+        "weekStart": "2026-04-19",
+        "rows": [
+          {
+            "builder": "Crystal",
+            "customer": null,
+            "total": 53
+          },
+          {
+            "builder": "Scout",
+            "customer": "Liberty Energy Services, LLC",
+            "total": 1106
+          },
+          {
+            "builder": "Steph",
+            "customer": "Logistix IQ",
+            "total": 420
+          }
+        ]
+      },
+      {
+        "weekStart": "2026-04-12",
+        "rows": [
+          {
+            "builder": "Scout",
+            "customer": "Liberty Energy Services, LLC",
+            "total": 1140
+          },
+          {
+            "builder": "Steph",
+            "customer": "Logistix IQ",
+            "total": 327
+          }
+        ]
+      }
+    ]
+  },
+  "v2Internals": {
+    "photoAttachmentPct": 97,
+    "syncRunSuccessPct24h": 97.9,
+    "openDiscrepancyCount": 11
+  },
+  "citationGuide": {
+    "okToCite": [
+      "Sheet vs v2 weekly parity — externally verifiable against Jenny's Load Count Sheet",
+      "PCS Q1 capture % — externally verifiable against PCS billing",
+      "PCS by-customer breakdown",
+      "Builder matrix totals — Jess hand-computes these every Friday",
+      "Open discrepancy count + breakdown",
+      "Photo attachment % (operational vital)"
+    ],
+    "avoid": [
+      "v2 total load count without sheet/PCS context",
+      "Match-tier counts — match_decisions stale since 2026-04-21",
+      "Driver-codes anything — table is empty pending Jess's input on canonical sheet",
+      "X loads dispatched / Y matched — auto-promote not shipped, pending dominates"
+    ]
+  }
+}

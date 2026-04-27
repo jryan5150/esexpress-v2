@@ -59,20 +59,31 @@ async function main() {
 
   console.log(`\n=== Sheet vs v2 well-level join ===`);
   // Match on well_name. Sheet wells may not match v2 well names exactly.
+  // Resolve sheet well names through BOTH wells.name AND wells.aliases.
+  // The aliases jsonb array holds known short-form / source-form variants
+  // (seeded 2026-04-27 via seed-aliases.ts). PostgreSQL `?` operator
+  // tests if a JSONB array contains a given text element.
+  // Sheet stores BOTH "Current" and "Previous" tab rows per week, so
+  // joining sheet → wells fan-outs and double-counts v2 loads. Use
+  // COUNT(DISTINCT l.id) to dedupe across the fan-out. MAX(s.week_total)
+  // over the duplicated sheet rows already returns the same value, so
+  // the sheet column stays correct.
   const joined = await sql`
     SELECT
-      COALESCE(s.well_name, w.name) AS well,
+      COALESCE(w.name, s.well_name) AS well,
       MAX(s.week_total) AS sheet_count,
-      COALESCE(COUNT(l.id), 0)::int AS v2_count
+      COUNT(DISTINCT l.id)::int AS v2_count
     FROM sheet_load_count_snapshots s
-    FULL OUTER JOIN wells w ON LOWER(TRIM(w.name)) = LOWER(TRIM(s.well_name))
+    LEFT JOIN wells w
+      ON LOWER(TRIM(w.name)) = LOWER(TRIM(s.well_name))
+      OR (w.aliases IS NOT NULL AND w.aliases ? s.well_name)
     LEFT JOIN assignments a ON a.well_id = w.id
     LEFT JOIN loads l ON l.id = a.load_id
       AND l.delivered_on >= ${wk}::date
       AND l.delivered_on < ${wk}::date + interval '7 days'
     WHERE s.week_start = ${wk} AND s.well_name IS NOT NULL
-    GROUP BY COALESCE(s.well_name, w.name)
-    ORDER BY (MAX(s.week_total) - COUNT(l.id)) DESC`;
+    GROUP BY COALESCE(w.name, s.well_name)
+    ORDER BY (MAX(s.week_total) - COUNT(DISTINCT l.id)) DESC`;
   console.log(`  sheet_well | sheet | v2 | delta`);
   for (const r of joined.slice(0, 25)) {
     const w = (r.well ?? "?").slice(0, 45);
@@ -82,7 +93,7 @@ async function main() {
     );
   }
 
-  console.log(`\n=== v2 wells NOT in sheet (likely the over-count source) ===`);
+  console.log(`\n=== v2 wells NOT in sheet (alias-aware) ===`);
   const v2Only = await sql`
     SELECT
       COALESCE(w.name, '(NO WELL)') AS well_name,
@@ -95,7 +106,11 @@ async function main() {
       AND NOT EXISTS (
         SELECT 1 FROM sheet_load_count_snapshots s
         WHERE s.week_start = ${wk}
-          AND LOWER(TRIM(s.well_name)) = LOWER(TRIM(w.name))
+          AND s.well_name IS NOT NULL
+          AND (
+            LOWER(TRIM(s.well_name)) = LOWER(TRIM(w.name))
+            OR (w.aliases IS NOT NULL AND w.aliases ? s.well_name)
+          )
       )
     GROUP BY w.name
     ORDER BY v2_count DESC LIMIT 20`;
