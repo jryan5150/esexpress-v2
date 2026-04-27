@@ -54,8 +54,16 @@ export function TodayIntakeSection({ onMatchedClick }: Props) {
   };
 
   const recentItems = useMemo<IntakeItem[]>(() => {
-    const response = queueQuery.data as { data?: IntakeItem[] } | undefined;
-    const items = response?.data ?? [];
+    // api.ts unwraps `json.data`; backend response is `{success, data: [...], meta}`
+    // so queryQuery.data is the array directly. BUT some hook callers wrap
+    // it as `{data, meta}`. Handle both shapes (matches BolQueue.tsx:340-342).
+    const response = queueQuery.data as
+      | { data?: IntakeItem[] }
+      | IntakeItem[]
+      | undefined;
+    const items: IntakeItem[] = Array.isArray(response)
+      ? response
+      : (response?.data ?? []);
     const cutoff = Date.now() - FOUR_HOURS_MS;
     return items.filter((x) => {
       const ts = x.submission.submittedAt ?? x.submission.createdAt;

@@ -34,6 +34,15 @@ interface InboxPayload {
     sheet_drift: number;
     total: number;
   };
+  // True backlog (unbounded) — counts.* is capped at 50 per section.
+  // Older deploys may not return totals; fall back to counts when absent.
+  totals?: {
+    missing_photos: number;
+    uncertain_matches: number;
+    pcs_discrepancies: number;
+    sheet_drift: number;
+    total: number;
+  };
 }
 
 const SECTION_LABELS: Record<string, string> = {
@@ -68,7 +77,10 @@ export function InboxSection({ customerIds, onItemClick, initialOpen }: Props) {
   });
 
   const data = inboxQuery.data;
-  const total = data?.counts.total ?? 0;
+  // Prefer true backlog totals when available (added 2026-04-27 to fix
+  // LIMIT 50 cap masking real urgency). Falls back to counts on stale deploys.
+  const totals = data?.totals ?? data?.counts;
+  const total = totals?.total ?? 0;
 
   return (
     <section className="rounded-lg border border-border bg-bg-secondary">
@@ -86,15 +98,15 @@ export function InboxSection({ customerIds, onItemClick, initialOpen }: Props) {
               {total}
             </span>
           )}
-          {!open && data && total > 0 && (
+          {!open && data && totals && total > 0 && (
             <span className="text-xs text-text-secondary ml-2 normal-case font-normal">
               {[
-                data.counts.missing_photos > 0 &&
-                  `${data.counts.missing_photos} missing photos`,
-                data.counts.uncertain_matches > 0 &&
-                  `${data.counts.uncertain_matches} uncertain`,
-                data.counts.pcs_discrepancies > 0 &&
-                  `${data.counts.pcs_discrepancies} PCS`,
+                totals.missing_photos > 0 &&
+                  `${totals.missing_photos} missing photos`,
+                totals.uncertain_matches > 0 &&
+                  `${totals.uncertain_matches} uncertain`,
+                totals.pcs_discrepancies > 0 &&
+                  `${totals.pcs_discrepancies} PCS`,
               ]
                 .filter(Boolean)
                 .join(" · ")}
@@ -125,10 +137,13 @@ export function InboxSection({ customerIds, onItemClick, initialOpen }: Props) {
           ).map((key) => {
             const items = data.items[key];
             if (items.length === 0) return null;
+            const sectionTotal = totals?.[key] ?? items.length;
+            const isCapped = sectionTotal > items.length;
             return (
               <div key={key}>
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary mb-1">
-                  {SECTION_LABELS[key]} ({items.length})
+                  {SECTION_LABELS[key]} ({items.length}
+                  {isCapped ? ` of ${sectionTotal}` : ""})
                 </h3>
                 <ul className="space-y-1">
                   {items.slice(0, 10).map((item, idx) => (

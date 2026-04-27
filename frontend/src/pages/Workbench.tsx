@@ -137,16 +137,29 @@ export function Workbench() {
   };
 
   // Inbox customer filter — Jess (admin manager) sees everything;
-  // builders see only their primary customer
+  // Builder customer scoping. Three cases:
+  //   1. Known manager (jryan / jess / mike) → unfiltered (sees all)
+  //   2. Mapped builder (Scout/Steph/Keli/Crystal/Katie/Jenny matched
+  //      via builder_routing) → filtered to their customer
+  //   3. Unmapped user (no builder_routing match, not a known manager)
+  //      → unfiltered + show banner so they know
+  const isKnownManager = useMemo(() => {
+    if (!me?.email) return false;
+    const local = me.email.split("@")[0].toLowerCase();
+    return ["jryan", "jess", "mike"].includes(local);
+  }, [me]);
   const inboxCustomerIds = useMemo(() => {
-    if (
-      me?.role === "admin" &&
-      (me.email?.startsWith("jryan") || me.email?.startsWith("jess"))
-    ) {
-      return [] as number[]; // manager view
-    }
+    if (isKnownManager) return [] as number[];
     return myCustomerId != null ? [myCustomerId] : [];
-  }, [me, myCustomerId]);
+  }, [isKnownManager, myCustomerId]);
+  // Surface when a logged-in user has neither a builder_routing match
+  // nor a known-manager email. Without this banner, Katie + several
+  // other team accounts silently get the unfiltered manager view.
+  const showUnmappedBanner = useMemo(() => {
+    if (!me?.email) return false;
+    if (isKnownManager) return false;
+    return myCustomerId == null && (routingQuery.data?.length ?? 0) > 0;
+  }, [me, isKnownManager, myCustomerId, routingQuery.data]);
 
   // Cell-click → drawer (drawer wiring lands in Task 4)
   const [openCell, setOpenCell] = useState<{
@@ -350,6 +363,14 @@ export function Workbench() {
         </div>
       </header>
 
+      {showUnmappedBanner && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-700 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+          You're viewing all customers — your account isn't mapped to a builder
+          yet. Ping admin to set up your builder routing if you should be scoped
+          to a specific customer.
+        </div>
+      )}
+
       <WorksurfaceTopStrip
         weekStart={weekStart}
         currentHighlight={highlight}
@@ -391,9 +412,11 @@ export function Workbench() {
       <TodayIntakeSection />
       <JennyQueueSection
         onLoadClick={(loadId) => {
-          // Phase 1.5: lookup load → cell context → open drawer.
-          // For Wave 1, just show alert; Phase 2.5 wires the click.
-          alert(`Load ${loadId} — drawer-open from Jenny's Queue is Phase 1.5`);
+          // Open the load detail in a new tab via the existing load-detail
+          // route. Cell-mapping the load is non-trivial (non-standard work
+          // often has no well or doesn't fit the (well, day) grid); the
+          // existing route is the right surface for these.
+          window.open(`/load-report?load=${loadId}`, "_blank");
         }}
       />
 

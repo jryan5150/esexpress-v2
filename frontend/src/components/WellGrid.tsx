@@ -164,11 +164,27 @@ export function WellGrid({
           </tbody>
         </table>
         {visibleRows.length === 0 && !gridQuery.isLoading && (
-          <div className="px-3 py-12 text-center text-sm text-text-secondary border-t border-border">
-            No active wells this week.{" "}
-            {activeOnly
-              ? "Toggle 'Active rows only' off to see the full roster."
-              : "Pick a different week."}
+          <div className="px-3 py-12 text-center text-sm text-text-secondary border-t border-border space-y-1">
+            <div>No active wells this week.</div>
+            {/* JRT/Keli special case: their loads come from PCS, not the
+                wells/sheet pipeline. Surface this so Keli isn't staring at
+                an empty grid wondering if v2 is broken. */}
+            {highlight === 3 && (
+              <div className="text-xs">
+                JRT loads come from PCS. Use the{" "}
+                <a
+                  href="/admin/pcs-truth"
+                  className="text-accent underline-offset-4 hover:underline"
+                >
+                  PCS Truth
+                </a>{" "}
+                page until JRT integration covers the worksurface.
+              </div>
+            )}
+            {highlight !== 3 &&
+              (activeOnly
+                ? "Toggle 'Active rows only' off to see the full roster."
+                : "Pick a different week.")}
           </div>
         )}
       </div>

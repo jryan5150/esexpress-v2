@@ -1450,6 +1450,12 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         : sql``;
 
     // Missing photos: delivered >4hr ago, no attached photo
+    const missingPhotosWhere = sql`
+      WHERE a.photo_status = 'missing'
+        AND l.delivered_on < now() - interval '4 hours'
+        AND l.delivered_on > now() - interval '14 days'
+        ${customerFilter}
+    `;
     const missingPhotos = (await db.execute(sql`
         SELECT
           'missing_photo' AS kind,
@@ -1461,15 +1467,24 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         JOIN assignments a ON a.load_id = l.id
         LEFT JOIN wells w ON w.id = a.well_id
         LEFT JOIN customers c ON c.id = l.customer_id
-        WHERE a.photo_status = 'missing'
-          AND l.delivered_on < now() - interval '4 hours'
-          AND l.delivered_on > now() - interval '14 days'
-          ${customerFilter}
+        ${missingPhotosWhere}
         ORDER BY l.delivered_on DESC
         LIMIT 50
       `)) as unknown as Array<Record<string, unknown>>;
+    const missingPhotosTotalRow = (await db.execute(sql`
+        SELECT COUNT(*)::int AS n
+        FROM loads l
+        JOIN assignments a ON a.load_id = l.id
+        ${missingPhotosWhere}
+      `)) as unknown as Array<{ n: number }>;
+    const missingPhotosTotal = missingPhotosTotalRow[0]?.n ?? 0;
 
     // Uncertain matches: pending assignments with no recent decision
+    const uncertainMatchesWhere = sql`
+      WHERE a.status = 'pending'
+        AND l.delivered_on > now() - interval '14 days'
+        ${customerFilter}
+    `;
     const uncertainMatches = (await db.execute(sql`
         SELECT
           'uncertain_match' AS kind,
@@ -1481,14 +1496,24 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         JOIN loads l ON l.id = a.load_id
         LEFT JOIN wells w ON w.id = a.well_id
         LEFT JOIN customers c ON c.id = l.customer_id
-        WHERE a.status = 'pending'
-          AND l.delivered_on > now() - interval '14 days'
-          ${customerFilter}
+        ${uncertainMatchesWhere}
         ORDER BY l.delivered_on DESC
         LIMIT 50
       `)) as unknown as Array<Record<string, unknown>>;
+    const uncertainMatchesTotalRow = (await db.execute(sql`
+        SELECT COUNT(*)::int AS n
+        FROM assignments a
+        JOIN loads l ON l.id = a.load_id
+        ${uncertainMatchesWhere}
+      `)) as unknown as Array<{ n: number }>;
+    const uncertainMatchesTotal = uncertainMatchesTotalRow[0]?.n ?? 0;
 
     // PCS discrepancies on this customer's loads
+    const pcsDiscrepanciesWhere = sql`
+      WHERE d.resolved_at IS NULL
+        AND d.discrepancy_type IN ('status_drift','weight_drift','well_mismatch','rate_drift','photo_gap')
+        ${customerFilter}
+    `;
     const pcsDiscrepancies = (await db.execute(sql`
         SELECT
           'pcs_discrepancy' AS kind,
@@ -1501,14 +1526,25 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         LEFT JOIN loads l ON l.id = COALESCE(d.load_id, a.load_id)
         LEFT JOIN wells w ON w.id = a.well_id
         LEFT JOIN customers c ON c.id = l.customer_id
-        WHERE d.resolved_at IS NULL
-          AND d.discrepancy_type IN ('status_drift','weight_drift','well_mismatch','rate_drift','photo_gap')
-          ${customerFilter}
+        ${pcsDiscrepanciesWhere}
         ORDER BY d.severity DESC, d.detected_at DESC
         LIMIT 50
       `)) as unknown as Array<Record<string, unknown>>;
+    const pcsDiscrepanciesTotalRow = (await db.execute(sql`
+        SELECT COUNT(*)::int AS n
+        FROM discrepancies d
+        LEFT JOIN assignments a ON a.id = d.assignment_id
+        LEFT JOIN loads l ON l.id = COALESCE(d.load_id, a.load_id)
+        ${pcsDiscrepanciesWhere}
+      `)) as unknown as Array<{ n: number }>;
+    const pcsDiscrepanciesTotal = pcsDiscrepanciesTotalRow[0]?.n ?? 0;
 
     // Sheet-drift discrepancies (sheet_status_drift type)
+    const sheetDriftWhere = sql`
+      WHERE d.resolved_at IS NULL
+        AND d.discrepancy_type IN ('sheet_status_drift','sheet_cell_count_drift','sheet_vs_v2_well_count')
+        ${customerFilter}
+    `;
     const sheetDrift = (await db.execute(sql`
         SELECT
           'sheet_drift' AS kind,
@@ -1521,12 +1557,18 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         LEFT JOIN loads l ON l.id = COALESCE(d.load_id, a.load_id)
         LEFT JOIN wells w ON w.id = a.well_id
         LEFT JOIN customers c ON c.id = l.customer_id
-        WHERE d.resolved_at IS NULL
-          AND d.discrepancy_type IN ('sheet_status_drift','sheet_cell_count_drift','sheet_vs_v2_well_count')
-          ${customerFilter}
+        ${sheetDriftWhere}
         ORDER BY d.detected_at DESC
         LIMIT 50
       `)) as unknown as Array<Record<string, unknown>>;
+    const sheetDriftTotalRow = (await db.execute(sql`
+        SELECT COUNT(*)::int AS n
+        FROM discrepancies d
+        LEFT JOIN assignments a ON a.id = d.assignment_id
+        LEFT JOIN loads l ON l.id = COALESCE(d.load_id, a.load_id)
+        ${sheetDriftWhere}
+      `)) as unknown as Array<{ n: number }>;
+    const sheetDriftTotal = sheetDriftTotalRow[0]?.n ?? 0;
 
     return {
       success: true,
@@ -1545,6 +1587,7 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
           sheet_drift: sheetDrift,
         },
         counts: {
+          // Returned (capped at 50) — use for "X shown" display
           missing_photos: missingPhotos.length,
           uncertain_matches: uncertainMatches.length,
           pcs_discrepancies: pcsDiscrepancies.length,
@@ -1554,6 +1597,18 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
             uncertainMatches.length +
             pcsDiscrepancies.length +
             sheetDrift.length,
+        },
+        totals: {
+          // Unbounded — true backlog. Use for "of N" + badge.
+          missing_photos: missingPhotosTotal,
+          uncertain_matches: uncertainMatchesTotal,
+          pcs_discrepancies: pcsDiscrepanciesTotal,
+          sheet_drift: sheetDriftTotal,
+          total:
+            missingPhotosTotal +
+            uncertainMatchesTotal +
+            pcsDiscrepanciesTotal +
+            sheetDriftTotal,
         },
       },
     };

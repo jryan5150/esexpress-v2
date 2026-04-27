@@ -128,11 +128,19 @@ export function AwaitingPhotoMatchSection({
       submittedAt: string | null;
     };
   };
+  // api.ts unwraps json.data; backend returns {success, data:[...], meta}
+  // so queryQuery.data is the array directly. Handle both shapes for
+  // safety (matches BolQueue.tsx:340-342 pattern).
   const response = queueQuery.data as
     | { data?: QueueItem[]; meta?: { total?: number } }
+    | QueueItem[]
     | undefined;
-  const items: QueueItem[] = response?.data ?? [];
-  const total = response?.meta?.total ?? items.length;
+  const items: QueueItem[] = Array.isArray(response)
+    ? response
+    : (response?.data ?? []);
+  const total = Array.isArray(response)
+    ? items.length
+    : (response?.meta?.total ?? items.length);
 
   if (queueQuery.isLoading || total === 0) return null;
 
