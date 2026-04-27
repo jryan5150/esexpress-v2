@@ -31,10 +31,15 @@ const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 interface Props {
   weekStart?: string;
+  currentHighlight?: number | "all" | "mine_only" | null;
   onBuilderClick?: (customerId: number | null) => void;
 }
 
-export function WorksurfaceTopStrip({ weekStart, onBuilderClick }: Props) {
+export function WorksurfaceTopStrip({
+  weekStart,
+  currentHighlight,
+  onBuilderClick,
+}: Props) {
   const matrixQuery = useQuery({
     queryKey: ["worksurface", "top-strip", weekStart],
     queryFn: () =>
@@ -74,40 +79,49 @@ export function WorksurfaceTopStrip({ weekStart, onBuilderClick }: Props) {
           </tr>
         </thead>
         <tbody>
-          {data.matrix.map((r) => (
-            <tr
-              key={`${r.builder}-${r.customerId ?? "none"}`}
-              className={`border-b border-border/40 cursor-pointer hover:bg-bg-tertiary ${
-                r.isPrimary ? "" : "opacity-70"
-              }`}
-              onClick={() => onBuilderClick?.(r.customerId)}
-            >
-              <td className="py-1.5 pl-3 pr-2">
-                {r.customer ?? (
-                  <span className="italic text-text-secondary">(floater)</span>
-                )}
-              </td>
-              <td className="py-1.5 pr-2 font-medium">
-                {r.builder}
-                {!r.isPrimary && (
-                  <span className="ml-1 text-[10px] px-1 rounded bg-bg-primary text-text-secondary border border-border">
-                    backup
-                  </span>
-                )}
-              </td>
-              {DOW.map((dk) => (
-                <td
-                  key={dk}
-                  className="py-1.5 pr-2 text-right tabular-nums text-text-secondary"
-                >
-                  {r.counts[dk] || ""}
+          {data.matrix.map((r) => {
+            const isActive =
+              currentHighlight != null &&
+              currentHighlight !== "all" &&
+              currentHighlight !== "mine_only" &&
+              r.customerId === currentHighlight;
+            return (
+              <tr
+                key={`${r.builder}-${r.customerId ?? "none"}`}
+                className={`border-b border-border/40 cursor-pointer hover:bg-bg-tertiary ${
+                  r.isPrimary ? "" : "opacity-70"
+                } ${isActive ? "bg-accent/10 border-l-2 border-l-accent" : ""}`}
+                onClick={() => onBuilderClick?.(r.customerId)}
+              >
+                <td className="py-1.5 pl-3 pr-2">
+                  {r.customer ?? (
+                    <span className="italic text-text-secondary">
+                      (floater)
+                    </span>
+                  )}
                 </td>
-              ))}
-              <td className="py-1.5 pr-3 text-right tabular-nums font-semibold">
-                {r.total.toLocaleString()}
-              </td>
-            </tr>
-          ))}
+                <td className="py-1.5 pr-2 font-medium">
+                  {r.builder}
+                  {!r.isPrimary && (
+                    <span className="ml-1 text-[10px] px-1 rounded bg-bg-primary text-text-secondary border border-border">
+                      backup
+                    </span>
+                  )}
+                </td>
+                {DOW.map((dk) => (
+                  <td
+                    key={dk}
+                    className="py-1.5 pr-2 text-right tabular-nums text-text-secondary"
+                  >
+                    {r.counts[dk] || ""}
+                  </td>
+                ))}
+                <td className="py-1.5 pr-3 text-right tabular-nums font-semibold">
+                  {r.total.toLocaleString()}
+                </td>
+              </tr>
+            );
+          })}
           <tr className="bg-bg-primary/40">
             <td
               colSpan={2}

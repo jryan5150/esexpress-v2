@@ -47,6 +47,7 @@ export function WellGrid({
   paintedStatusByCell,
 }: Props) {
   const [activeOnly, setActiveOnly] = useState(true);
+  const todayDow = new Date().getDay();
 
   const gridQuery = useQuery({
     queryKey: ["worksurface", "well-grid", weekStart],
@@ -72,9 +73,9 @@ export function WellGrid({
     return rows;
   }, [gridQuery.data, activeOnly, highlight, myCustomerId]);
 
-  const isDimmed = (row: GridRow): boolean => {
+  const isHighlighted = (row: GridRow): boolean => {
     if (highlight === "all" || highlight === "mine_only") return false;
-    return row.customerId !== highlight;
+    return row.customerId === highlight;
   };
 
   if (!gridQuery.data) {
@@ -106,8 +107,15 @@ export function WellGrid({
           <thead>
             <tr className="text-left uppercase tracking-wide text-text-secondary border-b border-border">
               <th className="py-2 pl-3 pr-3 text-xs">Bill To / Well</th>
-              {DOW_LABELS.map((d) => (
-                <th key={d} className="py-2 px-1 text-center w-12 text-xs">
+              {DOW_LABELS.map((d, idx) => (
+                <th
+                  key={d}
+                  className={`py-2 px-1 text-center w-12 text-xs ${
+                    idx === todayDow
+                      ? "bg-accent/10 text-accent font-semibold"
+                      : ""
+                  }`}
+                >
                   {d}
                 </th>
               ))}
@@ -117,7 +125,11 @@ export function WellGrid({
             {visibleRows.map((row) => (
               <tr
                 key={row.wellId}
-                className={`border-b border-border/40 ${isDimmed(row) ? "opacity-40" : ""}`}
+                className={`border-b border-border/40 ${
+                  isHighlighted(row)
+                    ? "border-l-4 border-l-accent bg-accent/5"
+                    : ""
+                }`}
               >
                 <td className="py-1.5 pl-3 pr-3">
                   <div className="text-xs text-text-secondary">
@@ -141,10 +153,9 @@ export function WellGrid({
                       <button
                         type="button"
                         onClick={() => onCellClick(row.wellId, idx)}
-                        className="w-10 h-7 rounded border border-border/40 bg-bg-primary/40 text-[10px] text-text-secondary hover:border-border"
-                      >
-                        ·
-                      </button>
+                        className="w-12 h-9 rounded border border-dashed border-border/40 bg-bg-primary/20 hover:border-border hover:bg-bg-primary/40 transition-colors"
+                        aria-label="Empty cell"
+                      />
                     )}
                   </td>
                 ))}
@@ -152,6 +163,14 @@ export function WellGrid({
             ))}
           </tbody>
         </table>
+        {visibleRows.length === 0 && !gridQuery.isLoading && (
+          <div className="px-3 py-12 text-center text-sm text-text-secondary border-t border-border">
+            No active wells this week.{" "}
+            {activeOnly
+              ? "Toggle 'Active rows only' off to see the full roster."
+              : "Pick a different week."}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -46,10 +46,11 @@ const SECTION_LABELS: Record<string, string> = {
 interface Props {
   customerIds: number[];
   onItemClick?: (item: InboxItem) => void;
+  initialOpen?: boolean;
 }
 
-export function InboxSection({ customerIds, onItemClick }: Props) {
-  const [open, setOpen] = useState(false);
+export function InboxSection({ customerIds, onItemClick, initialOpen }: Props) {
+  const [open, setOpen] = useState(initialOpen ?? false);
 
   // Direct-typed unwrap pattern: api.get<T>(url) already returns the
   // envelope's data payload (api.ts request() unwraps json.data), so we
@@ -85,9 +86,25 @@ export function InboxSection({ customerIds, onItemClick }: Props) {
               {total}
             </span>
           )}
+          {!open && data && total > 0 && (
+            <span className="text-xs text-text-secondary ml-2 normal-case font-normal">
+              {[
+                data.counts.missing_photos > 0 &&
+                  `${data.counts.missing_photos} missing photos`,
+                data.counts.uncertain_matches > 0 &&
+                  `${data.counts.uncertain_matches} uncertain`,
+                data.counts.pcs_discrepancies > 0 &&
+                  `${data.counts.pcs_discrepancies} PCS`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          )}
         </span>
-        <span className="text-xs text-text-secondary">
-          {open ? "Collapse ↑" : "Expand ↓"}
+        <span
+          className={`material-symbols-outlined text-base text-text-secondary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        >
+          expand_more
         </span>
       </button>
       {open && data && (

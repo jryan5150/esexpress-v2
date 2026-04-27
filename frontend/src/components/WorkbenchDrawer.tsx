@@ -397,6 +397,15 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [commentBody, setCommentBody] = useState("");
 
+  // ESC key dismisses the drawer
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cellContext.onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [cellContext]);
+
   const dayLabel = (() => {
     const d = new Date(cellContext.weekStart + "T00:00:00");
     d.setDate(d.getDate() + cellContext.dow);
@@ -409,217 +418,223 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
   })();
 
   return (
-    <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md bg-bg-primary border-l border-border shadow-2xl overflow-y-auto">
-      <div className="border-b border-border bg-bg-secondary p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-xs text-text-secondary">
-              {cellContext.billTo ?? "—"}
+    <>
+      <div
+        className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px]"
+        onClick={cellContext.onClose}
+        aria-hidden="true"
+      />
+      <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md lg:max-w-sm xl:max-w-md bg-bg-primary border-l border-border shadow-2xl flex flex-col">
+        <div className="border-b border-border bg-bg-secondary p-4 flex-shrink-0">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs text-text-secondary">
+                {cellContext.billTo ?? "—"}
+              </div>
+              <h2 className="text-lg font-semibold">{cellContext.wellName}</h2>
+              <div className="text-xs text-text-secondary mt-1">{dayLabel}</div>
             </div>
-            <h2 className="text-lg font-semibold">{cellContext.wellName}</h2>
-            <div className="text-xs text-text-secondary mt-1">{dayLabel}</div>
+            <button
+              type="button"
+              onClick={cellContext.onClose}
+              className="text-text-secondary hover:text-text-primary"
+              aria-label="Close drawer"
+            >
+              ✕
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={cellContext.onClose}
-            className="text-text-secondary hover:text-text-primary"
-            aria-label="Close drawer"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <div className="rounded-md border border-border bg-bg-primary/40 px-2 py-1.5">
-            <div className="text-[10px] uppercase tracking-wide text-text-secondary">
-              v2 status
-            </div>
-            <div className="font-semibold">
-              {cellContext.derivedStatus.replace(/_/g, " ")}
-            </div>
-          </div>
-          <div className="rounded-md border border-border bg-bg-primary/40 px-2 py-1.5">
-            <div className="text-[10px] uppercase tracking-wide text-text-secondary">
-              v2 count
-            </div>
-            <div className="font-semibold">{cellContext.loadCount}</div>
-          </div>
-          {cellContext.paintedStatus && (
-            <div className="col-span-2 rounded-md border border-border bg-bg-primary/40 px-2 py-1.5">
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-md border border-border bg-bg-primary/40 px-2 py-1.5">
               <div className="text-[10px] uppercase tracking-wide text-text-secondary">
-                sheet-painted
+                v2 status
               </div>
               <div className="font-semibold">
-                {cellContext.paintedStatus.replace(/_/g, " ")}
+                {cellContext.derivedStatus.replace(/_/g, " ")}
+              </div>
+            </div>
+            <div className="rounded-md border border-border bg-bg-primary/40 px-2 py-1.5">
+              <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+                v2 count
+              </div>
+              <div className="font-semibold">{cellContext.loadCount}</div>
+            </div>
+            {cellContext.paintedStatus && (
+              <div className="col-span-2 rounded-md border border-border bg-bg-primary/40 px-2 py-1.5">
+                <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+                  sheet-painted
+                </div>
+                <div className="font-semibold">
+                  {cellContext.paintedStatus.replace(/_/g, " ")}
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Action bar — context-aware on derivedStatus */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {cellContext.derivedStatus === "missing_tickets" && (
+              <button
+                type="button"
+                onClick={cellContext.onMatchBol}
+                className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90"
+              >
+                Match BOL
+              </button>
+            )}
+            {cellContext.derivedStatus === "missing_driver" && (
+              <button
+                type="button"
+                onClick={cellContext.onAssignDriver}
+                className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90"
+              >
+                Assign Driver
+              </button>
+            )}
+            {cellContext.derivedStatus === "loads_being_built" && (
+              <button
+                type="button"
+                onClick={cellContext.onConfirm}
+                disabled={
+                  cellContext.isConfirming ||
+                  (cellContext.assignmentIds?.length ?? 0) === 0
+                }
+                className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={
+                  cellContext.assignmentIds?.length
+                    ? `Bulk-advance ${cellContext.assignmentIds.length} loads to built`
+                    : "No loads to advance"
+                }
+              >
+                {cellContext.isConfirming
+                  ? "Confirming..."
+                  : `Confirm (${cellContext.assignmentIds?.length ?? 0})`}
+              </button>
+            )}
+            {cellContext.derivedStatus === "loads_completed" && (
+              <button
+                type="button"
+                disabled
+                className="px-3 py-1.5 text-sm rounded-md bg-bg-tertiary text-text-secondary border border-border opacity-60 cursor-not-allowed"
+                title="PCS push awaiting enablement"
+              >
+                Push to PCS
+              </button>
+            )}
+            {cellContext.derivedStatus === "need_rate_info" && (
+              <a
+                href={`/wells/${cellContext.wellId}`}
+                className="px-3 py-1.5 text-sm rounded-md bg-amber-500 text-white hover:opacity-90"
+              >
+                → Set rate on Well page
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowCommentForm((v) => !v)}
+              className="px-3 py-1.5 text-sm rounded-md border border-border bg-transparent text-text-primary hover:bg-bg-tertiary"
+            >
+              {showCommentForm ? "Cancel comment" : "Add Comment"}
+            </button>
+          </div>
+          {showCommentForm && (
+            <div className="mt-3 space-y-2">
+              <textarea
+                value={commentBody}
+                onChange={(e) => setCommentBody(e.target.value)}
+                placeholder={`Comment on this cell (${cellContext.wellName})…`}
+                rows={3}
+                autoFocus
+                className="w-full px-2 py-1.5 text-sm rounded-md border border-border bg-bg-primary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (commentBody.trim()) {
+                      cellContext.onAddComment?.(commentBody.trim());
+                      setCommentBody("");
+                      setShowCommentForm(false);
+                    }
+                  }}
+                  disabled={!commentBody.trim()}
+                  className="px-3 py-1 text-xs rounded-md bg-accent text-white disabled:opacity-50"
+                >
+                  Save comment
+                </button>
               </div>
             </div>
           )}
-        </div>
-        {/* Action bar — context-aware on derivedStatus */}
-        <div className="mt-3 flex flex-wrap gap-2">
-          {cellContext.derivedStatus === "missing_tickets" && (
-            <button
-              type="button"
-              onClick={cellContext.onMatchBol}
-              className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90"
-            >
-              Match BOL
-            </button>
-          )}
-          {cellContext.derivedStatus === "missing_driver" && (
-            <button
-              type="button"
-              onClick={cellContext.onAssignDriver}
-              className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90"
-            >
-              Assign Driver
-            </button>
-          )}
-          {cellContext.derivedStatus === "loads_being_built" && (
-            <button
-              type="button"
-              onClick={cellContext.onConfirm}
-              disabled={
-                cellContext.isConfirming ||
-                (cellContext.assignmentIds?.length ?? 0) === 0
-              }
-              className="px-3 py-1.5 text-sm rounded-md bg-accent text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={
-                cellContext.assignmentIds?.length
-                  ? `Bulk-advance ${cellContext.assignmentIds.length} loads to built`
-                  : "No loads to advance"
-              }
-            >
-              {cellContext.isConfirming
-                ? "Confirming..."
-                : `Confirm (${cellContext.assignmentIds?.length ?? 0})`}
-            </button>
-          )}
-          {cellContext.derivedStatus === "loads_completed" && (
-            <button
-              type="button"
-              disabled
-              className="px-3 py-1.5 text-sm rounded-md bg-bg-tertiary text-text-secondary border border-border opacity-60 cursor-not-allowed"
-              title="PCS push awaiting enablement"
-            >
-              Push to PCS
-            </button>
-          )}
-          {cellContext.derivedStatus === "need_rate_info" && (
-            <a
-              href={`/wells/${cellContext.wellId}`}
-              className="px-3 py-1.5 text-sm rounded-md bg-amber-500 text-white hover:opacity-90"
-            >
-              → Set rate on Well page
-            </a>
-          )}
-          <button
-            type="button"
-            onClick={() => setShowCommentForm((v) => !v)}
-            className="px-3 py-1.5 text-sm rounded-md border border-border bg-bg-primary hover:bg-bg-tertiary"
-          >
-            {showCommentForm ? "Cancel comment" : "Add Comment"}
-          </button>
-        </div>
-        {showCommentForm && (
-          <div className="mt-3 space-y-2">
-            <textarea
-              value={commentBody}
-              onChange={(e) => setCommentBody(e.target.value)}
-              placeholder={`Comment on this cell (${cellContext.wellName})…`}
-              rows={3}
-              className="w-full px-2 py-1.5 text-sm rounded-md border border-border bg-bg-primary"
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (commentBody.trim()) {
-                    cellContext.onAddComment?.(commentBody.trim());
-                    setCommentBody("");
-                    setShowCommentForm(false);
-                  }
-                }}
-                disabled={!commentBody.trim()}
-                className="px-3 py-1 text-xs rounded-md bg-accent text-white disabled:opacity-50"
-              >
-                Save comment
-              </button>
+          {cellContext.confirmResult && (
+            <div className="mt-3 px-3 py-2 rounded-md text-xs bg-bg-primary border border-border">
+              {cellContext.confirmResult}
             </div>
-          </div>
-        )}
-        {cellContext.confirmResult && (
-          <div className="mt-3 px-3 py-2 rounded-md text-xs bg-bg-primary border border-border">
-            {cellContext.confirmResult}
-          </div>
-        )}
-      </div>
-      <div
-        className="p-4 overflow-y-auto"
-        style={{ maxHeight: "calc(100vh - 320px)" }}
-      >
-        {(cellContext.loads ?? []).length === 0 ? (
-          <div className="text-xs text-text-secondary text-center py-6">
-            No loads in this cell.
-          </div>
-        ) : (
-          <table className="w-full text-xs">
-            <thead className="text-text-secondary uppercase tracking-wide">
-              <tr className="border-b border-border">
-                <th className="text-left py-1.5 pr-2">Driver</th>
-                <th className="text-left py-1.5 pr-2">Ticket</th>
-                <th className="text-left py-1.5 pr-2">BOL</th>
-                <th className="text-right py-1.5 pr-2">Wt</th>
-                <th className="text-left py-1.5 pr-2">Status</th>
-                <th className="text-left py-1.5">Photo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(cellContext.loads ?? []).map((l) => (
-                <tr key={l.load_id} className="border-b border-border/40">
-                  <td className="py-1.5 pr-2">
-                    {l.driver_name ?? <span className="text-amber-600">—</span>}
-                  </td>
-                  <td className="py-1.5 pr-2 tabular-nums">
-                    {l.ticket_no ?? "—"}
-                  </td>
-                  <td className="py-1.5 pr-2 tabular-nums">
-                    {l.bol_no ?? "—"}
-                  </td>
-                  <td className="py-1.5 pr-2 text-right tabular-nums">
-                    {l.weight_tons
-                      ? Number(l.weight_tons).toFixed(2)
-                      : l.weight_lbs
-                        ? `${(Number(l.weight_lbs) / 2000).toFixed(2)}`
-                        : "—"}
-                  </td>
-                  <td className="py-1.5 pr-2">
-                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-bg-primary border border-border">
-                      {l.assignment_status}
-                    </span>
-                  </td>
-                  <td className="py-1.5">
-                    {l.photo_status === "attached" ? (
-                      <span className="text-green-600" title="Attached">
-                        ●
-                      </span>
-                    ) : l.photo_status === "pending" ? (
-                      <span className="text-amber-500" title="Pending">
-                        ○
-                      </span>
-                    ) : (
-                      <span className="text-red-500" title="Missing">
-                        ✕
-                      </span>
-                    )}
-                  </td>
+          )}
+        </div>
+        <div className="p-4 overflow-y-auto flex-1">
+          {(cellContext.loads ?? []).length === 0 ? (
+            <div className="text-xs text-text-secondary text-center py-6">
+              No loads in this cell.
+            </div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="text-text-secondary uppercase tracking-wide">
+                <tr className="border-b border-border">
+                  <th className="text-left py-1.5 pr-2">Driver</th>
+                  <th className="text-left py-1.5 pr-2">Ticket</th>
+                  <th className="text-left py-1.5 pr-2">BOL</th>
+                  <th className="text-right py-1.5 pr-2">Wt</th>
+                  <th className="text-left py-1.5 pr-2">Status</th>
+                  <th className="text-left py-1.5">Photo</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {(cellContext.loads ?? []).map((l) => (
+                  <tr key={l.load_id} className="border-b border-border/40">
+                    <td className="py-1.5 pr-2">
+                      {l.driver_name ?? (
+                        <span className="text-amber-600">—</span>
+                      )}
+                    </td>
+                    <td className="py-1.5 pr-2 tabular-nums">
+                      {l.ticket_no ?? "—"}
+                    </td>
+                    <td className="py-1.5 pr-2 tabular-nums">
+                      {l.bol_no ?? "—"}
+                    </td>
+                    <td className="py-1.5 pr-2 text-right tabular-nums">
+                      {l.weight_tons
+                        ? Number(l.weight_tons).toFixed(2)
+                        : l.weight_lbs
+                          ? `${(Number(l.weight_lbs) / 2000).toFixed(2)}`
+                          : "—"}
+                    </td>
+                    <td className="py-1.5 pr-2">
+                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-bg-primary border border-border">
+                        {l.assignment_status}
+                      </span>
+                    </td>
+                    <td className="py-1.5">
+                      {l.photo_status === "attached" ? (
+                        <span className="text-green-600" title="Attached">
+                          ●
+                        </span>
+                      ) : l.photo_status === "pending" ? (
+                        <span className="text-amber-500" title="Pending">
+                          ○
+                        </span>
+                      ) : (
+                        <span className="text-red-500" title="Missing">
+                          ✕
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

@@ -72,8 +72,10 @@ export function JennyQueueSection({ onLoadClick }: Props) {
             </span>
           )}
         </span>
-        <span className="text-xs text-text-secondary">
-          {open ? "Collapse ↑" : "Expand ↓"}
+        <span
+          className={`material-symbols-outlined text-base text-text-secondary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        >
+          expand_more
         </span>
       </button>
       {open && data && (

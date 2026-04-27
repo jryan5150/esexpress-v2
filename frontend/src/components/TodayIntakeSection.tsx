@@ -81,8 +81,10 @@ export function TodayIntakeSection({ onMatchedClick }: Props) {
             </span>
           )}
         </span>
-        <span className="text-xs text-text-secondary">
-          {open ? "Collapse ↑" : "Expand ↓"}
+        <span
+          className={`material-symbols-outlined text-base text-text-secondary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        >
+          expand_more
         </span>
       </button>
       {open && (
@@ -151,7 +153,7 @@ export function TodayIntakeSection({ onMatchedClick }: Props) {
                         onClick={() =>
                           setExpandedSubId(expanded ? null : sub.id)
                         }
-                        className="text-xs px-2 py-1 rounded bg-amber-500 text-white hover:opacity-90"
+                        className="text-xs px-2 py-1 rounded bg-accent text-white hover:opacity-90"
                       >
                         {expanded ? "Hide match panel" : "Manual match"}
                       </button>

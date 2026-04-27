@@ -56,11 +56,9 @@ export function WellGridCell({
       <button
         type="button"
         onClick={onClick}
-        className="w-10 h-7 rounded border border-border/40 bg-bg-primary/40 text-[10px] text-text-secondary hover:border-border"
+        className="w-12 h-9 rounded border border-dashed border-border/40 bg-bg-primary/20 hover:border-border hover:bg-bg-primary/40 transition-colors"
         aria-label="Empty cell"
-      >
-        ·
-      </button>
+      />
     );
   }
 
@@ -68,7 +66,7 @@ export function WellGridCell({
     <button
       type="button"
       onClick={onClick}
-      className="relative w-10 h-7 rounded border border-border overflow-hidden flex items-center justify-center text-[11px] font-semibold text-black/80 hover:ring-2 hover:ring-accent"
+      className="relative w-12 h-9 rounded border border-border overflow-hidden flex items-center justify-center hover:ring-2 hover:ring-offset-2 hover:ring-offset-bg-secondary hover:ring-accent transition-all"
       aria-label={`Cell with ${loadCount} loads, status ${derivedStatus}`}
       title={`${loadCount} loads · v2: ${derivedStatus}${paintedStatus ? ` · sheet: ${paintedStatus}` : ""}`}
     >
@@ -84,7 +82,9 @@ export function WellGridCell({
         className={`absolute inset-x-0 ${paintedHex ? "bottom-0 h-1/2" : "inset-y-0"}`}
         style={{ backgroundColor: derivedHex }}
       />
-      <span className="relative z-10">{loadCount}</span>
+      <span className="relative z-10 px-1.5 py-0.5 rounded-sm bg-white/90 text-black tabular-nums font-bold text-xs">
+        {loadCount}
+      </span>
       {showBadge && (
         <span
           role="button"
@@ -92,7 +92,7 @@ export function WellGridCell({
             e.stopPropagation();
             onBadgeClick?.();
           }}
-          className="absolute -top-1 -right-1 z-20 w-3 h-3 rounded-full bg-amber-500 border border-white text-[8px] font-bold text-white flex items-center justify-center"
+          className="absolute -top-1.5 -right-1.5 z-20 w-4 h-4 rounded-full bg-amber-500 border border-amber-700 text-[10px] font-bold text-white flex items-center justify-center"
           title={`Mismatch: sheet says ${paintedStatus}, v2 says ${derivedStatus}`}
         >
           !

@@ -293,15 +293,66 @@ export function Workbench() {
 
   return (
     <div className="flex-1 flex flex-col p-4 sm:p-6 gap-3 max-w-[1600px] w-full mx-auto">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
-        <div className="text-xs text-text-secondary">
-          {me?.email ? `Signed in as ${me.email}` : ""}
+      <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
+          <p className="text-sm text-text-secondary">
+            {new Date().toLocaleDateString(undefined, {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}
+            {weekStart &&
+              weekStart !== effectiveWeekStart &&
+              ` · viewing week of ${weekStart}`}
+            {!weekStart && ` · week of ${effectiveWeekStart}`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const d = new Date(effectiveWeekStart + "T00:00:00");
+              d.setDate(d.getDate() - 7);
+              const sp = new URLSearchParams(searchParams);
+              sp.set("week", d.toISOString().slice(0, 10));
+              setSearchParams(sp);
+            }}
+            className="px-2.5 py-1 text-xs rounded-md border border-border bg-bg-secondary hover:bg-bg-tertiary"
+          >
+            ← Prev week
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const sp = new URLSearchParams(searchParams);
+              sp.delete("week");
+              setSearchParams(sp);
+            }}
+            className="px-2.5 py-1 text-xs rounded-md border border-border bg-bg-secondary hover:bg-bg-tertiary"
+          >
+            This week
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const d = new Date(effectiveWeekStart + "T00:00:00");
+              d.setDate(d.getDate() + 7);
+              const sp = new URLSearchParams(searchParams);
+              sp.set("week", d.toISOString().slice(0, 10));
+              setSearchParams(sp);
+            }}
+            className="px-2.5 py-1 text-xs rounded-md border border-border bg-bg-secondary hover:bg-bg-tertiary"
+          >
+            Next week →
+          </button>
         </div>
       </header>
 
       <WorksurfaceTopStrip
         weekStart={weekStart}
+        currentHighlight={highlight}
         onBuilderClick={(custId) => handleHighlight(custId ?? "all")}
       />
 
@@ -323,6 +374,7 @@ export function Workbench() {
 
       <InboxSection
         customerIds={inboxCustomerIds}
+        initialOpen
         onItemClick={(item) => {
           if (item.well_id != null && item.day) {
             const itemDate = new Date(item.day);
