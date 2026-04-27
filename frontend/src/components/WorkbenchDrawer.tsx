@@ -435,7 +435,7 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
         onClick={cellContext.onClose}
         aria-hidden="true"
       />
-      <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md lg:max-w-sm xl:max-w-md bg-bg-primary border-l border-border shadow-2xl flex flex-col">
+      <div className="fixed inset-y-0 right-0 z-40 w-full max-w-lg lg:max-w-xl xl:max-w-2xl 2xl:max-w-3xl bg-bg-primary border-l border-border shadow-2xl flex flex-col">
         <div className="border-b border-border bg-bg-secondary p-4 flex-shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div>
