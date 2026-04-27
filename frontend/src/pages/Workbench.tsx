@@ -397,16 +397,36 @@ export function Workbench() {
         customerIds={inboxCustomerIds}
         initialOpen
         onItemClick={(item) => {
-          if (item.well_id != null && item.day) {
-            const itemDate = new Date(item.day);
-            const week = weekStart ? new Date(weekStart) : new Date();
-            const dow = Math.floor(
-              (itemDate.getTime() - week.getTime()) / (24 * 60 * 60 * 1000),
-            );
-            if (dow >= 0 && dow < 7) {
-              setOpenCell({ wellId: item.well_id, dow });
-            }
+          // Inbox shows items from a 14-day window so most are from a
+          // prior week. Navigate to the item's week if needed, then
+          // open the cell drawer for that (well, dow).
+          if (item.load_id != null && item.well_id == null) {
+            // Non-well items (e.g. sheet_drift on a customer) — open
+            // the load detail in a new tab.
+            window.open(`/load-report?load=${item.load_id}`, "_blank");
+            return;
           }
+          if (item.well_id == null || !item.day) {
+            // Nothing well-tied to drill into — last resort, open the
+            // load report if we have a load_id.
+            if (item.load_id)
+              window.open(`/load-report?load=${item.load_id}`, "_blank");
+            return;
+          }
+          const itemDate = new Date(item.day);
+          // Compute the Sunday of the item's week (America/Chicago Sun-start).
+          const itemSunday = new Date(itemDate);
+          itemSunday.setUTCDate(itemDate.getUTCDate() - itemDate.getUTCDay());
+          const itemWeekStr = itemSunday.toISOString().slice(0, 10);
+          const dow = itemDate.getUTCDay();
+          if (dow < 0 || dow > 6) return;
+          // Navigate to the item's week if we're not already there.
+          if (effectiveWeekStart !== itemWeekStr) {
+            const sp = new URLSearchParams(searchParams);
+            sp.set("week", itemWeekStr);
+            setSearchParams(sp);
+          }
+          setOpenCell({ wellId: item.well_id, dow });
         }}
       />
       <TodayIntakeSection />
