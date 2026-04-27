@@ -63,6 +63,21 @@
   --font-headline: "Plus Jakarta Sans", sans-serif;
   --font-body: "Inter", sans-serif;
   --font-label: "IBM Plex Mono", monospace;
+
+  /* 2026-04-27 EMERGENCY: WorkbenchDrawer + WellGrid + InboxSection were
+     written using a different design-token vocabulary (bg-bg-primary,
+     bg-bg-secondary, border-border, text-text-primary, accent) that
+     was never defined here. Result: drawer rendered transparent,
+     grid bled through. Aliasing those tokens onto the existing Material
+     surface palette so all generated utilities work without touching
+     20+ component files in the next 30 minutes. */
+  --color-bg-primary: #f7f5ef;
+  --color-bg-secondary: #ece8df;
+  --color-bg-tertiary: #e4ded3;
+  --color-border: #d1cac0;
+  --color-text-primary: #1e1b18;
+  --color-text-secondary: #4a4540;
+  --color-accent: #2323c7;
 }
 
 body {
