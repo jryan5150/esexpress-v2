@@ -1,6 +1,13 @@
-import { useState, useEffect, Component, type ReactNode } from "react";
+import {
+  useState,
+  useEffect,
+  Component,
+  Fragment,
+  type ReactNode,
+} from "react";
+import { EditableField } from "./EditableField";
 import { Link } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useUpdateLoadField,
   useBolReconciliation,
@@ -396,6 +403,10 @@ export function WorkbenchDrawer(props: WorkbenchDrawerProps) {
 function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [commentBody, setCommentBody] = useState("");
+  // Per-load inline expand: clicking a load row toggles a detail panel
+  // below it with editable fields + photo, in the same drawer (no new
+  // tab, stays in view).
+  const [expandedLoadId, setExpandedLoadId] = useState<number | null>(null);
 
   // ESC key dismisses the drawer
   useEffect(() => {
@@ -593,55 +604,77 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
                 </tr>
               </thead>
               <tbody>
-                {(cellContext.loads ?? []).map((l) => (
-                  <tr
-                    key={l.load_id}
-                    className="border-b border-border/40 cursor-pointer hover:bg-bg-tertiary/50"
-                    onClick={() =>
-                      window.open(`/load-center?load=${l.load_id}`, "_blank")
-                    }
-                    title="Open in Load Center — load values + photo + status"
-                  >
-                    <td className="py-1.5 pr-2">
-                      {l.driver_name ?? (
-                        <span className="text-amber-600">—</span>
+                {(cellContext.loads ?? []).map((l) => {
+                  const expanded = expandedLoadId === l.load_id;
+                  return (
+                    <Fragment key={l.load_id}>
+                      <tr
+                        className={`border-b border-border/40 cursor-pointer transition-colors ${
+                          expanded
+                            ? "bg-accent/10 font-semibold"
+                            : "hover:bg-bg-tertiary/50"
+                        }`}
+                        onClick={() =>
+                          setExpandedLoadId(expanded ? null : l.load_id)
+                        }
+                        title={
+                          expanded
+                            ? "Click to collapse"
+                            : "Click to expand & edit"
+                        }
+                      >
+                        <td className="py-1.5 pr-2">
+                          {l.driver_name ?? (
+                            <span className="text-amber-600">—</span>
+                          )}
+                        </td>
+                        <td className="py-1.5 pr-2 tabular-nums">
+                          {l.ticket_no ?? "—"}
+                        </td>
+                        <td className="py-1.5 pr-2 text-right tabular-nums">
+                          {l.weight_tons
+                            ? Number(l.weight_tons).toFixed(2)
+                            : l.weight_lbs
+                              ? `${(Number(l.weight_lbs) / 2000).toFixed(2)}`
+                              : "—"}
+                        </td>
+                        <td className="py-1.5 pr-2">
+                          <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-bg-primary border border-border">
+                            {l.assignment_status}
+                          </span>
+                        </td>
+                        <td className="py-1.5 pr-2">
+                          {l.photo_status === "attached" ? (
+                            <span className="text-green-600" title="Attached">
+                              ●
+                            </span>
+                          ) : l.photo_status === "pending" ? (
+                            <span className="text-amber-500" title="Pending">
+                              ○
+                            </span>
+                          ) : (
+                            <span className="text-red-500" title="Missing">
+                              ✕
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-1.5 text-right text-text-secondary text-[10px]">
+                          {expanded ? "▾" : "▸"}
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="py-3 px-2 bg-bg-tertiary/30 border-b border-border"
+                          >
+                            <LoadInlinePanel loadId={l.load_id} />
+                          </td>
+                        </tr>
                       )}
-                    </td>
-                    <td className="py-1.5 pr-2 tabular-nums">
-                      {l.ticket_no ?? "—"}
-                    </td>
-                    <td className="py-1.5 pr-2 text-right tabular-nums">
-                      {l.weight_tons
-                        ? Number(l.weight_tons).toFixed(2)
-                        : l.weight_lbs
-                          ? `${(Number(l.weight_lbs) / 2000).toFixed(2)}`
-                          : "—"}
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-bg-primary border border-border">
-                        {l.assignment_status}
-                      </span>
-                    </td>
-                    <td className="py-1.5 pr-2">
-                      {l.photo_status === "attached" ? (
-                        <span className="text-green-600" title="Attached">
-                          ●
-                        </span>
-                      ) : l.photo_status === "pending" ? (
-                        <span className="text-amber-500" title="Pending">
-                          ○
-                        </span>
-                      ) : (
-                        <span className="text-red-500" title="Missing">
-                          ✕
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-1.5 text-right text-text-secondary text-[10px]">
-                      open →
-                    </td>
-                  </tr>
-                ))}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -1335,6 +1368,204 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerBodyProps) {
         alt={`Load ${row.loadNo} BOL`}
         onClose={() => setLightbox(false)}
       />
+    </div>
+  );
+}
+
+/* ===========================================================================
+ * LoadInlinePanel — expanded detail rendered in the cell drawer when a load
+ * row is clicked. Same-window edit experience: photo on the left, editable
+ * fields on the right, no navigation away from the worksurface.
+ * Wires to GET /diag/load-detail for read + PATCH /dispatch/loads/:id for
+ * writes. Used inside CellSummaryDrawerBody.
+ * ===========================================================================*/
+
+interface LoadDetailShape {
+  id: number;
+  load_no: string | null;
+  bol_no: string | null;
+  ticket_no: string | null;
+  driver_name: string | null;
+  truck_no: string | null;
+  trailer_no: string | null;
+  carrier_name: string | null;
+  delivered_on: string | null;
+  weight_tons: string | null;
+  weight_lbs: string | null;
+  net_weight_tons: string | null;
+  mileage: string | null;
+  rate: string | null;
+  source: string;
+  origin_name: string | null;
+  destination_name: string | null;
+  status: string | null;
+  assignment_status: string | null;
+  handler_stage: string | null;
+  photo_status: string | null;
+  well_name: string | null;
+  bill_to: string | null;
+  photos: Array<{ id: number; source_url: string; source: string }>;
+}
+
+function LoadInlinePanel({ loadId }: { loadId: number }) {
+  const qc = useQueryClient();
+  const detailQuery = useQuery({
+    queryKey: ["cell-drawer-load", loadId],
+    queryFn: () => api.get<LoadDetailShape>(`/diag/load-detail?load=${loadId}`),
+    staleTime: 15_000,
+  });
+  const update = useMutation({
+    mutationFn: (patch: Record<string, string | null>) =>
+      api.patch(`/dispatch/loads/${loadId}`, patch),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cell-drawer-load", loadId] });
+      qc.invalidateQueries({ queryKey: ["worksurface", "cell-context"] });
+    },
+  });
+
+  if (detailQuery.isLoading) {
+    return (
+      <div className="text-xs text-text-secondary text-center py-3">
+        Loading load #{loadId}…
+      </div>
+    );
+  }
+  if (detailQuery.isError || !detailQuery.data) {
+    return (
+      <div className="text-xs text-red-500">
+        Couldn't load #{loadId}.{" "}
+        {String((detailQuery.error as Error)?.message ?? "")}
+      </div>
+    );
+  }
+
+  const l = detailQuery.data;
+  const photoUrl = l.photos?.[0]?.source_url
+    ? resolvePhotoUrl(l.photos[0].source_url, { auth: true })
+    : null;
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Left: photo */}
+      <div className="flex flex-col gap-2">
+        <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+          Photo
+        </div>
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={`BOL for load ${l.id}`}
+            className="w-full max-h-72 object-contain rounded border border-border bg-black/5"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="text-xs text-text-secondary p-6 text-center border border-dashed border-border rounded">
+            No photo on file
+          </div>
+        )}
+        <Link
+          to={`/load-center?load=${l.id}`}
+          className="text-[10px] text-accent underline-offset-4 hover:underline self-start"
+          target="_blank"
+        >
+          Open full Load Center →
+        </Link>
+      </div>
+
+      {/* Right: editable fields */}
+      <div className="space-y-1.5">
+        <div className="text-[10px] uppercase tracking-wide text-text-secondary mb-1">
+          Edit values · click any to change
+        </div>
+        <EditableField
+          label="Driver"
+          value={l.driver_name}
+          onSave={(v) => update.mutateAsync({ driverName: v || null })}
+          size="sm"
+        />
+        <EditableField
+          label="Truck #"
+          value={l.truck_no}
+          onSave={(v) => update.mutateAsync({ truckNo: v || null })}
+          size="sm"
+        />
+        <EditableField
+          label="Trailer #"
+          value={l.trailer_no}
+          onSave={(v) => update.mutateAsync({ trailerNo: v || null })}
+          size="sm"
+        />
+        <EditableField
+          label="Carrier"
+          value={l.carrier_name}
+          onSave={(v) => update.mutateAsync({ carrierName: v || null })}
+          size="sm"
+        />
+        <EditableField
+          label="Ticket #"
+          value={l.ticket_no}
+          onSave={(v) => update.mutateAsync({ ticketNo: v || null })}
+          size="sm"
+        />
+        <EditableField
+          label="BOL #"
+          value={l.bol_no}
+          onSave={(v) => update.mutateAsync({ bolNo: v || null })}
+          size="sm"
+        />
+        <EditableField
+          label="Wt (tons)"
+          value={
+            l.weight_tons
+              ? Number(l.weight_tons).toFixed(2)
+              : l.weight_lbs
+                ? (Number(l.weight_lbs) / 2000).toFixed(2)
+                : ""
+          }
+          onSave={(v) => update.mutateAsync({ weightTons: v || null })}
+          type="decimal"
+          size="sm"
+        />
+        <EditableField
+          label="Net wt"
+          value={l.net_weight_tons}
+          onSave={(v) => update.mutateAsync({ netWeightTons: v || null })}
+          type="decimal"
+          size="sm"
+        />
+        <EditableField
+          label="Mileage"
+          value={l.mileage}
+          onSave={(v) => update.mutateAsync({ mileage: v || null })}
+          type="decimal"
+          size="sm"
+        />
+        <EditableField
+          label="Rate"
+          value={l.rate}
+          prefix="$"
+          onSave={(v) => update.mutateAsync({ rate: v || null })}
+          type="decimal"
+          size="sm"
+        />
+        <EditableField
+          label="Delivered"
+          value={l.delivered_on ? l.delivered_on.slice(0, 10) : ""}
+          onSave={(v) => update.mutateAsync({ deliveredOn: v || null })}
+          type="date"
+          size="sm"
+        />
+        {update.isError && (
+          <div className="text-[10px] text-red-500 mt-1">
+            Save failed: {(update.error as Error)?.message ?? "unknown"}
+          </div>
+        )}
+        {update.isSuccess && (
+          <div className="text-[10px] text-emerald-600 mt-1">Saved.</div>
+        )}
+      </div>
     </div>
   );
 }

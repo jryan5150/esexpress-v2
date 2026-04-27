@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useHeartbeat } from "../hooks/use-presence";
 import { resolvePhotoUrl } from "../lib/photo-url";
+import { EditableField } from "../components/EditableField";
 
 interface LoadDetail {
   id: number;
@@ -191,9 +191,26 @@ export function LoadCenter() {
             onSave={(v) => updateMutation.mutateAsync({ truckNo: v || null })}
           />
           <EditableField
+            label="Trailer #"
+            value={(l as { trailer_no?: string | null }).trailer_no ?? ""}
+            onSave={(v) => updateMutation.mutateAsync({ trailerNo: v || null })}
+          />
+          <EditableField
+            label="Carrier"
+            value={(l as { carrier_name?: string | null }).carrier_name ?? ""}
+            onSave={(v) =>
+              updateMutation.mutateAsync({ carrierName: v || null })
+            }
+          />
+          <EditableField
             label="Ticket #"
             value={l.ticket_no}
             onSave={(v) => updateMutation.mutateAsync({ ticketNo: v || null })}
+          />
+          <EditableField
+            label="BOL #"
+            value={l.bol_no}
+            onSave={(v) => updateMutation.mutateAsync({ bolNo: v || null })}
           />
           <Field label="Load #" value={l.load_no} />
           <EditableField
@@ -211,11 +228,35 @@ export function LoadCenter() {
             type="decimal"
           />
           <EditableField
+            label="Net wt (tons)"
+            value={
+              (l as { net_weight_tons?: string | null }).net_weight_tons ?? ""
+            }
+            onSave={(v) =>
+              updateMutation.mutateAsync({ netWeightTons: v || null })
+            }
+            type="decimal"
+          />
+          <EditableField
+            label="Mileage"
+            value={(l as { mileage?: string | null }).mileage ?? ""}
+            onSave={(v) => updateMutation.mutateAsync({ mileage: v || null })}
+            type="decimal"
+          />
+          <EditableField
             label="Rate"
             value={l.rate ?? ""}
             prefix="$"
             onSave={(v) => updateMutation.mutateAsync({ rate: v || null })}
             type="decimal"
+          />
+          <EditableField
+            label="Delivered on"
+            value={l.delivered_on ? l.delivered_on.slice(0, 10) : ""}
+            onSave={(v) =>
+              updateMutation.mutateAsync({ deliveredOn: v || null })
+            }
+            type="date"
           />
           <Field label="Origin" value={l.origin_name} />
           <Field label="Destination" value={l.destination_name} />
@@ -393,93 +434,5 @@ function Field({
   );
 }
 
-/**
- * EditableField — click-to-edit value with Save on Enter or blur,
- * Cancel on Escape. Wires to a parent-supplied async onSave that
- * receives the new string (empty → caller decides null vs empty).
- */
-function EditableField({
-  label,
-  value,
-  onSave,
-  prefix,
-  type,
-}: {
-  label: string;
-  value: string | null | undefined;
-  onSave: (next: string) => Promise<unknown>;
-  prefix?: string;
-  type?: "text" | "decimal";
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? "");
-  const [saving, setSaving] = useState(false);
-
-  // Keep draft in sync if the underlying value changes (e.g. switched
-  // focused load via the same-week table).
-  useEffect(() => {
-    if (!editing) setDraft(value ?? "");
-  }, [value, editing]);
-
-  const commit = async () => {
-    if (saving) return;
-    const next = draft.trim();
-    if ((value ?? "") === next) {
-      setEditing(false);
-      return;
-    }
-    setSaving(true);
-    try {
-      await onSave(next);
-      setEditing(false);
-    } catch {
-      // parent surfaces the error; keep editing open
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="grid grid-cols-3 gap-2 items-baseline text-sm">
-      <div className="text-[10px] text-text-secondary uppercase tracking-wide">
-        {label}
-      </div>
-      <div className="col-span-2">
-        {editing ? (
-          <input
-            autoFocus
-            type={type === "decimal" ? "number" : "text"}
-            step={type === "decimal" ? "0.01" : undefined}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commit();
-              else if (e.key === "Escape") {
-                setDraft(value ?? "");
-                setEditing(false);
-              }
-            }}
-            onBlur={commit}
-            disabled={saving}
-            className="w-full px-2 py-0.5 rounded border border-accent bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="text-left font-medium hover:bg-bg-tertiary rounded px-1 -mx-1 transition-colors"
-            title="Click to edit"
-          >
-            {value ? (
-              `${prefix ?? ""}${value}`
-            ) : (
-              <span className="text-text-secondary italic font-normal">
-                click to add
-              </span>
-            )}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
+// EditableField extracted to ../components/EditableField for reuse in
+// the WorkbenchDrawer's per-load inline-expand panel.

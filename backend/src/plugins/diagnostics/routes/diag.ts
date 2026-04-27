@@ -3348,8 +3348,11 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     const rows = (await db.execute(sql`
       SELECT
         l.id, l.load_no, l.bol_no, l.ticket_no, l.driver_name, l.truck_no,
+        l.trailer_no, l.carrier_name,
         l.delivered_on::text AS delivered_on,
         l.weight_tons::text AS weight_tons, l.weight_lbs::text AS weight_lbs,
+        l.net_weight_tons::text AS net_weight_tons,
+        l.mileage::text AS mileage,
         l.rate::text AS rate, l.source, l.origin_name, l.destination_name,
         l.customer_name, l.status,
         c.name AS bill_to,
