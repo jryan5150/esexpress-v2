@@ -113,6 +113,11 @@ export const wells = pgTable(
     ratePerTon: numeric("rate_per_ton", { precision: 10, scale: 4 }),
     ffcRate: numeric("ffc_rate", { precision: 10, scale: 4 }),
     fscRate: numeric("fsc_rate", { precision: 10, scale: 4 }),
+    // FSC method — added 2026-04-27 per Jess: FSC is calculated by either
+    // miles (fscRate × loads.mileage) or by weight (fscRate × loads.weightTons)
+    // depending on the well. Toggle lives per-well, surfaced in WellsAdmin.
+    // null = no FSC for this well.
+    fscMethod: text("fsc_method", { enum: ["miles", "weight"] }),
     mileageFromLoader: numeric("mileage_from_loader", {
       precision: 10,
       scale: 2,
