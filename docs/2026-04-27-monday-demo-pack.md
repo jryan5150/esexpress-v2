@@ -12,17 +12,23 @@
 
 ---
 
-## B. The PCS push proof — production-validated, point at it
+## B. PCS push status — staged, NOT confirmed-accepted
 
-**Loads 68648 + 68649** were pushed via the production path on **2026-04-23**. PCS accepted the writes. They live in v2 right now and prove the path works end-to-end.
+**Honest read (verified 2026-04-27):** the push code path exists and was exercised. Three seed loads sit in v2 in ready-to-push state. **None have a `pcs_number` returned and all show `assignment_status=failed`** — meaning we don't have evidence in our database that PCS accepted the writes.
 
-| Load             | Identifiers                                                                                           | Where to find it                                                                                                         |
-| ---------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **id=68648**     | loadNo=9190356, BOL=TEST-BOL-002, ticket=TEST-TKT-002, driver "TEST DRIVER - Hairpin Demo", 25.3 tons | [`/load-center?load=68648`](https://app.esexpressllc.com/load-center?load=68648)                                         |
-| **id=68649**     | loadNo=9190357, BOL=TEST-BOL-003, ticket=TEST-TKT-003, driver "TEST DRIVER - Hairpin Demo", 26.1 tons | [`/load-center?load=68649`](https://app.esexpressllc.com/load-center?load=68649)                                         |
-| Worksurface view | Both at well "Alliance-Silver HIll-D Pad North" delivered 2026-04-23 (Thursday)                       | [`/workbench?week=2026-04-19`](https://app.esexpressllc.com/workbench?week=2026-04-19) — click that well's Thursday cell |
+Per memory `project_pcs_validation_period_pivot.md`: push was paused 4/23 pending Kyle's clarification on a captured 500.
 
-**The line for the call:** _"These two loads were pushed via the production path Friday. PCS accepted them. The path is validated end-to-end — when we flip the live push for real production volume, no new code ships. Just a config flip."_
+| Load     | v2 location                                                                      | PCS state                      |
+| -------- | -------------------------------------------------------------------------------- | ------------------------------ |
+| id=68647 | [`/load-center?load=68647`](https://app.esexpressllc.com/load-center?load=68647) | pcs_number=NULL, assign=failed |
+| id=68648 | [`/load-center?load=68648`](https://app.esexpressllc.com/load-center?load=68648) | pcs_number=NULL, assign=failed |
+| id=68649 | [`/load-center?load=68649`](https://app.esexpressllc.com/load-center?load=68649) | pcs_number=NULL, assign=failed |
+
+**Defensible line for the call:**
+
+_"The push code path exists. Seeds are staged in v2 in ready-to-push state. Production write is paused on Kyle's response to a captured 500. PCS **read** is fully live — 96.3% Q1 capture, sync every 15 minutes, 100% success last 24h. The bigger value is the read side: v2 sees what PCS sees before you have to."_
+
+**Pivot move if asked "show me one":** Take Jess to `/admin/pcs-truth` immediately. The read side is the strong story.
 
 ---
 
