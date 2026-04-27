@@ -98,7 +98,7 @@ export function Aliases() {
   }
 
   return (
-    <div className="p-6 space-y-8 max-w-5xl">
+    <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-8 max-w-5xl">
       <header>
         <h1 className="text-2xl font-headline mb-1">Aliases</h1>
         <p className="text-sm text-text-secondary">

@@ -305,7 +305,7 @@ export function Workbench() {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-4 sm:p-6 gap-3 max-w-[1600px] w-full mx-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col p-4 sm:p-6 gap-3 max-w-[1600px] w-full mx-auto">
       <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Today</h1>
