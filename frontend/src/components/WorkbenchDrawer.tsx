@@ -78,6 +78,7 @@ import { PhotoLightbox } from "./PhotoLightbox";
 import { RotatableImage } from "./RotatableImage";
 import { StageStrip } from "./StageStrip";
 import { useRole } from "../hooks/use-role";
+import { useWeightUnit } from "../hooks/use-weight-unit";
 import { BOLDisplay } from "./BOLDisplay";
 import { PhotoStateBadge } from "./PhotoStateBadge";
 import type { WorkbenchRow, UncertainReason } from "../types/api";
@@ -454,6 +455,7 @@ function WellSummaryDrawerBody({
   onClose: () => void;
 }) {
   const { wellId, wellName, defaultWeekStart } = wellContext;
+  const { format: formatWeight } = useWeightUnit();
   // Date range presets — chip strip lives in the drawer header.
   type Preset =
     | "today"
@@ -551,7 +553,7 @@ function WellSummaryDrawerBody({
       role="dialog"
       aria-modal="true"
       aria-label={`Well drawer for ${wellName}`}
-      className="fixed inset-y-0 right-0 z-40 w-full sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl 2xl:max-w-3xl bg-bg-secondary border-l border-border shadow-xl flex flex-col"
+      className="fixed inset-y-0 right-0 z-40 w-full sm:max-w-lg md:max-w-xl lg:max-w-2xl xl:max-w-3xl 2xl:max-w-4xl bg-bg-secondary border-l border-border shadow-xl flex flex-col"
     >
       <div className="px-4 py-3 border-b border-border bg-bg-primary">
         <div className="flex items-baseline justify-between gap-3">
@@ -659,9 +661,7 @@ function WellSummaryDrawerBody({
                     {l.delivered_on
                       ? new Date(l.delivered_on).toLocaleDateString()
                       : "no date"}
-                    {l.weight_tons && (
-                      <> · {Number(l.weight_tons).toFixed(2)} tons</>
-                    )}
+                    {l.weight_tons && <> · {formatWeight(l.weight_tons)}</>}
                     {" · "}
                     {l.handler_stage ?? l.assignment_status}
                   </div>
@@ -702,6 +702,7 @@ function WellSummaryDrawerBody({
 }
 
 function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
+  const { format: formatWeight } = useWeightUnit();
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [commentBody, setCommentBody] = useState("");
   // Which load in the cell receives the comment. Defaults to the first
@@ -741,7 +742,7 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
         onClick={cellContext.onClose}
         aria-hidden="true"
       />
-      <div className="fixed inset-y-0 right-0 z-40 w-full max-w-lg lg:max-w-xl xl:max-w-2xl 2xl:max-w-3xl bg-bg-primary border-l border-border shadow-2xl flex flex-col">
+      <div className="fixed inset-y-0 right-0 z-40 w-full max-w-xl lg:max-w-2xl xl:max-w-3xl 2xl:max-w-4xl bg-bg-primary border-l border-border shadow-2xl flex flex-col">
         <div className="border-b border-border bg-bg-secondary p-4 flex-shrink-0">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -985,9 +986,9 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
                         </td>
                         <td className="py-1.5 pr-2 text-right tabular-nums">
                           {l.weight_tons
-                            ? Number(l.weight_tons).toFixed(2)
+                            ? formatWeight(l.weight_tons)
                             : l.weight_lbs
-                              ? `${(Number(l.weight_lbs) / 2000).toFixed(2)}`
+                              ? formatWeight(Number(l.weight_lbs) / 2000)
                               : "—"}
                         </td>
                         <td className="py-1.5 pr-2">
@@ -1058,6 +1059,7 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerBodyProps) {
   const update = useUpdateLoadField();
   const bol = useBolReconciliation(row.loadId);
   const advance = useAdvanceStage();
+  const { unit: weightUnit } = useWeightUnit();
   const flag = useFlagToUncertain();
   const pcsUpdate = useUpdatePcsNumber();
   const notesUpdate = useUpdateAssignmentNotes();
@@ -1381,14 +1383,29 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerBodyProps) {
             isSaving={update.isPending}
           />
           <EditableField
-            label="Weight (tons)"
-            value={row.weightTons}
+            label={weightUnit === "lbs" ? "Weight (lbs)" : "Weight (tons)"}
+            value={(() => {
+              const tons = row.weightTons ? Number(row.weightTons) : null;
+              if (tons == null || !Number.isFinite(tons)) return null;
+              return weightUnit === "lbs"
+                ? Math.round(tons * 2000).toString()
+                : tons.toFixed(2);
+            })()}
             ocrValue={
               ocr?.ocrWeightLbs != null
-                ? (ocr.ocrWeightLbs / 2000).toFixed(2)
+                ? weightUnit === "lbs"
+                  ? Math.round(ocr.ocrWeightLbs).toString()
+                  : (ocr.ocrWeightLbs / 2000).toFixed(2)
                 : null
             }
-            onSave={saveField("weightTons")}
+            onSave={(v) => {
+              const trimmed = v?.trim() ?? "";
+              if (!trimmed) return saveField("weightTons")("");
+              const n = Number(trimmed);
+              if (!Number.isFinite(n)) return saveField("weightTons")("");
+              const tons = weightUnit === "lbs" ? n / 2000 : n;
+              return saveField("weightTons")(tons.toFixed(2));
+            }}
             isSaving={update.isPending}
             type="number"
           />
@@ -1779,6 +1796,7 @@ interface LoadDetailShape {
 function LoadInlinePanel({ loadId }: { loadId: number }) {
   const qc = useQueryClient();
   const role = useRole();
+  const { unit: weightUnit, format: formatWeight } = useWeightUnit();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [flagPickerOpen, setFlagPickerOpen] = useState(false);
   const [flagOtherReason, setFlagOtherReason] = useState("");
@@ -2211,23 +2229,49 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           readOnly={!role.canEditDispatch}
         />
         <InlineEditField
-          label="Wt (tons)"
-          value={
-            l.weight_tons
-              ? Number(l.weight_tons).toFixed(2)
+          label={weightUnit === "lbs" ? "Wt (lbs)" : "Wt (tons)"}
+          value={(() => {
+            const tons = l.weight_tons
+              ? Number(l.weight_tons)
               : l.weight_lbs
-                ? (Number(l.weight_lbs) / 2000).toFixed(2)
-                : ""
-          }
-          onSave={(v) => update.mutateAsync({ weightTons: v || null })}
+                ? Number(l.weight_lbs) / 2000
+                : null;
+            if (tons == null || !Number.isFinite(tons)) return "";
+            return weightUnit === "lbs"
+              ? Math.round(tons * 2000).toString()
+              : tons.toFixed(2);
+          })()}
+          onSave={(v) => {
+            const trimmed = v?.trim();
+            if (!trimmed) return update.mutateAsync({ weightTons: null });
+            const n = Number(trimmed);
+            if (!Number.isFinite(n))
+              return update.mutateAsync({ weightTons: null });
+            const tons = weightUnit === "lbs" ? n / 2000 : n;
+            return update.mutateAsync({ weightTons: tons.toFixed(2) });
+          }}
           type="decimal"
           size="sm"
           readOnly={!role.canEditDispatch}
         />
         <InlineEditField
-          label="Net wt"
-          value={l.net_weight_tons}
-          onSave={(v) => update.mutateAsync({ netWeightTons: v || null })}
+          label={weightUnit === "lbs" ? "Net wt (lbs)" : "Net wt (tons)"}
+          value={(() => {
+            const tons = l.net_weight_tons ? Number(l.net_weight_tons) : null;
+            if (tons == null || !Number.isFinite(tons)) return "";
+            return weightUnit === "lbs"
+              ? Math.round(tons * 2000).toString()
+              : tons.toFixed(2);
+          })()}
+          onSave={(v) => {
+            const trimmed = v?.trim();
+            if (!trimmed) return update.mutateAsync({ netWeightTons: null });
+            const n = Number(trimmed);
+            if (!Number.isFinite(n))
+              return update.mutateAsync({ netWeightTons: null });
+            const tons = weightUnit === "lbs" ? n / 2000 : n;
+            return update.mutateAsync({ netWeightTons: tons.toFixed(2) });
+          }}
           type="decimal"
           size="sm"
           readOnly={!role.canEditDispatch}

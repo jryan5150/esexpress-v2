@@ -70,6 +70,10 @@ const DETAIL_FIELD_META: Record<
 
 export function WellsAdmin() {
   const [filter, setFilter] = useState<StatusFilter>("active");
+  // Free-text search across well name, aliases, customer, loader.
+  // Combines AND-style with the status filter — search narrows whatever
+  // status bucket is selected. Empty = no narrowing.
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -93,18 +97,29 @@ export function WellsAdmin() {
   const carriers = Array.isArray(carriersQuery.data) ? carriersQuery.data : [];
 
   const filtered = useMemo(() => {
-    if (filter === "all") return wells;
-    if (filter === "active")
-      return wells.filter(
+    let base: Well[];
+    if (filter === "all") base = wells;
+    else if (filter === "active")
+      base = wells.filter(
         (w) => w.status !== "completed" && w.status !== "closed",
       );
-    return wells.filter((w) => w.status === filter);
-  }, [wells, filter]);
+    else base = wells.filter((w) => w.status === filter);
 
-  // Reset to page 1 whenever the filter changes its result set
+    const q = search.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter((w) => {
+      if (w.name?.toLowerCase().includes(q)) return true;
+      if ((w.customerName ?? "").toLowerCase().includes(q)) return true;
+      if ((w.loaderSandplant ?? "").toLowerCase().includes(q)) return true;
+      const aliases = (w.aliases ?? []) as string[];
+      return aliases.some((a) => a.toLowerCase().includes(q));
+    });
+  }, [wells, filter, search]);
+
+  // Reset to page 1 whenever the filter or search changes its result set
   useEffect(() => {
     setPage(1);
-  }, [filter]);
+  }, [filter, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageWells = useMemo(() => {
@@ -282,8 +297,8 @@ export function WellsAdmin() {
           </div>
         )}
 
-        {/* Filter Bar */}
-        <div className="flex items-center gap-2">
+        {/* Filter Bar + search */}
+        <div className="flex flex-wrap items-center gap-2">
           {filterButtons.map((btn) => (
             <button
               key={btn.value}
@@ -307,7 +322,33 @@ export function WellsAdmin() {
               </span>
             </button>
           ))}
+          <div className="ml-auto relative w-full sm:w-72">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name, alias, customer, loader…"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-outline-variant/40 bg-surface-container text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-on-surface text-xs"
+                aria-label="Clear search"
+                title="Clear"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
+        {search && (
+          <div className="text-xs text-on-surface-variant -mt-1">
+            Showing <strong>{filtered.length}</strong> of {wells.length} wells
+            matching "<strong>{search}</strong>"
+          </div>
+        )}
 
         {/* Loading */}
         {wellsQuery.isLoading && (

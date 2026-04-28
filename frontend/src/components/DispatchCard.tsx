@@ -1,5 +1,6 @@
 import { useState, memo } from "react";
 import { Button } from "./Button";
+import { useWeightUnit } from "../hooks/use-weight-unit";
 
 interface DispatchCardProps {
   loadNo: string;
@@ -107,6 +108,7 @@ export const DispatchCard = memo(function DispatchCard({
   terminalName,
   netWeightTons,
 }: DispatchCardProps) {
+  const { format: formatWeight } = useWeightUnit();
   const hasPhotos = photoUrls && photoUrls.length > 0;
 
   const photoIcon =
@@ -219,7 +221,7 @@ export const DispatchCard = memo(function DispatchCard({
             <Field label="Carrier" value={carrierName} />
             <Field label="Truck #" value={truckNo} />
             <Field label="Product" value={productDescription} />
-            <Field label="Weight (tons)" value={weightTons} />
+            <Field label="Weight" value={formatWeight(weightTons)} />
           </div>
 
           {/* Right: ticket info / weight / attachments */}
@@ -230,9 +232,7 @@ export const DispatchCard = memo(function DispatchCard({
                 Weight
               </span>
               <div className="font-label text-lg font-bold text-on-surface tabular-nums">
-                {weightTons
-                  ? `${parseFloat(weightTons).toFixed(2)} tons`
-                  : "--"}
+                {formatWeight(weightTons)}
               </div>
               {(grossWeightLbs || netWeightLbs) && (
                 <div className="text-[10px] font-label text-on-surface-variant space-y-0.5 tabular-nums">

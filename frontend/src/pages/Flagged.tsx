@@ -124,7 +124,7 @@ function FlaggedList({ scope }: { scope: "all" | "mine" }) {
       : `${me?.name?.split(" ")[0] ?? "You"} — flagged items for your customer.`;
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto p-6 max-w-5xl mx-auto space-y-4">
+    <div className="flex-1 min-h-0 overflow-y-auto p-6 max-w-7xl mx-auto space-y-4">
       <header>
         <h1 className="text-2xl font-headline">{titleByScope}</h1>
         <p className="text-sm text-text-secondary">
@@ -152,9 +152,13 @@ function FlaggedList({ scope }: { scope: "all" | "mine" }) {
         </div>
       )}
 
-      {orderedGroups.map((g) => (
-        <QueueGroup key={g} type={g} items={byType[g]} />
-      ))}
+      {/* 1 col on mobile, 2 on md, 3 on xl — fills the wasted space on
+          wide monitors that the dispatch desk sits at. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+        {orderedGroups.map((g) => (
+          <QueueGroup key={g} type={g} items={byType[g]} />
+        ))}
+      </div>
     </div>
   );
 }

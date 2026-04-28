@@ -1,10 +1,12 @@
 import { Link, useParams } from "react-router-dom";
 import { useArchiveLoad } from "../hooks/use-archive";
+import { useWeightUnit } from "../../hooks/use-weight-unit";
 
 export function ArchiveLoadDetail() {
   const { id } = useParams<{ id: string }>();
   const loadId = Number(id ?? 0);
   const query = useArchiveLoad(loadId);
+  const { format: formatWeight } = useWeightUnit();
 
   const load = query.data;
 
@@ -48,7 +50,7 @@ export function ArchiveLoadDetail() {
     { label: "Product", value: load.productDescription },
     {
       label: "Weight",
-      value: load.weightTons ? `${load.weightTons} tons` : null,
+      value: load.weightTons ? formatWeight(load.weightTons) : null,
     },
     { label: "BOL", value: load.bolNo },
     { label: "Ticket", value: load.ticketNo },

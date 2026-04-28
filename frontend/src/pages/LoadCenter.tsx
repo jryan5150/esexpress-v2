@@ -9,6 +9,7 @@ import { EditableField } from "../components/EditableField";
 import { PhotoLightbox } from "../components/PhotoLightbox";
 import { RotatableImage } from "../components/RotatableImage";
 import { StageStrip } from "../components/StageStrip";
+import { useWeightUnit } from "../hooks/use-weight-unit";
 
 interface LoadDetail {
   id: number;
@@ -76,6 +77,7 @@ function weekBounds(
 export function LoadCenter() {
   useHeartbeat({ currentPage: "load-center" });
   const role = useRole();
+  const { unit: weightUnit, format: formatWeight } = useWeightUnit();
   const [params, setParams] = useSearchParams();
   const loadId = params.get("load");
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -286,27 +288,55 @@ export function LoadCenter() {
           />
           <Field label="Load #" value={l.load_no} />
           <EditableField
-            label="Weight (tons)"
-            value={
-              l.weight_tons
-                ? Number(l.weight_tons).toFixed(2)
+            label={weightUnit === "lbs" ? "Weight (lbs)" : "Weight (tons)"}
+            value={(() => {
+              const tons = l.weight_tons
+                ? Number(l.weight_tons)
                 : l.weight_lbs
-                  ? (Number(l.weight_lbs) / 2000).toFixed(2)
-                  : ""
-            }
-            onSave={(v) =>
-              updateMutation.mutateAsync({ weightTons: v || null })
-            }
+                  ? Number(l.weight_lbs) / 2000
+                  : null;
+              if (tons == null || !Number.isFinite(tons)) return "";
+              return weightUnit === "lbs"
+                ? Math.round(tons * 2000).toString()
+                : tons.toFixed(2);
+            })()}
+            onSave={(v) => {
+              const trimmed = v?.trim() ?? "";
+              if (!trimmed)
+                return updateMutation.mutateAsync({ weightTons: null });
+              const n = Number(trimmed);
+              if (!Number.isFinite(n))
+                return updateMutation.mutateAsync({ weightTons: null });
+              const tons = weightUnit === "lbs" ? n / 2000 : n;
+              return updateMutation.mutateAsync({
+                weightTons: tons.toFixed(2),
+              });
+            }}
             type="decimal"
             readOnly={dispatchReadOnly}
             readOnlyTitle={readOnlyTitle}
           />
           <EditableField
-            label="Net wt (tons)"
-            value={l.net_weight_tons ?? ""}
-            onSave={(v) =>
-              updateMutation.mutateAsync({ netWeightTons: v || null })
-            }
+            label={weightUnit === "lbs" ? "Net wt (lbs)" : "Net wt (tons)"}
+            value={(() => {
+              const tons = l.net_weight_tons ? Number(l.net_weight_tons) : null;
+              if (tons == null || !Number.isFinite(tons)) return "";
+              return weightUnit === "lbs"
+                ? Math.round(tons * 2000).toString()
+                : tons.toFixed(2);
+            })()}
+            onSave={(v) => {
+              const trimmed = v?.trim() ?? "";
+              if (!trimmed)
+                return updateMutation.mutateAsync({ netWeightTons: null });
+              const n = Number(trimmed);
+              if (!Number.isFinite(n))
+                return updateMutation.mutateAsync({ netWeightTons: null });
+              const tons = weightUnit === "lbs" ? n / 2000 : n;
+              return updateMutation.mutateAsync({
+                netWeightTons: tons.toFixed(2),
+              });
+            }}
             type="decimal"
             readOnly={dispatchReadOnly}
             readOnlyTitle={readOnlyTitle}
@@ -584,7 +614,7 @@ export function LoadCenter() {
                     <th className="text-left py-2 px-3">Driver</th>
                     <th className="text-left py-2 px-3">Ticket #</th>
                     <th className="text-left py-2 px-3">Well</th>
-                    <th className="text-right py-2 px-3">Tons</th>
+                    <th className="text-right py-2 px-3">Weight</th>
                     <th className="text-left py-2 px-3">Status</th>
                     <th className="text-left py-2 px-3">Photo</th>
                   </tr>
@@ -627,9 +657,7 @@ export function LoadCenter() {
                           {row.well_name ?? "—"}
                         </td>
                         <td className="py-1.5 px-3 text-right tabular-nums">
-                          {row.weight_tons
-                            ? Number(row.weight_tons).toFixed(2)
-                            : "—"}
+                          {formatWeight(row.weight_tons)}
                         </td>
                         <td className="py-1.5 px-3 text-text-secondary">
                           {row.assignment_status ?? "—"}
@@ -695,6 +723,7 @@ function Field({
 // searchable list using /diag/loads-list so the sidebar entry actually
 // produces useful output instead of bouncing the user back to Today.
 function LoadsListBrowser({ onPick }: { onPick: (id: number) => void }) {
+  const { format: formatWeight } = useWeightUnit();
   const [search, setSearch] = useState("");
   // Debounce search a beat so each keystroke doesn't fire a query.
   const [debounced, setDebounced] = useState("");
@@ -800,9 +829,7 @@ function LoadsListBrowser({ onPick }: { onPick: (id: number) => void }) {
                       {row.bill_to ?? "—"}
                     </td>
                     <td className="py-1.5 px-3 text-right tabular-nums">
-                      {row.weight_tons
-                        ? Number(row.weight_tons).toFixed(2)
-                        : "—"}
+                      {formatWeight(row.weight_tons)}
                     </td>
                     <td className="py-1.5 px-3 text-text-secondary">
                       {row.assignment_status ?? "—"}

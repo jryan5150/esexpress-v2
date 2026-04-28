@@ -77,16 +77,19 @@ type Tab = "wells" | "pcs";
 export function ScopeDiscovery() {
   useHeartbeat({ currentPage: "scope-discovery" });
   const [tab, setTab] = useState<Tab>("wells");
+  // Shared search box at the page level — both tabs read from the
+  // same `search` state so switching tabs preserves the query and a
+  // dispatcher can quickly cross-reference the same string in both
+  // discovery surfaces.
+  const [search, setSearch] = useState("");
 
   const discoveryQuery = useQuery({
     queryKey: ["admin", "scope-discovery"],
     queryFn: () =>
-      api
-        .get<{
-          success: boolean;
-          data: ScopeDiscoveryResponse;
-        }>("/diag/scope-discovery")
-        ,
+      api.get<{
+        success: boolean;
+        data: ScopeDiscoveryResponse;
+      }>("/diag/scope-discovery"),
     staleTime: 5 * 60_000,
   });
 
@@ -107,28 +110,54 @@ export function ScopeDiscovery() {
         </div>
       </div>
 
-      {/* Tab bar */}
+      {/* Tab bar + search */}
       <div className="px-7 pt-4 border-b border-outline-variant/30 bg-surface-container-lowest">
-        <div className="flex gap-1">
-          <TabButton
-            active={tab === "wells"}
-            onClick={() => setTab("wells")}
-            label="Wells We Discovered"
-            count={discoveryQuery.data?.flywheel.wells.length}
-            hint="3-year historical analysis"
-          />
-          <TabButton
-            active={tab === "pcs"}
-            onClick={() => setTab("pcs")}
-            label="In PCS, Not in v2"
-            hint="Live PCS reconciliation"
-          />
+        <div className="flex items-end justify-between gap-4">
+          <div className="flex gap-1">
+            <TabButton
+              active={tab === "wells"}
+              onClick={() => setTab("wells")}
+              label="Wells We Discovered"
+              count={discoveryQuery.data?.flywheel.wells.length}
+              hint="3-year historical analysis"
+            />
+            <TabButton
+              active={tab === "pcs"}
+              onClick={() => setTab("pcs")}
+              label="In PCS, Not in v2"
+              hint="Live PCS reconciliation"
+            />
+          </div>
+          <div className="relative w-full max-w-xs pb-2">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={
+                tab === "wells"
+                  ? "Search wells, cities, classification…"
+                  : "Search consignee, shipper, ticket…"
+              }
+              className="w-full px-3 py-1.5 text-sm rounded-md border border-outline-variant/40 bg-surface-container text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant/60 hover:text-on-surface text-xs"
+                aria-label="Clear search"
+                title="Clear"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-7 pt-5 pb-6 space-y-4">
-        {tab === "wells" && <WellsTab query={discoveryQuery} />}
-        {tab === "pcs" && <PcsTab />}
+        {tab === "wells" && <WellsTab query={discoveryQuery} search={search} />}
+        {tab === "pcs" && <PcsTab search={search} />}
       </div>
     </div>
   );
@@ -186,9 +215,39 @@ function TabButton({
 
 function WellsTab({
   query,
+  search,
 }: {
   query: ReturnType<typeof useQuery<ScopeDiscoveryResponse>>;
+  search: string;
 }) {
+  // Promote a discovered well into the canonical wells registry.
+  // POST /wells with needsRateInfo=true so it shows up in the
+  // rate-needed view on /admin/wells immediately. Optimistically
+  // tracks which names just got added so the row swaps to "✓ Added"
+  // without waiting on a refetch.
+  const [adding, setAdding] = useState<string | null>(null);
+  const [added, setAdded] = useState<Set<string>>(new Set());
+  const [addError, setAddError] = useState<string | null>(null);
+  const addMutation = useMutation({
+    mutationFn: (name: string) =>
+      api.post<{ id: number; name: string }>("/dispatch/wells", {
+        name,
+        needsRateInfo: true,
+      }),
+    onMutate: (name) => {
+      setAdding(name);
+      setAddError(null);
+    },
+    onSuccess: (_d, name) => {
+      setAdded((prev) => new Set(prev).add(name));
+      setAdding(null);
+    },
+    onError: (err, name) => {
+      setAddError(`${name}: ${(err as Error)?.message ?? "unknown error"}`);
+      setAdding(null);
+    },
+  });
+
   if (query.isLoading) {
     return (
       <div className="text-sm text-on-surface-variant p-4">
@@ -208,6 +267,17 @@ function WellsTab({
   if (!data) return null;
   const wells = data.flywheel.wells;
   const totalLoads = wells.reduce((sum, w) => sum + w.loads, 0);
+
+  // Substring filter against name + top_city + classification.
+  const q = search.trim().toLowerCase();
+  const visible = q
+    ? wells.filter(
+        (w) =>
+          w.name.toLowerCase().includes(q) ||
+          (w.top_city ?? "").toLowerCase().includes(q) ||
+          (w.classification ?? "").toLowerCase().includes(q),
+      )
+    : wells;
 
   return (
     <>
@@ -241,50 +311,103 @@ function WellsTab({
         </div>
       </div>
 
+      {addError && (
+        <div className="text-xs text-rose-900 bg-rose-50 border border-rose-300 rounded p-2">
+          Add failed: {addError}
+        </div>
+      )}
+
       {/* Wells table */}
       <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-[12px] overflow-hidden">
-        <div className="grid grid-cols-[1fr_5.5rem_9rem_6rem_8rem] gap-3 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container-low/60 border-b border-outline-variant/40">
+        <div className="px-4 py-2 text-[11px] text-on-surface-variant border-b border-outline-variant/30 bg-surface-container-low/30">
+          {q ? (
+            <>
+              Showing <strong>{visible.length}</strong> of {wells.length} wells
+              matching "<strong>{search}</strong>"
+            </>
+          ) : (
+            <>
+              Showing all <strong>{wells.length}</strong> wells
+            </>
+          )}
+        </div>
+        <div className="grid grid-cols-[1fr_5.5rem_9rem_5rem_8rem_8rem] gap-3 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant bg-surface-container-low/60 border-b border-outline-variant/40">
           <div>Well name</div>
           <div className="text-right">Loads</div>
           <div>Top city</div>
-          <div className="text-center">Divisions</div>
+          <div className="text-center">Div</div>
           <div>Date range</div>
+          <div className="text-right">Action</div>
         </div>
-        {wells.map((w, i) => (
-          <div
-            key={`${w.name}-${i}`}
-            className="grid grid-cols-[1fr_5.5rem_9rem_6rem_8rem] gap-3 px-4 py-2.5 text-sm border-b border-outline-variant/20 hover:bg-surface-container-low/40 transition-colors"
-          >
-            <div className="min-w-0">
-              <div className="text-on-surface font-medium truncate">
-                {w.name}
-              </div>
-              <div className="text-[10px] text-on-surface-variant/70 uppercase tracking-wider">
-                {w.classification}
-              </div>
-            </div>
-            <div className="text-right tabular-nums font-medium text-on-surface">
-              {w.loads.toLocaleString()}
-            </div>
-            <div className="text-on-surface-variant truncate">
-              {w.top_city || "—"}
-            </div>
-            <div className="text-center text-on-surface-variant tabular-nums">
-              {w.divisions}
-            </div>
-            <div className="text-[11px] text-on-surface-variant/80 tabular-nums whitespace-nowrap">
-              {w.earliest}
-              <br />
-              <span className="text-on-surface-variant/60">→ {w.latest}</span>
-            </div>
+        {visible.length === 0 && (
+          <div className="px-4 py-6 text-sm text-on-surface-variant text-center">
+            No wells match "{search}".
           </div>
-        ))}
+        )}
+        {visible.map((w, i) => {
+          const isAdding = adding === w.name;
+          const isAdded = added.has(w.name) || w.in_v2;
+          return (
+            <div
+              key={`${w.name}-${i}`}
+              className="grid grid-cols-[1fr_5.5rem_9rem_5rem_8rem_8rem] gap-3 px-4 py-2.5 text-sm border-b border-outline-variant/20 hover:bg-surface-container-low/40 transition-colors items-center"
+            >
+              <div className="min-w-0">
+                <div className="text-on-surface font-medium truncate">
+                  {w.name}
+                </div>
+                <div className="text-[10px] text-on-surface-variant/70 uppercase tracking-wider">
+                  {w.classification}
+                </div>
+              </div>
+              <div className="text-right tabular-nums font-medium text-on-surface">
+                {w.loads.toLocaleString()}
+              </div>
+              <div className="text-on-surface-variant truncate">
+                {w.top_city || "—"}
+              </div>
+              <div className="text-center text-on-surface-variant tabular-nums">
+                {w.divisions}
+              </div>
+              <div className="text-[11px] text-on-surface-variant/80 tabular-nums whitespace-nowrap">
+                {w.earliest}
+                <br />
+                <span className="text-on-surface-variant/60">→ {w.latest}</span>
+              </div>
+              <div className="text-right">
+                {isAdded ? (
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300"
+                    title="Already in v2 wells registry"
+                  >
+                    ✓ In Wells
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => addMutation.mutate(w.name)}
+                    disabled={isAdding}
+                    className="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-primary text-on-primary hover:opacity-90 disabled:opacity-50"
+                    title="Create a v2 well with this name (needs-rate-info flagged so it shows up in the Wells admin queue)"
+                  >
+                    {isAdding ? "Adding…" : "+ Add to Wells"}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Post-continuation footer */}
       <div className="text-xs text-on-surface-variant/70 text-center py-2">
-        Read-only MVP · Add / Skip / Mark-as-sandplant actions are the Week 1
-        post-continuation build.
+        Tip: added wells land on{" "}
+        <a
+          href="/admin/wells"
+          className="underline text-primary hover:opacity-80"
+        >
+          /admin/wells
+        </a>{" "}
+        with "needs rate info" set — finance/admin can fill the rate from there.
       </div>
     </>
   );
@@ -294,15 +417,13 @@ function WellsTab({
 /*  Tab 2 — In PCS, Not in v2                                        */
 /* ================================================================= */
 
-function PcsTab() {
+function PcsTab({ search }: { search: string }) {
   const syncMutation = useMutation({
     mutationFn: () =>
-      api
-        .post<{
-          success: boolean;
-          data: PcsSyncResponse;
-        }>("/pcs/sync-loads", { sinceDays: 7 })
-        ,
+      api.post<{
+        success: boolean;
+        data: PcsSyncResponse;
+      }>("/pcs/sync-loads", { sinceDays: 7 }),
   });
 
   const data = syncMutation.data;
@@ -363,9 +484,49 @@ function PcsTab() {
         </div>
       )}
 
-      {data && data.missedByV2.length > 0 && (
-        <MissedByV2Table rows={data.missedByV2} />
-      )}
+      {data &&
+        data.missedByV2.length > 0 &&
+        (() => {
+          const q = search.trim().toLowerCase();
+          const visible = q
+            ? data.missedByV2.filter((r) =>
+                [
+                  r.consigneeCompany,
+                  r.shipperCompany,
+                  r.shipperTicket,
+                  r.shipperCity,
+                  r.consigneeCity,
+                  r.loadReference,
+                  String(r.pcsLoadId ?? ""),
+                ].some((v) => (v ?? "").toString().toLowerCase().includes(q)),
+              )
+            : data.missedByV2;
+          return (
+            <>
+              <div className="text-[11px] text-on-surface-variant">
+                {q ? (
+                  <>
+                    Showing <strong>{visible.length}</strong> of{" "}
+                    {data.missedByV2.length} loads matching "
+                    <strong>{search}</strong>"
+                  </>
+                ) : (
+                  <>
+                    Showing all <strong>{data.missedByV2.length}</strong>{" "}
+                    missed-by-v2 loads
+                  </>
+                )}
+              </div>
+              {visible.length === 0 ? (
+                <div className="text-sm text-on-surface-variant p-4 text-center bg-surface-container-lowest border border-outline-variant/40 rounded-[12px]">
+                  No missed-by-v2 loads match "{search}".
+                </div>
+              ) : (
+                <MissedByV2Table rows={visible} />
+              )}
+            </>
+          );
+        })()}
       {data && data.missedByV2.length === 0 && (
         <div className="text-sm text-on-surface-variant p-6 text-center bg-surface-container-lowest border border-outline-variant/40 rounded-[12px]">
           🎯 Every active PCS load has a v2 counterpart. Nothing to review.

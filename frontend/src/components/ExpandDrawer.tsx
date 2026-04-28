@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useUpdateLoad, useDuplicateLoad } from "../hooks/use-wells";
 import { useToast } from "./Toast";
 import { DiscrepancyPanel } from "./DiscrepancyPanel";
+import { useWeightUnit } from "../hooks/use-weight-unit";
 
 /**
  * Free-form notes editor for an assignment (O-05). Saves on blur / Cmd+Enter.
@@ -369,6 +370,7 @@ export function ExpandDrawer({
   const updateLoad = useUpdateLoad();
   const dupLoad = useDuplicateLoad();
   const { toast } = useToast();
+  const { format: formatWeight } = useWeightUnit();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -411,7 +413,7 @@ export function ExpandDrawer({
       carrierName && `Carrier: ${carrierName}`,
       bolNo && `BOL: ${bolNo}`,
       ticketNo && `Ticket: ${ticketNo}`,
-      weightTons && `Weight: ${weightTons} tons`,
+      weightTons && `Weight: ${formatWeight(weightTons)}`,
       rate && `Rate: $${rate}/ton`,
       mileage && `Mileage: ${mileage}`,
       deliveredOn && `Delivered: ${formatTime(deliveredOn)}`,

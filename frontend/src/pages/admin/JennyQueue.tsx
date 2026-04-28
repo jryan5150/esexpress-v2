@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useHeartbeat } from "../../hooks/use-presence";
+import { useWeightUnit } from "../../hooks/use-weight-unit";
 
 /**
  * Jenny's Queue — mirrors the "Other Jobs to be Invoiced (Jenny)" section
@@ -62,13 +63,12 @@ function formatDate(s: string | null): string {
 
 export function JennyQueue() {
   useHeartbeat({ currentPage: "admin-jenny-queue" });
+  const { format: formatWeight } = useWeightUnit();
 
   const queueQuery = useQuery({
     queryKey: ["admin", "jenny-queue"],
     queryFn: () =>
-      api
-        .get<{ success: boolean; data: QueuePayload }>("/diag/jenny-queue")
-        ,
+      api.get<{ success: boolean; data: QueuePayload }>("/diag/jenny-queue"),
     staleTime: 60_000,
   });
 
@@ -199,7 +199,7 @@ export function JennyQueue() {
                       <th className="py-1.5 pr-3">Load #</th>
                       <th className="py-1.5 pr-3">Driver</th>
                       <th className="py-1.5 pr-3">Product</th>
-                      <th className="py-1.5 text-right">Tons</th>
+                      <th className="py-1.5 text-right">Weight</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -222,9 +222,7 @@ export function JennyQueue() {
                           {s.product_description ?? "—"}
                         </td>
                         <td className="py-1.5 text-right tabular-nums">
-                          {s.weight_tons
-                            ? Number(s.weight_tons).toFixed(2)
-                            : "—"}
+                          {formatWeight(s.weight_tons)}
                         </td>
                       </tr>
                     ))}

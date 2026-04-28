@@ -16,10 +16,10 @@ import { useEffect } from "react";
  * the email + PDF; how-to lives here, in-context.
  */
 
-// Bumped 2026-04-28-pm-6 — forces re-show after PCS rehearsal mode
+// Bumped 2026-04-28-pm-7 — forces re-show after lbs/tons + PCS auto-entered
 // (Mark ready for PCS while Kyle's OAuth pending) + Flagged contract
 // fix (page now actually renders items).
-const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-6";
+const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-7";
 
 export function markWhatsNewSeen() {
   try {
@@ -149,9 +149,50 @@ export function WhatsNew() {
           </p>
         </div>
 
-        {/* Tue PM 6 — PCS rehearsal mode + /flagged contract fix */}
+        {/* Tue PM 7 — lbs/tons toggle + auto-entered + Flagged grid + drawer width */}
         <Section
           number="00"
+          title="⚖️ Lbs/tons toggle now works everywhere — and PCS-already-loads auto-mark Entered"
+          why="Three small comfort fixes for the day-to-day. (1) The lbs/tons switch in the sidebar footer now flips weights everywhere — Workbench, Load Center, drawer, Jenny's Queue, Archive — and even renames the edit-field labels so you know what unit you're typing. (2) When the PCS sync finds a v2 load that's already in PCS, the load now automatically advances to Entered. You shouldn't have to click 'Entered' on a load PCS already has. (3) Flagged page got a 2-3 column grid on wide monitors instead of one tall scroll, and the right-side slide-in drawer is wider so the inline edits aren't cramped."
+          how={
+            <div className="space-y-3">
+              <p>
+                <strong>Lbs/tons:</strong> sidebar footer toggle now drives
+                weight display + edits site-wide. Editing in lbs view? The
+                number you type gets converted to tons in storage automatically,
+                so the math stays right.
+              </p>
+              <p>
+                <strong>Auto-entered:</strong> the PCS bridge runs every 15 min.
+                When it confirms a load is in PCS, the v2 stage strip flips to
+                Entered (unless PCS shows Cancelled, in which case we leave it
+                alone so the discrepancy surfaces). Loads already past Entered
+                (e.g. Cleared) are never downgraded.
+              </p>
+              <p>
+                <strong>Flagged layout:</strong> on monitors wider than ~1280px
+                the queue groups now sit side-by-side in a grid instead of one
+                long single column.
+              </p>
+              <p>
+                <strong>Drawer width:</strong> the right-side slide-in panel is
+                ~30% wider on wide monitors. Inline edits get more breathing
+                room.
+              </p>
+              <p>
+                <strong>Wells search + Add to Wells:</strong> Scope Discovery
+                and Wells Admin both got a search bar. Scope Discovery's Wells
+                tab also got an "+ Add to Wells" button so a missing well goes
+                straight into the system without a roundtrip.
+              </p>
+            </div>
+          }
+          cta={{ label: "Open Today", to: "/workbench" }}
+        />
+
+        {/* Tue PM 6 — PCS rehearsal mode + /flagged contract fix */}
+        <Section
+          number="00b"
           title="🎯 Push to PCS now works in rehearsal — practice before Kyle is live"
           why="You've been waiting on Kyle for OAuth credentials and we're not blocking the workflow on him anymore. The Push to PCS button now works in rehearsal mode: click it, and the load gets marked as ready for PCS (queued) instead of attempting a real push that would fail. When Kyle delivers OAuth, every queued load drains in a single bulk push."
           how={
