@@ -20,8 +20,6 @@
  */
 
 import { eq } from "drizzle-orm";
-import { Configuration } from "../../../generated/pcs/load-client/src/runtime.js";
-import { DevelopersApi } from "../../../generated/pcs/load-client/src/apis/DevelopersApi.js";
 import type { AddLoadRequest } from "../../../generated/pcs/load-client/src/models/AddLoadRequest.js";
 import { createPcsBreaker } from "../../../lib/circuit-breaker.js";
 import { NetworkError } from "../../../lib/errors.js";
@@ -184,38 +182,13 @@ export function buildAddLoadRequest(pkg: DispatchPackage): AddLoadRequest {
   return body as unknown as AddLoadRequest;
 }
 
-async function buildLoadApi(
-  accessTokenProvider: () => Promise<string>,
-  // Restored 2026-04-28 (Path A revert). The 4/22 push that successfully
-  // created loadId 357468 sent X-Company-Letter — the 4/23 removal of
-  // this header was based on a guess that was never validated against
-  // PCS. We're testing whether restoring the exact 4/22 wire shape
-  // un-breaks the 500s before bothering Kyle. Defaults to "A" (Hairpin)
-  // because that's the only push toggle currently enabled.
-  companyLetter: "A" | "B" = "A",
-): Promise<DevelopersApi> {
-  // Generated client's operations use urlPath = "/" — final URL is
-  // basePath + urlPath. Kyle's updated endpoint is /dispatching/v1/load,
-  // so basePath must end at /load for the generated relative paths to
-  // resolve correctly.
-  const basePath = `${getPcsBaseUrl()}/dispatching/v1/load`;
-
-  // OpenAPI spec didn't declare OAuth security, so accessToken config is
-  // never auto-consumed by the generated client. Inject the Bearer header
-  // manually via the headers option. Token acquired per-call.
-  const bearer = await accessTokenProvider();
-
-  const config = new Configuration({
-    basePath,
-    accessToken: () => Promise.resolve(bearer),
-    headers: {
-      Authorization: `Bearer ${bearer}`,
-      "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
-      "X-Company-Letter": companyLetter,
-    },
-  });
-  return new DevelopersApi(config);
-}
+// 2026-04-28 — buildLoadApi removed. The OpenAPI-generated client's
+// AddLoadRequestToJSON serializer converts camelCase keys → PascalCase
+// on the wire (see scripts/pcs-shape-probe.mjs results). PCS REST API
+// rejects PascalCase with HTTP 500. dispatchLoad now POSTs camelCase
+// JSON directly via fetch. The generated client + Configuration import
+// are kept around in case other operations (cancelLoad, etc.) want to
+// use them later without the AddLoad serializer trap.
 
 /**
  * Rehearsal-mode dispatch — runs when app_settings.pcs_dispatch_mode
@@ -421,33 +394,40 @@ export async function dispatchLoad(
   const pkg = buildDispatchPackage(assignment, load, well);
   const body = buildAddLoadRequest(pkg);
 
-  // ─── Path A revert (2026-04-28) ─────────────────────────────────────
-  // Restored the exact 4/22 wire shape that successfully created PCS
-  // loadIds 357468 + 357469. The 4/23 changes (raw-fetch + PascalCase
-  // body + X-Company-Letter removal) were a chain of unverified guesses
-  // chasing 500s that may have been caused by something else entirely.
+  // ─── Direct fetch with camelCase body (2026-04-28) ──────────────────
+  // Definitively isolated via 5-variant shape probe (scripts/pcs-shape-probe.mjs):
+  //   - camelCase wire body  → 200 OK + loadId returned (✅ proven 357470)
+  //   - PascalCase wire body → 500 "An unexpected error has occurred"
   //
-  // 4/22 working contract:
-  //   - Generated OpenAPI client: api.addLoad({ addLoadRequest: body })
-  //   - camelCase body via IntermodalLoadToJSON serializer (the union
-  //     dispatcher routes there first; PCS accepted it without TotalWeight
-  //     on 4/22 → so the "needs TotalWeight" hypothesis was wrong)
-  //   - Headers: Authorization + X-Company-Id + X-Company-Letter
+  // The OpenAPI generated client (api.addLoad → IntermodalLoadToJSON) emits
+  // PascalCase keys on the wire, which PCS rejects. The post-4/23 explicit
+  // PascalCase transform also got rejected for the same reason. Both paths
+  // were sending the wrong shape — PCS REST API expects camelCase
+  // (matches what GetLoad returns on read).
   //
-  // If this push works → we know the 4/23 changes were the cause.
-  // If this push 500s → it's something else (auth scope, server-side
-  // change between 4/22 and now, etc.) and we go to Kyle with a clean
-  // story instead of a tangled one.
-  const api = await buildLoadApi(() => getAccessToken(db), company);
+  // Fix: bypass the generator entirely. JSON.stringify the camelCase body
+  // from buildAddLoadRequest() and POST it directly. Same headers as the
+  // working probe variant: Authorization + X-Company-Id + X-Company-Letter.
+  const bearer = await getAccessToken(db);
+  const url = `${getPcsBaseUrl()}/dispatching/v1/load`;
+  const serializedBody = JSON.stringify(body);
 
   try {
     const response = await restPolicy.execute(async () => {
+      let res: Response;
       try {
-        return (await api.addLoad({
-          addLoadRequest: body,
-        })) as unknown as Record<string, unknown>;
+        res = await fetch(url, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${bearer}`,
+            "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
+            "X-Company-Letter": company,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: serializedBody,
+        });
       } catch (err: unknown) {
-        // Rewrap transport errors for the circuit breaker
         if (
           err instanceof TypeError ||
           (err instanceof Error && err.name === "AbortError") ||
@@ -457,21 +437,27 @@ export async function dispatchLoad(
             `PCS Load API request failed: ${err instanceof Error ? err.message : String(err)}`,
           );
         }
-        // Surface the real PCS error body — the OpenAPI client's
-        // ResponseError swallows the response, leaving us with "Response
-        // returned an error code" and no detail. Read the body so the
-        // caller sees fields + code.
-        if (
-          err instanceof Error &&
-          "response" in err &&
-          err.response instanceof Response
-        ) {
-          const bodyText = await err.response.text().catch(() => "");
-          throw new Error(
-            `PCS ${err.response.status}: ${bodyText || err.message}`,
-          );
-        }
         throw err;
+      }
+
+      const responseText = await res.text().catch(() => "");
+      if (!res.ok) {
+        // Surface the full PCS error body + the request we sent so any
+        // future regression has a tight diagnostic loop. Wire bodies are
+        // <2KB so full inclusion is fine.
+        const respHeaders: Record<string, string> = {};
+        res.headers.forEach((v, k) => {
+          respHeaders[k] = v;
+        });
+        throw new Error(
+          `PCS ${res.status}: resp=${responseText || res.statusText} | req=${serializedBody} | respHeaders=${JSON.stringify(respHeaders)}`,
+        );
+      }
+
+      try {
+        return JSON.parse(responseText) as Record<string, unknown>;
+      } catch {
+        return { raw: responseText } as Record<string, unknown>;
       }
     });
 
