@@ -39,9 +39,19 @@ export const PCS_DISPATCH_ENABLED = process.env.PCS_DISPATCH_ENABLED === "true";
 
 export interface DispatchResult {
   success: boolean;
+  /**
+   * Which code path produced this result. 'live' = real PCS REST call.
+   * 'rehearsal' = no PCS call; assignment was queued locally with
+   * pcs_pending_at set. Frontend reads this to swap success-message
+   * copy so the dispatcher knows which thing actually happened.
+   */
+  mode?: "live" | "rehearsal";
   pcsLoadId?: number | string;
   pcsStatus?: string;
   dispatchedAt?: string;
+  /** Set in rehearsal mode only — the timestamp the queue marker was
+   *  written. Useful for the drain script's audit log. */
+  pendingAt?: string;
   error?: {
     code: string;
     message: string;
@@ -210,17 +220,115 @@ async function buildLoadApi(
 }
 
 /**
+ * Rehearsal-mode dispatch — runs when app_settings.pcs_dispatch_mode
+ * is 'rehearsal' (the default while Kyle's OAuth is pending). Marks
+ * the assignment pcs_pending_at = now() + advances handler_stage to
+ * 'entered' so the load visibly leaves the active worksurface and
+ * lands on /flagged under "📦 Ready for PCS — awaiting Kyle".
+ *
+ * No PCS REST call is made. The return shape mirrors a successful
+ * dispatch so the frontend can render a success state — only the
+ * `mode: 'rehearsal'` field tells the UI to swap copy.
+ *
+ * Idempotent: if pcs_pending_at is already set, we update the
+ * timestamp + stage but don't crash. If pcs_number is already set
+ * (load was already pushed for real), we no-op with a clear error.
+ */
+async function runRehearsalDispatch(
+  db: Database,
+  assignmentId: number,
+): Promise<DispatchResult> {
+  const startedAt = Date.now();
+  const { sql } = await import("drizzle-orm");
+
+  // Refuse to queue an already-pushed load — it would put the row in
+  // an ambiguous "pushed AND pending" state that the drain script can't
+  // safely interpret.
+  const existing = (await db.execute(sql`
+    SELECT id, pcs_number, pcs_pending_at::text AS pcs_pending_at
+    FROM assignments WHERE id = ${assignmentId} LIMIT 1
+  `)) as unknown as Array<{
+    id: number;
+    pcs_number: string | null;
+    pcs_pending_at: string | null;
+  }>;
+  if (existing.length === 0) {
+    return {
+      success: false,
+      mode: "rehearsal",
+      latencyMs: Date.now() - startedAt,
+      error: {
+        code: "ASSIGNMENT_NOT_FOUND",
+        message: `Assignment ${assignmentId} not found`,
+        retryable: false,
+      },
+    };
+  }
+  if (existing[0].pcs_number) {
+    return {
+      success: false,
+      mode: "rehearsal",
+      latencyMs: Date.now() - startedAt,
+      error: {
+        code: "ALREADY_PUSHED",
+        message: `Assignment ${assignmentId} already has PCS number ${existing[0].pcs_number} — re-queue not allowed in rehearsal mode.`,
+        retryable: false,
+      },
+    };
+  }
+
+  const now = new Date().toISOString();
+  await db.execute(sql`
+    UPDATE assignments
+    SET pcs_pending_at = NOW(),
+        handler_stage = 'entered',
+        entered_on = COALESCE(entered_on, NOW()),
+        updated_at = NOW()
+    WHERE id = ${assignmentId}
+  `);
+
+  return {
+    success: true,
+    mode: "rehearsal",
+    pendingAt: now,
+    pcsStatus: "queued_for_pcs",
+    dispatchedAt: now,
+    latencyMs: Date.now() - startedAt,
+  };
+}
+
+/**
  * Dispatch an assignment to PCS via REST Load API.
  * Gated by PCS_DISPATCH_ENABLED. When the flag is off we never make a network
  * call — returns a structured disabled result instead.
+ *
+ * In rehearsal mode (app_settings.pcs_dispatch_mode = 'rehearsal',
+ * default while Kyle's OAuth pending) this short-circuits to
+ * runRehearsalDispatch() above. Pass options.forceLive=true from the
+ * cutover drain script to bypass the rehearsal check.
  */
 export async function dispatchLoad(
   db: Database,
   assignmentId: number,
-  options: { company?: "A" | "B" } = {},
+  options: { company?: "A" | "B"; forceLive?: boolean } = {},
 ): Promise<DispatchResult> {
-  const { getPcsDispatchEnabled } =
+  const { getPcsDispatchEnabled, getPcsDispatchMode } =
     await import("../../dispatch/services/app-settings.service.js");
+
+  // Rehearsal-mode short-circuit. While Kyle's OAuth credentials are
+  // pending, every Push to PCS click should advance the workflow but
+  // not actually call PCS REST. Frontend reads the response.mode field
+  // to swap the success message ("Saved as ready — Kyle's PCS will pick
+  // this up when it goes live"). When OAuth lands, flip the setting
+  // (UPDATE app_settings ... 'live') and run the drain script.
+  //
+  // forceLive=true overrides — used by the cutover drain script.
+  if (!options.forceLive) {
+    const mode = await getPcsDispatchMode(db);
+    if (mode === "rehearsal") {
+      return runRehearsalDispatch(db, assignmentId);
+    }
+  }
 
   // Auto-company inference: when the caller doesn't specify a company
   // explicitly, pick based on which toggle is on. This makes the Friday-

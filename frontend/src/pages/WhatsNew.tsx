@@ -16,9 +16,10 @@ import { useEffect } from "react";
  * the email + PDF; how-to lives here, in-context.
  */
 
-// Bumped 2026-04-28-pm-5 — forces re-show after WellsList navigation
-// surface below the grid + drawer well-mode with date-filter chips.
-const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-5";
+// Bumped 2026-04-28-pm-6 — forces re-show after PCS rehearsal mode
+// (Mark ready for PCS while Kyle's OAuth pending) + Flagged contract
+// fix (page now actually renders items).
+const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-6";
 
 export function markWhatsNewSeen() {
   try {
@@ -148,9 +149,75 @@ export function WhatsNew() {
           </p>
         </div>
 
-        {/* Tue PM 5 — WellsList navigation surface below the grid */}
+        {/* Tue PM 6 — PCS rehearsal mode + /flagged contract fix */}
         <Section
           number="00"
+          title="🎯 Push to PCS now works in rehearsal — practice before Kyle is live"
+          why="You've been waiting on Kyle for OAuth credentials and we're not blocking the workflow on him anymore. The Push to PCS button now works in rehearsal mode: click it, and the load gets marked as ready for PCS (queued) instead of attempting a real push that would fail. When Kyle delivers OAuth, every queued load drains in a single bulk push."
+          how={
+            <div className="space-y-3">
+              <p>
+                <strong>What changes:</strong> the green Push button on the cell
+                drawer's load expand AND on Load Center now reads{" "}
+                <em>"→ Mark ready for PCS"</em> with an amber color. Click it,
+                and you get an amber confirmation:
+                <em>
+                  {" "}
+                  "Saved as ready ✓ — Kyle's PCS will pick this up when OAuth
+                  goes live."
+                </em>
+              </p>
+              <p>
+                <strong>What happens in the data:</strong> the load's handler
+                stage advances to <strong>Entered</strong> and we record a
+                "queued for PCS" timestamp. The load shows up on Flagged under{" "}
+                <strong>"📦 Ready for PCS — awaiting Kyle"</strong> so you can
+                see exactly what would push when we go live.
+              </p>
+              <p>
+                <strong>If you change your mind</strong> and move a queued load
+                backward through the stage strip, you'll get a confirm prompt:
+                "This load is queued for PCS; clear the queue too?" Click OK to
+                clear, Cancel to keep it queued.
+              </p>
+              <p className="text-xs text-on-surface-variant">
+                When Kyle's creds land: we flip a single setting, run a one-shot
+                drain script, every queued load goes to PCS in one pass, and the
+                button label switches back to "Push to PCS" automatically. Your
+                muscle memory for clicking the button is the same — only what
+                happens behind it changes.
+              </p>
+            </div>
+          }
+          cta={{ label: "Open Today", to: "/workbench" }}
+        />
+
+        {/* Tue PM 6 — Flagged contract fix */}
+        <Section
+          number="00a"
+          title="🚩 Flagged page now actually renders items"
+          why="The Flagged page was reading the inbox API in a way that produced an empty list every time. Fixed — now you see every flagged item, grouped by reason, click-to-load."
+          how={
+            <div className="space-y-3">
+              <p>
+                Backend now flattens the inbox into a single sorted list. The 4
+                reasons you click on the inline 🚩 picker (Needs Rate, Missing
+                Ticket, Missing Driver, Other) each render under their own group
+                on Flagged so they're actionable separately.
+              </p>
+              <p>
+                Plus the new <strong>"📦 Ready for PCS"</strong> group surfaces
+                every load you've marked as ready for PCS in rehearsal mode (see
+                above).
+              </p>
+            </div>
+          }
+          cta={{ label: "Open Flagged", to: "/flagged" }}
+        />
+
+        {/* Tue PM 5 — WellsList navigation surface below the grid */}
+        <Section
+          number="00b"
           title="Wells list below Today — second way to navigate to a load"
           why="Per your feedback: needed another way to navigate besides clicking grid cells. The wells list is reference (every active well, in predictable order); Flagged is triage (what to work next). Two separate jobs, two separate surfaces."
           how={

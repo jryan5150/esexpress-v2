@@ -1589,36 +1589,138 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
       `)) as unknown as Array<{ n: number }>;
     const sheetDriftTotal = sheetDriftTotalRow[0]?.n ?? 0;
 
+    // ── Flag-reason buckets ────────────────────────────────────────
+    // Surfaces the 4 reasons Jess clicks on the inline 🚩 picker as
+    // distinct types so /flagged groups them correctly. Each row
+    // emits one item per uncertain_reason so a load flagged for both
+    // "missing_ticket" and "needs_rate" appears in both groups.
+    // SECURITY: jsonb_array_elements_text on a NULL is undefined; guard
+    // with COALESCE to '[]' jsonb.
+    const flaggedReasonsWhere = sql`
+      WHERE a.handler_stage = 'uncertain'
+        AND COALESCE(jsonb_array_length(a.uncertain_reasons), 0) > 0
+        AND l.delivered_on > now() - interval '14 days'
+        ${customerFilter}
+    `;
+    const flaggedReasons = (await db.execute(sql`
+        SELECT
+          reason::text AS kind,
+          l.id AS load_id, a.id AS assignment_id, a.well_id,
+          w.name AS well_name, c.name AS bill_to,
+          l.customer_id,
+          l.delivered_on::date AS day,
+          l.driver_name, l.bol_no, l.ticket_no, l.notes AS detail
+        FROM assignments a
+        JOIN loads l ON l.id = a.load_id
+        LEFT JOIN wells w ON w.id = a.well_id
+        LEFT JOIN customers c ON c.id = l.customer_id
+        CROSS JOIN LATERAL jsonb_array_elements_text(
+          COALESCE(a.uncertain_reasons, '[]'::jsonb)
+        ) AS reason
+        ${flaggedReasonsWhere}
+        ORDER BY l.delivered_on DESC
+        LIMIT 200
+      `)) as unknown as Array<Record<string, unknown>>;
+
+    // ── Pending PCS push ──────────────────────────────────────────
+    // Loads where rehearsal-mode push has set pcs_pending_at but no
+    // PCS number landed yet. Surfaces under "📦 Ready for PCS" so
+    // Jess can see exactly what would go when Kyle's OAuth lands.
+    const pendingPcsWhere = sql`
+      WHERE a.pcs_pending_at IS NOT NULL
+        AND a.pcs_number IS NULL
+        ${customerFilter}
+    `;
+    const pendingPcs = (await db.execute(sql`
+        SELECT
+          'pending_pcs' AS kind,
+          l.id AS load_id, a.id AS assignment_id, a.well_id,
+          w.name AS well_name, c.name AS bill_to,
+          l.customer_id,
+          l.delivered_on::date AS day,
+          l.driver_name, l.bol_no, l.ticket_no,
+          a.pcs_pending_at::text AS pending_at
+        FROM assignments a
+        JOIN loads l ON l.id = a.load_id
+        LEFT JOIN wells w ON w.id = a.well_id
+        LEFT JOIN customers c ON c.id = l.customer_id
+        ${pendingPcsWhere}
+        ORDER BY a.pcs_pending_at DESC
+        LIMIT 200
+      `)) as unknown as Array<Record<string, unknown>>;
+
+    // ── Backfill customer_id on the 4 existing buckets so the
+    // frontend's client-side scope filter has something to key on.
+    // (The select queries above don't pull l.customer_id explicitly;
+    // this is a quick client-side annotation pass.)
+    const enrich = (
+      rows: Array<Record<string, unknown>>,
+      type: string,
+    ): Array<Record<string, unknown>> =>
+      rows.map((r) => ({
+        type,
+        load_id: r.load_id ?? null,
+        assignment_id: r.assignment_id ?? null,
+        well_id: r.well_id ?? null,
+        well_name: r.well_name ?? null,
+        customer_id: r.customer_id ?? null,
+        customer_name: r.bill_to ?? null,
+        day: r.day ?? null,
+        detail:
+          (r.message as string | null | undefined) ??
+          (r.detail as string | null | undefined) ??
+          null,
+        ...r,
+      }));
+
+    // Flat items array, ordered by urgency. Each item carries its own
+    // `type` field so the frontend can group/filter without bucketed
+    // response keys. Order: most actionable first (missing_photo +
+    // pending_pcs near the top of the daily loop).
+    const items = [
+      ...enrich(missingPhotos, "missing_photo"),
+      ...enrich(pendingPcs, "pending_pcs"),
+      ...enrich(flaggedReasons, "flagged"),
+      ...enrich(uncertainMatches, "uncertain_match"),
+      ...enrich(pcsDiscrepancies, "pcs_discrepancy"),
+      ...enrich(sheetDrift, "sheet_drift"),
+    ];
+
+    // Promote the per-reason `kind` from flagged buckets onto the top-
+    // level type so /flagged groups them as distinct rows. Falls back
+    // to "flagged" if the reason string is unrecognized.
+    for (const it of items) {
+      if (it.type === "flagged" && typeof it.kind === "string") {
+        it.type = it.kind;
+      }
+    }
+
     return {
       success: true,
       data: {
         customerIds,
         urgencyOrder: [
           "missing_photo",
+          "pending_pcs",
+          "needs_rate",
+          "missing_ticket",
+          "missing_driver",
+          "bol_mismatch",
           "uncertain_match",
           "pcs_discrepancy",
           "sheet_drift",
         ],
-        items: {
-          missing_photos: missingPhotos,
-          uncertain_matches: uncertainMatches,
-          pcs_discrepancies: pcsDiscrepancies,
-          sheet_drift: sheetDrift,
-        },
+        items,
         counts: {
-          // Returned (capped at 50) — use for "X shown" display
           missing_photos: missingPhotos.length,
           uncertain_matches: uncertainMatches.length,
           pcs_discrepancies: pcsDiscrepancies.length,
           sheet_drift: sheetDrift.length,
-          total:
-            missingPhotos.length +
-            uncertainMatches.length +
-            pcsDiscrepancies.length +
-            sheetDrift.length,
+          flagged_reasons: flaggedReasons.length,
+          pending_pcs: pendingPcs.length,
+          total: items.length,
         },
         totals: {
-          // Unbounded — true backlog. Use for "of N" + badge.
           missing_photos: missingPhotosTotal,
           uncertain_matches: uncertainMatchesTotal,
           pcs_discrepancies: pcsDiscrepanciesTotal,
@@ -1627,7 +1729,9 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
             missingPhotosTotal +
             uncertainMatchesTotal +
             pcsDiscrepanciesTotal +
-            sheetDriftTotal,
+            sheetDriftTotal +
+            flaggedReasons.length +
+            pendingPcs.length,
         },
       },
     };
@@ -3563,6 +3667,7 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         a.handler_stage,
         a.photo_status,
         a.pcs_number,
+        a.pcs_pending_at::text AS pcs_pending_at,
         w.name AS well_name
       FROM loads l
       LEFT JOIN customers c ON c.id = l.customer_id

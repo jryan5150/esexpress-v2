@@ -126,6 +126,25 @@ export async function getPcsDispatchEnabled(
   return getBooleanSetting(db, "pcs_dispatch_enabled", "PCS_DISPATCH_ENABLED");
 }
 
+/**
+ * Dispatch mode dial — controls whether Push to PCS clicks call the
+ * PCS REST API ('live') or just queue the load locally with
+ * pcs_pending_at set ('rehearsal'). Default 'rehearsal' keeps Jess
+ * able to run the workflow during the dual-run period before Kyle's
+ * OAuth credentials are live.
+ *
+ * To flip after OAuth delivery:
+ *   UPDATE app_settings SET value = 'live' WHERE key = 'pcs_dispatch_mode';
+ *   then run backend/scripts/drain-pending-pcs.ts to flush the queue.
+ */
+export type PcsDispatchMode = "live" | "rehearsal";
+export async function getPcsDispatchMode(
+  db: Database,
+): Promise<PcsDispatchMode> {
+  const raw = await getAppSetting(db, "pcs_dispatch_mode");
+  return raw === "live" ? "live" : "rehearsal";
+}
+
 export async function listAppSettings(db: Database): Promise<
   Array<{
     key: string;

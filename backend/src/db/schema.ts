@@ -447,6 +447,12 @@ export const assignments = pgTable(
     // report joins on this. Once bidirectional OAuth lands this becomes
     // auto-populated and read-only.
     pcsNumber: text("pcs_number"),
+    // Set when a Push to PCS click is captured in rehearsal mode (pre-
+    // OAuth). Drains to NULL when the cutover script flips the load to
+    // a real PCS push and pcsNumber gets populated. Surfaces on /flagged
+    // under "📦 Ready for PCS — awaiting Kyle" so Jess can see exactly
+    // what would go when the OAuth flag flips. Added 2026-04-28.
+    pcsPendingAt: timestamp("pcs_pending_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   },
@@ -462,6 +468,7 @@ export const assignments = pgTable(
     index("idx_assignments_current_handler").on(table.currentHandlerId),
     index("idx_assignments_entered_on").on(table.enteredOn),
     index("idx_assignments_pcs_number").on(table.pcsNumber),
+    index("idx_assignments_pcs_pending_at").on(table.pcsPendingAt),
   ],
 );
 

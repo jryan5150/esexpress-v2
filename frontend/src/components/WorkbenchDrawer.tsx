@@ -1769,6 +1769,7 @@ interface LoadDetailShape {
   handler_stage: string | null;
   photo_status: string | null;
   pcs_number: string | null;
+  pcs_pending_at: string | null;
   well_name: string | null;
   bill_to: string | null;
   photos: Array<{ id: number; source_url: string; source: string }>;
@@ -1821,8 +1822,15 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
     mutationFn: (assignmentId: number) =>
       api.post<{
         success: boolean;
+        // Backend tags every response with mode: 'live' or 'rehearsal'.
+        // 'rehearsal' = no PCS REST call was made; the assignment was
+        // queued locally with pcs_pending_at set. UI swaps copy based
+        // on this so dispatcher knows what actually happened.
+        mode?: "live" | "rehearsal";
         pcsLoadNo?: string;
+        pcsLoadId?: number | string;
         pcsNumber?: string;
+        pendingAt?: string;
         error?: { code?: string; message?: string };
         message?: string;
       }>(`/pcs/dispatch`, { assignmentId }),
@@ -2284,28 +2292,54 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
             {/* Push to PCS — terminal action. Loud success/failure per
                 fire-and-forget contract validated against the call
                 transcript. Hidden for finance/viewer roles. */}
-            {role.canPushPcs && (
-              <div className="flex items-center gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={() => pushPcs.mutate(l.assignment_id!)}
-                  disabled={pushPcs.isPending}
-                  className="px-3 py-1.5 text-xs font-semibold rounded bg-accent text-white hover:opacity-90 disabled:opacity-50"
-                  title="Send this load to PCS — terminal action, no further v2 state changes after this"
-                >
-                  {pushPcs.isPending
-                    ? "Pushing…"
-                    : l.pcs_number
-                      ? "↻ Re-push to PCS"
-                      : "→ Push to PCS"}
-                </button>
-                {l.pcs_number && (
-                  <span className="text-[10px] text-emerald-600">
-                    in PCS as #{l.pcs_number}
-                  </span>
-                )}
-              </div>
-            )}
+            {role.canPushPcs &&
+              (() => {
+                // Mode comes back on the response. We default to
+                // "rehearsal" until the first push lands so the button
+                // copy reflects the current default state of the system
+                // (PCS not yet OAuth'd). After the first response the
+                // real mode wins.
+                const mode = pushPcs.data?.mode ?? "rehearsal";
+                const isPending = !!l.pcs_pending_at && !l.pcs_number;
+                const livePushed = !!l.pcs_number;
+                let label: string;
+                if (pushPcs.isPending) label = "Pushing…";
+                else if (livePushed) label = "↻ Re-push to PCS";
+                else if (mode === "rehearsal" && isPending)
+                  label = "↻ Re-queue for PCS";
+                else if (mode === "rehearsal") label = "→ Mark ready for PCS";
+                else label = "→ Push to PCS";
+
+                const liveTitle =
+                  "Send this load to PCS — terminal action, no further v2 state changes after this";
+                const rehearsalTitle =
+                  "Kyle's PCS connection isn't live yet. This marks the load as ready; the cutover will push it for real when OAuth lands.";
+                return (
+                  <div className="flex items-center gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => pushPcs.mutate(l.assignment_id!)}
+                      disabled={pushPcs.isPending}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded text-white hover:opacity-90 disabled:opacity-50 ${
+                        mode === "rehearsal" ? "bg-amber-600" : "bg-accent"
+                      }`}
+                      title={mode === "rehearsal" ? rehearsalTitle : liveTitle}
+                    >
+                      {label}
+                    </button>
+                    {livePushed && (
+                      <span className="text-[10px] text-emerald-600">
+                        in PCS as #{l.pcs_number}
+                      </span>
+                    )}
+                    {!livePushed && isPending && (
+                      <span className="text-[10px] text-amber-700">
+                        queued for PCS · awaiting Kyle
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             {pushPcs.isError && (
               <div className="text-[11px] px-2 py-1.5 rounded bg-red-50 border border-red-300 text-red-900">
                 <strong>PCS rejected the push:</strong>{" "}
@@ -2315,19 +2349,36 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
               </div>
             )}
             {pushPcs.isSuccess && pushPcs.data && (
-              <div className="text-[11px] px-2 py-1.5 rounded bg-emerald-50 border border-emerald-300 text-emerald-900">
+              <div
+                className={`text-[11px] px-2 py-1.5 rounded ${
+                  pushPcs.data.mode === "rehearsal"
+                    ? "bg-amber-50 border border-amber-300 text-amber-900"
+                    : "bg-emerald-50 border border-emerald-300 text-emerald-900"
+                }`}
+              >
                 {pushPcs.data.success ? (
-                  <>
-                    <strong>PCS accepted ✓</strong>
-                    {(pushPcs.data.pcsLoadNo || pushPcs.data.pcsNumber) && (
-                      <>
-                        {" "}
-                        — now in PCS as #
-                        {pushPcs.data.pcsLoadNo ?? pushPcs.data.pcsNumber}
-                      </>
-                    )}
-                    . Load handed off; v2 stops tracking from here.
-                  </>
+                  pushPcs.data.mode === "rehearsal" ? (
+                    <>
+                      <strong>Saved as ready ✓</strong> — Kyle's PCS will pick
+                      this up when OAuth goes live. Visible on{" "}
+                      <Link to="/flagged" className="underline">
+                        /flagged
+                      </Link>{" "}
+                      under "📦 Ready for PCS".
+                    </>
+                  ) : (
+                    <>
+                      <strong>PCS accepted ✓</strong>
+                      {(pushPcs.data.pcsLoadNo || pushPcs.data.pcsNumber) && (
+                        <>
+                          {" "}
+                          — now in PCS as #
+                          {pushPcs.data.pcsLoadNo ?? pushPcs.data.pcsNumber}
+                        </>
+                      )}
+                      . Load handed off; v2 stops tracking from here.
+                    </>
+                  )
                 ) : (
                   <>
                     <strong>Push call returned but not accepted:</strong>{" "}

@@ -142,6 +142,53 @@ const loadRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
+  // PATCH /:id/clear-pcs-pending — drop the rehearsal-mode queue marker
+  // on a load's assignment(s). Called from the frontend when a user
+  // moves a queued load backward through the stage strip and confirms
+  // the queue should clear too.
+  fastify.patch<{ Params: { id: string } }>(
+    "/:id/clear-pcs-pending",
+    {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(["admin", "builder"]),
+      ],
+    },
+    async (request, reply) => {
+      const db = fastify.db;
+      if (!db) {
+        return reply.status(503).send({
+          success: false,
+          error: {
+            code: "SERVICE_UNAVAILABLE",
+            message: "Database not connected",
+          },
+        });
+      }
+      const loadId = parseInt(request.params.id, 10);
+      if (!Number.isFinite(loadId)) {
+        return reply.status(400).send({
+          success: false,
+          error: { code: "BAD_REQUEST", message: "load id required" },
+        });
+      }
+      const { sql } = await import("drizzle-orm");
+      const result = (await db.execute(sql`
+        UPDATE assignments
+        SET pcs_pending_at = NULL, updated_at = NOW()
+        WHERE load_id = ${loadId} AND pcs_pending_at IS NOT NULL
+        RETURNING id
+      `)) as unknown as Array<{ id: number }>;
+      return {
+        success: true,
+        data: {
+          cleared: result.length,
+          assignmentIds: result.map((r) => r.id),
+        },
+      };
+    },
+  );
+
   // POST /bulk-update — apply the same field updates to multiple loads at once
   fastify.post(
     "/bulk-update",

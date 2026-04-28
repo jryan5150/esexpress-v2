@@ -137,12 +137,16 @@ export function LoadCenter() {
   });
 
   // Push to PCS — terminal action; same endpoint as the inline panel.
+  // Backend may run in 'live' or 'rehearsal' mode; UI swaps copy based
+  // on the response.mode field so Jess always knows which thing happened.
   const pushPcsMutation = useMutation({
     mutationFn: (assignmentId: number) =>
       api.post<{
         success: boolean;
+        mode?: "live" | "rehearsal";
         pcsLoadNo?: string;
         pcsNumber?: string;
+        pendingAt?: string;
         error?: { code?: string; message?: string };
         message?: string;
       }>(`/pcs/dispatch`, { assignmentId }),
@@ -365,12 +369,47 @@ export function LoadCenter() {
               <StageStrip
                 currentStage={l.handler_stage ?? "uncertain"}
                 isPending={advanceMutation.isPending}
-                onAdvance={(stage) =>
-                  advanceMutation.mutateAsync({
+                onAdvance={(stage) => {
+                  // Backward-advance guard. If the load is queued for
+                  // PCS (pcs_pending_at set, no pcs_number yet) and the
+                  // user is moving it back to a pre-entered stage,
+                  // confirm before clearing the PCS queue marker so a
+                  // misclick doesn't silently drop a queued load.
+                  const lExt = l as { pcs_pending_at?: string | null };
+                  const queued = !!lExt.pcs_pending_at && !l.pcs_number;
+                  const earlier = ["uncertain", "ready_to_build", "building"];
+                  if (queued && earlier.includes(stage)) {
+                    const ok = window.confirm(
+                      "This load is queued for PCS (rehearsal mode). " +
+                        `Moving it back to "${stage.replace(/_/g, " ")}" will clear the queue marker — ` +
+                        "the cutover script won't push it on its own. " +
+                        "Click OK to clear the queue and move backward, or Cancel to keep it queued.",
+                    );
+                    if (!ok) return Promise.resolve();
+                    return advanceMutation
+                      .mutateAsync({
+                        assignmentId: l.assignment_id!,
+                        stage,
+                      })
+                      .then(async () => {
+                        // Clear pcs_pending_at via the load PATCH —
+                        // backend dispatch service writes that column
+                        // but the stage-advance route doesn't, so do
+                        // it here explicitly.
+                        await api.patch(
+                          `/dispatch/loads/${l.id}/clear-pcs-pending`,
+                          {},
+                        );
+                        qc.invalidateQueries({
+                          queryKey: ["load-center", loadId],
+                        });
+                      });
+                  }
+                  return advanceMutation.mutateAsync({
                     assignmentId: l.assignment_id!,
                     stage,
-                  })
-                }
+                  });
+                }}
               />
               {advanceMutation.isError && (
                 <div className="text-[11px] text-red-600">
@@ -383,17 +422,40 @@ export function LoadCenter() {
                   Click any stage to set it directly. Hover for what each stage
                   means.
                 </span>
-                {role.canPushPcs && (
-                  <button
-                    type="button"
-                    onClick={() => pushPcsMutation.mutate(l.assignment_id!)}
-                    disabled={pushPcsMutation.isPending}
-                    className="px-3 py-1 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-                    title="Hand this load off to PCS. v2 stops tracking after a successful push."
-                  >
-                    {pushPcsMutation.isPending ? "Pushing…" : "→ Push to PCS"}
-                  </button>
-                )}
+                {role.canPushPcs &&
+                  (() => {
+                    const mode = pushPcsMutation.data?.mode ?? "rehearsal";
+                    const lExt = l as { pcs_pending_at?: string | null };
+                    const isPending = !!lExt.pcs_pending_at && !l.pcs_number;
+                    const livePushed = !!l.pcs_number;
+                    let label: string;
+                    if (pushPcsMutation.isPending) label = "Pushing…";
+                    else if (livePushed) label = "↻ Re-push to PCS";
+                    else if (mode === "rehearsal" && isPending)
+                      label = "↻ Re-queue for PCS";
+                    else if (mode === "rehearsal")
+                      label = "→ Mark ready for PCS";
+                    else label = "→ Push to PCS";
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => pushPcsMutation.mutate(l.assignment_id!)}
+                        disabled={pushPcsMutation.isPending}
+                        className={`px-3 py-1 text-xs font-semibold rounded-md text-white hover:opacity-90 disabled:opacity-50 ${
+                          mode === "rehearsal"
+                            ? "bg-amber-600"
+                            : "bg-emerald-600"
+                        }`}
+                        title={
+                          mode === "rehearsal"
+                            ? "Kyle's PCS connection isn't live yet. This marks the load as ready; the cutover will push it for real when OAuth lands."
+                            : "Hand this load off to PCS. v2 stops tracking after a successful push."
+                        }
+                      >
+                        {label}
+                      </button>
+                    );
+                  })()}
               </div>
               {pushPcsMutation.isError && (
                 <div className="text-[11px] px-2 py-1.5 rounded bg-red-50 border border-red-300 text-red-900">
@@ -404,21 +466,38 @@ export function LoadCenter() {
                 </div>
               )}
               {pushPcsMutation.isSuccess && pushPcsMutation.data && (
-                <div className="text-[11px] px-2 py-1.5 rounded bg-emerald-50 border border-emerald-300 text-emerald-900">
+                <div
+                  className={`text-[11px] px-2 py-1.5 rounded ${
+                    pushPcsMutation.data.mode === "rehearsal"
+                      ? "bg-amber-50 border border-amber-300 text-amber-900"
+                      : "bg-emerald-50 border border-emerald-300 text-emerald-900"
+                  }`}
+                >
                   {pushPcsMutation.data.success ? (
-                    <>
-                      <strong>PCS accepted ✓</strong>
-                      {(pushPcsMutation.data.pcsLoadNo ||
-                        pushPcsMutation.data.pcsNumber) && (
-                        <>
-                          {" "}
-                          — now in PCS as #
-                          {pushPcsMutation.data.pcsLoadNo ??
-                            pushPcsMutation.data.pcsNumber}
-                        </>
-                      )}
-                      . Load handed off; v2 stops tracking from here.
-                    </>
+                    pushPcsMutation.data.mode === "rehearsal" ? (
+                      <>
+                        <strong>Saved as ready ✓</strong> — Kyle's PCS will pick
+                        this up when OAuth goes live. Visible on{" "}
+                        <Link to="/flagged" className="underline">
+                          /flagged
+                        </Link>{" "}
+                        under "📦 Ready for PCS".
+                      </>
+                    ) : (
+                      <>
+                        <strong>PCS accepted ✓</strong>
+                        {(pushPcsMutation.data.pcsLoadNo ||
+                          pushPcsMutation.data.pcsNumber) && (
+                          <>
+                            {" "}
+                            — now in PCS as #
+                            {pushPcsMutation.data.pcsLoadNo ??
+                              pushPcsMutation.data.pcsNumber}
+                          </>
+                        )}
+                        . Load handed off; v2 stops tracking from here.
+                      </>
+                    )
                   ) : (
                     <>
                       <strong>Push call returned but not accepted:</strong>{" "}

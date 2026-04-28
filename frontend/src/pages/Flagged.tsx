@@ -100,12 +100,14 @@ function FlaggedList({ scope }: { scope: "all" | "mine" }) {
   }, {});
   const groupOrder = [
     "missing_photo",
-    "stage_uncertain",
-    "discrepancy",
-    "sheet_drift",
+    "pending_pcs",
+    "needs_rate",
     "missing_ticket",
     "missing_driver",
-    "needs_rate",
+    "bol_mismatch",
+    "uncertain_match",
+    "pcs_discrepancy",
+    "sheet_drift",
   ];
   const orderedGroups = [
     ...groupOrder.filter((g) => byType[g]?.length),
@@ -208,13 +210,23 @@ function QueueGroup({ type, items }: { type: string; items: InboxItem[] }) {
 }
 
 const LABEL_BY_TYPE: Record<string, string> = {
+  // Backend kinds (post-flatten 2026-04-28). Key list mirrors
+  // urgencyOrder in /diag/inbox: most actionable first.
   missing_photo: "🖼  Photos to match",
-  stage_uncertain: "🚩 Flagged for review",
-  discrepancy: "⚠️  Discrepancies to resolve",
-  sheet_drift: "📊 Sheet drift",
+  pending_pcs: "📦 Ready for PCS — awaiting Kyle",
+  needs_rate: "💵 Needs rate",
   missing_ticket: "🎫 Missing ticket #",
   missing_driver: "👤 Missing driver",
-  needs_rate: "💵 Needs rate",
+  bol_mismatch: "❓ BOL mismatch / other flag",
+  uncertain_match: "🤔 Matcher uncertain",
+  pcs_discrepancy: "⚠️ PCS discrepancy",
+  sheet_drift: "📊 Sheet drift",
+  // Legacy aliases — won't fire after the flatten ships, but kept
+  // briefly so a stale browser doesn't render an unlabeled group.
+  stage_uncertain: "🚩 Flagged for review",
+  discrepancy: "⚠️  Discrepancies to resolve",
+  rate_missing: "💵 Needs rate",
+  missing_tickets: "🎫 Missing ticket #",
 };
 
 // ─────────────────────────────────────────────────────────────────

@@ -154,9 +154,12 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
       const { assignmentId } = request.body as { assignmentId: number };
       const result = await dispatchLoad(db, assignmentId);
 
+      // Default mode to 'live' so the frontend always has the field set.
+      // runRehearsalDispatch() already stamps mode:'rehearsal' explicitly;
+      // every other code path through dispatchLoad is the live REST call.
       return {
         success: result.success,
-        data: result,
+        data: { ...result, mode: result.mode ?? "live" },
       };
     },
   );
