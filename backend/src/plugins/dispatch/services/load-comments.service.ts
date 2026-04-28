@@ -10,7 +10,7 @@ import type { Database } from "../../../db/client.js";
 export interface CommentAuthorContext {
   userId: number;
   userName: string;
-  role: "admin" | "dispatcher" | "viewer";
+  role: "admin" | "builder" | "finance" | "viewer";
 }
 
 export interface AddCommentInput {

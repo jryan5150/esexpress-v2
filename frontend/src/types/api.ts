@@ -220,11 +220,13 @@ export interface FinanceSummary {
 }
 
 // Auth
+export type Role = "admin" | "builder" | "finance" | "viewer";
+
 export interface User {
   id: number;
   email: string;
   name: string;
-  role: "admin" | "dispatcher" | "viewer";
+  role: Role;
 }
 
 export interface LoginResponse {

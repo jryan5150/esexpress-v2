@@ -3,6 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useHeartbeat } from "../hooks/use-presence";
+import { useRole } from "../hooks/use-role";
 import { resolvePhotoUrl } from "../lib/photo-url";
 import { EditableField } from "../components/EditableField";
 import { PhotoLightbox } from "../components/PhotoLightbox";
@@ -74,6 +75,7 @@ function weekBounds(
 
 export function LoadCenter() {
   useHeartbeat({ currentPage: "load-center" });
+  const role = useRole();
   const [params, setParams] = useSearchParams();
   const loadId = params.get("load");
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -186,6 +188,16 @@ export function LoadCenter() {
   const photoUrl = l.photos?.[0]?.source_url
     ? resolvePhotoUrl(l.photos[0].source_url)
     : null;
+  // Role-aware read-only flags. Dispatch fields lock for finance/viewer;
+  // rate locks for builder/viewer (only admin + finance own rate).
+  const dispatchReadOnly = !role.canEditDispatch;
+  const rateReadOnly = !role.canEditRate;
+  const readOnlyTitle =
+    role.role === "finance"
+      ? "Read-only — finance role doesn't edit dispatch fields"
+      : role.role === "viewer"
+        ? "Read-only — viewer role"
+        : "Read-only";
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-6 max-w-5xl mx-auto space-y-4">
@@ -228,16 +240,22 @@ export function LoadCenter() {
             onSave={(v) =>
               updateMutation.mutateAsync({ driverName: v || null })
             }
+            readOnly={dispatchReadOnly}
+            readOnlyTitle={readOnlyTitle}
           />
           <EditableField
             label="Truck #"
             value={l.truck_no}
             onSave={(v) => updateMutation.mutateAsync({ truckNo: v || null })}
+            readOnly={dispatchReadOnly}
+            readOnlyTitle={readOnlyTitle}
           />
           <EditableField
             label="Trailer #"
             value={l.trailer_no ?? ""}
             onSave={(v) => updateMutation.mutateAsync({ trailerNo: v || null })}
+            readOnly={dispatchReadOnly}
+            readOnlyTitle={readOnlyTitle}
           />
           <EditableField
             label="Carrier"
@@ -245,16 +263,22 @@ export function LoadCenter() {
             onSave={(v) =>
               updateMutation.mutateAsync({ carrierName: v || null })
             }
+            readOnly={dispatchReadOnly}
+            readOnlyTitle={readOnlyTitle}
           />
           <EditableField
             label="Ticket #"
             value={l.ticket_no}
             onSave={(v) => updateMutation.mutateAsync({ ticketNo: v || null })}
+            readOnly={dispatchReadOnly}
+            readOnlyTitle={readOnlyTitle}
           />
           <EditableField
             label="BOL #"
             value={l.bol_no}
             onSave={(v) => updateMutation.mutateAsync({ bolNo: v || null })}
+            readOnly={dispatchReadOnly}
+            readOnlyTitle={readOnlyTitle}
           />
           <Field label="Load #" value={l.load_no} />
           <EditableField
@@ -270,6 +294,8 @@ export function LoadCenter() {
               updateMutation.mutateAsync({ weightTons: v || null })
             }
             type="decimal"
+            readOnly={dispatchReadOnly}
+            readOnlyTitle={readOnlyTitle}
           />
           <EditableField
             label="Net wt (tons)"
@@ -278,12 +304,16 @@ export function LoadCenter() {
               updateMutation.mutateAsync({ netWeightTons: v || null })
             }
             type="decimal"
+            readOnly={dispatchReadOnly}
+            readOnlyTitle={readOnlyTitle}
           />
           <EditableField
             label="Mileage"
             value={l.mileage ?? ""}
             onSave={(v) => updateMutation.mutateAsync({ mileage: v || null })}
             type="decimal"
+            readOnly={dispatchReadOnly}
+            readOnlyTitle={readOnlyTitle}
           />
           <EditableField
             label="Rate"
@@ -291,6 +321,8 @@ export function LoadCenter() {
             prefix="$"
             onSave={(v) => updateMutation.mutateAsync({ rate: v || null })}
             type="decimal"
+            readOnly={rateReadOnly}
+            readOnlyTitle="Read-only — only admin or finance can edit rate"
           />
           <EditableField
             label="Delivered on"
@@ -299,6 +331,8 @@ export function LoadCenter() {
               updateMutation.mutateAsync({ deliveredOn: v || null })
             }
             type="date"
+            readOnly={dispatchReadOnly}
+            readOnlyTitle={readOnlyTitle}
           />
           <Field label="Origin" value={l.origin_name} />
           <Field label="Destination" value={l.destination_name} />
@@ -321,8 +355,9 @@ export function LoadCenter() {
           {/* Stage strip + Push to PCS — terminal action surface. Same
               controls as the cell-drawer's inline expand panel so anyone
               landing here from the searchable list can move the load
-              through the workflow without bouncing back to Today. */}
-          {l.assignment_id != null && (
+              through the workflow without bouncing back to Today.
+              Hidden for finance + viewer roles (read-only on dispatch). */}
+          {l.assignment_id != null && role.canAdvanceStage && (
             <div className="space-y-2 pb-3 border-b border-border">
               <div className="text-[10px] text-text-secondary uppercase tracking-wide">
                 Workflow stage
@@ -348,15 +383,17 @@ export function LoadCenter() {
                   Click any stage to set it directly. Hover for what each stage
                   means.
                 </span>
-                <button
-                  type="button"
-                  onClick={() => pushPcsMutation.mutate(l.assignment_id!)}
-                  disabled={pushPcsMutation.isPending}
-                  className="px-3 py-1 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-                  title="Hand this load off to PCS. v2 stops tracking after a successful push."
-                >
-                  {pushPcsMutation.isPending ? "Pushing…" : "→ Push to PCS"}
-                </button>
+                {role.canPushPcs && (
+                  <button
+                    type="button"
+                    onClick={() => pushPcsMutation.mutate(l.assignment_id!)}
+                    disabled={pushPcsMutation.isPending}
+                    className="px-3 py-1 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                    title="Hand this load off to PCS. v2 stops tracking after a successful push."
+                  >
+                    {pushPcsMutation.isPending ? "Pushing…" : "→ Push to PCS"}
+                  </button>
+                )}
               </div>
               {pushPcsMutation.isError && (
                 <div className="text-[11px] px-2 py-1.5 rounded bg-red-50 border border-red-300 text-red-900">

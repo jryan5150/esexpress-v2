@@ -120,7 +120,7 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {
@@ -167,7 +167,7 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {
@@ -265,7 +265,7 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {
@@ -333,7 +333,7 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {
@@ -525,7 +525,7 @@ const pcsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useCurrentUser, useLogoutFn } from "../hooks/use-auth";
+import { useRole } from "../hooks/use-role";
 import { usePresence } from "../hooks/use-presence";
 import { useBolStats } from "../hooks/use-bol";
 import { useWeightUnit } from "../hooks/use-weight-unit";
@@ -15,6 +16,7 @@ const COLLAPSE_STORAGE_KEY = "sidebar:collapsed";
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   const location = useLocation();
   const userQuery = useCurrentUser();
+  const role = useRole();
   const logout = useLogoutFn();
   const presenceQuery = usePresence();
   const onlineUsers = Array.isArray(presenceQuery.data)
@@ -307,10 +309,10 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 <Link
                   to="/exceptions"
                   className={`${navClass("/exceptions")} !pl-9`}
-                  title="Exception feed (legacy Today's Objectives) — gap-list view across all loads"
+                  title="Exceptions — role-aware morning queue. Builders see My Queue (your customer); admins see the system pulse; finance + viewer get tailored placeholders."
                 >
-                  <span className={iconClass("/exceptions")}>home</span>
-                  Exception Feed
+                  <span className={iconClass("/exceptions")}>inbox</span>
+                  Exceptions
                 </Link>
                 <Link
                   to="/load-center"
@@ -422,17 +424,21 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 <span className={iconClass("/admin/overview")}>dashboard</span>
                 Overview
               </Link>
-              <Link
-                to="/admin/users"
-                className={`${navClass("/admin/users")} !pl-9`}
-              >
-                <span className={iconClass("/admin/users")}>group</span>
-                Users
-              </Link>
-              <Link to="/finance" className={`${navClass("/finance")} !pl-9`}>
-                <span className={iconClass("/finance")}>payments</span>
-                Finance
-              </Link>
+              {role.canManageUsers && (
+                <Link
+                  to="/admin/users"
+                  className={`${navClass("/admin/users")} !pl-9`}
+                >
+                  <span className={iconClass("/admin/users")}>group</span>
+                  Users
+                </Link>
+              )}
+              {role.canEditFinance && (
+                <Link to="/finance" className={`${navClass("/finance")} !pl-9`}>
+                  <span className={iconClass("/finance")}>payments</span>
+                  Finance
+                </Link>
+              )}
               <Link
                 to="/admin/missed-loads"
                 className={`${navClass("/admin/missed-loads")} !pl-9`}

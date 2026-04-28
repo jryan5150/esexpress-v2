@@ -83,7 +83,7 @@ const commentRoutes: FastifyPluginAsync = async (fastify) => {
       const user = (request as any).user as {
         id: number;
         name: string;
-        role: "admin" | "dispatcher" | "viewer";
+        role: "admin" | "builder" | "finance" | "viewer";
       };
       try {
         const comment = await addComment(
@@ -150,7 +150,7 @@ const commentRoutes: FastifyPluginAsync = async (fastify) => {
       const user = (request as any).user as {
         id: number;
         name: string;
-        role: "admin" | "dispatcher" | "viewer";
+        role: "admin" | "builder" | "finance" | "viewer";
       };
       try {
         const result = await deleteComment(db, commentId, {

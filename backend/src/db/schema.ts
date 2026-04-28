@@ -21,7 +21,17 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   passwordHash: text("password_hash"),
-  role: text("role", { enum: ["admin", "dispatcher", "viewer"] })
+  // Role taxonomy locked 2026-04-28:
+  //   admin   — Jess, Bryan, Mike, Jace. Full read/write everywhere.
+  //   builder — Scout/Steph/Keli/Crystal/Katie/Jenny. Unscoped R/W on
+  //             dispatch surfaces (Today, Load Center, BOL Center, stage
+  //             advance, push to PCS). Default Today filter scopes to
+  //             their builder_routing customer but they can see all.
+  //   finance — owns rate + invoicing. R/W on /finance + Wells rate
+  //             fields. Read-only on dispatch surfaces.
+  //   viewer  — read-only across the app (auditors, observers).
+  // Migration 0031 renamed legacy 'dispatcher' rows → 'builder'.
+  role: text("role", { enum: ["admin", "builder", "finance", "viewer"] })
     .notNull()
     .default("viewer"),
   authProvider: text("auth_provider", {
@@ -57,9 +67,9 @@ export const ssoConfig = pgTable("sso_config", {
 export const invitedEmails = pgTable("invited_emails", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
-  role: text("role", { enum: ["dispatcher", "viewer"] })
+  role: text("role", { enum: ["admin", "builder", "finance", "viewer"] })
     .notNull()
-    .default("dispatcher"),
+    .default("builder"),
   invitedBy: integer("invited_by").references(() => users.id),
   accepted: boolean("accepted").default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),

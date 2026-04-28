@@ -56,7 +56,7 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {
@@ -125,7 +125,7 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {
@@ -179,7 +179,7 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {
@@ -227,7 +227,7 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {
@@ -282,7 +282,7 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
     },
     async (_request, _reply) => {
@@ -409,7 +409,7 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
     },
     async (_request, _reply) => {
@@ -433,7 +433,7 @@ const sheetsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {

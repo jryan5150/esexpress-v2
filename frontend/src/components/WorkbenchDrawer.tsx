@@ -77,6 +77,7 @@ import { StagePill } from "./StagePill";
 import { PhotoLightbox } from "./PhotoLightbox";
 import { RotatableImage } from "./RotatableImage";
 import { StageStrip } from "./StageStrip";
+import { useRole } from "../hooks/use-role";
 import { BOLDisplay } from "./BOLDisplay";
 import { PhotoStateBadge } from "./PhotoStateBadge";
 import type { WorkbenchRow, UncertainReason } from "../types/api";
@@ -1484,6 +1485,7 @@ interface LoadDetailShape {
 
 function LoadInlinePanel({ loadId }: { loadId: number }) {
   const qc = useQueryClient();
+  const role = useRole();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const detailQuery = useQuery({
     queryKey: ["cell-drawer-load", loadId],
@@ -1751,43 +1753,51 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
         )}
 
         <div className="text-[10px] uppercase tracking-wide text-text-secondary mb-1 mt-2">
-          Edit values · click any to change
+          {role.canEditDispatch
+            ? "Edit values · click any to change"
+            : "Values · read-only for your role"}
         </div>
         <InlineEditField
           label="Driver"
           value={l.driver_name}
           onSave={(v) => update.mutateAsync({ driverName: v || null })}
           size="sm"
+          readOnly={!role.canEditDispatch}
         />
         <InlineEditField
           label="Truck #"
           value={l.truck_no}
           onSave={(v) => update.mutateAsync({ truckNo: v || null })}
           size="sm"
+          readOnly={!role.canEditDispatch}
         />
         <InlineEditField
           label="Trailer #"
           value={l.trailer_no}
           onSave={(v) => update.mutateAsync({ trailerNo: v || null })}
           size="sm"
+          readOnly={!role.canEditDispatch}
         />
         <InlineEditField
           label="Carrier"
           value={l.carrier_name}
           onSave={(v) => update.mutateAsync({ carrierName: v || null })}
           size="sm"
+          readOnly={!role.canEditDispatch}
         />
         <InlineEditField
           label="Ticket #"
           value={l.ticket_no}
           onSave={(v) => update.mutateAsync({ ticketNo: v || null })}
           size="sm"
+          readOnly={!role.canEditDispatch}
         />
         <InlineEditField
           label="BOL #"
           value={l.bol_no}
           onSave={(v) => update.mutateAsync({ bolNo: v || null })}
           size="sm"
+          readOnly={!role.canEditDispatch}
         />
         <InlineEditField
           label="Wt (tons)"
@@ -1801,6 +1811,7 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           onSave={(v) => update.mutateAsync({ weightTons: v || null })}
           type="decimal"
           size="sm"
+          readOnly={!role.canEditDispatch}
         />
         <InlineEditField
           label="Net wt"
@@ -1808,6 +1819,7 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           onSave={(v) => update.mutateAsync({ netWeightTons: v || null })}
           type="decimal"
           size="sm"
+          readOnly={!role.canEditDispatch}
         />
         <InlineEditField
           label="Mileage"
@@ -1815,6 +1827,7 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           onSave={(v) => update.mutateAsync({ mileage: v || null })}
           type="decimal"
           size="sm"
+          readOnly={!role.canEditDispatch}
         />
         <InlineEditField
           label="Rate"
@@ -1823,6 +1836,7 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           onSave={(v) => update.mutateAsync({ rate: v || null })}
           type="decimal"
           size="sm"
+          readOnly={!role.canEditRate}
         />
         <InlineEditField
           label="Delivered"
@@ -1830,6 +1844,7 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           onSave={(v) => update.mutateAsync({ deliveredOn: v || null })}
           type="date"
           size="sm"
+          readOnly={!role.canEditDispatch}
         />
         {update.isError && (
           <div className="text-[10px] text-red-500 mt-1">
@@ -1841,7 +1856,7 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
         )}
 
         {/* ===== Workflow & Push to PCS ===== */}
-        {l.assignment_id != null && (
+        {l.assignment_id != null && role.canAdvanceStage && (
           <div className="mt-3 pt-3 border-t border-border space-y-2">
             <div className="text-[10px] uppercase tracking-wide text-text-secondary">
               Workflow stage · click to advance
@@ -1865,27 +1880,29 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
 
             {/* Push to PCS — terminal action. Loud success/failure per
                 fire-and-forget contract validated against the call
-                transcript. */}
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                type="button"
-                onClick={() => pushPcs.mutate(l.assignment_id!)}
-                disabled={pushPcs.isPending}
-                className="px-3 py-1.5 text-xs font-semibold rounded bg-accent text-white hover:opacity-90 disabled:opacity-50"
-                title="Send this load to PCS — terminal action, no further v2 state changes after this"
-              >
-                {pushPcs.isPending
-                  ? "Pushing…"
-                  : l.pcs_number
-                    ? "↻ Re-push to PCS"
-                    : "→ Push to PCS"}
-              </button>
-              {l.pcs_number && (
-                <span className="text-[10px] text-emerald-600">
-                  in PCS as #{l.pcs_number}
-                </span>
-              )}
-            </div>
+                transcript. Hidden for finance/viewer roles. */}
+            {role.canPushPcs && (
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => pushPcs.mutate(l.assignment_id!)}
+                  disabled={pushPcs.isPending}
+                  className="px-3 py-1.5 text-xs font-semibold rounded bg-accent text-white hover:opacity-90 disabled:opacity-50"
+                  title="Send this load to PCS — terminal action, no further v2 state changes after this"
+                >
+                  {pushPcs.isPending
+                    ? "Pushing…"
+                    : l.pcs_number
+                      ? "↻ Re-push to PCS"
+                      : "→ Push to PCS"}
+                </button>
+                {l.pcs_number && (
+                  <span className="text-[10px] text-emerald-600">
+                    in PCS as #{l.pcs_number}
+                  </span>
+                )}
+              </div>
+            )}
             {pushPcs.isError && (
               <div className="text-[11px] px-2 py-1.5 rounded bg-red-50 border border-red-300 text-red-900">
                 <strong>PCS rejected the push:</strong>{" "}

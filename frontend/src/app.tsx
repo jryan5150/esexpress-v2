@@ -33,6 +33,9 @@ const Workbench = lazy(() =>
 const ExceptionFeed = lazy(() =>
   import("./pages/ExceptionFeed").then((m) => ({ default: m.ExceptionFeed })),
 );
+const Exceptions = lazy(() =>
+  import("./pages/Exceptions").then((m) => ({ default: m.Exceptions })),
+);
 const DispatchDesk = lazy(() =>
   import("./pages/DispatchDesk").then((m) => ({ default: m.DispatchDesk })),
 );
@@ -154,12 +157,13 @@ export function App() {
               <Route path="/maintenance" element={<MaintenanceMode />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<Layout />}>
-                  {/* / now redirects to /workbench. The old "Today's
-                      Objectives" page (ExceptionFeed) lives at /exceptions
-                      under Reference for the rare case dispatch needs the
-                      legacy gap-list view. Active workflow lives on Today. */}
+                  {/* / redirects to /workbench. /exceptions is role-aware:
+                      admin sees the legacy ExceptionFeed gap-list,
+                      builder sees "My Queue" scoped to their customer,
+                      finance sees a placeholder lens, viewer redirects.
+                      Wrapper component selects the lens at runtime. */}
                   <Route index element={<Navigate to="/workbench" replace />} />
-                  <Route path="exceptions" element={<ExceptionFeed />} />
+                  <Route path="exceptions" element={<Exceptions />} />
                   <Route path="workbench" element={<Workbench />} />
                   <Route path="bol" element={<BolQueue />} />
                   <Route

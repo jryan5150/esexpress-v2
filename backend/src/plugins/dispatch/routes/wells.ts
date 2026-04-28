@@ -104,7 +104,7 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder", "finance"]),
       ],
       schema: {
         body: {
@@ -157,7 +157,7 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder", "finance"]),
       ],
       schema: {
         params: {
@@ -233,7 +233,7 @@ const wellRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder", "finance"]),
       ],
       schema: {
         params: {

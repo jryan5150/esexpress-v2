@@ -16,9 +16,10 @@ import { useEffect } from "react";
  * the email + PDF; how-to lives here, in-context.
  */
 
-// Bumped 2026-04-28-pm-2 — forces re-show after Load Center stage
-// controls + Push to PCS, comment-attribution picker, stage tooltips.
-const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-2";
+// Bumped 2026-04-28-pm-3 — forces re-show after roles rollout
+// (admin / builder / finance / viewer) + role-aware /exceptions
+// (My Queue for builders, Manager Blockers for admins).
+const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-3";
 
 export function markWhatsNewSeen() {
   try {
@@ -147,6 +148,108 @@ export function WhatsNew() {
             patch in minutes.
           </p>
         </div>
+
+        {/* Tue PM 3 — Roles + role-aware /exceptions */}
+        <Section
+          number="00a"
+          title="Roles are live — admin, builder, finance, viewer"
+          why="Up to now everyone effectively had admin powers. With more of the team poking around (and finance/viewers coming in), we needed a clean role split so the right buttons surface for the right people. No one's permissions silently shrank — every existing account stays admin until you say otherwise."
+          how={
+            <div className="space-y-3">
+              <p>The four roles + what they can do:</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border border-outline-variant/40">
+                  <thead className="bg-surface-container-high">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-headline">
+                        Role
+                      </th>
+                      <th className="text-left px-3 py-2 font-headline">Who</th>
+                      <th className="text-left px-3 py-2 font-headline">
+                        Can do
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/30">
+                    <tr>
+                      <td className="px-3 py-2 font-bold">admin</td>
+                      <td className="px-3 py-2">Jess, Bryan, Mike, Jace</td>
+                      <td className="px-3 py-2">Everything</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 font-bold">builder</td>
+                      <td className="px-3 py-2">
+                        Scout, Steph, Keli, Crystal, Katie, Jenny
+                      </td>
+                      <td className="px-3 py-2">
+                        Edit dispatch fields, advance stage, push to PCS, match
+                        BOLs. Today defaults to their customer but sees
+                        everything.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 font-bold">finance</td>
+                      <td className="px-3 py-2">TBD</td>
+                      <td className="px-3 py-2">
+                        Edit rate fields + Wells rate page + /finance. Read-only
+                        on dispatch surfaces.
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 font-bold">viewer</td>
+                      <td className="px-3 py-2">Auditors / observers</td>
+                      <td className="px-3 py-2">Read-only across the app.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-on-surface-variant">
+                Buttons hide when you don't have permission instead of graying
+                out, so the UI stays clean for each role. Backend also enforces
+                the same rules — the green Push to PCS button isn't hideable
+                from a finance account, the API rejects it independently.
+              </p>
+            </div>
+          }
+        />
+
+        {/* Tue PM 3 — /exceptions becomes role-aware */}
+        <Section
+          number="00b"
+          title="/exceptions is now your role's morning queue"
+          why="Old Today's Objectives page was a mixed dashboard nobody opened twice. Now it's a personal punch-list scoped to your role, so it gives you the actual list of things you should look at first."
+          how={
+            <div className="space-y-3">
+              <ul className="list-disc list-inside space-y-1.5 text-sm">
+                <li>
+                  <strong>Builders</strong> see <em>My Queue</em> — your
+                  customer's photos to match, loads stuck Uncertain,
+                  discrepancies to resolve, sheet drift, missing tickets. Each
+                  row links straight to the load.
+                </li>
+                <li>
+                  <strong>Admins</strong> (Jess + Mike + Bryan + Jace) see the
+                  full system pulse — wells overview, dispatch readiness,
+                  validation summary, pipeline status, plus the cross-check
+                  pill.
+                </li>
+                <li>
+                  <strong>Finance</strong> gets a placeholder for now (AR aging
+                  coming) with quick links to Finance, Discrepancies, Sheet
+                  Truth, and Wells.
+                </li>
+                <li>
+                  <strong>Viewers</strong> redirect to Today since their
+                  read-only flow lives there.
+                </li>
+              </ul>
+              <p className="text-xs text-on-surface-variant">
+                Open it from Reference → Exception Feed in the sidebar.
+              </p>
+            </div>
+          }
+          cta={{ label: "Open my queue", to: "/exceptions" }}
+        />
 
         {/* Tue PM 2 — Load Center now mirrors the cell-drawer action surface */}
         <Section

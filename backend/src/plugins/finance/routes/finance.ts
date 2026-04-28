@@ -106,7 +106,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "finance"]),
       ],
       schema: {
         body: {
@@ -161,7 +161,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "finance"]),
       ],
       schema: {
         body: {
@@ -222,7 +222,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "finance"]),
       ],
       schema: {
         params: {
@@ -269,7 +269,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "finance"]),
       ],
       schema: {
         params: {
@@ -313,7 +313,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "finance"]),
       ],
       schema: {
         params: {
@@ -350,7 +350,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "finance"]),
       ],
       schema: {
         params: {
@@ -419,7 +419,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "finance"]),
       ],
       schema: {
         params: {
@@ -495,7 +495,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "finance"]),
       ],
       schema: {
         params: {
@@ -531,7 +531,7 @@ const financeRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "finance"]),
       ],
       schema: {
         params: {

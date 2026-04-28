@@ -183,7 +183,7 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         body: {
@@ -397,7 +397,7 @@ const jotformRoutes: FastifyPluginAsync = async (fastify) => {
     {
       preHandler: [
         fastify.authenticate,
-        fastify.requireRole(["admin", "dispatcher"]),
+        fastify.requireRole(["admin", "builder"]),
       ],
       schema: {
         params: {

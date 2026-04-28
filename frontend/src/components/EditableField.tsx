@@ -16,6 +16,8 @@ export function EditableField({
   prefix,
   type,
   size,
+  readOnly,
+  readOnlyTitle,
 }: {
   label: string;
   value: string | null | undefined;
@@ -23,6 +25,12 @@ export function EditableField({
   prefix?: string;
   type?: "text" | "decimal" | "date";
   size?: "sm" | "md";
+  /** When true, render value statically — no edit affordance, no
+   *  click handler, no "click to add" placeholder. Used to gate by
+   *  role (finance/viewer get read-only on dispatch fields). */
+  readOnly?: boolean;
+  /** Tooltip on the read-only display, e.g. "Read-only — finance role". */
+  readOnlyTitle?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value ?? "");
@@ -55,6 +63,24 @@ export function EditableField({
       ? "text-[9px] text-text-secondary uppercase tracking-wide"
       : "text-[10px] text-text-secondary uppercase tracking-wide";
   const valueCls = size === "sm" ? "text-xs" : "text-sm";
+
+  if (readOnly) {
+    return (
+      <div className={`grid grid-cols-3 gap-2 items-baseline ${valueCls}`}>
+        <div className={labelCls}>{label}</div>
+        <div
+          className="col-span-2 font-medium text-text-secondary"
+          title={readOnlyTitle ?? "Read-only"}
+        >
+          {value ? (
+            `${prefix ?? ""}${value}`
+          ) : (
+            <span className="text-text-secondary italic font-normal">—</span>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`grid grid-cols-3 gap-2 items-baseline ${valueCls}`}>
