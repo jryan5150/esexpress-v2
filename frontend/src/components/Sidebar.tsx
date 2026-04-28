@@ -410,6 +410,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               className="overflow-hidden animate-slide-down"
             >
               <Link
+                to="/admin/overview"
+                className={`${navClass("/admin/overview")} !pl-9`}
+                title="Admin Overview — all five reconciliation surfaces (Sheet Truth, PCS Truth, Discrepancies, Order of Invoicing, Sheet Status) in one consolidated view."
+              >
+                <span className={iconClass("/admin/overview")}>dashboard</span>
+                Overview
+              </Link>
+              <Link
                 to="/admin/users"
                 className={`${navClass("/admin/users")} !pl-9`}
               >

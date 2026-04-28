@@ -103,6 +103,11 @@ const Aliases = lazy(() =>
     default: m.Aliases,
   })),
 );
+const AdminOverview = lazy(() =>
+  import("./pages/admin/AdminOverview").then((m) => ({
+    default: m.AdminOverview,
+  })),
+);
 const LoadCenter = lazy(() =>
   import("./pages/LoadCenter").then((m) => ({
     default: m.LoadCenter,
@@ -191,6 +196,7 @@ export function App() {
                   <Route path="admin/jenny-queue" element={<JennyQueue />} />
                   <Route path="admin/sheet-status" element={<SheetStatus />} />
                   <Route path="admin/aliases" element={<Aliases />} />
+                  <Route path="admin/overview" element={<AdminOverview />} />
                   <Route path="load-report" element={<LoadReport />} />
                   <Route path="load-center" element={<LoadCenter />} />
                   <Route path="settings" element={<Settings />} />
