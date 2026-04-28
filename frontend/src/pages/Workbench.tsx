@@ -5,7 +5,6 @@ import { api } from "../lib/api";
 import { useCurrentUser } from "../hooks/use-auth";
 import { useHeartbeat } from "../hooks/use-presence";
 import { useBulkConfirm } from "../hooks/use-workbench";
-import { WorksurfaceTopStrip } from "../components/WorksurfaceTopStrip";
 import { UserHighlightStrip } from "../components/UserHighlightStrip";
 import { WellGrid } from "../components/WellGrid";
 import { WorkbenchDrawer } from "../components/WorkbenchDrawer";
@@ -361,11 +360,10 @@ export function Workbench() {
         </div>
       )}
 
-      <WorksurfaceTopStrip
-        weekStart={weekStart}
-        currentHighlight={highlight}
-        onBuilderClick={(custId) => handleHighlight(custId ?? "all")}
-      />
+      {/* Builder→customer matrix removed from Today 2026-04-28-pm-3.
+          Same view lives at /admin/builder-matrix; on Today it was
+          duplicating space the well grid needs. UserHighlightStrip below
+          still drives the customer filter on the grid. */}
 
       <UserHighlightStrip
         customers={customers}
