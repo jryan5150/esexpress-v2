@@ -3374,9 +3374,11 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         l.rate::text AS rate, l.source, l.origin_name, l.destination_name,
         l.customer_name, l.status,
         c.name AS bill_to,
+        a.id AS assignment_id,
         a.status AS assignment_status,
         a.handler_stage,
         a.photo_status,
+        a.pcs_number,
         w.name AS well_name
       FROM loads l
       LEFT JOIN customers c ON c.id = l.customer_id

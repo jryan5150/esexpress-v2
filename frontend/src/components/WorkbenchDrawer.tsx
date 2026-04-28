@@ -1412,9 +1412,11 @@ interface LoadDetailShape {
   origin_name: string | null;
   destination_name: string | null;
   status: string | null;
+  assignment_id: number | null;
   assignment_status: string | null;
   handler_stage: string | null;
   photo_status: string | null;
+  pcs_number: string | null;
   well_name: string | null;
   bill_to: string | null;
   photos: Array<{ id: number; source_url: string; source: string }>;
@@ -1428,6 +1430,41 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
     queryKey: ["cell-drawer-load", loadId],
     queryFn: () => api.get<LoadDetailShape>(`/diag/load-detail?load=${loadId}`),
     staleTime: 15_000,
+  });
+
+  // Stage advance — POST /dispatch/workbench/:assignment_id/advance
+  // (assignment_id comes from /diag/load-detail directly).
+  const advance = useMutation({
+    mutationFn: ({
+      stage,
+      assignmentId,
+    }: {
+      stage: string;
+      assignmentId: number;
+    }) => api.post(`/dispatch/workbench/${assignmentId}/advance`, { stage }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cell-drawer-load", loadId] });
+      qc.invalidateQueries({ queryKey: ["worksurface", "cell-context"] });
+    },
+  });
+
+  // Push to PCS — POST /pcs/dispatch with the assignment_id. Per Jess's
+  // workflow: this is the terminal action. Success = green confirmation +
+  // pcs_number returned. Failure = loud red with the actual PCS error so
+  // she knows to chase it (no silent fail allowed in fire-and-forget).
+  const pushPcs = useMutation({
+    mutationFn: (assignmentId: number) =>
+      api.post<{
+        success: boolean;
+        pcsLoadNo?: string;
+        pcsNumber?: string;
+        error?: { code?: string; message?: string };
+        message?: string;
+      }>(`/pcs/dispatch`, { assignmentId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cell-drawer-load", loadId] });
+      qc.invalidateQueries({ queryKey: ["worksurface", "cell-context"] });
+    },
   });
   const update = useMutation({
     mutationFn: (patch: Record<string, string | null>) =>
@@ -1735,7 +1772,143 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
         {update.isSuccess && (
           <div className="text-[10px] text-emerald-600 mt-1">Saved.</div>
         )}
+
+        {/* ===== Workflow & Push to PCS ===== */}
+        {l.assignment_id != null && (
+          <div className="mt-3 pt-3 border-t border-border space-y-2">
+            <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+              Workflow stage · click to advance
+            </div>
+            <StageStrip
+              currentStage={l.handler_stage ?? "uncertain"}
+              onAdvance={(stage) =>
+                advance.mutateAsync({
+                  stage,
+                  assignmentId: l.assignment_id!,
+                })
+              }
+              isPending={advance.isPending}
+            />
+            {advance.isError && (
+              <div className="text-[10px] text-red-500">
+                Stage change failed:{" "}
+                {(advance.error as Error)?.message ?? "unknown"}
+              </div>
+            )}
+
+            {/* Push to PCS — terminal action. Loud success/failure per
+                fire-and-forget contract validated against the call
+                transcript. */}
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => pushPcs.mutate(l.assignment_id!)}
+                disabled={pushPcs.isPending}
+                className="px-3 py-1.5 text-xs font-semibold rounded bg-accent text-white hover:opacity-90 disabled:opacity-50"
+                title="Send this load to PCS — terminal action, no further v2 state changes after this"
+              >
+                {pushPcs.isPending
+                  ? "Pushing…"
+                  : l.pcs_number
+                    ? "↻ Re-push to PCS"
+                    : "→ Push to PCS"}
+              </button>
+              {l.pcs_number && (
+                <span className="text-[10px] text-emerald-600">
+                  in PCS as #{l.pcs_number}
+                </span>
+              )}
+            </div>
+            {pushPcs.isError && (
+              <div className="text-[11px] px-2 py-1.5 rounded bg-red-50 border border-red-300 text-red-900">
+                <strong>PCS rejected the push:</strong>{" "}
+                {(pushPcs.error as Error)?.message ?? "unknown error"}. Verify
+                the load's required fields (well, driver, weight, photo) and try
+                again — or open in BOL Center to investigate.
+              </div>
+            )}
+            {pushPcs.isSuccess && pushPcs.data && (
+              <div className="text-[11px] px-2 py-1.5 rounded bg-emerald-50 border border-emerald-300 text-emerald-900">
+                {pushPcs.data.success ? (
+                  <>
+                    <strong>PCS accepted ✓</strong>
+                    {(pushPcs.data.pcsLoadNo || pushPcs.data.pcsNumber) && (
+                      <>
+                        {" "}
+                        — now in PCS as #
+                        {pushPcs.data.pcsLoadNo ?? pushPcs.data.pcsNumber}
+                      </>
+                    )}
+                    . Load handed off; v2 stops tracking from here.
+                  </>
+                ) : (
+                  <>
+                    <strong>Push call returned but not accepted:</strong>{" "}
+                    {pushPcs.data.error?.message ??
+                      pushPcs.data.message ??
+                      "see logs"}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+/** StageStrip — clickable 5-stage progress bar. Current stage highlighted;
+ *  click any stage (including a backwards stage) to set it directly via
+ *  the advance mutation. */
+function StageStrip({
+  currentStage,
+  onAdvance,
+  isPending,
+}: {
+  currentStage: string;
+  onAdvance: (stage: string) => Promise<unknown>;
+  isPending: boolean;
+}) {
+  const STAGES: Array<{ key: string; label: string }> = [
+    { key: "uncertain", label: "Uncertain" },
+    { key: "ready_to_build", label: "Ready" },
+    { key: "building", label: "Building" },
+    { key: "entered", label: "Entered" },
+    { key: "cleared", label: "Cleared" },
+  ];
+  const currentIdx = STAGES.findIndex((s) => s.key === currentStage);
+
+  return (
+    <div className="flex items-center gap-0.5">
+      {STAGES.map((s, i) => {
+        const isCurrent = i === currentIdx;
+        const isPast = i < currentIdx;
+        return (
+          <button
+            key={s.key}
+            type="button"
+            onClick={() => onAdvance(s.key)}
+            disabled={isPending || isCurrent}
+            className={`
+              flex-1 px-1.5 py-1 text-[10px] font-medium border transition-colors
+              ${i === 0 ? "rounded-l" : ""}
+              ${i === STAGES.length - 1 ? "rounded-r" : ""}
+              ${
+                isCurrent
+                  ? "bg-accent text-white border-accent"
+                  : isPast
+                    ? "bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-200"
+                    : "bg-bg-primary text-text-secondary border-border hover:bg-bg-tertiary"
+              }
+              disabled:cursor-default
+            `}
+            title={`Set handler stage to ${s.label}`}
+          >
+            {s.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
