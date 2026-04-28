@@ -8,9 +8,6 @@ import { useBulkConfirm } from "../hooks/use-workbench";
 import { WorksurfaceTopStrip } from "../components/WorksurfaceTopStrip";
 import { UserHighlightStrip } from "../components/UserHighlightStrip";
 import { WellGrid } from "../components/WellGrid";
-import { InboxSection } from "../components/InboxSection";
-import { TodayIntakeSection } from "../components/TodayIntakeSection";
-import { JennyQueueSection } from "../components/JennyQueueSection";
 import { WorkbenchDrawer } from "../components/WorkbenchDrawer";
 
 interface CellLoad {
@@ -140,25 +137,14 @@ export function Workbench() {
     setSearchParams(sp);
   };
 
-  // Inbox customer filter — Jess (admin manager) sees everything;
-  // Builder customer scoping. Three cases:
-  //   1. Known manager (jryan / jess / mike) → unfiltered (sees all)
-  //   2. Mapped builder (Scout/Steph/Keli/Crystal/Katie/Jenny matched
-  //      via builder_routing) → filtered to their customer
-  //   3. Unmapped user (no builder_routing match, not a known manager)
-  //      → unfiltered + show banner so they know
+  // Surface when a logged-in user has neither a builder_routing match
+  // nor a known-manager email. Without this banner, Katie + several
+  // other team accounts silently get the unfiltered grid view.
   const isKnownManager = useMemo(() => {
     if (!me?.email) return false;
     const local = me.email.split("@")[0].toLowerCase();
     return ["jryan", "jess", "mike"].includes(local);
   }, [me]);
-  const inboxCustomerIds = useMemo(() => {
-    if (isKnownManager) return [] as number[];
-    return myCustomerId != null ? [myCustomerId] : [];
-  }, [isKnownManager, myCustomerId]);
-  // Surface when a logged-in user has neither a builder_routing match
-  // nor a known-manager email. Without this banner, Katie + several
-  // other team accounts silently get the unfiltered manager view.
   const showUnmappedBanner = useMemo(() => {
     if (!me?.email) return false;
     if (isKnownManager) return false;
@@ -395,53 +381,6 @@ export function Workbench() {
         onCellClick={handleCellClick}
         onBadgeClick={handleBadgeClick}
         paintedStatusByCell={paintedStatusByCell}
-      />
-
-      <InboxSection
-        customerIds={inboxCustomerIds}
-        initialOpen
-        onItemClick={(item) => {
-          // Inbox shows items from a 14-day window so most are from a
-          // prior week. Navigate to the item's week if needed, then
-          // open the cell drawer for that (well, dow).
-          if (item.load_id != null && item.well_id == null) {
-            // Non-well items (e.g. sheet_drift on a customer) — open
-            // the load detail in a new tab.
-            window.open(`/load-report?load=${item.load_id}`, "_blank");
-            return;
-          }
-          if (item.well_id == null || !item.day) {
-            // Nothing well-tied to drill into — last resort, open the
-            // load report if we have a load_id.
-            if (item.load_id)
-              window.open(`/load-report?load=${item.load_id}`, "_blank");
-            return;
-          }
-          const itemDate = new Date(item.day);
-          // Compute the Sunday of the item's week (America/Chicago Sun-start).
-          const itemSunday = new Date(itemDate);
-          itemSunday.setUTCDate(itemDate.getUTCDate() - itemDate.getUTCDay());
-          const itemWeekStr = itemSunday.toISOString().slice(0, 10);
-          const dow = itemDate.getUTCDay();
-          if (dow < 0 || dow > 6) return;
-          // Navigate to the item's week if we're not already there.
-          if (effectiveWeekStart !== itemWeekStr) {
-            const sp = new URLSearchParams(searchParams);
-            sp.set("week", itemWeekStr);
-            setSearchParams(sp);
-          }
-          setOpenCell({ wellId: item.well_id, dow });
-        }}
-      />
-      <TodayIntakeSection />
-      <JennyQueueSection
-        onLoadClick={(loadId) => {
-          // Open the load detail in a new tab via the existing load-detail
-          // route. Cell-mapping the load is non-trivial (non-standard work
-          // often has no well or doesn't fit the (well, day) grid); the
-          // existing route is the right surface for these.
-          window.open(`/load-report?load=${loadId}`, "_blank");
-        }}
       />
 
       {/* Cell-mode drawer — opens when a Worksurface grid cell is clicked.

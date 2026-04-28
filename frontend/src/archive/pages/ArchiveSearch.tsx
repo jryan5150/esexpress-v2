@@ -30,15 +30,13 @@ export function ArchiveSearch() {
   const [date, setDate] = useState("");
   const [stats, setStats] = useState<HistoricalStats | null>(null);
 
-  // Fetch stats once on mount — auditable proof of what's captured
+  // Fetch stats once on mount — auditable proof of what's captured.
+  // api.get prefixes /api/v1 + auto-unwraps the {success,data} envelope,
+  // so we ask for the inner shape directly.
   useEffect(() => {
     api
-      .get<{ success: boolean; data: HistoricalStats }>(
-        "/api/v1/diag/historical-stats",
-      )
-      .then((res) => {
-        if (res.success) setStats(res.data);
-      })
+      .get<HistoricalStats>("/diag/historical-stats")
+      .then((res) => setStats(res))
       .catch(() => {
         /* silent — stats are nice-to-have, not critical */
       });

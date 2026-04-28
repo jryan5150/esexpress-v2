@@ -1,7 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { qk } from "../../lib/query-client";
-import type { DispatchDeskLoad, Paginated } from "../../types/api";
+import type { DispatchDeskLoad } from "../../types/api";
+
+// Backend returns {success, data: DispatchDeskLoad[], meta: {page, limit, count}}.
+// api.get unwraps json.data, so the queryFn resolves to the array directly.
+// We bundle it back into an items/total shape so the page renders without
+// double-unwrap surprises.
+interface ArchivePage {
+  items: DispatchDeskLoad[];
+  total: number;
+}
 
 export function useArchiveLoads(filters?: {
   wellId?: number;
@@ -17,10 +26,24 @@ export function useArchiveLoads(filters?: {
   if (filters?.limit) params.set("limit", String(filters.limit));
   const qs = params.toString();
 
-  return useQuery({
+  return useQuery<ArchivePage>({
     queryKey: qk.archive.loads(filters),
-    queryFn: () =>
-      api.get<Paginated<DispatchDeskLoad>>(`/dispatch/dispatch-desk?${qs}`),
+    queryFn: async () => {
+      const items = await api.get<DispatchDeskLoad[]>(
+        `/dispatch/dispatch-desk?${qs}`,
+      );
+      // Backend doesn't return a total. Use returned page size as a
+      // floor — pagination shows "this page of N" honestly, and the
+      // Pagination control's `next` button stays available while a
+      // full page comes back.
+      const limit = filters?.limit ?? 100;
+      const page = filters?.page ?? 1;
+      const total =
+        items.length === limit
+          ? page * limit + 1
+          : (page - 1) * limit + items.length;
+      return { items, total };
+    },
   });
 }
 

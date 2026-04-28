@@ -16,10 +16,9 @@ import { useEffect } from "react";
  * the email + PDF; how-to lives here, in-context.
  */
 
-// Bumped 2026-04-28 — forces re-show of the post-Monday-call shipped
-// features (Load Center, inline expand, OCR loop, stage strip, push to
-// PCS, lightbox, photo backfill, AdminOverview, etc.).
-const RELEASE_KEY = "esexpress-whatsnew-2026-04-28";
+// Bumped 2026-04-28-pm — forces re-show after Today-page slim, manual ↻
+// rotate, Archive fix, Load Center sidebar fix.
+const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm";
 
 export function markWhatsNewSeen() {
   try {
@@ -183,6 +182,52 @@ export function WhatsNew() {
             </div>
           }
           cta={{ label: "Open Worksurface", to: "/workbench" }}
+        />
+
+        {/* Tue PM batch — page-strip + manual rotate + archive fix + load-center fix */}
+        <Section
+          number="00b"
+          title="Today page slimmed + manual ↻ rotate on every photo"
+          why='From your Tue feedback: "lets just keep the bill to / well grid" and "the rotation fix for the images isnt functioning either on some of the photos that are sideways." Both done.'
+          how={
+            <div className="space-y-3">
+              <p>
+                <strong>Today page is just the grid now.</strong> The Inbox,
+                Today's Intake, and Jenny's Queue blocks below the well grid are
+                gone — those were noise on a page that should be one glance:
+                who's working, what cells need attention. The cell drawer +
+                inline-expand on the right still does everything.
+              </p>
+              <p>
+                <strong>↻ Rotate button on every photo.</strong> Auto-EXIF
+                rotation handled most sideways shots, but a handful of driver
+                photos were still landing rotated. There's now a circular ↻
+                button on every photo (cell drawer, Load Center, lightbox zoom).
+                Click it once for 90°, twice for 180°, etc. Your rotation choice
+                is remembered per-load — next time the same load loads, the
+                photo comes back the way you left it.
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>
+                  <strong>Archive page fixed</strong> — was throwing on the
+                  stats banner load. Now renders the historical capture stats +
+                  paginated table of pre-Jan-2026 loads.
+                </li>
+                <li>
+                  <strong>Load Center sidebar entry now useful</strong> —
+                  clicking it lands on a searchable list of every recent load
+                  (filter by BOL, ticket #, driver, truck, well, customer). Pick
+                  a row to open the editable workspace for that load. Moved into
+                  Reference for tidiness.
+                </li>
+                <li>
+                  <strong>Today's Objectives</strong> moved under Reference — it
+                  was the old Phase-1 page; the active workflow lives on Today.
+                </li>
+              </ul>
+            </div>
+          }
+          cta={{ label: "Open Today", to: "/workbench" }}
         />
 
         <Section

@@ -75,6 +75,7 @@ class DrawerErrorBoundary extends Component<
 }
 import { StagePill } from "./StagePill";
 import { PhotoLightbox } from "./PhotoLightbox";
+import { RotatableImage } from "./RotatableImage";
 import { BOLDisplay } from "./BOLDisplay";
 import { PhotoStateBadge } from "./PhotoStateBadge";
 import type { WorkbenchRow, UncertainReason } from "../types/api";
@@ -863,13 +864,12 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerBodyProps) {
         <div className="relative bg-black/20 rounded flex flex-col items-center justify-center min-h-[280px] p-4 gap-3">
           {currentPhoto ? (
             <>
-              <img
+              <RotatableImage
                 src={currentPhoto}
                 alt="BOL"
-                className="max-h-[360px] w-auto cursor-zoom-in rounded"
-                loading="eager"
-                decoding="async"
-                onClick={() => setLightbox(true)}
+                storageKey={`load-${row.loadId}-photo-${photoIdx}`}
+                imgClassName="max-h-[360px] w-auto cursor-zoom-in rounded"
+                onImgClick={() => setLightbox(true)}
                 onError={(e) => {
                   // Transient fetch failure (proxy 503, CDN edge miss).
                   // One retry with a cache-buster — if that fails, leave
@@ -881,6 +881,7 @@ function WorkbenchDrawerBody({ row, onClose }: WorkbenchDrawerBodyProps) {
                     img.src = `${currentPhoto}${sep}_r=${Date.now()}`;
                   }
                 }}
+                controlPosition="top-right"
               />
               {photoUrls.length > 1 && (
                 <>
@@ -1533,24 +1534,23 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
           Photo
         </div>
         {photoUrl ? (
-          <button
-            type="button"
-            onClick={() => setLightboxOpen(true)}
-            className="block w-full p-0 border-0 bg-transparent cursor-zoom-in group"
-            title="Click to view full size"
-          >
-            <img
+          <div className="space-y-0.5">
+            <RotatableImage
               src={photoUrl}
               alt={`BOL for load ${l.id}`}
-              className="w-full max-h-72 object-contain rounded border border-border bg-black/5 group-hover:opacity-90 transition-opacity"
+              storageKey={`load-${l.id}`}
+              imgClassName="w-full max-h-72 object-contain rounded border border-border bg-black/5 cursor-zoom-in hover:opacity-90 transition-opacity"
+              onImgClick={() => setLightboxOpen(true)}
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = "none";
               }}
+              controlPosition="top-right"
             />
-            <div className="text-[10px] text-text-secondary mt-0.5 group-hover:text-accent">
-              click to zoom ⤢
+            <div className="text-[10px] text-text-secondary flex items-center justify-between">
+              <span>click image to zoom ⤢</span>
+              <span>↻ remembers per load</span>
             </div>
-          </button>
+          </div>
         ) : (
           <div className="text-xs text-text-secondary p-6 text-center border border-dashed border-border rounded">
             No photo on file

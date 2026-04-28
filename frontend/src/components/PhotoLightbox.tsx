@@ -31,6 +31,16 @@ export function PhotoLightbox({
   const [index, setIndex] = useState(() =>
     Math.max(0, Math.min(initialIndex, Math.max(0, effectiveUrls.length - 1))),
   );
+  // Session-only rotation per photo (key = index). Click ↻ to step
+  // 90° while zoomed; resets when the lightbox closes.
+  const [rotations, setRotations] = useState<Record<number, number>>({});
+  const rotation = rotations[index] ?? 0;
+  const rotateCurrent = () => {
+    setRotations((prev) => ({
+      ...prev,
+      [index]: ((prev[index] ?? 0) + 90) % 360,
+    }));
+  };
 
   // Reset index when the source array itself changes.
   useEffect(() => {
@@ -76,6 +86,18 @@ export function PhotoLightbox({
       >
         ×
       </button>
+      <button
+        type="button"
+        aria-label="Rotate photo 90°"
+        onClick={(e) => {
+          e.stopPropagation();
+          rotateCurrent();
+        }}
+        title={`Rotate 90° (currently ${rotation}°)`}
+        className="absolute top-4 right-16 w-10 h-10 rounded-full bg-white/15 hover:bg-white/30 text-white text-xl leading-none flex items-center justify-center"
+      >
+        ↻
+      </button>
       {multi && (
         <>
           <button
@@ -108,6 +130,10 @@ export function PhotoLightbox({
       <img
         src={resolvePhotoUrl(current)}
         alt={alt ?? "Load photo"}
+        style={{
+          transform: `rotate(${rotation}deg)`,
+          transition: "transform 200ms ease",
+        }}
         className="max-w-[92vw] max-h-[92vh] rounded-md shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       />

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
@@ -6,6 +6,7 @@ import { useHeartbeat } from "../hooks/use-presence";
 import { resolvePhotoUrl } from "../lib/photo-url";
 import { EditableField } from "../components/EditableField";
 import { PhotoLightbox } from "../components/PhotoLightbox";
+import { RotatableImage } from "../components/RotatableImage";
 
 interface LoadDetail {
   id: number;
@@ -107,13 +108,7 @@ export function LoadCenter() {
 
   if (!loadId) {
     return (
-      <div className="flex-1 min-h-0 overflow-y-auto p-6 max-w-4xl">
-        <h1 className="text-2xl font-headline mb-2">Load Center</h1>
-        <p className="text-sm text-text-secondary">
-          Open a load from the worksurface (click a load in any cell drawer) to
-          land here with that load preselected for editing.
-        </p>
-      </div>
+      <LoadsListBrowser onPick={(id) => setParams({ load: String(id) })} />
     );
   }
 
@@ -288,24 +283,22 @@ export function LoadCenter() {
               Photo
             </div>
             {photoUrl ? (
-              <button
-                type="button"
-                onClick={() => setLightboxOpen(true)}
-                className="block w-full p-0 border-0 bg-transparent cursor-zoom-in group"
-                title="Click to view full size"
-              >
-                <img
+              <div className="space-y-1">
+                <RotatableImage
                   src={photoUrl}
                   alt={`BOL for load ${l.id}`}
-                  className="w-full max-h-96 object-contain rounded border border-border bg-black/10 group-hover:opacity-90 transition-opacity"
+                  storageKey={`load-${l.id}`}
+                  imgClassName="w-full max-h-96 object-contain rounded border border-border bg-black/10 cursor-zoom-in hover:opacity-90 transition-opacity"
+                  onImgClick={() => setLightboxOpen(true)}
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
                   }}
                 />
-                <div className="text-[10px] text-text-secondary mt-0.5 group-hover:text-accent">
-                  click to zoom ⤢
+                <div className="text-[10px] text-text-secondary flex items-center justify-between">
+                  <span>click image to zoom ⤢</span>
+                  <span>↻ rotates &amp; remembers per load</span>
                 </div>
-              </button>
+              </div>
             ) : (
               <div className="text-xs text-text-secondary p-6 text-center border border-dashed border-border rounded">
                 No photo on file
@@ -471,3 +464,152 @@ function Field({
 
 // EditableField extracted to ../components/EditableField for reuse in
 // the WorkbenchDrawer's per-load inline-expand panel.
+
+// Empty-state landing for /load-center (no ?load param). Renders a
+// searchable list using /diag/loads-list so the sidebar entry actually
+// produces useful output instead of bouncing the user back to Today.
+function LoadsListBrowser({ onPick }: { onPick: (id: number) => void }) {
+  const [search, setSearch] = useState("");
+  // Debounce search a beat so each keystroke doesn't fire a query.
+  const [debounced, setDebounced] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(search.trim()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const listQuery = useQuery({
+    queryKey: ["load-center", "list", debounced],
+    queryFn: () => {
+      const sp = new URLSearchParams();
+      sp.set("limit", "200");
+      if (debounced) sp.set("q", debounced);
+      return api.get<{
+        loads: LoadsListRow[];
+        total: number;
+        returned: number;
+      }>(`/diag/loads-list?${sp.toString()}`);
+    },
+    staleTime: 30_000,
+  });
+
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto p-6 max-w-6xl mx-auto space-y-4">
+      <header>
+        <h1 className="text-2xl font-headline">Load Center</h1>
+        <p className="text-sm text-text-secondary">
+          Pick a load to open the editable workspace, or filter by BOL, ticket
+          #, driver, truck, well, or customer.
+        </p>
+      </header>
+      <div className="flex items-center gap-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search loads — BOL, ticket #, driver, truck, well, customer…"
+          className="flex-1 px-3 py-2 text-sm rounded-md border border-border bg-bg-secondary focus:outline-none focus:ring-2 focus:ring-accent/30"
+          autoFocus
+        />
+        {listQuery.data && (
+          <span className="text-xs text-text-secondary tabular-nums whitespace-nowrap">
+            {listQuery.data.returned} of {listQuery.data.total}
+          </span>
+        )}
+      </div>
+      <section className="rounded-lg border border-border bg-bg-primary">
+        {listQuery.isLoading && (
+          <div className="px-4 py-6 text-xs text-text-secondary text-center">
+            Loading…
+          </div>
+        )}
+        {listQuery.isError && (
+          <div className="px-4 py-6 text-xs text-red-500 text-center">
+            Couldn't load list. {(listQuery.error as Error)?.message ?? ""}
+          </div>
+        )}
+        {listQuery.data && listQuery.data.loads.length === 0 && (
+          <div className="px-4 py-6 text-xs text-text-secondary text-center">
+            No loads match{debounced ? ` "${debounced}"` : ""}.
+          </div>
+        )}
+        {listQuery.data && listQuery.data.loads.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-text-secondary uppercase tracking-wide">
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 px-3">Date</th>
+                  <th className="text-left py-2 px-3">Driver</th>
+                  <th className="text-left py-2 px-3">Truck #</th>
+                  <th className="text-left py-2 px-3">Ticket #</th>
+                  <th className="text-left py-2 px-3">Well</th>
+                  <th className="text-left py-2 px-3">Bill To</th>
+                  <th className="text-right py-2 px-3">Tons</th>
+                  <th className="text-left py-2 px-3">Status</th>
+                  <th className="text-left py-2 px-3">Photo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listQuery.data.loads.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-b border-border/40 cursor-pointer hover:bg-bg-tertiary/40 transition-colors"
+                    onClick={() => onPick(row.id)}
+                  >
+                    <td className="py-1.5 px-3 tabular-nums text-text-secondary">
+                      {row.delivered_on
+                        ? new Date(row.delivered_on).toLocaleDateString()
+                        : "—"}
+                    </td>
+                    <td className="py-1.5 px-3">{row.driver_name ?? "—"}</td>
+                    <td className="py-1.5 px-3 tabular-nums">
+                      {row.truck_no ?? "—"}
+                    </td>
+                    <td className="py-1.5 px-3 tabular-nums">
+                      {row.ticket_no ?? "—"}
+                    </td>
+                    <td className="py-1.5 px-3 truncate max-w-[14rem]">
+                      {row.well_name ?? "—"}
+                    </td>
+                    <td className="py-1.5 px-3 truncate max-w-[12rem]">
+                      {row.bill_to ?? "—"}
+                    </td>
+                    <td className="py-1.5 px-3 text-right tabular-nums">
+                      {row.weight_tons
+                        ? Number(row.weight_tons).toFixed(2)
+                        : "—"}
+                    </td>
+                    <td className="py-1.5 px-3 text-text-secondary">
+                      {row.assignment_status ?? "—"}
+                    </td>
+                    <td className="py-1.5 px-3">
+                      {(() => {
+                        const eff =
+                          row.effective_photo_status ?? row.photo_status;
+                        return eff === "attached" ? (
+                          <span
+                            className="text-green-600"
+                            title="Photo attached"
+                          >
+                            ●
+                          </span>
+                        ) : eff === "pending" ? (
+                          <span className="text-amber-500" title="Pending">
+                            ○
+                          </span>
+                        ) : (
+                          <span className="text-red-500" title="Missing">
+                            ✕
+                          </span>
+                        );
+                      })()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
