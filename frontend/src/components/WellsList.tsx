@@ -42,11 +42,16 @@ export function WellsList({ onPickWell }: Props) {
   const [collapsed, setCollapsed] = useState(false);
 
   const wellsQuery = useQuery({
-    queryKey: ["workbench", "wells-active"],
+    // v2 suffix bumped 2026-04-28 to invalidate any browser caches that
+    // captured the broken-schema 500 from the first hour after launch.
+    queryKey: ["workbench", "wells-active", "v2"],
     queryFn: () =>
       api.get<{ wells: ActiveWell[]; total: number }>("/diag/wells-active"),
     staleTime: 60_000,
     refetchInterval: 5 * 60_000,
+    // Don't keep showing a stale error from a previous failed request
+    // when the backend is now healthy — let the new fetch reset state.
+    retry: 1,
   });
 
   const wells = wellsQuery.data?.wells ?? [];
