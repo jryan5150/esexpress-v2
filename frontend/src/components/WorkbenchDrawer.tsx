@@ -2274,12 +2274,41 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
             </div>
             <StageStrip
               currentStage={l.handler_stage ?? "uncertain"}
-              onAdvance={(stage) =>
-                advance.mutateAsync({
+              onAdvance={(stage) => {
+                // Backward-advance guard mirroring LoadCenter. If the
+                // load has been queued for PCS in rehearsal mode and
+                // the user moves it to a pre-entered stage, confirm
+                // before silently dropping the queue marker.
+                const queued = !!l.pcs_pending_at && !l.pcs_number;
+                const earlier = ["uncertain", "ready_to_build", "building"];
+                if (queued && earlier.includes(stage)) {
+                  const ok = window.confirm(
+                    "This load is queued for PCS (rehearsal mode). " +
+                      `Moving it back to "${stage.replace(/_/g, " ")}" will clear the queue marker — ` +
+                      "the cutover script won't push it on its own. " +
+                      "Click OK to clear the queue and move backward, or Cancel to keep it queued.",
+                  );
+                  if (!ok) return Promise.resolve();
+                  return advance
+                    .mutateAsync({
+                      stage,
+                      assignmentId: l.assignment_id!,
+                    })
+                    .then(async () => {
+                      await api.patch(
+                        `/dispatch/loads/${l.id}/clear-pcs-pending`,
+                        {},
+                      );
+                      qc.invalidateQueries({
+                        queryKey: ["cell-drawer-load", loadId],
+                      });
+                    });
+                }
+                return advance.mutateAsync({
                   stage,
                   assignmentId: l.assignment_id!,
-                })
-              }
+                });
+              }}
               isPending={advance.isPending}
             />
             {advance.isError && (
