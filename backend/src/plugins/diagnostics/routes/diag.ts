@@ -3343,6 +3343,190 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
     };
   });
 
+  // GET /diag/wells-active — wells navigation list for the Today page.
+  //
+  // "Active" = has at least one load delivered in the last 14 days OR
+  // has at least one open assignment (status in pending/assigned/
+  // dispatch_ready). Sorted by total load count this week desc, then
+  // alphabetical tiebreaker.
+  //
+  // Powers the WellsList component below the WellGrid on /workbench.
+  // Always returns ALL active wells regardless of customer filter —
+  // the list is intentionally a navigation surface, not a triage
+  // surface (Flagged is the triage surface).
+  fastify.get("/wells-active", async (_request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const { sql } = await import("drizzle-orm");
+
+    // Compute the current Sun-Sat week in America/Chicago. Same window
+    // the WellGrid uses by default so the load_count column lines up
+    // with what the grid shows.
+    const rows = (await db.execute(sql`
+      WITH week_window AS (
+        SELECT
+          (date_trunc('week', now() AT TIME ZONE 'America/Chicago')::date
+            - INTERVAL '1 day') AS week_start,
+          (date_trunc('week', now() AT TIME ZONE 'America/Chicago')::date
+            + INTERVAL '6 days') AS week_end
+      ),
+      active_wells AS (
+        SELECT DISTINCT w.id
+        FROM wells w
+        WHERE EXISTS (
+          SELECT 1
+          FROM assignments a
+          JOIN loads l ON l.id = a.load_id
+          WHERE a.well_id = w.id
+            AND (
+              l.delivered_on >= now() - INTERVAL '14 days'
+              OR a.status IN ('pending','assigned','dispatch_ready')
+            )
+        )
+      )
+      SELECT
+        w.id,
+        w.name,
+        c.name AS customer_name,
+        w.customer_id,
+        COUNT(DISTINCT CASE
+          WHEN l.delivered_on >= ww.week_start
+            AND l.delivered_on < ww.week_end + INTERVAL '1 day'
+          THEN l.id
+        END)::int AS load_count_this_week,
+        COUNT(DISTINCT l.id)::int AS load_count_14d,
+        COUNT(DISTINCT CASE
+          WHEN a.handler_stage = 'ready_to_build' THEN a.id
+        END)::int AS ready_count,
+        COUNT(DISTINCT CASE
+          WHEN a.handler_stage = 'building' THEN a.id
+        END)::int AS building_count,
+        COUNT(DISTINCT CASE
+          WHEN a.handler_stage = 'entered' THEN a.id
+        END)::int AS entered_count,
+        COUNT(DISTINCT CASE
+          WHEN a.handler_stage = 'uncertain' THEN a.id
+        END)::int AS flagged_count,
+        MAX(GREATEST(l.updated_at, a.updated_at))::text AS last_touched_at
+      FROM wells w
+      JOIN active_wells aw ON aw.id = w.id
+      LEFT JOIN customers c ON c.id = w.customer_id
+      LEFT JOIN assignments a ON a.well_id = w.id
+      LEFT JOIN loads l ON l.id = a.load_id
+        AND l.delivered_on >= now() - INTERVAL '14 days'
+      CROSS JOIN week_window ww
+      GROUP BY w.id, w.name, c.name, w.customer_id
+      ORDER BY load_count_this_week DESC, w.name ASC
+      LIMIT 500`)) as unknown as Array<Record<string, unknown>>;
+
+    return {
+      success: true,
+      data: {
+        wells: rows,
+        total: rows.length,
+      },
+    };
+  });
+
+  // GET /diag/well-loads?wellId=N&since=YYYY-MM-DD&until=YYYY-MM-DD
+  //
+  // Loads for a single well within a date range. Powers the drawer's
+  // "well mode" — picked from the WellsList, supports the date-filter
+  // chips (Today / This week / Last week / All this month / Custom).
+  // Sorted by delivered_on desc so the most-recent load is at the top.
+  fastify.get("/well-loads", async (request, reply) => {
+    const db = fastify.db;
+    if (!db)
+      return reply.status(503).send({
+        success: false,
+        error: { code: "SERVICE_UNAVAILABLE", message: "DB not connected" },
+      });
+    const { sql } = await import("drizzle-orm");
+    const q = (request.query ?? {}) as {
+      wellId?: string;
+      since?: string;
+      until?: string;
+    };
+    const wellId = parseInt(q.wellId ?? "", 10);
+    if (!Number.isFinite(wellId)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: "BAD_REQUEST", message: "wellId required" },
+      });
+    }
+    const since =
+      q.since && /^\d{4}-\d{2}-\d{2}$/.test(q.since) ? q.since : null;
+    const until =
+      q.until && /^\d{4}-\d{2}-\d{2}$/.test(q.until) ? q.until : null;
+    const sinceFilter = since
+      ? sql`AND l.delivered_on >= ${since}::date`
+      : sql``;
+    const untilFilter = until
+      ? sql`AND l.delivered_on < (${until}::date + INTERVAL '1 day')`
+      : sql``;
+
+    const wellRow = (await db.execute(sql`
+      SELECT w.id, w.name, c.name AS customer_name
+      FROM wells w
+      LEFT JOIN customers c ON c.id = w.customer_id
+      WHERE w.id = ${wellId}
+      LIMIT 1`)) as unknown as Array<{
+      id: number;
+      name: string;
+      customer_name: string | null;
+    }>;
+    if (wellRow.length === 0) {
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "well not found" },
+      });
+    }
+
+    const loads = (await db.execute(sql`
+      SELECT
+        a.id AS assignment_id,
+        a.status AS assignment_status,
+        a.handler_stage,
+        a.photo_status,
+        l.id AS load_id,
+        l.load_no,
+        l.driver_name,
+        l.bol_no,
+        l.ticket_no,
+        l.weight_tons::text AS weight_tons,
+        l.weight_lbs::text AS weight_lbs,
+        l.delivered_on::text AS delivered_on,
+        -- Same effective_photo_status pattern as /loads-list — read from
+        -- live evidence rather than the (sometimes stale) stored field.
+        CASE
+          WHEN EXISTS (SELECT 1 FROM photos p WHERE p.load_id = l.id) THEN 'attached'
+          WHEN EXISTS (SELECT 1 FROM bol_submissions b WHERE b.matched_load_id = l.id) THEN 'attached'
+          ELSE COALESCE(a.photo_status, 'missing')
+        END AS effective_photo_status
+      FROM assignments a
+      JOIN loads l ON l.id = a.load_id
+      WHERE a.well_id = ${wellId}
+        ${sinceFilter}
+        ${untilFilter}
+      ORDER BY l.delivered_on DESC NULLS LAST, l.id DESC
+      LIMIT 500`)) as unknown as Array<Record<string, unknown>>;
+
+    return {
+      success: true,
+      data: {
+        well: wellRow[0],
+        loads,
+        total: loads.length,
+        since,
+        until,
+      },
+    };
+  });
+
   // GET /diag/load-detail?load=ID — single-load workspace fetch
   // Powers the /load-center page: pulls a single load with all the
   // ancillary context (assignment, well, customer, photos) needed to

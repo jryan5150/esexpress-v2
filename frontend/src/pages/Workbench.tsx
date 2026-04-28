@@ -7,6 +7,7 @@ import { useHeartbeat } from "../hooks/use-presence";
 import { useBulkConfirm } from "../hooks/use-workbench";
 import { UserHighlightStrip } from "../components/UserHighlightStrip";
 import { WellGrid } from "../components/WellGrid";
+import { WellsList } from "../components/WellsList";
 import { WorkbenchDrawer } from "../components/WorkbenchDrawer";
 
 interface CellLoad {
@@ -155,13 +156,24 @@ export function Workbench() {
     wellId: number;
     dow: number;
   } | null>(null);
+  // Picked from the WellsList below the grid. Opens the drawer in
+  // well-mode (date-filterable load list, sorted by delivered_on desc)
+  // instead of the per-cell mode.
+  const [openWell, setOpenWell] = useState<{
+    wellId: number;
+    wellName: string;
+  } | null>(null);
   const handleCellClick = (wellId: number, dow: number) => {
+    setOpenWell(null);
     setOpenCell({ wellId, dow });
-    // Drawer mount happens in Task 4
   };
   const handleBadgeClick = (wellId: number, dow: number) => {
-    // Flag + open drawer — wired in Task 4
+    setOpenWell(null);
     setOpenCell({ wellId, dow });
+  };
+  const handleWellPick = (wellId: number, wellName: string) => {
+    setOpenCell(null);
+    setOpenWell({ wellId, wellName });
   };
 
   // Look up the active cell's context once openCell is set. Direct-typed
@@ -381,6 +393,12 @@ export function Workbench() {
         paintedStatusByCell={paintedStatusByCell}
       />
 
+      {/* Wells navigation list — shows every active well across all
+          customers (intentionally ignores the customer chip filter
+          above; triage lives at /flagged). Click a well row to open
+          the drawer in well-mode with its date-filter chips. */}
+      <WellsList onPickWell={handleWellPick} />
+
       {/* Cell-mode drawer — opens when a Worksurface grid cell is clicked.
           Per-load drilldown wires in Phase 1.5. */}
       {openCell && cellContextQuery.data && (
@@ -442,6 +460,21 @@ export function Workbench() {
               setOpenCell(null);
               setConfirmResult(null);
             },
+          }}
+        />
+      )}
+
+      {/* Well-mode drawer — opens when a well row in WellsList is
+          clicked. Date filter chips inside the drawer let the user
+          narrow to today / this week / last week / month / all /
+          custom; default range tracks the currently-shown grid week. */}
+      {openWell && (
+        <WorkbenchDrawer
+          onClose={() => setOpenWell(null)}
+          wellContext={{
+            wellId: openWell.wellId,
+            wellName: openWell.wellName,
+            defaultWeekStart: effectiveWeekStart,
           }}
         />
       )}

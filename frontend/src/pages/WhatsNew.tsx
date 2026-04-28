@@ -16,10 +16,9 @@ import { useEffect } from "react";
  * the email + PDF; how-to lives here, in-context.
  */
 
-// Bumped 2026-04-28-pm-4 — forces re-show after Flagged rename
-// (was /exceptions), main-nav promotion, and inline 4-reason flag
-// picker on the cell-drawer expand.
-const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-4";
+// Bumped 2026-04-28-pm-5 — forces re-show after WellsList navigation
+// surface below the grid + drawer well-mode with date-filter chips.
+const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-5";
 
 export function markWhatsNewSeen() {
   try {
@@ -148,6 +147,41 @@ export function WhatsNew() {
             patch in minutes.
           </p>
         </div>
+
+        {/* Tue PM 5 — WellsList navigation surface below the grid */}
+        <Section
+          number="00"
+          title="Wells list below Today — second way to navigate to a load"
+          why="Per your feedback: needed another way to navigate besides clicking grid cells. The wells list is reference (every active well, in predictable order); Flagged is triage (what to work next). Two separate jobs, two separate surfaces."
+          how={
+            <div className="space-y-3">
+              <p>
+                Below the well grid on Today there's now an{" "}
+                <strong>All active wells</strong> table — every well with loads
+                in the last 14 days OR an open assignment. Sorted by this week's
+                load count (descending), then alphabetical tiebreaker.
+              </p>
+              <p>
+                Columns show: well · customer · loads this week · last 14d ·
+                ready / building / entered counts · 🚩 flagged count · last
+                touched (relative time).
+              </p>
+              <p>
+                <strong>Click any row</strong> to open the drawer in "well mode"
+                — date filter chips at the top (Today / This week / Last week /
+                This month / All / Custom) let you narrow what loads show. Each
+                load expands inline with the same per-load editor (stage strip,
+                push to PCS, flag picker) you get from cell mode.
+              </p>
+              <p className="text-xs text-on-surface-variant">
+                The wells list intentionally <em>ignores</em> the customer chip
+                filter at the top of the page — it's a reference surface, not a
+                triage surface. Triage stays on /flagged.
+              </p>
+            </div>
+          }
+          cta={{ label: "Open Today", to: "/workbench" }}
+        />
 
         {/* Tue PM 4 — Flagged page + inline flag button */}
         <Section

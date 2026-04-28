@@ -86,6 +86,26 @@ interface WorkbenchDrawerProps {
   row?: WorkbenchRow;
   onClose: () => void;
   cellContext?: CellContext;
+  wellContext?: WellContext;
+}
+
+/**
+ * Well-mode context for opening the drawer from the WellsList below
+ * the grid (every active well, not bound to a single cell). The drawer
+ * renders a date-filter chip strip in the header (Today / This week /
+ * Last week / All this month / Custom) and lists every load matching
+ * the filter sorted by delivered_on desc.
+ *
+ * Per-load expand reuses LoadInlinePanel — same edit / stage advance /
+ * push to PCS / flag picker the cell drawer uses.
+ */
+export interface WellContext {
+  wellId: number;
+  wellName: string;
+  /** Default week-start (YYYY-MM-DD, Sun) — usually inherited from the
+   *  parent grid week so opening a well from this week's grid lands
+   *  on this week's loads. User can override with the chip strip. */
+  defaultWeekStart: string;
 }
 
 /**
@@ -381,6 +401,18 @@ function RerunOcrButton({ assignmentId }: { assignmentId: number }) {
 }
 
 export function WorkbenchDrawer(props: WorkbenchDrawerProps) {
+  // Well-mode: opened from the WellsList. Renders a date-filterable
+  // load list for the well using the same per-load expand as cell mode.
+  if (props.wellContext && !props.row && !props.cellContext) {
+    return (
+      <DrawerErrorBoundary onReset={props.onClose}>
+        <WellSummaryDrawerBody
+          wellContext={props.wellContext}
+          onClose={props.onClose}
+        />
+      </DrawerErrorBoundary>
+    );
+  }
   // Cell-mode: opened from a Worksurface grid cell (well + day) instead of
   // a single load row. Renders the cell-summary header + action bar only.
   // Per-load drill-down list is deferred to Phase 1.5.
@@ -409,6 +441,266 @@ export function WorkbenchDrawer(props: WorkbenchDrawerProps) {
  * Action handlers are stubs in Wave 1 — actual write-throughs land in
  * Phase 1.5 once the surface is validated with the dispatch team.
  */
+/**
+ * Well-mode drawer body: renders a fixed-position right-side panel
+ * showing one well's loads inside a date range, with a chip strip to
+ * change the range on the fly. Per-load expand reuses LoadInlinePanel.
+ */
+function WellSummaryDrawerBody({
+  wellContext,
+  onClose,
+}: {
+  wellContext: WellContext;
+  onClose: () => void;
+}) {
+  const { wellId, wellName, defaultWeekStart } = wellContext;
+  // Date range presets — chip strip lives in the drawer header.
+  type Preset =
+    | "today"
+    | "this_week"
+    | "last_week"
+    | "month"
+    | "all"
+    | "custom";
+  const [preset, setPreset] = useState<Preset>("this_week");
+  const [customSince, setCustomSince] = useState("");
+  const [customUntil, setCustomUntil] = useState("");
+  const [expandedLoadId, setExpandedLoadId] = useState<number | null>(null);
+
+  // Resolve the chip selection into a (since, until) date pair sent
+  // with the /diag/well-loads query. defaultWeekStart is the parent
+  // grid's week (so opening from this week's grid lands on this week).
+  const range = (() => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (preset === "today") return { since: today, until: today };
+    if (preset === "this_week") {
+      const sun = defaultWeekStart;
+      const sunDate = new Date(sun + "T00:00:00");
+      sunDate.setUTCDate(sunDate.getUTCDate() + 6);
+      return { since: sun, until: sunDate.toISOString().slice(0, 10) };
+    }
+    if (preset === "last_week") {
+      const sunDate = new Date(defaultWeekStart + "T00:00:00");
+      sunDate.setUTCDate(sunDate.getUTCDate() - 7);
+      const sun = sunDate.toISOString().slice(0, 10);
+      sunDate.setUTCDate(sunDate.getUTCDate() + 6);
+      return { since: sun, until: sunDate.toISOString().slice(0, 10) };
+    }
+    if (preset === "month") {
+      const now = new Date();
+      const first = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+      );
+      const last = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0),
+      );
+      return {
+        since: first.toISOString().slice(0, 10),
+        until: last.toISOString().slice(0, 10),
+      };
+    }
+    if (preset === "all") return { since: null, until: null };
+    return {
+      since: customSince || null,
+      until: customUntil || null,
+    };
+  })();
+
+  const loadsQuery = useQuery({
+    queryKey: ["well-mode-loads", wellId, range.since, range.until],
+    queryFn: () => {
+      const sp = new URLSearchParams();
+      sp.set("wellId", String(wellId));
+      if (range.since) sp.set("since", range.since);
+      if (range.until) sp.set("until", range.until);
+      return api.get<{
+        well: { id: number; name: string; customer_name: string | null };
+        loads: Array<{
+          load_id: number;
+          assignment_id: number;
+          assignment_status: string;
+          handler_stage: string | null;
+          photo_status: string | null;
+          effective_photo_status: string | null;
+          load_no: string | null;
+          driver_name: string | null;
+          bol_no: string | null;
+          ticket_no: string | null;
+          weight_tons: string | null;
+          delivered_on: string | null;
+        }>;
+        total: number;
+      }>(`/diag/well-loads?${sp.toString()}`);
+    },
+    staleTime: 30_000,
+  });
+
+  const loads = loadsQuery.data?.loads ?? [];
+
+  const PRESETS: Array<{ key: Preset; label: string }> = [
+    { key: "today", label: "Today" },
+    { key: "this_week", label: "This week" },
+    { key: "last_week", label: "Last week" },
+    { key: "month", label: "This month" },
+    { key: "all", label: "All" },
+    { key: "custom", label: "Custom" },
+  ];
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Well drawer for ${wellName}`}
+      className="fixed inset-y-0 right-0 z-40 w-full sm:max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl 2xl:max-w-3xl bg-bg-secondary border-l border-border shadow-xl flex flex-col"
+    >
+      <div className="px-4 py-3 border-b border-border bg-bg-primary">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] uppercase tracking-wide text-text-secondary">
+              Well · all loads
+            </div>
+            <h2 className="text-base font-semibold truncate">{wellName}</h2>
+            {loadsQuery.data?.well?.customer_name && (
+              <div className="text-xs text-text-secondary truncate">
+                {loadsQuery.data.well.customer_name}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-2 py-1 text-xs text-text-secondary hover:text-text-primary"
+            aria-label="Close drawer"
+          >
+            ✕ Close
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-1">
+          {PRESETS.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => setPreset(p.key)}
+              className={`px-2 py-0.5 text-[11px] rounded-md border transition-colors ${
+                preset === p.key
+                  ? "bg-accent text-white border-accent"
+                  : "bg-bg-secondary border-border text-text-secondary hover:bg-bg-tertiary"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+          {preset === "custom" && (
+            <div className="basis-full mt-1.5 flex items-center gap-1.5 text-[11px]">
+              <input
+                type="date"
+                value={customSince}
+                onChange={(e) => setCustomSince(e.target.value)}
+                className="px-1.5 py-0.5 rounded border border-border bg-bg-primary"
+              />
+              <span className="text-text-secondary">→</span>
+              <input
+                type="date"
+                value={customUntil}
+                onChange={(e) => setCustomUntil(e.target.value)}
+                className="px-1.5 py-0.5 rounded border border-border bg-bg-primary"
+              />
+            </div>
+          )}
+        </div>
+
+        {loadsQuery.data && (
+          <div className="mt-2 text-[11px] text-text-secondary">
+            {loadsQuery.data.total} load
+            {loadsQuery.data.total === 1 ? "" : "s"} in range
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {loadsQuery.isLoading && (
+          <div className="text-xs text-text-secondary text-center py-6">
+            Loading loads…
+          </div>
+        )}
+        {loadsQuery.isError && (
+          <div className="text-xs text-red-500 text-center py-6">
+            Couldn't load. {(loadsQuery.error as Error)?.message ?? ""}
+          </div>
+        )}
+        {loadsQuery.data && loads.length === 0 && (
+          <div className="text-xs text-text-secondary text-center py-6">
+            No loads in this date range.
+          </div>
+        )}
+        {loads.map((l) => {
+          const expanded = expandedLoadId === l.load_id;
+          return (
+            <div
+              key={l.load_id}
+              className="rounded border border-border bg-bg-primary"
+            >
+              <button
+                type="button"
+                onClick={() => setExpandedLoadId(expanded ? null : l.load_id)}
+                className="w-full px-3 py-2 text-left hover:bg-bg-tertiary/40 flex items-center justify-between gap-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium truncate">
+                    {l.driver_name ?? "(no driver)"}
+                    {l.ticket_no && (
+                      <span className="ml-2 text-text-secondary tabular-nums">
+                        ticket {l.ticket_no}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-text-secondary tabular-nums">
+                    {l.delivered_on
+                      ? new Date(l.delivered_on).toLocaleDateString()
+                      : "no date"}
+                    {l.weight_tons && (
+                      <> · {Number(l.weight_tons).toFixed(2)} tons</>
+                    )}
+                    {" · "}
+                    {l.handler_stage ?? l.assignment_status}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {(() => {
+                    const eff = l.effective_photo_status ?? l.photo_status;
+                    return eff === "attached" ? (
+                      <span className="text-green-600" title="Photo attached">
+                        ●
+                      </span>
+                    ) : eff === "pending" ? (
+                      <span className="text-amber-500" title="Pending">
+                        ○
+                      </span>
+                    ) : (
+                      <span className="text-red-500" title="Missing">
+                        ✕
+                      </span>
+                    );
+                  })()}
+                  <span className="text-[11px] text-text-secondary">
+                    {expanded ? "▾" : "▸"}
+                  </span>
+                </div>
+              </button>
+              {expanded && (
+                <div className="border-t border-border p-2">
+                  <LoadInlinePanel loadId={l.load_id} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [commentBody, setCommentBody] = useState("");
