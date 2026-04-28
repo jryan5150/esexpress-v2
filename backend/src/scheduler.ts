@@ -10,8 +10,9 @@
  */
 
 import cron from "node-cron";
+import { eq } from "drizzle-orm";
 import type { Database } from "./db/client.js";
-import { syncRuns } from "./db/schema.js";
+import { syncRuns, users } from "./db/schema.js";
 import { reportError } from "./lib/sentry.js";
 
 const TZ = "America/Chicago";
@@ -460,13 +461,47 @@ async function runAutoMap() {
 
   const loadIds = unmapped.map((r) => r.id);
 
-  // System user ID = 1 (jryan@esexpress.com) for automated operations.
-  // No dedicated system user exists yet — user_id 0 has no matching row in
-  // users(id) so createAssignment's FK (assigned_by → users.id) rejects it
-  // and every scheduled auto-map silently skips every load. Post-MVP: create
-  // a dedicated `system@esexpressllc.com` admin user and switch to that id.
-  const results = await processLoadBatch(db, loadIds, 1);
+  // Resolve the system user dynamically rather than hard-coding id=1.
+  // 2026-04-28: previous code assumed user 1 = jryan@esexpress.com, which
+  // is true today but silent-breaks if user 1 ever gets renumbered or
+  // deleted (createAssignment's FK rejects, every scheduled auto-map
+  // silently skips every load → Jess's queue dries up with no error).
+  // Lookup-by-email is resilient to id churn. Throws if the user
+  // doesn't exist so the cron failure is visible in Sentry rather than
+  // silent.
+  const systemUserId = await resolveSystemUserId(db);
+  const results = await processLoadBatch(db, loadIds, systemUserId);
   const mapped = results.filter((r) => r.assignmentId !== null).length;
 
   return { total: loadIds.length, mapped, skipped: loadIds.length - mapped };
+}
+
+/**
+ * Resolve the user id used as `assigned_by` for scheduled auto-mapper
+ * runs. Prefers a dedicated `system@esexpressllc.com` row if it exists
+ * (post-MVP plan), falls back to `jryan@esexpress.com` (operator), then
+ * any admin user. Throws if no admin exists — that's a real config
+ * problem worth a loud error.
+ */
+async function resolveSystemUserId(db: Database): Promise<number> {
+  const candidates = ["system@esexpressllc.com", "jryan@esexpress.com"];
+  for (const email of candidates) {
+    const [row] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    if (row) return row.id;
+  }
+  // Last resort: any admin
+  const [admin] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, "admin"))
+    .limit(1);
+  if (admin) return admin.id;
+  throw new Error(
+    "[auto-mapper] No admin user found — cannot run scheduled auto-mapper. " +
+      "Expected one of: system@esexpressllc.com, jryan@esexpress.com, or any user with role='admin'.",
+  );
 }

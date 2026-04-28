@@ -345,6 +345,32 @@ export async function dispatchLoad(
     assignmentId,
   );
 
+  // ─── Idempotency guard (2026-04-28) ─────────────────────────────────
+  // Refuse to live-push an assignment that already has a PCS loadId on
+  // pcs_dispatch. Mirrors the rehearsal-mode ALREADY_PUSHED guard
+  // (runRehearsalDispatch line ~238). Without this, a UI double-click
+  // creates two real PCS loads — the second one orphaned in v2 because
+  // we only persist the latest pcs_load_id back to assignments.
+  const existingPcsLoadId =
+    assignment.pcsDispatch &&
+    typeof assignment.pcsDispatch === "object" &&
+    "pcs_load_id" in assignment.pcsDispatch
+      ? (assignment.pcsDispatch as { pcs_load_id?: number | string | null })
+          .pcs_load_id
+      : null;
+  if (existingPcsLoadId != null) {
+    return {
+      success: false,
+      mode: "live",
+      latencyMs: Date.now() - startMs,
+      error: {
+        code: "ALREADY_PUSHED",
+        message: `Assignment ${assignmentId} already has PCS loadId ${existingPcsLoadId}. Refusing to create a duplicate.`,
+        retryable: false,
+      },
+    };
+  }
+
   // ─── Photo gate — hard requirement per client (no photo, no PCS push) ───
   // Jessica Apr 6 / Apr 17: "100% + photo → ready_to_build". We run this
   // check BEFORE touching PCS so no load ever lands there without a BOL.

@@ -55,7 +55,35 @@ function parseMaintenanceAllowlist(): Set<string> {
   );
 }
 
+/**
+ * Startup assertion (2026-04-28): in production, MAINTENANCE_ALLOW_EMAILS
+ * MUST be populated. The maintenance gate is a no-op when the allowlist is
+ * empty — if the env var ever clears (Railway redeploy typo, dashboard
+ * misconfig, etc.) the entire team would silently get app access during
+ * single-operator validation. Fail-fast at boot is safer than silent open.
+ *
+ * Local/dev/test environments are exempt — the gate is intentionally off
+ * there. Only production demands the explicit allowlist.
+ */
+function assertMaintenanceConfigInProduction(): void {
+  const env = process.env.NODE_ENV;
+  if (env !== "production") return;
+  const allowlist = parseMaintenanceAllowlist();
+  if (allowlist.size === 0) {
+    throw new Error(
+      "[startup] MAINTENANCE_ALLOW_EMAILS must be set in production. " +
+        "Refusing to boot — the maintenance gate would otherwise silently " +
+        "open app access to every authenticated user.",
+    );
+  }
+}
+
 const guardsPlugin: FastifyPluginAsync = async (fastify) => {
+  // Boot-time assertion. Throws synchronously if production env is misconfigured;
+  // Fastify will surface the error and Railway will fail the deploy rather than
+  // running with a broken gate.
+  assertMaintenanceConfigInProduction();
+
   fastify.decorate(
     "authenticate",
     async function (request: FastifyRequest, reply: FastifyReply) {
