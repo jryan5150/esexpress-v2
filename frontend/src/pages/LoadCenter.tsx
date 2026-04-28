@@ -15,9 +15,13 @@ interface LoadDetail {
   ticket_no: string | null;
   driver_name: string | null;
   truck_no: string | null;
+  trailer_no: string | null;
+  carrier_name: string | null;
   delivered_on: string | null;
   weight_tons: string | null;
   weight_lbs: string | null;
+  net_weight_tons: string | null;
+  mileage: string | null;
   rate: string | null;
   source: string;
   origin_name: string | null;
@@ -28,6 +32,7 @@ interface LoadDetail {
   assignment_status: string | null;
   handler_stage: string | null;
   photo_status: string | null;
+  pcs_number: string | null;
   well_name: string | null;
   photos: Array<{ id: number; source_url: string; source: string }>;
 }
@@ -191,12 +196,12 @@ export function LoadCenter() {
           />
           <EditableField
             label="Trailer #"
-            value={(l as { trailer_no?: string | null }).trailer_no ?? ""}
+            value={l.trailer_no ?? ""}
             onSave={(v) => updateMutation.mutateAsync({ trailerNo: v || null })}
           />
           <EditableField
             label="Carrier"
-            value={(l as { carrier_name?: string | null }).carrier_name ?? ""}
+            value={l.carrier_name ?? ""}
             onSave={(v) =>
               updateMutation.mutateAsync({ carrierName: v || null })
             }
@@ -228,9 +233,7 @@ export function LoadCenter() {
           />
           <EditableField
             label="Net wt (tons)"
-            value={
-              (l as { net_weight_tons?: string | null }).net_weight_tons ?? ""
-            }
+            value={l.net_weight_tons ?? ""}
             onSave={(v) =>
               updateMutation.mutateAsync({ netWeightTons: v || null })
             }
@@ -238,7 +241,7 @@ export function LoadCenter() {
           />
           <EditableField
             label="Mileage"
-            value={(l as { mileage?: string | null }).mileage ?? ""}
+            value={l.mileage ?? ""}
             onSave={(v) => updateMutation.mutateAsync({ mileage: v || null })}
             type="decimal"
           />
@@ -314,17 +317,6 @@ export function LoadCenter() {
             )}
           </div>
         </section>
-      </div>
-
-      <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-700 p-3 text-xs text-amber-900 dark:text-amber-100">
-        <strong>Heads up:</strong> inline editing on these fields is the
-        Tuesday-follow-up. Today this view confirms the right load is selected
-        and surfaces its photo + status. Edit via the existing BOL Center
-        workflow at{" "}
-        <Link to={`/bol?load=${l.id}`} className="underline">
-          /bol?load={l.id}
-        </Link>{" "}
-        until inline edit ships.
       </div>
 
       {/* Other loads from the same week — click any row to switch focus */}

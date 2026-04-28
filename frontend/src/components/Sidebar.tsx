@@ -208,7 +208,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
             <Link
               to="/workbench"
               className={navClass("/workbench")}
-              title="Today — the unified worksurface: builder matrix, well grid (with painted colors), your inbox, today's intake, and Jenny's queue"
+              title="Today — builder matrix + well grid (painted colors). Click any cell to open the load drawer."
             >
               <span className={iconClass("/workbench")}>today</span>
               {!collapsed && "Today"}

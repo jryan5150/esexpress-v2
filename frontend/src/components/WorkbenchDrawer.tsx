@@ -522,14 +522,12 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
               </button>
             )}
             {cellContext.derivedStatus === "loads_completed" && (
-              <button
-                type="button"
-                disabled
-                className="px-3 py-1.5 text-sm rounded-md bg-bg-tertiary text-text-secondary border border-border opacity-60 cursor-not-allowed"
-                title="PCS push awaiting enablement"
+              <span
+                className="px-3 py-1.5 text-xs rounded-md bg-bg-tertiary text-text-secondary border border-border italic"
+                title="Open a load row below to push it to PCS individually."
               >
-                Push to PCS
-              </button>
+                Push to PCS is per-load — open a row below
+              </span>
             )}
             {cellContext.derivedStatus === "need_rate_info" && (
               <button
@@ -1446,6 +1444,9 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cell-drawer-load", loadId] });
       qc.invalidateQueries({ queryKey: ["worksurface", "cell-context"] });
+      // Cell color is computed from the underlying loads' stages — invalidate
+      // the grid query so the cell ticks forward without needing a refresh.
+      qc.invalidateQueries({ queryKey: ["worksurface", "well-grid"] });
     },
   });
 
@@ -1465,6 +1466,9 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cell-drawer-load", loadId] });
       qc.invalidateQueries({ queryKey: ["worksurface", "cell-context"] });
+      // Cell color is computed from the underlying loads' stages — invalidate
+      // the grid query so the cell ticks forward without needing a refresh.
+      qc.invalidateQueries({ queryKey: ["worksurface", "well-grid"] });
     },
   });
   const update = useMutation({
@@ -1473,6 +1477,9 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cell-drawer-load", loadId] });
       qc.invalidateQueries({ queryKey: ["worksurface", "cell-context"] });
+      // Cell color is computed from the underlying loads' stages — invalidate
+      // the grid query so the cell ticks forward without needing a refresh.
+      qc.invalidateQueries({ queryKey: ["worksurface", "well-grid"] });
     },
   });
 
