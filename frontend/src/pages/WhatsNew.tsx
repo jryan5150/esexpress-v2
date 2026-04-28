@@ -16,9 +16,9 @@ import { useEffect } from "react";
  * the email + PDF; how-to lives here, in-context.
  */
 
-// Bumped 2026-04-28-pm — forces re-show after Today-page slim, manual ↻
-// rotate, Archive fix, Load Center sidebar fix.
-const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm";
+// Bumped 2026-04-28-pm-2 — forces re-show after Load Center stage
+// controls + Push to PCS, comment-attribution picker, stage tooltips.
+const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-2";
 
 export function markWhatsNewSeen() {
   try {
@@ -120,7 +120,7 @@ export function WhatsNew() {
             </p>
           </div>
           <Link
-            to="/validation"
+            to="/workbench"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-surface-container-lowest border border-outline-variant/40 text-on-surface-variant hover:bg-surface-container-high text-xs font-semibold uppercase tracking-wider"
           >
             Skip to work
@@ -147,6 +147,91 @@ export function WhatsNew() {
             patch in minutes.
           </p>
         </div>
+
+        {/* Tue PM 2 — Load Center now mirrors the cell-drawer action surface */}
+        <Section
+          number="00c"
+          title="Stage controls + Push to PCS now in Load Center too"
+          why="If you land on Load Center directly (from the sidebar search, an inbox link, or a deep-linked URL), you'd previously have to bounce back to Today to actually move the load through the workflow. No more — the same five stage buttons and the green Push to PCS sit right at the top of the editable workspace."
+          how={
+            <div className="space-y-3">
+              <p>
+                Open <strong>Load Center</strong> (sidebar Reference → Load
+                Center, or click any load in the cell drawer). Above the field
+                grid you'll see:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {["Uncertain", "Ready", "Building", "Entered", "Cleared"].map(
+                  (s) => (
+                    <span
+                      key={s}
+                      className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border border-outline-variant/40 bg-surface-container-high text-on-surface-variant"
+                    >
+                      {s}
+                    </span>
+                  ),
+                )}
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-emerald-600 text-white">
+                  → Push to PCS
+                </span>
+              </div>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>
+                  Hover any stage to read what it means (no more guessing the
+                  difference between "Entered" and "Cleared").
+                </li>
+                <li>
+                  Click any stage to set it directly — green = past, accent =
+                  current, neutral = future. Backwards moves work too if you
+                  advanced too early.
+                </li>
+                <li>
+                  <strong>Push to PCS</strong> is the same button as in the cell
+                  drawer. Success shows the new PCS load number; failure shows
+                  the actual PCS reason so you can fix and retry.
+                </li>
+              </ul>
+              <p className="text-xs text-on-surface-variant">
+                Stage changes here also tick the cell color forward on Today
+                instantly — no refresh needed.
+              </p>
+            </div>
+          }
+          cta={{ label: "Open Load Center", to: "/load-center" }}
+        />
+
+        {/* Tue PM 2 — Comment attribution + nav cleanup */}
+        <Section
+          number="00d"
+          title="Quality-of-life: comment attribution, stage tooltips, nav cleanup"
+          why="Three small fixes that unblock confusion the first time you hit them."
+          how={
+            <div className="space-y-3">
+              <ul className="list-disc list-inside space-y-2 text-sm">
+                <li>
+                  <strong>Add Comment</strong> in the cell drawer now shows a
+                  load picker when the cell has multiple loads, plus a caption
+                  above Save: "→ Will land on load #X (driver, ticket)". No more
+                  silent attribution to the first row.
+                </li>
+                <li>
+                  <strong>Stage strip tooltips</strong> on every Uncertain /
+                  Ready / Building / Entered / Cleared button — hover for a
+                  one-line definition.
+                </li>
+                <li>
+                  Old Today's Objectives page (the legacy gap-list) moved to{" "}
+                  <strong>Reference → Exception Feed</strong>. Visiting the bare{" "}
+                  <code>/</code> URL now goes straight to Today.
+                </li>
+                <li>
+                  Today tooltip in the sidebar rewritten — old version described
+                  the deleted Inbox / Intake / Jenny strips.
+                </li>
+              </ul>
+            </div>
+          }
+        />
 
         {/* Post-Monday-call shipped — Tue Apr 28 */}
         <Section
