@@ -186,14 +186,13 @@ export function buildAddLoadRequest(pkg: DispatchPackage): AddLoadRequest {
 
 async function buildLoadApi(
   accessTokenProvider: () => Promise<string>,
-  // Parameter retained for callsite compatibility but UNUSED.
-  // 2026-04-23 finding: X-Company-Letter on REST writes triggers PCS 500s
-  // ("An unexpected error has occurred"). Yesterday's successful push
-  // (loadId 357468) sent NO letter header and routed to the Hairpin
-  // pool via OAuth + billToId defaults. Reads are un-segmented by
-  // letter either way. Header removed pending Kyle clarification on
-  // the REST-side letter semantics.
-  _companyLetterReserved: "A" | "B" = "B",
+  // Restored 2026-04-28 (Path A revert). The 4/22 push that successfully
+  // created loadId 357468 sent X-Company-Letter — the 4/23 removal of
+  // this header was based on a guess that was never validated against
+  // PCS. We're testing whether restoring the exact 4/22 wire shape
+  // un-breaks the 500s before bothering Kyle. Defaults to "A" (Hairpin)
+  // because that's the only push toggle currently enabled.
+  companyLetter: "A" | "B" = "A",
 ): Promise<DevelopersApi> {
   // Generated client's operations use urlPath = "/" — final URL is
   // basePath + urlPath. Kyle's updated endpoint is /dispatching/v1/load,
@@ -212,8 +211,7 @@ async function buildLoadApi(
     headers: {
       Authorization: `Bearer ${bearer}`,
       "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
-      // X-Company-Letter intentionally omitted — see comment on the
-      // function's _companyLetterReserved parameter.
+      "X-Company-Letter": companyLetter,
     },
   });
   return new DevelopersApi(config);
@@ -423,102 +421,59 @@ export async function dispatchLoad(
   const pkg = buildDispatchPackage(assignment, load, well);
   const body = buildAddLoadRequest(pkg);
 
-  // ─── Raw fetch instead of generated OpenAPI client ─────────────────────
-  // 2026-04-23 finding: the generated client's AddLoadRequestToJSON is a
-  // union dispatcher that checks instanceOfIntermodalLoad FIRST. Because
-  // IntermodalLoad's type-guard requires only {status, loadClass, office}
-  // (same as TruckLoad), our TruckLoad-shaped payload gets serialized as
-  // IntermodalLoad — which STRIPS TotalWeight, BillingType, MilesBilled,
-  // Pallets and instead emits Boundary, BookingNumber, Container,
-  // Chassis (all undefined). PCS receives a TL-class load with no
-  // TotalWeight → server-side NullReferenceException → 500.
+  // ─── Path A revert (2026-04-28) ─────────────────────────────────────
+  // Restored the exact 4/22 wire shape that successfully created PCS
+  // loadIds 357468 + 357469. The 4/23 changes (raw-fetch + PascalCase
+  // body + X-Company-Letter removal) were a chain of unverified guesses
+  // chasing 500s that may have been caused by something else entirely.
   //
-  // Fix: bypass the generator, emit the PascalCase TruckLoad payload
-  // directly. Mirrors the raw-fetch pattern already used by
-  // pcs-sync.service.ts for GetLoads for similar camelCase-drift reasons.
-  const bearer = await getAccessToken(db);
-  const bodyMap = body as unknown as Record<string, unknown>;
-
-  // PCS schema: Office.Code is PascalCase AND required to be an integer.
-  // Our buildAddLoadRequest passes { code: "1" } — transform to { Code: 1 }.
-  const officeSrc =
-    (bodyMap.office as Record<string, unknown> | undefined) ?? {};
-  const rawCode = officeSrc.code ?? officeSrc.Code;
-  const officeCode =
-    typeof rawCode === "string" ? Number.parseInt(rawCode, 10) : rawCode;
-
-  const truckLoadBody = {
-    Status: bodyMap.status,
-    LoadClass: bodyMap.loadClass,
-    LoadType: bodyMap.loadType,
-    BillToId: bodyMap.billToId,
-    BillToName: bodyMap.billToName,
-    LoadReference: bodyMap.loadReference,
-    BillingType: bodyMap.billingType,
-    MilesBilled: bodyMap.milesBilled,
-    TotalWeight: bodyMap.totalWeight,
-    Pallets: bodyMap.pallets,
-    Notes: bodyMap.notes,
-    Office: { Code: officeCode },
-    Stops: bodyMap.stops,
-  };
+  // 4/22 working contract:
+  //   - Generated OpenAPI client: api.addLoad({ addLoadRequest: body })
+  //   - camelCase body via IntermodalLoadToJSON serializer (the union
+  //     dispatcher routes there first; PCS accepted it without TotalWeight
+  //     on 4/22 → so the "needs TotalWeight" hypothesis was wrong)
+  //   - Headers: Authorization + X-Company-Id + X-Company-Letter
+  //
+  // If this push works → we know the 4/23 changes were the cause.
+  // If this push 500s → it's something else (auth scope, server-side
+  // change between 4/22 and now, etc.) and we go to Kyle with a clean
+  // story instead of a tangled one.
+  const api = await buildLoadApi(() => getAccessToken(db), company);
 
   try {
     const response = await restPolicy.execute(async () => {
-      const url = `${getPcsBaseUrl()}/dispatching/v1/load`;
-      const serializedBody = JSON.stringify(truckLoadBody);
-
-      // Diagnostic: log exact wire format so we can cross-reference with
-      // Kyle. Tokens masked. Bytes-exact so he can locate on his side.
-      console.log("[pcs-addload-diag] REQUEST", {
-        url,
-        method: "POST",
-        headerKeys: [
-          "Authorization (Bearer <masked>)",
-          "X-Company-Id",
-          "Content-Type: application/json",
-          "Accept: application/json",
-        ],
-        xCompanyId: process.env.PCS_COMPANY_ID ?? "",
-        bodyLen: serializedBody.length,
-        body: serializedBody,
-      });
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${bearer}`,
-          "X-Company-Id": process.env.PCS_COMPANY_ID ?? "",
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: serializedBody,
-      });
-
-      const responseText = await res.text().catch(() => "");
-      const respHeaders: Record<string, string> = {};
-      res.headers.forEach((v, k) => {
-        respHeaders[k] = v;
-      });
-
-      if (!res.ok) {
-        // Include request body in the error so we can cross-reference
-        // with Kyle even when Railway's logger eats console.log output.
-        // Truncate if huge; these TruckLoad payloads are always <2KB so
-        // full inclusion is fine.
-        throw new Error(
-          `PCS ${res.status}: resp=${responseText || res.statusText} | req=${serializedBody} | respHeaders=${JSON.stringify(respHeaders)}`,
-        );
-      }
       try {
-        return JSON.parse(responseText) as Record<string, unknown>;
-      } catch {
-        return { raw: responseText } as Record<string, unknown>;
+        return (await api.addLoad({
+          addLoadRequest: body,
+        })) as unknown as Record<string, unknown>;
+      } catch (err: unknown) {
+        // Rewrap transport errors for the circuit breaker
+        if (
+          err instanceof TypeError ||
+          (err instanceof Error && err.name === "AbortError") ||
+          (err instanceof Error && err.name === "TimeoutError")
+        ) {
+          throw new NetworkError(
+            `PCS Load API request failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+        // Surface the real PCS error body — the OpenAPI client's
+        // ResponseError swallows the response, leaving us with "Response
+        // returned an error code" and no detail. Read the body so the
+        // caller sees fields + code.
+        if (
+          err instanceof Error &&
+          "response" in err &&
+          err.response instanceof Response
+        ) {
+          const bodyText = await err.response.text().catch(() => "");
+          throw new Error(
+            `PCS ${err.response.status}: ${bodyText || err.message}`,
+          );
+        }
+        throw err;
       }
     });
-    // `company` variable kept in scope — future work may wire it to
-    // letter-based routing once Kyle confirms REST-side behavior.
-    void company;
 
     // AddLoad200Response shape varies by PCS version; capture the raw response
     // envelope for observability, and try to pull a loadId if present.
