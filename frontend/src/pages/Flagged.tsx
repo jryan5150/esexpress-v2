@@ -101,10 +101,13 @@ function FlaggedList({ scope }: { scope: "all" | "mine" }) {
   const groupOrder = [
     "missing_photo",
     "pending_pcs",
-    "needs_rate",
-    "missing_ticket",
+    "rate_missing",
+    "missing_tickets",
     "missing_driver",
     "bol_mismatch",
+    "fuzzy_match",
+    "weight_mismatch",
+    "no_photo_48h",
     "uncertain_match",
     "pcs_discrepancy",
     "sheet_drift",
@@ -210,23 +213,28 @@ function QueueGroup({ type, items }: { type: string; items: InboxItem[] }) {
 }
 
 const LABEL_BY_TYPE: Record<string, string> = {
-  // Backend kinds (post-flatten 2026-04-28). Key list mirrors
-  // urgencyOrder in /diag/inbox: most actionable first.
+  // Backend kinds (post-flatten 2026-04-28). The flag-reason kinds
+  // (rate_missing / missing_tickets / missing_driver / bol_mismatch /
+  // fuzzy_match / weight_mismatch / no_photo_48h) come straight from
+  // the UNCERTAIN_REASONS enum in schema.ts — keep these aligned.
   missing_photo: "🖼  Photos to match",
   pending_pcs: "📦 Ready for PCS — awaiting Kyle",
-  needs_rate: "💵 Needs rate",
-  missing_ticket: "🎫 Missing ticket #",
+  rate_missing: "💵 Needs rate",
+  missing_tickets: "🎫 Missing ticket #",
   missing_driver: "👤 Missing driver",
   bol_mismatch: "❓ BOL mismatch / other flag",
+  fuzzy_match: "🤝 Match needs review",
+  weight_mismatch: "⚖️ Weight mismatch",
+  no_photo_48h: "📷 No photo after 48h",
   uncertain_match: "🤔 Matcher uncertain",
   pcs_discrepancy: "⚠️ PCS discrepancy",
   sheet_drift: "📊 Sheet drift",
-  // Legacy aliases — won't fire after the flatten ships, but kept
-  // briefly so a stale browser doesn't render an unlabeled group.
+  // Legacy aliases — kept briefly so a stale browser doesn't render
+  // an unlabeled group while users pick up the new build.
   stage_uncertain: "🚩 Flagged for review",
-  discrepancy: "⚠️  Discrepancies to resolve",
-  rate_missing: "💵 Needs rate",
-  missing_tickets: "🎫 Missing ticket #",
+  discrepancy: "⚠️ Discrepancies to resolve",
+  needs_rate: "💵 Needs rate",
+  missing_ticket: "🎫 Missing ticket #",
 };
 
 // ─────────────────────────────────────────────────────────────────
