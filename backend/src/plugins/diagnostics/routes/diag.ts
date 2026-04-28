@@ -3500,8 +3500,8 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
         SELECT
           w.id,
           w.name,
-          c.name AS customer_name,
-          w.customer_id,
+          w.customer_name,
+          c.id AS customer_id,
           COUNT(DISTINCT CASE
             WHEN l.delivered_on >= ww.week_start
               AND l.delivered_on < ww.week_end + INTERVAL '1 day'
@@ -3523,12 +3523,12 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
           MAX(COALESCE(l.updated_at, a.updated_at))::text AS last_touched_at
         FROM wells w
         JOIN active_wells aw ON aw.id = w.id
-        LEFT JOIN customers c ON c.id = w.customer_id
+        LEFT JOIN customers c ON c.name = w.customer_name
         LEFT JOIN assignments a ON a.well_id = w.id
         LEFT JOIN loads l ON l.id = a.load_id
           AND l.delivered_on >= now() - INTERVAL '14 days'
         CROSS JOIN week_window ww
-        GROUP BY w.id, w.name, c.name, w.customer_id
+        GROUP BY w.id, w.name, w.customer_name, c.id
         ORDER BY load_count_this_week DESC, w.name ASC
         LIMIT 500`)) as unknown as Array<Record<string, unknown>>;
 
