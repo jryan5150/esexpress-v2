@@ -138,10 +138,13 @@ export function WhatsNew() {
             <strong className="font-bold">
               Continuous shipping since Monday's call.
             </strong>{" "}
-            Every change below is live right now and reachable from the sidebar.
-            We pushed each item without taking the site down, so you've been
-            free to keep poking around the whole time. If you see anything odd,
-            text or email the URL plus what you saw and we'll patch in minutes.
+            Every change below is live right now. Most are reachable from the
+            sidebar (Today / BOL Center / Load Report) — a few legacy or
+            drill-down pages live under <strong>Reference</strong> to keep the
+            main nav clean. We pushed each item without taking the site down, so
+            you've been free to keep poking around the whole time. If you see
+            anything odd, text or email the URL plus what you saw and we'll
+            patch in minutes.
           </p>
         </div>
 
@@ -232,34 +235,33 @@ export function WhatsNew() {
 
         <Section
           number="01"
-          title="OCR loop: see what was extracted vs what's saved"
-          why="When the driver photo extracted a value that disagrees with the load record, you can see both side-by-side and accept the OCR value with one click — no retyping."
+          title="What the photo says vs what's saved — side-by-side"
+          why="When we read the BOL photo and got a number that disagrees with what's on the load record, you'd be retyping by hand. Now both values sit next to each other and you accept the photo's read with one click."
           how={
             <div className="space-y-3">
               <p>
-                When you expand a load row in the cell drawer, an{" "}
-                <strong>OCR extracted</strong> panel appears above the editable
-                fields (only when the photo has been Vision- processed). Each
-                field shows:
+                When you expand a load row in the cell drawer, a{" "}
+                <strong>From the photo</strong> panel appears above the editable
+                fields (only when we've already read the photo). Each field
+                shows:
               </p>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>
                   <span className="text-emerald-700 font-semibold">
                     ✓ matches
                   </span>{" "}
-                  in green when the OCR value agrees with the saved load
+                  in green when the photo's value agrees with the saved load
                 </li>
                 <li>
                   A blue <strong>use →</strong> button when they differ — one
-                  click overwrites the load with the OCR value
+                  click overwrites the load with what the photo said
                 </li>
-                <li>
-                  Overall confidence % top-right (when Claude returned one)
-                </li>
+                <li>Overall confidence % top-right (when we have one)</li>
               </ul>
               <p>
-                There's also a <strong>Run OCR</strong> button in the same panel
-                that re-triggers Vision on the photo if the first pass was poor.
+                There's also a <strong>Re-read photo</strong> button in the same
+                panel — useful when the first read missed text or the photo
+                loaded better the second time.
               </p>
             </div>
           }
@@ -366,9 +368,9 @@ export function WhatsNew() {
           </p>
         </div>
 
-        {/* 01 — Pre-Dispatch Verification */}
+        {/* 07 — Pre-Dispatch Verification */}
         <Section
-          number="01"
+          number="07"
           title="Pre-Dispatch Verification"
           why='Per your Apr 15 ask: "nothing would go to dispatch desk until it had been validated." One front door for everything that gates dispatch.'
           how={
@@ -405,9 +407,9 @@ export function WhatsNew() {
           cta={{ label: "Open Validate", to: "/validation" }}
         />
 
-        {/* 02 — Date filter */}
+        {/* 08 — Date filter */}
         <Section
-          number="02"
+          number="08"
           title="Date Filter on Validate"
           why='Your Apr 15 quote: "if you actually put in like the 13th to the 15th, which would be more like what we&apos;re working on" / "do a day&apos;s worth at a time."'
           how={
@@ -444,9 +446,9 @@ export function WhatsNew() {
           cta={{ label: "Try the date filter", to: "/validation" }}
         />
 
-        {/* 03 — Photo-gated bulk approve */}
+        {/* 09 — Photo-gated bulk approve */}
         <Section
-          number="03"
+          number="09"
           title="Photo-Gated Bulk Approve"
           why="Your Apr 15 trust risk: &quot;loads that don't have an image there, but they're saying they're 100% matched.&quot; Closed by design."
           how={
@@ -476,9 +478,9 @@ export function WhatsNew() {
           }
         />
 
-        {/* 04 — Cross-check */}
+        {/* 10 — Cross-check */}
         <Section
-          number="04"
+          number="10"
           title="Cross-Check Loop (PCS ↔ v2)"
           why="Every 15 minutes v2 pulls PCS, compares, and surfaces any well or load where the two systems disagree. This is the thing that catches what a manual reconciliation would catch — same day, automatically."
           how={
@@ -517,9 +519,9 @@ export function WhatsNew() {
           cta={{ label: "Open Discrepancies", to: "/admin/discrepancies" }}
         />
 
-        {/* 05 — Photo rotation for PCS push */}
+        {/* 11 — Photo rotation for PCS push */}
         <Section
-          number="05"
+          number="11"
           title="Photo Rotation for PCS Push"
           why="Driver-mobile photos often carry an EXIF orientation tag that browsers don't reliably honor. When a load goes to PCS, the photo is rotated server-side first so PCS receives an upright BOL ready to read."
           how={
@@ -540,9 +542,9 @@ export function WhatsNew() {
           }
         />
 
-        {/* 06 — Numbers refresh */}
+        {/* 12 — Numbers refresh */}
         <Section
-          number="06"
+          number="12"
           title="Numbers Refresh — Verifiable Today"
           why="Two coverage numbers moved this week. Both are verifiable in your own tools."
           how={

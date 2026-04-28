@@ -419,22 +419,21 @@ export function Workbench() {
             onAssignDriver: () => {
               window.location.href = `/wells/${cellContextQuery.data?.wellId}`;
             },
-            // Add Comment → real POST to first load in the cell, with a
-            // cell-context prefix so it's findable per-load.
-            onAddComment: async (body: string) => {
-              const firstLoad = cellContextQuery.data?.loads?.[0];
-              if (!firstLoad) {
+            // Add Comment → real POST to the load the user picked in the
+            // drawer's comment form (or first load in the cell as fallback).
+            // Cell-context prefix kept so the comment is findable per-load.
+            onAddComment: async (body, opts) => {
+              const cellLoads = cellContextQuery.data?.loads ?? [];
+              const targetId = opts?.loadId ?? cellLoads[0]?.load_id ?? null;
+              if (targetId == null) {
                 setConfirmResult("No load to attach comment to.");
                 return;
               }
               try {
-                await api.post(
-                  `/dispatch/loads/${firstLoad.load_id}/comments`,
-                  {
-                    body: `[cell: ${cellContextQuery.data?.wellName} · day ${openCell.dow}] ${body}`,
-                  },
-                );
-                setConfirmResult(`Comment saved on load ${firstLoad.load_id}.`);
+                await api.post(`/dispatch/loads/${targetId}/comments`, {
+                  body: `[cell: ${cellContextQuery.data?.wellName} · day ${openCell.dow}] ${body}`,
+                });
+                setConfirmResult(`Comment saved on load ${targetId}.`);
               } catch (err) {
                 setConfirmResult(
                   `Comment failed: ${err instanceof Error ? err.message : String(err)}`,

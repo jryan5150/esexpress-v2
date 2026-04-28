@@ -33,13 +33,16 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   const isAdminRoute =
     location.pathname.startsWith("/admin") || location.pathname === "/finance";
   // Reference group: legacy workspace pages + archive surfaces + wells
-  // registry. Top-level nav surfaces Load Center, BOL Center, and Load
+  // registry + Load Center. Top-level nav surfaces BOL Center and Load
   // Report — everything else lives behind this collapsible group so
   // dispatchers see one front door. Wells lives here (not Admin) because
-  // the team needs frequent access for alias/rate maintenance.
+  // the team needs frequent access for alias/rate maintenance. Load
+  // Center listed here so navigating to /load-center keeps the group
+  // open instead of collapsing it underneath the user.
   const isReferenceRoute =
-    location.pathname === "/" ||
+    location.pathname === "/exceptions" ||
     location.pathname === "/archive" ||
+    location.pathname === "/load-center" ||
     location.pathname === "/admin/wells";
 
   // Collapse state — persisted
@@ -302,12 +305,12 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 className="overflow-hidden animate-slide-down space-y-px"
               >
                 <Link
-                  to="/"
-                  className={`${navClass("/")} !pl-9`}
-                  title="Today's Objectives"
+                  to="/exceptions"
+                  className={`${navClass("/exceptions")} !pl-9`}
+                  title="Exception feed (legacy Today's Objectives) — gap-list view across all loads"
                 >
-                  <span className={iconClass("/")}>home</span>
-                  Today's Objectives
+                  <span className={iconClass("/exceptions")}>home</span>
+                  Exception Feed
                 </Link>
                 <Link
                   to="/load-center"

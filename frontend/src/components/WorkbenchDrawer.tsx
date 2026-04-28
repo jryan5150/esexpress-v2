@@ -128,7 +128,13 @@ export interface CellContext {
   onConfirm?: () => void;
   onMatchBol?: () => void;
   onAssignDriver?: () => void;
-  onAddComment?: (body: string) => void;
+  /**
+   * Save a comment. Optional `loadId` lets the drawer's comment form pick
+   * a specific load when the cell has multiple — otherwise the parent
+   * (Workbench page) falls back to the first load and prefixes the body
+   * with the cell context for searchability.
+   */
+  onAddComment?: (body: string, opts?: { loadId?: number }) => void;
   onClose: () => void;
 }
 
@@ -404,6 +410,11 @@ export function WorkbenchDrawer(props: WorkbenchDrawerProps) {
 function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [commentBody, setCommentBody] = useState("");
+  // Which load in the cell receives the comment. Defaults to the first
+  // load (matches old behavior) but the user can pick from the cell's
+  // loads in a dropdown so a stray "looks good" comment doesn't silently
+  // attach to the wrong row when multiple loads share the cell.
+  const [commentLoadId, setCommentLoadId] = useState<number | "">("");
   // Per-load inline expand: clicking a load row toggles a detail panel
   // below it with editable fields + photo, in the same drawer (no new
   // tab, stays in view).
@@ -551,34 +562,82 @@ function CellSummaryDrawerBody({ cellContext }: { cellContext: CellContext }) {
               {showCommentForm ? "Cancel comment" : "Add Comment"}
             </button>
           </div>
-          {showCommentForm && (
-            <div className="mt-3 space-y-2">
-              <textarea
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-                placeholder={`Comment on this cell (${cellContext.wellName})…`}
-                rows={3}
-                autoFocus
-                className="w-full px-2 py-1.5 text-sm rounded-md border border-border bg-bg-primary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (commentBody.trim()) {
-                      cellContext.onAddComment?.(commentBody.trim());
-                      setCommentBody("");
-                      setShowCommentForm(false);
-                    }
-                  }}
-                  disabled={!commentBody.trim()}
-                  className="px-3 py-1 text-xs rounded-md bg-accent text-white disabled:opacity-50"
-                >
-                  Save comment
-                </button>
-              </div>
-            </div>
-          )}
+          {showCommentForm &&
+            (() => {
+              const cellLoads = cellContext.loads ?? [];
+              const targetId =
+                commentLoadId !== ""
+                  ? commentLoadId
+                  : (cellLoads[0]?.load_id ?? null);
+              const targetLoad = cellLoads.find((l) => l.load_id === targetId);
+              return (
+                <div className="mt-3 space-y-2">
+                  {cellLoads.length > 1 && (
+                    <label className="block text-[11px] text-text-secondary">
+                      Attach comment to which load?
+                      <select
+                        value={
+                          commentLoadId === ""
+                            ? cellLoads[0].load_id
+                            : commentLoadId
+                        }
+                        onChange={(e) =>
+                          setCommentLoadId(parseInt(e.target.value, 10))
+                        }
+                        className="block mt-1 w-full px-2 py-1 text-sm rounded-md border border-border bg-bg-primary"
+                      >
+                        {cellLoads.map((l) => (
+                          <option key={l.load_id} value={l.load_id}>
+                            #{l.load_id}
+                            {l.driver_name ? ` · ${l.driver_name}` : ""}
+                            {l.ticket_no ? ` · ticket ${l.ticket_no}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <textarea
+                    value={commentBody}
+                    onChange={(e) => setCommentBody(e.target.value)}
+                    placeholder={`Comment on this cell (${cellContext.wellName})…`}
+                    rows={3}
+                    autoFocus
+                    className="w-full px-2 py-1.5 text-sm rounded-md border border-border bg-bg-primary focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent"
+                  />
+                  {targetLoad && (
+                    <p className="text-[11px] text-text-secondary">
+                      → Will land on load #{targetLoad.load_id}
+                      {targetLoad.driver_name
+                        ? ` (${targetLoad.driver_name})`
+                        : ""}
+                      {targetLoad.ticket_no
+                        ? `, ticket ${targetLoad.ticket_no}`
+                        : ""}
+                      , prefixed with the cell context for searchability.
+                    </p>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (commentBody.trim()) {
+                          cellContext.onAddComment?.(commentBody.trim(), {
+                            loadId: targetId ?? undefined,
+                          });
+                          setCommentBody("");
+                          setCommentLoadId("");
+                          setShowCommentForm(false);
+                        }
+                      }}
+                      disabled={!commentBody.trim()}
+                      className="px-3 py-1 text-xs rounded-md bg-accent text-white disabled:opacity-50"
+                    >
+                      Save comment
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           {cellContext.confirmResult && (
             <div className="mt-3 px-3 py-2 rounded-md text-xs bg-bg-primary border border-border">
               {cellContext.confirmResult}
@@ -1877,12 +1936,32 @@ function StageStrip({
   onAdvance: (stage: string) => Promise<unknown>;
   isPending: boolean;
 }) {
-  const STAGES: Array<{ key: string; label: string }> = [
-    { key: "uncertain", label: "Uncertain" },
-    { key: "ready_to_build", label: "Ready" },
-    { key: "building", label: "Building" },
-    { key: "entered", label: "Entered" },
-    { key: "cleared", label: "Cleared" },
+  const STAGES: Array<{ key: string; label: string; help: string }> = [
+    {
+      key: "uncertain",
+      label: "Uncertain",
+      help: "Not enough info to build yet (missing fields, photo doesn't match, well not assigned, etc.). Sits here until someone resolves the issue.",
+    },
+    {
+      key: "ready_to_build",
+      label: "Ready",
+      help: "Photo + fields look right; this load is ready to be entered into PCS. Builder picks it up next.",
+    },
+    {
+      key: "building",
+      label: "Building",
+      help: "Builder is actively typing this load into PCS right now. Lock — don't double-claim.",
+    },
+    {
+      key: "entered",
+      label: "Entered",
+      help: "Builder finished entering the load in PCS. Awaiting clearance from the customer.",
+    },
+    {
+      key: "cleared",
+      label: "Cleared",
+      help: "Customer has cleared this load in PCS. Done — drops off the active worksurface into history.",
+    },
   ];
   const currentIdx = STAGES.findIndex((s) => s.key === currentStage);
 
@@ -1910,7 +1989,7 @@ function StageStrip({
               }
               disabled:cursor-default
             `}
-            title={`Set handler stage to ${s.label}`}
+            title={`${s.label} — ${s.help}\n\nClick to set handler stage to ${s.label}.`}
           >
             {s.label}
           </button>

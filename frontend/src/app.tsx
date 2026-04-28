@@ -154,7 +154,12 @@ export function App() {
               <Route path="/maintenance" element={<MaintenanceMode />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<Layout />}>
-                  <Route index element={<ExceptionFeed />} />
+                  {/* / now redirects to /workbench. The old "Today's
+                      Objectives" page (ExceptionFeed) lives at /exceptions
+                      under Reference for the rare case dispatch needs the
+                      legacy gap-list view. Active workflow lives on Today. */}
+                  <Route index element={<Navigate to="/workbench" replace />} />
+                  <Route path="exceptions" element={<ExceptionFeed />} />
                   <Route path="workbench" element={<Workbench />} />
                   <Route path="bol" element={<BolQueue />} />
                   <Route
