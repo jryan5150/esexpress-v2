@@ -66,6 +66,50 @@ const guardsPlugin: FastifyPluginAsync = async (fastify) => {
         throw new UnauthorizedError("Invalid or expired token");
       }
 
+      // Server-side session invalidation. When users.tokens_invalidated_at
+      // is set and is newer than the JWT's iat, force the user to
+      // re-authenticate. Used to push WhatsNew / release content without
+      // waiting for natural 24h JWT expiry. Cheap query — single row by
+      // PK with a small projection.
+      const db = fastify.db;
+      if (db && request.user.id) {
+        try {
+          const { sql } = await import("drizzle-orm");
+          const rows = (await db.execute(sql`
+            SELECT tokens_invalidated_at::text AS tia
+            FROM users WHERE id = ${request.user.id}
+            LIMIT 1
+          `)) as unknown as Array<{ tia: string | null }>;
+          const tia = rows[0]?.tia;
+          if (tia && (request.user as { iat?: number }).iat) {
+            const invalidatedMs = new Date(tia).getTime();
+            const issuedMs =
+              ((request.user as { iat?: number }).iat ?? 0) * 1000;
+            if (issuedMs < invalidatedMs) {
+              request.log.info(
+                { userId: request.user.id, issuedMs, invalidatedMs },
+                "[force-relogin] rejecting JWT older than user's invalidation timestamp",
+              );
+              return reply.status(401).send({
+                success: false,
+                error: {
+                  code: "TOKEN_INVALIDATED",
+                  message:
+                    "Your session was invalidated to load new content. Please sign in again.",
+                },
+              });
+            }
+          }
+        } catch (err) {
+          // Don't fail-closed on a token-invalidation lookup failure —
+          // logging only. The natural JWT expiry still applies.
+          request.log.warn(
+            { err, userId: request.user.id },
+            "[force-relogin] tokens_invalidated_at lookup failed",
+          );
+        }
+      }
+
       // Soft maintenance gate. Active only when MAINTENANCE_ALLOW_EMAILS
       // is set; otherwise this is a no-op.
       const allowlist = parseMaintenanceAllowlist();

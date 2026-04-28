@@ -33,6 +33,13 @@ export const users = pgTable("users", {
   color: text("color"), // hex color for dispatcher identification (e.g. "#3b82f6")
   assignedWells: jsonb("assigned_wells").$type<number[]>().default([]),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  // 2026-04-28: server-side session invalidation. When set, any JWT
+  // whose `iat` is older than this timestamp is rejected by the
+  // authenticate guard (forces a fresh login). Use to push WhatsNew /
+  // release content without waiting for natural 24h JWT expiry.
+  tokensInvalidatedAt: timestamp("tokens_invalidated_at", {
+    withTimezone: true,
+  }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });

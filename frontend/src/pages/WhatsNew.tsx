@@ -16,7 +16,10 @@ import { useEffect } from "react";
  * the email + PDF; how-to lives here, in-context.
  */
 
-const RELEASE_KEY = "esexpress-whatsnew-2026-04-24";
+// Bumped 2026-04-28 — forces re-show of the post-Monday-call shipped
+// features (Load Center, inline expand, OCR loop, stage strip, push to
+// PCS, lightbox, photo backfill, AdminOverview, etc.).
+const RELEASE_KEY = "esexpress-whatsnew-2026-04-28";
 
 export function markWhatsNewSeen() {
   try {
@@ -111,10 +114,10 @@ export function WhatsNew() {
           <div className="w-1 h-8 bg-primary rounded-sm shrink-0" />
           <div className="flex-1">
             <h1 className="font-headline text-[22px] font-extrabold tracking-tight text-on-surface uppercase leading-tight">
-              What's New &mdash; Week of Apr 21
+              What's New &mdash; Tue Apr 28
             </h1>
             <p className="text-[11px] font-medium text-outline tracking-[0.08em] uppercase mt-0.5">
-              Guided Tour // Verifiable Numbers
+              Post-call updates // since Monday's review
             </p>
           </div>
           <Link
@@ -134,13 +137,187 @@ export function WhatsNew() {
         <div className="bg-primary-container/5 border-l-4 border-primary-container rounded-r-md p-5">
           <p className="text-sm text-on-surface leading-relaxed">
             <strong className="font-bold">
-              The system is open for your validation.
+              Continuous shipping since Monday's call.
             </strong>{" "}
-            This page summarizes what's changed since you last saw it, what each
-            new surface answers, and where to click. Every number you see is
-            queryable in your own tools &mdash; nothing here is a promise, it's
-            all inventory. Walk through at your pace; everything is reachable
-            from the sidebar after you skip out.
+            Every change below is live right now and reachable from the sidebar.
+            We pushed each item without taking the site down, so you've been
+            free to keep poking around the whole time. If you see anything odd,
+            text or email the URL plus what you saw and we'll patch in minutes.
+          </p>
+        </div>
+
+        {/* Post-Monday-call shipped — Tue Apr 28 */}
+        <Section
+          number="00"
+          title="Click a load → edit it → push to PCS, all in one spot"
+          why='From the call: "if I can just get in and kind of start pushing those through" — the build-then-push workflow validated against the transcript. Edit inline, no bouncing between screens.'
+          how={
+            <div className="space-y-3">
+              <p>
+                In the worksurface, click any cell → drawer opens on the right →
+                click any load row → it expands inline with the photo on the
+                left and editable fields on the right. Eleven editable fields:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <UiChip icon="person" label="Driver" />
+                <UiChip icon="local_shipping" label="Truck #" />
+                <UiChip icon="local_shipping" label="Trailer #" />
+                <UiChip icon="business" label="Carrier" />
+                <UiChip icon="receipt" label="Ticket #" />
+                <UiChip icon="numbers" label="BOL #" />
+                <UiChip icon="scale" label="Weight (tons)" />
+                <UiChip icon="scale" label="Net Weight" />
+                <UiChip icon="speed" label="Mileage" />
+                <UiChip icon="payments" label="Rate" />
+                <UiChip icon="event" label="Delivered" />
+              </div>
+              <p>
+                Below the fields, a 5-stage Workflow strip lets you move the
+                load through Uncertain → Ready → Building → Entered → Cleared
+                with one click. And a green <strong>→ Push to PCS</strong>{" "}
+                button at the bottom is the terminal action — when you click it,
+                v2 hands off to PCS and stops tracking. You'll see a green
+                confirmation with the new PCS load number, or a red error with
+                the actual PCS reason if something went wrong.
+              </p>
+            </div>
+          }
+          cta={{ label: "Open Worksurface", to: "/workbench" }}
+        />
+
+        <Section
+          number="01"
+          title="OCR loop: see what was extracted vs what's saved"
+          why="When the driver photo extracted a value that disagrees with the load record, you can see both side-by-side and accept the OCR value with one click — no retyping."
+          how={
+            <div className="space-y-3">
+              <p>
+                When you expand a load row in the cell drawer, an{" "}
+                <strong>OCR extracted</strong> panel appears above the editable
+                fields (only when the photo has been Vision- processed). Each
+                field shows:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>
+                  <span className="text-emerald-700 font-semibold">
+                    ✓ matches
+                  </span>{" "}
+                  in green when the OCR value agrees with the saved load
+                </li>
+                <li>
+                  A blue <strong>use →</strong> button when they differ — one
+                  click overwrites the load with the OCR value
+                </li>
+                <li>
+                  Overall confidence % top-right (when Claude returned one)
+                </li>
+              </ul>
+              <p>
+                There's also a <strong>Run OCR</strong> button in the same panel
+                that re-triggers Vision on the photo if the first pass was poor.
+              </p>
+            </div>
+          }
+        />
+
+        <Section
+          number="02"
+          title="Photos clickable everywhere → zoom"
+          why="You couldn't read the BOL numbers at thumbnail size. Now every photo opens a full-screen lightbox on click."
+          how={
+            <p>
+              Click any photo in the cell drawer's inline expand or in the
+              standalone Load Center page. Esc closes. ←/→ cycles through
+              multiple photos when a JotForm submission has multiple angles.
+            </p>
+          }
+        />
+
+        <Section
+          number="03"
+          title="Photo column now reflects reality, not stored field"
+          why='From your testing: "why does the photo column say no photo when clearly photo." The stored photo_status field on legacy matches was never updated when the photo got attached.'
+          how={
+            <div className="space-y-3">
+              <p>Three things fixed:</p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>
+                  Backend now computes <code>effective_photo_status</code> from
+                  live evidence (photos table OR matched JotForm submission)
+                </li>
+                <li>
+                  All UI surfaces (per-load row dot, week-list table, inline
+                  panel) read this corrected value
+                </li>
+                <li>
+                  One-time backfill: 655 legacy assignments updated from
+                  'missing' → 'attached' in the underlying data. No more red ✕
+                  on loads that genuinely have photos.
+                </li>
+              </ul>
+            </div>
+          }
+          cta={{ label: "Open Worksurface", to: "/workbench" }}
+        />
+
+        <Section
+          number="04"
+          title="Admin Overview — one page, five surfaces"
+          why="From the call: too many tabs to flip between. The five reconciliation pages now have a single overview that summarizes each one."
+          how={
+            <p>
+              <strong>Admin → Overview</strong> shows compact summaries of Sheet
+              Truth, PCS Truth, Discrepancies, Order of Invoicing, and Sheet
+              Status. Each section header links to its full page for drilling
+              in. Read-only — edits happen on the dedicated pages.
+            </p>
+          }
+          cta={{ label: "Open Admin Overview", to: "/admin/overview" }}
+        />
+
+        <Section
+          number="05"
+          title="Aliases admin — fix sheet spellings yourself"
+          why="Your sheet has Liberty as Liberty, Liberty(FSC), Liberty (FSC), LIberty (typo). v2 was fragmenting your numbers across all five spellings. Now collapsed to canonical via aliases you can edit."
+          how={
+            <p>
+              <strong>Admin → Aliases</strong> shows two tables: customer-name
+              aliases (sheet spelling → canonical customer) and well aliases
+              (sheet name → canonical well). Add or remove any time. The next
+              sheet sync (every 30 min) picks up the changes. No code deploy
+              needed.
+            </p>
+          }
+          cta={{ label: "Open Aliases", to: "/admin/aliases" }}
+        />
+
+        <Section
+          number="06"
+          title="If we have a sheet you use that we're not reading…"
+          why="Found mid-call — we don't see the canonical Driver Codes sheet (we see a 45-row tab; you have the 983-row roster somewhere)."
+          how={
+            <div className="space-y-3">
+              <p>
+                Share any spreadsheet with our service-account email and the
+                next 30-minute sync picks it up automatically:
+              </p>
+              <code className="block bg-surface-container-high px-3 py-2 rounded text-xs font-mono">
+                esexpress-integration@esexpress.iam.gserviceaccount.com
+              </code>
+              <p className="text-xs text-on-surface-variant">
+                Steps: open sheet → Share → paste email → Viewer → uncheck
+                "Notify people" → Send.
+              </p>
+            </div>
+          }
+        />
+
+        <div className="bg-tertiary/5 border-l-4 border-tertiary rounded-r-md p-5">
+          <p className="text-sm text-on-surface leading-relaxed">
+            <strong className="font-bold">Below this line:</strong> the earlier
+            What's New entries from the run-up to Monday's call. Still relevant
+            — the Pre-Dispatch Verification, date filter, sheet-truth setup, and
+            PCS push proof all still apply. Skim or skip to your work.
           </p>
         </div>
 
