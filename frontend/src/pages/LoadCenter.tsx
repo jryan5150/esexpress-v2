@@ -7,6 +7,7 @@ import { resolvePhotoUrl } from "../lib/photo-url";
 import { EditableField } from "../components/EditableField";
 import { PhotoLightbox } from "../components/PhotoLightbox";
 import { RotatableImage } from "../components/RotatableImage";
+import { StageStrip } from "../components/StageStrip";
 
 interface LoadDetail {
   id: number;
@@ -29,6 +30,7 @@ interface LoadDetail {
   customer_name: string | null;
   bill_to: string | null;
   status: string | null;
+  assignment_id: number | null;
   assignment_status: string | null;
   handler_stage: string | null;
   photo_status: string | null;
@@ -108,6 +110,44 @@ export function LoadCenter() {
       api.patch(`/dispatch/loads/${loadId}`, patch),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["load-center", loadId] });
+      // Cell color on the worksurface is computed from underlying load
+      // stage — invalidate that grid so any open Today tab ticks
+      // forward without a refresh.
+      qc.invalidateQueries({ queryKey: ["worksurface", "well-grid"] });
+    },
+  });
+
+  // Stage advance — same /dispatch/workbench/:assignmentId/advance endpoint
+  // used by the cell-drawer inline panel. assignmentId comes from /diag/load-detail.
+  const advanceMutation = useMutation({
+    mutationFn: ({
+      assignmentId,
+      stage,
+    }: {
+      assignmentId: number;
+      stage: string;
+    }) => api.post(`/dispatch/workbench/${assignmentId}/advance`, { stage }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["load-center", loadId] });
+      qc.invalidateQueries({ queryKey: ["worksurface", "well-grid"] });
+      qc.invalidateQueries({ queryKey: ["worksurface", "cell-context"] });
+    },
+  });
+
+  // Push to PCS — terminal action; same endpoint as the inline panel.
+  const pushPcsMutation = useMutation({
+    mutationFn: (assignmentId: number) =>
+      api.post<{
+        success: boolean;
+        pcsLoadNo?: string;
+        pcsNumber?: string;
+        error?: { code?: string; message?: string };
+        message?: string;
+      }>(`/pcs/dispatch`, { assignmentId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["load-center", loadId] });
+      qc.invalidateQueries({ queryKey: ["worksurface", "well-grid"] });
+      qc.invalidateQueries({ queryKey: ["worksurface", "cell-context"] });
     },
   });
 
@@ -277,6 +317,84 @@ export function LoadCenter() {
           <h2 className="text-sm font-semibold uppercase tracking-wide">
             Status
           </h2>
+
+          {/* Stage strip + Push to PCS — terminal action surface. Same
+              controls as the cell-drawer's inline expand panel so anyone
+              landing here from the searchable list can move the load
+              through the workflow without bouncing back to Today. */}
+          {l.assignment_id != null && (
+            <div className="space-y-2 pb-3 border-b border-border">
+              <div className="text-[10px] text-text-secondary uppercase tracking-wide">
+                Workflow stage
+              </div>
+              <StageStrip
+                currentStage={l.handler_stage ?? "uncertain"}
+                isPending={advanceMutation.isPending}
+                onAdvance={(stage) =>
+                  advanceMutation.mutateAsync({
+                    assignmentId: l.assignment_id!,
+                    stage,
+                  })
+                }
+              />
+              {advanceMutation.isError && (
+                <div className="text-[11px] text-red-600">
+                  Stage change failed:{" "}
+                  {(advanceMutation.error as Error)?.message ?? "unknown error"}
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <span className="text-[10px] text-text-secondary">
+                  Click any stage to set it directly. Hover for what each stage
+                  means.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => pushPcsMutation.mutate(l.assignment_id!)}
+                  disabled={pushPcsMutation.isPending}
+                  className="px-3 py-1 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                  title="Hand this load off to PCS. v2 stops tracking after a successful push."
+                >
+                  {pushPcsMutation.isPending ? "Pushing…" : "→ Push to PCS"}
+                </button>
+              </div>
+              {pushPcsMutation.isError && (
+                <div className="text-[11px] px-2 py-1.5 rounded bg-red-50 border border-red-300 text-red-900">
+                  <strong>PCS rejected the push:</strong>{" "}
+                  {(pushPcsMutation.error as Error)?.message ?? "unknown error"}
+                  . Verify the load's required fields (well, driver, weight,
+                  photo) and try again.
+                </div>
+              )}
+              {pushPcsMutation.isSuccess && pushPcsMutation.data && (
+                <div className="text-[11px] px-2 py-1.5 rounded bg-emerald-50 border border-emerald-300 text-emerald-900">
+                  {pushPcsMutation.data.success ? (
+                    <>
+                      <strong>PCS accepted ✓</strong>
+                      {(pushPcsMutation.data.pcsLoadNo ||
+                        pushPcsMutation.data.pcsNumber) && (
+                        <>
+                          {" "}
+                          — now in PCS as #
+                          {pushPcsMutation.data.pcsLoadNo ??
+                            pushPcsMutation.data.pcsNumber}
+                        </>
+                      )}
+                      . Load handed off; v2 stops tracking from here.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Push call returned but not accepted:</strong>{" "}
+                      {pushPcsMutation.data.error?.message ??
+                        pushPcsMutation.data.message ??
+                        "see logs"}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <Field label="Source status" value={l.status} />
           <Field label="Assignment status" value={l.assignment_status} />
           <Field label="Handler stage" value={l.handler_stage} />
