@@ -1609,7 +1609,7 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
           w.name AS well_name, c.name AS bill_to,
           l.customer_id,
           l.delivered_on::date AS day,
-          l.driver_name, l.bol_no, l.ticket_no, l.notes AS detail
+          l.driver_name, l.bol_no, l.ticket_no, a.notes AS detail
         FROM assignments a
         JOIN loads l ON l.id = a.load_id
         LEFT JOIN wells w ON w.id = a.well_id
