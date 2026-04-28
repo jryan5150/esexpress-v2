@@ -374,7 +374,15 @@ export async function syncPcsLoads(
     // Update every matched assignment with PCS state. `matched_via`
     // records which bridge strategy resolved this pair so the
     // reconciliation audit trail stays honest.
+    //
+    // Auto-promote handler_stage: a load PCS confirms it has IS by
+    // definition "entered" — Jess shouldn't have to manually walk the
+    // stage strip for loads we already know are over the wall. Only
+    // advance from earlier stages; never downgrade `cleared`. PCS
+    // "Cancelled" is left alone so the discrepancy surfaces instead of
+    // silently advancing.
     const assignmentIds = hits.map((r) => r.assignmentId);
+    const shouldAutoEnter = status?.trim() !== "Cancelled";
     await db
       .update(assignments)
       .set({
@@ -390,6 +398,15 @@ export async function syncPcsLoads(
           last_status_sync: now.toISOString(),
           transport: "rest",
         },
+        ...(shouldAutoEnter
+          ? {
+              handlerStage: sql`CASE
+                WHEN ${assignments.handlerStage} IN ('uncertain', 'ready_to_build', 'building')
+                  THEN 'entered'
+                ELSE ${assignments.handlerStage}
+              END` as unknown as typeof assignments.handlerStage._.data,
+            }
+          : {}),
         updatedAt: now,
       })
       .where(inArray(assignments.id, assignmentIds));

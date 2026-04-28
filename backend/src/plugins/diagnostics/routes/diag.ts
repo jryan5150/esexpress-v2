@@ -1,5 +1,6 @@
 import { type FastifyPluginAsync } from "fastify";
 import { perfBuffer } from "../../../lib/perf-buffer.js";
+import { reportError } from "../../../lib/sentry.js";
 
 /** Paths whose latency is bottlenecked by upstream third parties, not our
  *  code. Excluded from p95 health signal so a slow PropX / JotForm API
@@ -3469,71 +3470,84 @@ const diagRoutes: FastifyPluginAsync = async (fastify) => {
 
     // Compute the current Sun-Sat week in America/Chicago. Same window
     // the WellGrid uses by default so the load_count column lines up
-    // with what the grid shows.
-    const rows = (await db.execute(sql`
-      WITH week_window AS (
-        SELECT
-          (date_trunc('week', now() AT TIME ZONE 'America/Chicago')::date
-            - INTERVAL '1 day') AS week_start,
-          (date_trunc('week', now() AT TIME ZONE 'America/Chicago')::date
-            + INTERVAL '6 days') AS week_end
-      ),
-      active_wells AS (
-        SELECT DISTINCT w.id
-        FROM wells w
-        WHERE EXISTS (
-          SELECT 1
-          FROM assignments a
-          JOIN loads l ON l.id = a.load_id
-          WHERE a.well_id = w.id
-            AND (
-              l.delivered_on >= now() - INTERVAL '14 days'
-              OR a.status IN ('pending','assigned','dispatch_ready')
-            )
+    // with what the grid shows. GREATEST(NULL,NULL)=NULL is fine here —
+    // the LEFT JOIN guarantees at least one of l/a has rows since the
+    // active_wells CTE filters wells without recent activity.
+    try {
+      const rows = (await db.execute(sql`
+        WITH week_window AS (
+          SELECT
+            (date_trunc('week', now() AT TIME ZONE 'America/Chicago')::date
+              - INTERVAL '1 day') AS week_start,
+            (date_trunc('week', now() AT TIME ZONE 'America/Chicago')::date
+              + INTERVAL '6 days') AS week_end
+        ),
+        active_wells AS (
+          SELECT DISTINCT w.id
+          FROM wells w
+          WHERE EXISTS (
+            SELECT 1
+            FROM assignments a
+            LEFT JOIN loads l ON l.id = a.load_id
+            WHERE a.well_id = w.id
+              AND (
+                (l.delivered_on IS NOT NULL
+                  AND l.delivered_on >= now() - INTERVAL '14 days')
+                OR a.status IN ('pending','assigned','dispatch_ready')
+              )
+          )
         )
-      )
-      SELECT
-        w.id,
-        w.name,
-        c.name AS customer_name,
-        w.customer_id,
-        COUNT(DISTINCT CASE
-          WHEN l.delivered_on >= ww.week_start
-            AND l.delivered_on < ww.week_end + INTERVAL '1 day'
-          THEN l.id
-        END)::int AS load_count_this_week,
-        COUNT(DISTINCT l.id)::int AS load_count_14d,
-        COUNT(DISTINCT CASE
-          WHEN a.handler_stage = 'ready_to_build' THEN a.id
-        END)::int AS ready_count,
-        COUNT(DISTINCT CASE
-          WHEN a.handler_stage = 'building' THEN a.id
-        END)::int AS building_count,
-        COUNT(DISTINCT CASE
-          WHEN a.handler_stage = 'entered' THEN a.id
-        END)::int AS entered_count,
-        COUNT(DISTINCT CASE
-          WHEN a.handler_stage = 'uncertain' THEN a.id
-        END)::int AS flagged_count,
-        MAX(GREATEST(l.updated_at, a.updated_at))::text AS last_touched_at
-      FROM wells w
-      JOIN active_wells aw ON aw.id = w.id
-      LEFT JOIN customers c ON c.id = w.customer_id
-      LEFT JOIN assignments a ON a.well_id = w.id
-      LEFT JOIN loads l ON l.id = a.load_id
-        AND l.delivered_on >= now() - INTERVAL '14 days'
-      CROSS JOIN week_window ww
-      GROUP BY w.id, w.name, c.name, w.customer_id
-      ORDER BY load_count_this_week DESC, w.name ASC
-      LIMIT 500`)) as unknown as Array<Record<string, unknown>>;
+        SELECT
+          w.id,
+          w.name,
+          c.name AS customer_name,
+          w.customer_id,
+          COUNT(DISTINCT CASE
+            WHEN l.delivered_on >= ww.week_start
+              AND l.delivered_on < ww.week_end + INTERVAL '1 day'
+            THEN l.id
+          END)::int AS load_count_this_week,
+          COUNT(DISTINCT l.id)::int AS load_count_14d,
+          COUNT(DISTINCT CASE
+            WHEN a.handler_stage = 'ready_to_build' THEN a.id
+          END)::int AS ready_count,
+          COUNT(DISTINCT CASE
+            WHEN a.handler_stage = 'building' THEN a.id
+          END)::int AS building_count,
+          COUNT(DISTINCT CASE
+            WHEN a.handler_stage = 'entered' THEN a.id
+          END)::int AS entered_count,
+          COUNT(DISTINCT CASE
+            WHEN a.handler_stage = 'uncertain' THEN a.id
+          END)::int AS flagged_count,
+          MAX(COALESCE(l.updated_at, a.updated_at))::text AS last_touched_at
+        FROM wells w
+        JOIN active_wells aw ON aw.id = w.id
+        LEFT JOIN customers c ON c.id = w.customer_id
+        LEFT JOIN assignments a ON a.well_id = w.id
+        LEFT JOIN loads l ON l.id = a.load_id
+          AND l.delivered_on >= now() - INTERVAL '14 days'
+        CROSS JOIN week_window ww
+        GROUP BY w.id, w.name, c.name, w.customer_id
+        ORDER BY load_count_this_week DESC, w.name ASC
+        LIMIT 500`)) as unknown as Array<Record<string, unknown>>;
 
-    return {
-      success: true,
-      data: {
-        wells: rows,
-        total: rows.length,
-      },
-    };
+      return {
+        success: true,
+        data: { wells: rows, total: rows.length },
+      };
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
+      console.error("[diag/wells-active] query failed:", e);
+      reportError(e, { source: "diag", op: "wells-active" });
+      return reply.status(500).send({
+        success: false,
+        error: {
+          code: "WELLS_ACTIVE_QUERY_FAILED",
+          message: e.message || "Query failed",
+        },
+      });
+    }
   });
 
   // GET /diag/well-loads?wellId=N&since=YYYY-MM-DD&until=YYYY-MM-DD
