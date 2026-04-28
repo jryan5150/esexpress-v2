@@ -4,29 +4,34 @@ import { useRole } from "../hooks/use-role";
 import { useCurrentUser } from "../hooks/use-auth";
 import { useHeartbeat } from "../hooks/use-presence";
 import { api } from "../lib/api";
-import { ExceptionFeed } from "./ExceptionFeed";
 
 /**
- * Role-aware /exceptions surface.
+ * Role-aware /flagged surface — central destination for everything that
+ * needs human attention.
  *
- *   admin    — manager blockers + system pulse (legacy ExceptionFeed)
- *   builder  — "My queue" — actionable list scoped to my customer
+ *   admin    — every flagged item across the system
+ *   builder  — flagged items scoped to my customer
  *   finance  — AR aging placeholder until v1 of the finance lens
- *   viewer   — redirect to /workbench (no actionable content for them)
+ *   viewer   — redirect to /workbench (no actionable content)
  *
- * Each lens is its own component so they can grow independently
- * without entangling. Routed in app.tsx as <Route path="exceptions">.
+ * "Flagged" rather than "Exceptions" because that's the dispatch
+ * vocabulary — loads get flagged for review, then the team works the
+ * flagged list down to zero. Items land here automatically when:
+ *   - handler_stage = 'uncertain' (someone clicked a Flag button or the
+ *     matcher couldn't confidently advance the load)
+ *   - the load is missing a photo / ticket / driver
+ *   - cross-check found a discrepancy between sources
  */
-export function Exceptions() {
-  useHeartbeat({ currentPage: "exceptions" });
+export function Flagged() {
+  useHeartbeat({ currentPage: "flagged" });
   const role = useRole();
 
   if (!role.isAuthenticated) return null;
   if (role.isViewer) return <Navigate to="/workbench" replace />;
   if (role.isFinance) return <FinanceLens />;
-  if (role.isBuilder) return <BuilderQueueLens />;
-  // admin (default) — full legacy dashboard
-  return <ExceptionFeed />;
+  // admin gets the full unfiltered list; builder gets it scoped to
+  // their customer. Same component, different scope flag.
+  return <FlaggedList scope={role.isAdmin ? "all" : "mine"} />;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -44,14 +49,15 @@ interface InboxItem {
   detail: string | null;
 }
 
-function BuilderQueueLens() {
+function FlaggedList({ scope }: { scope: "all" | "mine" }) {
   const userQuery = useCurrentUser();
   const me = userQuery.data;
   const myBuilder = (me?.email ?? "").split("@")[0].toLowerCase();
 
-  // Find this user's primary customer via builder_routing.
+  // Find this user's primary customer via builder_routing — only used
+  // when scope === "mine". Admin scope ignores this.
   const routingQuery = useQuery({
-    queryKey: ["exceptions", "builder", "routing"],
+    queryKey: ["flagged", "routing"],
     queryFn: () =>
       api
         .get<{
@@ -63,27 +69,31 @@ function BuilderQueueLens() {
         }>("/diag/builder-matrix")
         .then((r) => r.matrix),
     staleTime: 5 * 60_000,
+    enabled: scope === "mine",
   });
   const myCustomerId =
-    routingQuery.data?.find(
-      (b) => b.isPrimary && b.builder.toLowerCase() === myBuilder,
-    )?.customerId ?? null;
+    scope === "mine"
+      ? (routingQuery.data?.find(
+          (b) => b.isPrimary && b.builder.toLowerCase() === myBuilder,
+        )?.customerId ?? null)
+      : null;
 
-  // Pull the inbox (last 14d) and filter client-side to my customer
-  // when we have one. Falls back to all when unmapped.
+  // Pull the inbox (last 14d). Filter to my customer when scoped;
+  // admin sees everything.
   const inboxQuery = useQuery({
-    queryKey: ["exceptions", "builder", "inbox", myCustomerId],
+    queryKey: ["flagged", "inbox", scope, myCustomerId],
     queryFn: () => api.get<{ items: InboxItem[] }>("/diag/inbox?days=14"),
     staleTime: 60_000,
     refetchInterval: 5 * 60_000,
   });
   const items = inboxQuery.data?.items ?? [];
-  const mine = myCustomerId
-    ? items.filter((i) => i.customer_id === myCustomerId)
-    : items;
+  const mine =
+    scope === "mine" && myCustomerId
+      ? items.filter((i) => i.customer_id === myCustomerId)
+      : items;
 
-  // Group by type so the builder sees a clean punch-list rather than
-  // 40 mixed rows.
+  // Group by type so the user sees a clean punch-list rather than 40
+  // mixed rows.
   const byType = mine.reduce<Record<string, InboxItem[]>>((acc, i) => {
     (acc[i.type] = acc[i.type] ?? []).push(i);
     return acc;
@@ -94,20 +104,27 @@ function BuilderQueueLens() {
     "discrepancy",
     "sheet_drift",
     "missing_ticket",
+    "missing_driver",
+    "needs_rate",
   ];
   const orderedGroups = [
     ...groupOrder.filter((g) => byType[g]?.length),
     ...Object.keys(byType).filter((g) => !groupOrder.includes(g)),
   ];
 
+  const titleByScope = scope === "all" ? "Flagged" : "My Flagged";
+  const subtitleByScope =
+    scope === "all"
+      ? "Everything across the system that needs human attention."
+      : `${me?.name?.split(" ")[0] ?? "You"} — flagged items for your customer.`;
+
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-6 max-w-5xl mx-auto space-y-4">
       <header>
-        <h1 className="text-2xl font-headline">My Queue</h1>
+        <h1 className="text-2xl font-headline">{titleByScope}</h1>
         <p className="text-sm text-text-secondary">
-          {me?.name?.split(" ")[0] ?? "You"} — actionable items for your
-          customer
-          {routingQuery.data && !myCustomerId && (
+          {subtitleByScope}
+          {scope === "mine" && routingQuery.data && !myCustomerId && (
             <>
               {" "}
               <span className="text-amber-600">
@@ -115,7 +132,6 @@ function BuilderQueueLens() {
               </span>
             </>
           )}
-          .
         </p>
       </header>
 
@@ -127,7 +143,7 @@ function BuilderQueueLens() {
 
       {!inboxQuery.isLoading && mine.length === 0 && (
         <div className="rounded-lg border border-border bg-bg-secondary p-6 text-sm text-text-secondary text-center">
-          ✨ Inbox zero. Nothing on your queue right now.
+          ✨ Nothing flagged. You're caught up.
         </div>
       )}
 
@@ -192,11 +208,13 @@ function QueueGroup({ type, items }: { type: string; items: InboxItem[] }) {
 }
 
 const LABEL_BY_TYPE: Record<string, string> = {
-  missing_photo: "Photos to match",
-  stage_uncertain: "Loads stuck in Uncertain",
-  discrepancy: "Discrepancies to resolve",
-  sheet_drift: "Sheet drift",
-  missing_ticket: "Missing ticket #",
+  missing_photo: "🖼  Photos to match",
+  stage_uncertain: "🚩 Flagged for review",
+  discrepancy: "⚠️  Discrepancies to resolve",
+  sheet_drift: "📊 Sheet drift",
+  missing_ticket: "🎫 Missing ticket #",
+  missing_driver: "👤 Missing driver",
+  needs_rate: "💵 Needs rate",
 };
 
 // ─────────────────────────────────────────────────────────────────

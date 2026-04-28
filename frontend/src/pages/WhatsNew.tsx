@@ -16,10 +16,10 @@ import { useEffect } from "react";
  * the email + PDF; how-to lives here, in-context.
  */
 
-// Bumped 2026-04-28-pm-3 — forces re-show after roles rollout
-// (admin / builder / finance / viewer) + role-aware /exceptions
-// (My Queue for builders, Manager Blockers for admins).
-const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-3";
+// Bumped 2026-04-28-pm-4 — forces re-show after Flagged rename
+// (was /exceptions), main-nav promotion, and inline 4-reason flag
+// picker on the cell-drawer expand.
+const RELEASE_KEY = "esexpress-whatsnew-2026-04-28-pm-4";
 
 export function markWhatsNewSeen() {
   try {
@@ -148,6 +148,53 @@ export function WhatsNew() {
             patch in minutes.
           </p>
         </div>
+
+        {/* Tue PM 4 — Flagged page + inline flag button */}
+        <Section
+          number="00"
+          title="🚩 Flagged is now your central queue"
+          why="The page that was Exceptions / Today's Objectives is now Flagged — one front door for everything that needs a human. Promoted to the main sidebar between Today and BOL Center because that's where it belongs in the daily loop."
+          how={
+            <div className="space-y-3">
+              <p>
+                Anything that lands in the flagged queue groups itself
+                automatically by reason:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "🖼  Photos to match",
+                  "🚩 Flagged for review",
+                  "⚠️ Discrepancies",
+                  "📊 Sheet drift",
+                  "🎫 Missing ticket",
+                  "👤 Missing driver",
+                  "💵 Needs rate",
+                ].map((s) => (
+                  <span
+                    key={s}
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-md border border-outline-variant/40 bg-surface-container-high text-on-surface-variant"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+              <p>
+                <strong>Builders</strong> see only their customer's flagged
+                items. <strong>Admins</strong> see everything. Each row links
+                straight to Load Center for that load.
+              </p>
+              <p>
+                <strong>New: inline 🚩 Flag button</strong> on every load in the
+                cell drawer's expand. Click it, pick one of four reasons (Needs
+                Rate · Missing Ticket · Missing Driver · Other / BOL off), and
+                the load lands on Flagged for whoever's scoped to see it. Saves
+                you from bouncing between pages just to mark something as
+                needing a look.
+              </p>
+            </div>
+          }
+          cta={{ label: "Open Flagged", to: "/flagged" }}
+        />
 
         {/* Tue PM 3 — Roles + role-aware /exceptions */}
         <Section

@@ -1487,6 +1487,15 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
   const qc = useQueryClient();
   const role = useRole();
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [flagPickerOpen, setFlagPickerOpen] = useState(false);
+  const [flagOtherReason, setFlagOtherReason] = useState("");
+
+  // Flag → Uncertain. Same useFlagToUncertain hook the outer drawer
+  // uses; just exposed inline so a builder doesn't have to back out
+  // and click "Flag back" on the parent row card. The 4 reasons mirror
+  // the original Apr workbench sign-off taxonomy minus the two advance
+  // actions (Confirm and Reject).
+  const flag = useFlagToUncertain();
   const detailQuery = useQuery({
     queryKey: ["cell-drawer-load", loadId],
     queryFn: () => api.get<LoadDetailShape>(`/diag/load-detail?load=${loadId}`),
@@ -1668,6 +1677,108 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
         {reocr.isSuccess && (
           <div className="text-[10px] text-emerald-600">
             OCR re-run queued — refresh in a few seconds.
+          </div>
+        )}
+
+        {/* Flag → Uncertain. Only builders + admin can flag (matches
+            who can advance stage). The 4 reasons land on /flagged for
+            anyone scoped to see them. */}
+        {l.assignment_id != null && role.canAdvanceStage && (
+          <div className="space-y-1.5">
+            {!flagPickerOpen ? (
+              <button
+                type="button"
+                onClick={() => setFlagPickerOpen(true)}
+                disabled={flag.isPending}
+                className="px-2 py-1 text-[11px] rounded border border-amber-400 bg-amber-50 text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                title="Flag this load for review. Pick a reason; it lands on the Flagged page for whoever's scoped to see it."
+              >
+                🚩 Flag for review…
+              </button>
+            ) : (
+              <div className="rounded border border-amber-300 bg-amber-50 p-2 space-y-1.5">
+                <div className="text-[10px] font-semibold text-amber-900">
+                  Flag reason — pick one
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  <FlagReasonBtn
+                    reason="rate_missing"
+                    label="💵 Needs rate"
+                    onClick={(r) =>
+                      flag.mutate({
+                        id: l.assignment_id!,
+                        reason: r,
+                        notes: undefined,
+                      })
+                    }
+                    disabled={flag.isPending}
+                  />
+                  <FlagReasonBtn
+                    reason="missing_tickets"
+                    label="🎫 Missing ticket"
+                    onClick={(r) =>
+                      flag.mutate({
+                        id: l.assignment_id!,
+                        reason: r,
+                        notes: undefined,
+                      })
+                    }
+                    disabled={flag.isPending}
+                  />
+                  <FlagReasonBtn
+                    reason="missing_driver"
+                    label="👤 Missing driver"
+                    onClick={(r) =>
+                      flag.mutate({
+                        id: l.assignment_id!,
+                        reason: r,
+                        notes: undefined,
+                      })
+                    }
+                    disabled={flag.isPending}
+                  />
+                  <FlagReasonBtn
+                    reason="bol_mismatch"
+                    label="❓ Other / BOL off"
+                    onClick={(r) =>
+                      flag.mutate({
+                        id: l.assignment_id!,
+                        reason: r,
+                        notes: flagOtherReason || undefined,
+                      })
+                    }
+                    disabled={flag.isPending}
+                  />
+                </div>
+                <input
+                  type="text"
+                  value={flagOtherReason}
+                  onChange={(e) => setFlagOtherReason(e.target.value)}
+                  placeholder="Optional note (used by Other / BOL off)"
+                  className="w-full px-1.5 py-0.5 text-[11px] rounded border border-amber-300 bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFlagPickerOpen(false);
+                    setFlagOtherReason("");
+                  }}
+                  className="text-[10px] text-amber-900 underline"
+                >
+                  cancel
+                </button>
+              </div>
+            )}
+            {flag.isSuccess && (
+              <div className="text-[10px] text-emerald-700">
+                Flagged. Now visible on /flagged.
+              </div>
+            )}
+            {flag.isError && (
+              <div className="text-[10px] text-red-600">
+                Flag failed: {(flag.error as Error)?.message ?? "unknown"}
+              </div>
+            )}
           </div>
         )}
 
@@ -1939,6 +2050,31 @@ function LoadInlinePanel({ loadId }: { loadId: number }) {
         )}
       </div>
     </div>
+  );
+}
+
+/* FlagReasonBtn — single button in the inline flag-reason picker.
+ * Onclick fires the parent's flag mutation with the supplied reason. */
+function FlagReasonBtn({
+  reason,
+  label,
+  onClick,
+  disabled,
+}: {
+  reason: UncertainReason;
+  label: string;
+  onClick: (reason: UncertainReason) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(reason)}
+      disabled={disabled}
+      className="px-2 py-1 text-[11px] rounded border border-amber-300 bg-white hover:bg-amber-100 text-amber-900 text-left disabled:opacity-50"
+    >
+      {label}
+    </button>
   );
 }
 

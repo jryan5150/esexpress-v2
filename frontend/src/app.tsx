@@ -33,8 +33,8 @@ const Workbench = lazy(() =>
 const ExceptionFeed = lazy(() =>
   import("./pages/ExceptionFeed").then((m) => ({ default: m.ExceptionFeed })),
 );
-const Exceptions = lazy(() =>
-  import("./pages/Exceptions").then((m) => ({ default: m.Exceptions })),
+const Flagged = lazy(() =>
+  import("./pages/Flagged").then((m) => ({ default: m.Flagged })),
 );
 const DispatchDesk = lazy(() =>
   import("./pages/DispatchDesk").then((m) => ({ default: m.DispatchDesk })),
@@ -157,13 +157,17 @@ export function App() {
               <Route path="/maintenance" element={<MaintenanceMode />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<Layout />}>
-                  {/* / redirects to /workbench. /exceptions is role-aware:
-                      admin sees the legacy ExceptionFeed gap-list,
-                      builder sees "My Queue" scoped to their customer,
+                  {/* / redirects to /workbench. /flagged is role-aware:
+                      admin sees the full unfiltered flagged list,
+                      builder sees their customer's flagged items,
                       finance sees a placeholder lens, viewer redirects.
-                      Wrapper component selects the lens at runtime. */}
+                      /exceptions kept as a redirect for any old links. */}
                   <Route index element={<Navigate to="/workbench" replace />} />
-                  <Route path="exceptions" element={<Exceptions />} />
+                  <Route path="flagged" element={<Flagged />} />
+                  <Route
+                    path="exceptions"
+                    element={<Navigate to="/flagged" replace />}
+                  />
                   <Route path="workbench" element={<Workbench />} />
                   <Route path="bol" element={<BolQueue />} />
                   <Route

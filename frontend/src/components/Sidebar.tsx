@@ -42,7 +42,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
   // Center listed here so navigating to /load-center keeps the group
   // open instead of collapsing it underneath the user.
   const isReferenceRoute =
-    location.pathname === "/exceptions" ||
+    location.pathname === "/flagged" ||
     location.pathname === "/archive" ||
     location.pathname === "/load-center" ||
     location.pathname === "/admin/wells";
@@ -219,6 +219,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
               {!collapsed && "Today"}
             </Link>
             <Link
+              to="/flagged"
+              className={navClass("/flagged")}
+              title="Flagged — central destination for everything that needs attention. Admins see all; builders see their customer."
+            >
+              <span className={iconClass("/flagged")}>flag</span>
+              {!collapsed && "Flagged"}
+            </Link>
+            <Link
               to="/bol"
               className={navClass("/bol")}
               title={
@@ -306,13 +314,17 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps = {}) {
                 id="sidebar-reference-submenu"
                 className="overflow-hidden animate-slide-down space-y-px"
               >
+                {/* Flagged moved out of Reference into main nav above —
+                    it's the central daily destination now, not a legacy
+                    surface. Keeping a stub here just so existing
+                    bookmarks under Reference still find it. */}
                 <Link
-                  to="/exceptions"
-                  className={`${navClass("/exceptions")} !pl-9`}
-                  title="Exceptions — role-aware morning queue. Builders see My Queue (your customer); admins see the system pulse; finance + viewer get tailored placeholders."
+                  to="/flagged"
+                  className={`${navClass("/flagged")} !pl-9`}
+                  title="Flagged — central destination for everything that needs attention."
                 >
-                  <span className={iconClass("/exceptions")}>inbox</span>
-                  Exceptions
+                  <span className={iconClass("/flagged")}>flag</span>
+                  Flagged
                 </Link>
                 <Link
                   to="/load-center"
